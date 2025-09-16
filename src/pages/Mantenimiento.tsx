@@ -6,8 +6,11 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Calendar, Search, Filter, Clock, AlertCircle } from 'lucide-react';
+import { Button } from '@/components/ui/button';
+import { Calendar, Search, Filter, Clock, AlertCircle, Download } from 'lucide-react';
 import { useState } from 'react';
+import jsPDF from 'jspdf';
+import 'jspdf-autotable';
 
 export default function Mantenimiento() {
   const { data, loading } = useLocalStorage();
@@ -86,6 +89,118 @@ export default function Mantenimiento() {
     return { label: 'Normal', variant: 'default' as const };
   };
 
+  const exportarPDF = () => {
+    const doc = new jsPDF();
+    
+    // Configurar fuente
+    doc.setFont('helvetica');
+    
+    // Título del documento
+    doc.setFontSize(18);
+    doc.setTextColor(40, 40, 40);
+    doc.text('Reporte de Mantenimientos Programados', 20, 25);
+    
+    // Fecha de generación
+    doc.setFontSize(10);
+    doc.setTextColor(100, 100, 100);
+    doc.text(`Generado el: ${new Date().toLocaleDateString('es-ES')} a las ${new Date().toLocaleTimeString('es-ES')}`, 20, 35);
+    
+    // Resumen estadístico
+    doc.setFontSize(12);
+    doc.setTextColor(40, 40, 40);
+    doc.text('Resumen:', 20, 50);
+    doc.setFontSize(10);
+    doc.text(`Total de mantenimientos: ${totalMantenimientos}`, 20, 60);
+    doc.text(`Vencidos: ${vencidos}`, 20, 68);
+    doc.text(`Próximos (≤100): ${proximos}`, 20, 76);
+    doc.text(`Normales: ${normales}`, 20, 84);
+    
+    // Preparar datos para la tabla
+    const tableData = mantenimientosFiltrados.map(mant => {
+      const estado = obtenerEstadoMantenimiento(mant.horasKmRestante);
+      const unidad = mant.tipoMantenimiento === 'Horas' ? 'hrs' : 'km';
+      const equipo = equiposPorFicha[mant.ficha];
+      
+      return [
+        mant.ficha,
+        mant.nombreEquipo,
+        equipo?.categoria || 'N/A',
+        mant.tipoMantenimiento,
+        `${mant.horasKmActuales.toLocaleString()} ${unidad}`,
+        `${mant.frecuencia.toLocaleString()} ${unidad}`,
+        `${mant.horasKmUltimoMantenimiento.toLocaleString()} ${unidad}`,
+        `${mant.proximoMantenimiento.toLocaleString()} ${unidad}`,
+        mant.horasKmRestante <= 0 ? 
+          `${Math.abs(mant.horasKmRestante).toFixed(0)} ${unidad} vencido` :
+          `${mant.horasKmRestante.toFixed(0)} ${unidad}`,
+        formatearFecha(mant.fechaUltimoMantenimiento),
+        estado.label
+      ];
+    });
+    
+    // Configurar tabla
+    (doc as any).autoTable({
+      startY: 95,
+      head: [['Ficha', 'Equipo', 'Categoría', 'Tipo', 'Actual', 'Frecuencia', 'Últ. Mant.', 'Próximo', 'Restante', 'Fecha Últ.', 'Estado']],
+      body: tableData,
+      theme: 'grid',
+      styles: {
+        fontSize: 8,
+        cellPadding: 3,
+      },
+      headStyles: {
+        fillColor: [34, 197, 94], // Verde
+        textColor: 255,
+        fontStyle: 'bold',
+        fontSize: 9,
+      },
+      columnStyles: {
+        0: { cellWidth: 15 }, // Ficha
+        1: { cellWidth: 25 }, // Equipo
+        2: { cellWidth: 20 }, // Categoría
+        3: { cellWidth: 15 }, // Tipo
+        4: { cellWidth: 20 }, // Actual
+        5: { cellWidth: 20 }, // Frecuencia
+        6: { cellWidth: 20 }, // Últ. Mant.
+        7: { cellWidth: 20 }, // Próximo
+        8: { cellWidth: 25 }, // Restante
+        9: { cellWidth: 20 }, // Fecha Últ.
+        10: { cellWidth: 15 }, // Estado
+      },
+      didParseCell: (data: any) => {
+        // Colorear filas según estado
+        if (data.section === 'body') {
+          const estado = data.row.raw[10]; // Estado está en la columna 10
+          if (estado === 'Vencido') {
+            data.cell.styles.fillColor = [254, 242, 242]; // Rojo claro
+            data.cell.styles.textColor = [220, 38, 38]; // Rojo
+          } else if (estado === 'Próximo') {
+            data.cell.styles.fillColor = [255, 251, 235]; // Amarillo claro
+            data.cell.styles.textColor = [180, 83, 9]; // Amarillo oscuro
+          } else {
+            data.cell.styles.fillColor = [240, 253, 244]; // Verde claro
+            data.cell.styles.textColor = [22, 163, 74]; // Verde
+          }
+        }
+      },
+      margin: { top: 20, right: 15, bottom: 20, left: 15 },
+      pageBreak: 'auto',
+      showHead: 'everyPage',
+    });
+    
+    // Pie de página
+    const pageCount = (doc as any).internal.getNumberOfPages();
+    for (let i = 1; i <= pageCount; i++) {
+      doc.setPage(i);
+      doc.setFontSize(8);
+      doc.setTextColor(100, 100, 100);
+      doc.text(`Página ${i} de ${pageCount}`, doc.internal.pageSize.width - 30, doc.internal.pageSize.height - 10);
+    }
+    
+    // Guardar el PDF
+    doc.save(`mantenimientos_${new Date().toISOString().split('T')[0]}.pdf`);
+  };
+
   return (
     <Layout title="Mantenimiento Programado">
       <Navigation />
@@ -129,6 +244,10 @@ export default function Mantenimiento() {
                 Control y seguimiento de mantenimientos preventivos
               </CardDescription>
             </div>
+            <Button onClick={exportarPDF} variant="outline" className="flex items-center gap-2">
+              <Download className="w-4 h-4" />
+              Exportar PDF
+            </Button>
           </div>
           
           <div className="flex flex-col sm:flex-row gap-4 mt-4">
