@@ -14,6 +14,7 @@ export default function Mantenimiento() {
   const [searchTerm, setSearchTerm] = useState('');
   const [filterTipo, setFilterTipo] = useState('all');
   const [filterEstado, setFilterEstado] = useState('all');
+  const [filterCategoria, setFilterCategoria] = useState('all');
 
   if (loading) {
     return (
@@ -26,8 +27,32 @@ export default function Mantenimiento() {
   }
 
   const tipos = [...new Set(data.mantenimientosProgramados.map(m => m.tipoMantenimiento))];
+  
+  // Crear mapa de equipos por ficha para obtener categorías
+  const equiposPorFicha = data.equipos.reduce((acc, equipo) => {
+    acc[equipo.ficha] = equipo;
+    return acc;
+  }, {});
+  
+  const categorias = [...new Set(data.equipos.map(e => e.categoria))];
 
-  const mantenimientosFiltrados = data.mantenimientosProgramados.filter(mant => {
+  // Recalcular próximo y restante según nueva lógica
+  const mantenimientosConCalculos = data.mantenimientosProgramados.map(mant => {
+    // Próximo = frecuencia + hr/km último mantenimiento
+    const proximoCalculado = mant.horasKmUltimoMantenimiento + mant.frecuencia;
+    // Restante = próximo - actual
+    const restanteCalculado = proximoCalculado - mant.horasKmActuales;
+    
+    return {
+      ...mant,
+      proximoMantenimiento: proximoCalculado,
+      horasKmRestante: restanteCalculado
+    };
+  });
+
+  const mantenimientosFiltrados = mantenimientosConCalculos.filter(mant => {
+    const equipo = equiposPorFicha[mant.ficha];
+    
     const matchesSearch = Object.values(mant)
       .join(' ')
       .toLowerCase()
@@ -35,18 +60,20 @@ export default function Mantenimiento() {
     
     const matchesTipo = filterTipo === 'all' || mant.tipoMantenimiento === filterTipo;
     
+    const matchesCategoria = filterCategoria === 'all' || (equipo && equipo.categoria === filterCategoria);
+    
     const matchesEstado = filterEstado === 'all' || 
       (filterEstado === 'vencido' && mant.horasKmRestante <= 0) ||
       (filterEstado === 'proximo' && mant.horasKmRestante > 0 && mant.horasKmRestante <= 100) ||
-      (filterEstado === 'programado' && mant.horasKmRestante > 100);
+      (filterEstado === 'normal' && mant.horasKmRestante > 100);
 
-    return matchesSearch && matchesTipo && matchesEstado && mant.activo;
+    return matchesSearch && matchesTipo && matchesCategoria && matchesEstado && mant.activo;
   });
 
   const totalMantenimientos = mantenimientosFiltrados.length;
   const vencidos = mantenimientosFiltrados.filter(m => m.horasKmRestante <= 0).length;
   const proximos = mantenimientosFiltrados.filter(m => m.horasKmRestante > 0 && m.horasKmRestante <= 100).length;
-  const programados = mantenimientosFiltrados.filter(m => m.horasKmRestante > 100).length;
+  const normales = mantenimientosFiltrados.filter(m => m.horasKmRestante > 100).length;
 
   const formatearFecha = (fecha: string | null) => {
     if (!fecha) return 'N/A';
@@ -56,7 +83,7 @@ export default function Mantenimiento() {
   const obtenerEstadoMantenimiento = (horasRestante: number) => {
     if (horasRestante <= 0) return { label: 'Vencido', variant: 'destructive' as const };
     if (horasRestante <= 100) return { label: 'Próximo', variant: 'secondary' as const };
-    return { label: 'Programado', variant: 'default' as const };
+    return { label: 'Normal', variant: 'default' as const };
   };
 
   return (
@@ -84,8 +111,8 @@ export default function Mantenimiento() {
         </Card>
         <Card>
           <CardHeader className="pb-2">
-            <CardDescription>Programados</CardDescription>
-            <CardTitle className="text-3xl text-success">{programados}</CardTitle>
+            <CardDescription>Normales</CardDescription>
+            <CardTitle className="text-3xl text-emerald-500">{normales}</CardTitle>
           </CardHeader>
         </Card>
       </div>
@@ -126,6 +153,18 @@ export default function Mantenimiento() {
                 ))}
               </SelectContent>
             </Select>
+            <Select value={filterCategoria} onValueChange={setFilterCategoria}>
+              <SelectTrigger className="w-full sm:w-[180px]">
+                <Filter className="w-4 h-4 mr-2" />
+                <SelectValue placeholder="Categoría" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">Todas</SelectItem>
+                {categorias.map(categoria => (
+                  <SelectItem key={categoria} value={categoria}>{categoria}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
             <Select value={filterEstado} onValueChange={setFilterEstado}>
               <SelectTrigger className="w-full sm:w-[160px]">
                 <SelectValue placeholder="Estado" />
@@ -134,7 +173,7 @@ export default function Mantenimiento() {
                 <SelectItem value="all">Todos</SelectItem>
                 <SelectItem value="vencido">Vencidos</SelectItem>
                 <SelectItem value="proximo">Próximos</SelectItem>
-                <SelectItem value="programado">Programados</SelectItem>
+                <SelectItem value="normal">Normales</SelectItem>
               </SelectContent>
             </Select>
           </div>
@@ -146,12 +185,14 @@ export default function Mantenimiento() {
                 <TableRow>
                   <TableHead>Ficha</TableHead>
                   <TableHead>Equipo</TableHead>
+                  <TableHead>Categoría</TableHead>
                   <TableHead>Tipo</TableHead>
                   <TableHead>Actual</TableHead>
                   <TableHead>Frecuencia</TableHead>
+                  <TableHead>Últ. Mant.</TableHead>
                   <TableHead>Próximo</TableHead>
                   <TableHead>Restante</TableHead>
-                  <TableHead>Último Mant.</TableHead>
+                  <TableHead>Fecha Últ.</TableHead>
                   <TableHead>Estado</TableHead>
                 </TableRow>
               </TableHeader>
@@ -159,26 +200,31 @@ export default function Mantenimiento() {
                 {mantenimientosFiltrados.map((mant) => {
                   const estado = obtenerEstadoMantenimiento(mant.horasKmRestante);
                   const unidad = mant.tipoMantenimiento === 'Horas' ? 'hrs' : 'km';
+                  const equipo = equiposPorFicha[mant.ficha];
                   
                   return (
                     <TableRow key={mant.id}>
                       <TableCell className="font-medium">{mant.ficha}</TableCell>
                       <TableCell>{mant.nombreEquipo}</TableCell>
+                      <TableCell>{equipo?.categoria || 'N/A'}</TableCell>
                       <TableCell>{mant.tipoMantenimiento}</TableCell>
                       <TableCell>{mant.horasKmActuales.toLocaleString()} {unidad}</TableCell>
                       <TableCell>{mant.frecuencia.toLocaleString()} {unidad}</TableCell>
+                      <TableCell className="font-medium text-blue-600">
+                        {mant.horasKmUltimoMantenimiento.toLocaleString()} {unidad}
+                      </TableCell>
                       <TableCell>{mant.proximoMantenimiento.toLocaleString()} {unidad}</TableCell>
                       <TableCell>
                         <div className="flex items-center">
                           {mant.horasKmRestante <= 0 && (
-                            <AlertCircle className="w-4 h-4 text-destructive mr-2" />
+                            <AlertCircle className="w-4 h-4 text-red-500 mr-2" />
                           )}
                           {mant.horasKmRestante > 0 && mant.horasKmRestante <= 100 && (
-                            <Clock className="w-4 h-4 text-warning mr-2" />
+                            <Clock className="w-4 h-4 text-amber-500 mr-2" />
                           )}
                           <span className={
-                            mant.horasKmRestante <= 0 ? 'text-destructive font-medium' :
-                            mant.horasKmRestante <= 100 ? 'text-warning font-medium' : ''
+                            mant.horasKmRestante <= 0 ? 'text-red-600 font-medium' :
+                            mant.horasKmRestante <= 100 ? 'text-amber-600 font-medium' : 'text-emerald-600 font-medium'
                           }>
                             {mant.horasKmRestante <= 0 ? 
                               `${Math.abs(mant.horasKmRestante).toFixed(0)} ${unidad} vencido` :
@@ -189,7 +235,14 @@ export default function Mantenimiento() {
                       </TableCell>
                       <TableCell>{formatearFecha(mant.fechaUltimoMantenimiento)}</TableCell>
                       <TableCell>
-                        <Badge variant={estado.variant}>
+                        <Badge 
+                          variant={estado.variant} 
+                          className={
+                            estado.label === 'Vencido' ? 'bg-red-100 text-red-700 border-red-200' :
+                            estado.label === 'Próximo' ? 'bg-amber-100 text-amber-700 border-amber-200' :
+                            'bg-emerald-100 text-emerald-700 border-emerald-200'
+                          }
+                        >
                           {estado.label}
                         </Badge>
                       </TableCell>
