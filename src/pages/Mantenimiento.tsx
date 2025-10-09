@@ -7,17 +7,25 @@ import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Button } from '@/components/ui/button';
-import { Calendar, Search, Filter, Clock, AlertCircle, Download } from 'lucide-react';
+import { Calendar, Search, Filter, Clock, AlertCircle, Download, X } from 'lucide-react';
 import { useState } from 'react';
 import jsPDF from 'jspdf';
 import 'jspdf-autotable';
+import { Checkbox } from '@/components/ui/checkbox';
+import { Label } from '@/components/ui/label';
 
 export default function Mantenimiento() {
   const { data, loading } = useLocalStorage();
+  const [modoAvanzado, setModoAvanzado] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
-  const [filterTipo, setFilterTipo] = useState('all');
-  const [filterEstado, setFilterEstado] = useState('all');
-  const [filterCategoria, setFilterCategoria] = useState('all');
+  const [filtros, setFiltros] = useState({
+    tipos: [] as string[],
+    categorias: [] as string[],
+    estados: [] as string[],
+    fichas: [] as string[],
+    restanteMin: '',
+    restanteMax: ''
+  });
 
   if (loading) {
     return (
@@ -53,6 +61,8 @@ export default function Mantenimiento() {
     };
   });
 
+  const fichas = [...new Set(data.mantenimientosProgramados.map(m => m.ficha))].sort();
+
   const mantenimientosFiltrados = mantenimientosConCalculos.filter(mant => {
     const equipo = equiposPorFicha[mant.ficha];
     
@@ -61,16 +71,24 @@ export default function Mantenimiento() {
       .toLowerCase()
       .includes(searchTerm.toLowerCase());
     
-    const matchesTipo = filterTipo === 'all' || mant.tipoMantenimiento === filterTipo;
+    // Filtros multi-select
+    const matchesTipo = filtros.tipos.length === 0 || filtros.tipos.includes(mant.tipoMantenimiento);
     
-    const matchesCategoria = filterCategoria === 'all' || (equipo && equipo.categoria === filterCategoria);
+    const matchesCategoria = filtros.categorias.length === 0 || (equipo && filtros.categorias.includes(equipo.categoria));
     
-    const matchesEstado = filterEstado === 'all' || 
-      (filterEstado === 'vencido' && mant.horasKmRestante <= 0) ||
-      (filterEstado === 'proximo' && mant.horasKmRestante > 0 && mant.horasKmRestante <= 100) ||
-      (filterEstado === 'normal' && mant.horasKmRestante > 100);
+    const matchesFicha = filtros.fichas.length === 0 || filtros.fichas.includes(mant.ficha);
+    
+    const matchesEstado = filtros.estados.length === 0 || 
+      (filtros.estados.includes('vencido') && mant.horasKmRestante <= 0) ||
+      (filtros.estados.includes('proximo') && mant.horasKmRestante > 0 && mant.horasKmRestante <= 100) ||
+      (filtros.estados.includes('normal') && mant.horasKmRestante > 100);
 
-    return matchesSearch && matchesTipo && matchesCategoria && matchesEstado && mant.activo;
+    // Filtro de rango de restante
+    const restante = Math.abs(mant.horasKmRestante);
+    const matchesRestanteMin = !filtros.restanteMin || restante >= parseFloat(filtros.restanteMin);
+    const matchesRestanteMax = !filtros.restanteMax || restante <= parseFloat(filtros.restanteMax);
+
+    return matchesSearch && matchesTipo && matchesCategoria && matchesFicha && matchesEstado && matchesRestanteMin && matchesRestanteMax && mant.activo;
   });
 
   const totalMantenimientos = mantenimientosFiltrados.length;
@@ -201,6 +219,54 @@ export default function Mantenimiento() {
     doc.save(`mantenimientos_${new Date().toISOString().split('T')[0]}.pdf`);
   };
 
+  const toggleTipo = (tipo: string) => {
+    setFiltros(prev => ({
+      ...prev,
+      tipos: prev.tipos.includes(tipo)
+        ? prev.tipos.filter(t => t !== tipo)
+        : [...prev.tipos, tipo]
+    }));
+  };
+
+  const toggleCategoria = (categoria: string) => {
+    setFiltros(prev => ({
+      ...prev,
+      categorias: prev.categorias.includes(categoria)
+        ? prev.categorias.filter(c => c !== categoria)
+        : [...prev.categorias, categoria]
+    }));
+  };
+
+  const toggleEstado = (estado: string) => {
+    setFiltros(prev => ({
+      ...prev,
+      estados: prev.estados.includes(estado)
+        ? prev.estados.filter(e => e !== estado)
+        : [...prev.estados, estado]
+    }));
+  };
+
+  const toggleFicha = (ficha: string) => {
+    setFiltros(prev => ({
+      ...prev,
+      fichas: prev.fichas.includes(ficha)
+        ? prev.fichas.filter(f => f !== ficha)
+        : [...prev.fichas, ficha]
+    }));
+  };
+
+  const limpiarFiltros = () => {
+    setFiltros({
+      tipos: [],
+      categorias: [],
+      estados: [],
+      fichas: [],
+      restanteMin: '',
+      restanteMax: ''
+    });
+    setSearchTerm('');
+  };
+
   return (
     <Layout title="Mantenimiento Programado">
       <Navigation />
@@ -234,7 +300,7 @@ export default function Mantenimiento() {
 
       <Card>
         <CardHeader>
-          <div className="flex justify-between items-center">
+          <div className="flex justify-between items-center mb-4">
             <div>
               <CardTitle className="flex items-center">
                 <Calendar className="w-5 h-5 mr-2" />
@@ -244,58 +310,282 @@ export default function Mantenimiento() {
                 Control y seguimiento de mantenimientos preventivos
               </CardDescription>
             </div>
-            <Button onClick={exportarPDF} variant="outline" className="flex items-center gap-2">
-              <Download className="w-4 h-4" />
-              Exportar PDF
-            </Button>
+            <div className="flex gap-2">
+              <Button 
+                variant={modoAvanzado ? "default" : "outline"} 
+                size="sm"
+                onClick={() => setModoAvanzado(!modoAvanzado)}
+              >
+                {modoAvanzado ? "Modo Simple" : "Modo Avanzado"}
+              </Button>
+              <Button onClick={exportarPDF} variant="outline" size="sm" className="flex items-center gap-2">
+                <Download className="w-4 h-4" />
+                Exportar PDF
+              </Button>
+            </div>
           </div>
           
-          <div className="flex flex-col sm:flex-row gap-4 mt-4">
-            <div className="flex-1 relative">
-              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground w-4 h-4" />
-              <Input
-                placeholder="Buscar mantenimientos..."
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-                className="pl-10"
-              />
+          {!modoAvanzado ? (
+            // Filtros simples
+            <div className="space-y-4">
+              <div className="flex-1 relative">
+                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground w-4 h-4" />
+                <Input
+                  placeholder="Buscar mantenimientos..."
+                  value={searchTerm}
+                  onChange={(e) => setSearchTerm(e.target.value)}
+                  className="pl-10"
+                />
+              </div>
+              <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+                <div>
+                  <Label className="mb-2 block">Tipos</Label>
+                  <div className="space-y-2">
+                    {tipos.map(tipo => (
+                      <div key={tipo} className="flex items-center space-x-2">
+                        <Checkbox 
+                          id={`tipo-${tipo}`}
+                          checked={filtros.tipos.includes(tipo)}
+                          onCheckedChange={() => toggleTipo(tipo)}
+                        />
+                        <label htmlFor={`tipo-${tipo}`} className="text-sm cursor-pointer">
+                          {tipo}
+                        </label>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+                <div>
+                  <Label className="mb-2 block">Categorías</Label>
+                  <div className="space-y-2 max-h-32 overflow-y-auto border rounded-md p-2">
+                    {categorias.map(cat => (
+                      <div key={cat} className="flex items-center space-x-2">
+                        <Checkbox 
+                          id={`cat-simple-${cat}`}
+                          checked={filtros.categorias.includes(cat)}
+                          onCheckedChange={() => toggleCategoria(cat)}
+                        />
+                        <label htmlFor={`cat-simple-${cat}`} className="text-sm cursor-pointer">
+                          {cat}
+                        </label>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+                <div>
+                  <Label className="mb-2 block">Estados</Label>
+                  <div className="space-y-2">
+                    {['vencido', 'proximo', 'normal'].map(estado => (
+                      <div key={estado} className="flex items-center space-x-2">
+                        <Checkbox 
+                          id={`estado-simple-${estado}`}
+                          checked={filtros.estados.includes(estado)}
+                          onCheckedChange={() => toggleEstado(estado)}
+                        />
+                        <label htmlFor={`estado-simple-${estado}`} className="text-sm cursor-pointer capitalize">
+                          {estado === 'proximo' ? 'Próximos' : estado === 'vencido' ? 'Vencidos' : 'Normales'}
+                        </label>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+                <div>
+                  {(filtros.tipos.length > 0 || filtros.categorias.length > 0 || filtros.estados.length > 0 || filtros.fichas.length > 0 || searchTerm) && (
+                    <Button variant="outline" size="sm" onClick={limpiarFiltros} className="w-full">
+                      <X className="w-4 h-4 mr-2" />
+                      Limpiar Filtros
+                    </Button>
+                  )}
+                </div>
+              </div>
             </div>
-            <Select value={filterTipo} onValueChange={setFilterTipo}>
-              <SelectTrigger className="w-full sm:w-[160px]">
-                <Filter className="w-4 h-4 mr-2" />
-                <SelectValue placeholder="Tipo" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">Todos</SelectItem>
-                {tipos.map(tipo => (
-                  <SelectItem key={tipo} value={tipo}>{tipo}</SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-            <Select value={filterCategoria} onValueChange={setFilterCategoria}>
-              <SelectTrigger className="w-full sm:w-[180px]">
-                <Filter className="w-4 h-4 mr-2" />
-                <SelectValue placeholder="Categoría" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">Todas</SelectItem>
-                {categorias.map(categoria => (
-                  <SelectItem key={categoria} value={categoria}>{categoria}</SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-            <Select value={filterEstado} onValueChange={setFilterEstado}>
-              <SelectTrigger className="w-full sm:w-[160px]">
-                <SelectValue placeholder="Estado" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">Todos</SelectItem>
-                <SelectItem value="vencido">Vencidos</SelectItem>
-                <SelectItem value="proximo">Próximos</SelectItem>
-                <SelectItem value="normal">Normales</SelectItem>
-              </SelectContent>
-            </Select>
-          </div>
+          ) : (
+            // Filtros avanzados
+            <div className="space-y-4">
+              <div className="flex-1 relative">
+                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground w-4 h-4" />
+                <Input
+                  placeholder="Buscar mantenimientos..."
+                  value={searchTerm}
+                  onChange={(e) => setSearchTerm(e.target.value)}
+                  className="pl-10"
+                />
+              </div>
+              
+              <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+                <div>
+                  <Label className="mb-2 block">Tipos (Multi-select)</Label>
+                  <div className="space-y-2 border rounded-md p-3 bg-muted/30">
+                    {tipos.map(tipo => (
+                      <div key={tipo} className="flex items-center space-x-2">
+                        <Checkbox 
+                          id={`tipo-adv-${tipo}`}
+                          checked={filtros.tipos.includes(tipo)}
+                          onCheckedChange={() => toggleTipo(tipo)}
+                        />
+                        <label htmlFor={`tipo-adv-${tipo}`} className="text-sm cursor-pointer flex-1">
+                          {tipo}
+                        </label>
+                      </div>
+                    ))}
+                  </div>
+                  {filtros.tipos.length > 0 && (
+                    <Badge variant="secondary" className="mt-2">
+                      {filtros.tipos.length} seleccionado(s)
+                    </Badge>
+                  )}
+                </div>
+
+                <div>
+                  <Label className="mb-2 block">Categorías (Multi-select)</Label>
+                  <div className="space-y-2 max-h-40 overflow-y-auto border rounded-md p-3 bg-muted/30">
+                    {categorias.map(cat => (
+                      <div key={cat} className="flex items-center space-x-2">
+                        <Checkbox 
+                          id={`cat-adv-${cat}`}
+                          checked={filtros.categorias.includes(cat)}
+                          onCheckedChange={() => toggleCategoria(cat)}
+                        />
+                        <label htmlFor={`cat-adv-${cat}`} className="text-sm cursor-pointer flex-1">
+                          {cat}
+                        </label>
+                      </div>
+                    ))}
+                  </div>
+                  {filtros.categorias.length > 0 && (
+                    <Badge variant="secondary" className="mt-2">
+                      {filtros.categorias.length} seleccionada(s)
+                    </Badge>
+                  )}
+                </div>
+
+                <div>
+                  <Label className="mb-2 block">Fichas Específicas</Label>
+                  <div className="space-y-2 max-h-40 overflow-y-auto border rounded-md p-3 bg-muted/30">
+                    {fichas.slice(0, 20).map(ficha => (
+                      <div key={ficha} className="flex items-center space-x-2">
+                        <Checkbox 
+                          id={`ficha-adv-${ficha}`}
+                          checked={filtros.fichas.includes(ficha)}
+                          onCheckedChange={() => toggleFicha(ficha)}
+                        />
+                        <label htmlFor={`ficha-adv-${ficha}`} className="text-sm cursor-pointer flex-1 font-mono">
+                          {ficha}
+                        </label>
+                      </div>
+                    ))}
+                  </div>
+                  {filtros.fichas.length > 0 && (
+                    <Badge variant="secondary" className="mt-2">
+                      {filtros.fichas.length} seleccionada(s)
+                    </Badge>
+                  )}
+                </div>
+
+                <div>
+                  <Label className="mb-2 block">Estados</Label>
+                  <div className="space-y-2 border rounded-md p-3 bg-muted/30">
+                    {['vencido', 'proximo', 'normal'].map(estado => (
+                      <div key={estado} className="flex items-center space-x-2">
+                        <Checkbox 
+                          id={`estado-adv-${estado}`}
+                          checked={filtros.estados.includes(estado)}
+                          onCheckedChange={() => toggleEstado(estado)}
+                        />
+                        <label htmlFor={`estado-adv-${estado}`} className="text-sm cursor-pointer capitalize">
+                          {estado === 'proximo' ? 'Próximos' : estado === 'vencido' ? 'Vencidos' : 'Normales'}
+                        </label>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4 pt-4 border-t">
+                <div>
+                  <Label className="mb-2 block">Hrs/Km Restante Mínimo</Label>
+                  <Input 
+                    type="number"
+                    placeholder="Mínimo"
+                    value={filtros.restanteMin}
+                    onChange={(e) => setFiltros({...filtros, restanteMin: e.target.value})}
+                  />
+                </div>
+                <div>
+                  <Label className="mb-2 block">Hrs/Km Restante Máximo</Label>
+                  <Input 
+                    type="number"
+                    placeholder="Máximo"
+                    value={filtros.restanteMax}
+                    onChange={(e) => setFiltros({...filtros, restanteMax: e.target.value})}
+                  />
+                </div>
+                <div className="flex items-end">
+                  {(filtros.tipos.length > 0 || filtros.categorias.length > 0 || filtros.estados.length > 0 || filtros.fichas.length > 0 || filtros.restanteMin || filtros.restanteMax || searchTerm) && (
+                    <Button variant="outline" onClick={limpiarFiltros} className="w-full">
+                      <X className="w-4 h-4 mr-2" />
+                      Limpiar Todos los Filtros
+                    </Button>
+                  )}
+                </div>
+              </div>
+
+              {/* Resumen de filtros activos */}
+              {(filtros.tipos.length > 0 || filtros.categorias.length > 0 || filtros.estados.length > 0 || filtros.fichas.length > 0 || filtros.restanteMin || filtros.restanteMax) && (
+                <div className="pt-4 border-t">
+                  <Label className="mb-2 block text-sm font-semibold">Filtros Aplicados:</Label>
+                  <div className="flex flex-wrap gap-2">
+                    {filtros.tipos.map(tipo => (
+                      <Badge key={tipo} variant="secondary">
+                        Tipo: {tipo}
+                        <X 
+                          className="w-3 h-3 ml-1 cursor-pointer" 
+                          onClick={() => toggleTipo(tipo)}
+                        />
+                      </Badge>
+                    ))}
+                    {filtros.categorias.map(cat => (
+                      <Badge key={cat} variant="secondary">
+                        Cat: {cat}
+                        <X 
+                          className="w-3 h-3 ml-1 cursor-pointer" 
+                          onClick={() => toggleCategoria(cat)}
+                        />
+                      </Badge>
+                    ))}
+                    {filtros.fichas.map(ficha => (
+                      <Badge key={ficha} variant="secondary" className="font-mono">
+                        Ficha: {ficha}
+                        <X 
+                          className="w-3 h-3 ml-1 cursor-pointer" 
+                          onClick={() => toggleFicha(ficha)}
+                        />
+                      </Badge>
+                    ))}
+                    {filtros.estados.map(estado => (
+                      <Badge key={estado} variant="secondary" className="capitalize">
+                        {estado === 'proximo' ? 'Próximo' : estado === 'vencido' ? 'Vencido' : 'Normal'}
+                        <X 
+                          className="w-3 h-3 ml-1 cursor-pointer" 
+                          onClick={() => toggleEstado(estado)}
+                        />
+                      </Badge>
+                    ))}
+                    {filtros.restanteMin && (
+                      <Badge variant="secondary">
+                        Restante ≥ {filtros.restanteMin}
+                      </Badge>
+                    )}
+                    {filtros.restanteMax && (
+                      <Badge variant="secondary">
+                        Restante ≤ {filtros.restanteMax}
+                      </Badge>
+                    )}
+                  </div>
+                </div>
+              )}
+            </div>
+          )}
         </CardHeader>
         <CardContent>
           <div className="rounded-md border">
