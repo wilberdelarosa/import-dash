@@ -8,11 +8,12 @@ import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Button } from '@/components/ui/button';
 import { Calendar, Search, Filter, Clock, AlertCircle, Download, Trash2, X } from 'lucide-react';
-import { useState } from 'react';
+import { useMemo, useState } from 'react';
 import jsPDF from 'jspdf';
-import 'jspdf-autotable';
+import autoTable, { RowInput } from 'jspdf-autotable';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Label } from '@/components/ui/label';
+import type { Equipo } from '@/types/equipment';
 
 export default function Mantenimiento() {
   const { data, loading, clearDatabase } = useSupabaseData();
@@ -38,35 +39,35 @@ export default function Mantenimiento() {
     );
   }
 
-  const tipos = [...new Set(data.mantenimientosProgramados.map(m => m.tipoMantenimiento))];
-  
+  const tipos = useMemo(() => [...new Set(data.mantenimientosProgramados.map(m => m.tipoMantenimiento))], [data.mantenimientosProgramados]);
+
   // Crear mapa de equipos por ficha para obtener categorías
-  const equiposPorFicha = data.equipos.reduce((acc, equipo) => {
+  const equiposPorFicha = useMemo(() => data.equipos.reduce<Record<string, Equipo>>((acc, equipo) => {
     acc[equipo.ficha] = equipo;
     return acc;
-  }, {});
-  
-  const categorias = [...new Set(data.equipos.map(e => e.categoria))];
+  }, {} as Record<string, Equipo>), [data.equipos]);
+
+  const categorias = useMemo(() => [...new Set(data.equipos.map(e => e.categoria))], [data.equipos]);
 
   // Recalcular próximo y restante según nueva lógica
-  const mantenimientosConCalculos = data.mantenimientosProgramados.map(mant => {
+  const mantenimientosConCalculos = useMemo(() => data.mantenimientosProgramados.map(mant => {
     // Próximo = frecuencia + hr/km último mantenimiento
     const proximoCalculado = mant.horasKmUltimoMantenimiento + mant.frecuencia;
     // Restante = próximo - actual
     const restanteCalculado = proximoCalculado - mant.horasKmActuales;
-    
+
     return {
       ...mant,
       proximoMantenimiento: proximoCalculado,
       horasKmRestante: restanteCalculado
     };
-  });
+  }), [data.mantenimientosProgramados]);
 
-  const fichas = [...new Set(data.mantenimientosProgramados.map(m => m.ficha))].sort();
+  const fichas = useMemo(() => [...new Set(data.mantenimientosProgramados.map(m => m.ficha))].sort(), [data.mantenimientosProgramados]);
 
-  const mantenimientosFiltrados = mantenimientosConCalculos.filter(mant => {
+  const mantenimientosFiltrados = useMemo(() => mantenimientosConCalculos.filter(mant => {
     const equipo = equiposPorFicha[mant.ficha];
-    
+
     const matchesSearch = Object.values(mant)
       .join(' ')
       .toLowerCase()
@@ -90,7 +91,7 @@ export default function Mantenimiento() {
     const matchesRestanteMax = !filtros.restanteMax || restante <= parseFloat(filtros.restanteMax);
 
     return matchesSearch && matchesTipo && matchesCategoria && matchesFicha && matchesEstado && matchesRestanteMin && matchesRestanteMax && mant.activo;
-  });
+  }), [mantenimientosConCalculos, equiposPorFicha, searchTerm, filtros]);
 
   const totalMantenimientos = mantenimientosFiltrados.length;
   const vencidos = mantenimientosFiltrados.filter(m => m.horasKmRestante <= 0).length;
@@ -135,11 +136,19 @@ export default function Mantenimiento() {
     doc.text(`Normales: ${normales}`, 20, 84);
     
     // Preparar datos para la tabla
-    const tableData = mantenimientosFiltrados.map(mant => {
+    if (mantenimientosFiltrados.length === 0) {
+      doc.setFontSize(12);
+      doc.setTextColor(120, 120, 120);
+      doc.text('No se encontraron mantenimientos que coincidan con los filtros aplicados.', 20, 60);
+      doc.save(`mantenimientos_${new Date().toISOString().split('T')[0]}.pdf`);
+      return;
+    }
+
+    const tableData: RowInput[] = mantenimientosFiltrados.map(mant => {
       const estado = obtenerEstadoMantenimiento(mant.horasKmRestante);
       const unidad = mant.tipoMantenimiento === 'Horas' ? 'hrs' : 'km';
       const equipo = equiposPorFicha[mant.ficha];
-      
+
       return [
         mant.ficha,
         mant.nombreEquipo,
@@ -158,7 +167,7 @@ export default function Mantenimiento() {
     });
     
     // Configurar tabla
-    (doc as any).autoTable({
+    autoTable(doc, {
       startY: 95,
       head: [['Ficha', 'Equipo', 'Categoría', 'Tipo', 'Actual', 'Frecuencia', 'Últ. Mant.', 'Próximo', 'Restante', 'Fecha Últ.', 'Estado']],
       body: tableData,
@@ -346,7 +355,7 @@ export default function Mantenimiento() {
 
       <Card>
         <CardHeader>
-          <div className="flex justify-between items-center mb-4">
+          <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between mb-4">
             <div>
               <CardTitle className="flex items-center">
                 <Calendar className="w-5 h-5 mr-2" />
@@ -356,12 +365,12 @@ export default function Mantenimiento() {
                 Control y seguimiento de mantenimientos preventivos
               </CardDescription>
             </div>
-            <div className="flex gap-2">
+            <div className="flex flex-col gap-2 sm:flex-row sm:flex-wrap sm:gap-3 lg:justify-end">
               <Button
                 variant={modoAvanzado ? "default" : "outline"}
                 size="sm"
                 onClick={() => setModoAvanzado(!modoAvanzado)}
-                className="transition-colors focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-primary"
+                className="w-full justify-center transition-colors focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-primary sm:w-auto"
               >
                 {modoAvanzado ? "Modo Simple" : "Modo Avanzado"}
               </Button>
@@ -369,7 +378,7 @@ export default function Mantenimiento() {
                 onClick={exportarPDF}
                 variant="outline"
                 size="sm"
-                className="flex items-center gap-2 transition-colors hover:bg-primary/10 focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-primary"
+                className="flex w-full items-center justify-center gap-2 transition-colors hover:bg-primary/10 focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-primary sm:w-auto"
               >
                 <Download className="w-4 h-4" />
                 Exportar PDF
@@ -671,7 +680,7 @@ export default function Mantenimiento() {
         </CardHeader>
         <CardContent>
           <div className="rounded-md border">
-            <Table>
+            <Table className="min-w-[1000px]">
               <TableHeader>
                 <TableRow>
                   <TableHead>Ficha</TableHead>

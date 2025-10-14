@@ -74,25 +74,45 @@ export function Layout({ children, title }: LayoutProps) {
     <div className="min-h-screen bg-background">
       <header className="border-b bg-white shadow-sm">
         <div className="container mx-auto px-4 py-4">
-          <div className="flex justify-between items-center">
-            <div>
+          <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
+            <div className="space-y-1">
               <h1 className="text-2xl font-bold text-primary">Sistema de Gestión de Equipos</h1>
               <p className="text-muted-foreground">{title}</p>
             </div>
-            <div className="flex gap-2">
-              <Button variant="outline" onClick={handleImport} size="sm">
+            <div className="flex flex-col gap-2 sm:flex-row sm:flex-wrap sm:gap-3 lg:justify-end">
+              <Button
+                variant="outline"
+                onClick={handleImport}
+                size="sm"
+                className="w-full sm:w-auto justify-center"
+              >
                 <FileUp className="w-4 h-4 mr-2" />
                 Importar JSON
               </Button>
-              <Button variant="outline" onClick={handleMigrate} size="sm">
+              <Button
+                variant="outline"
+                onClick={handleMigrate}
+                size="sm"
+                className="w-full sm:w-auto justify-center"
+              >
                 <RefreshCw className="w-4 h-4 mr-2" />
                 Migrar a DB
               </Button>
-              <Button variant="destructive" onClick={handleClear} size="sm">
+              <Button
+                variant="destructive"
+                onClick={handleClear}
+                size="sm"
+                className="w-full sm:w-auto justify-center"
+              >
                 <Trash2 className="w-4 h-4 mr-2" />
                 Vaciar Datos
               </Button>
-              <Button variant="outline" onClick={handleExport} size="sm">
+              <Button
+                variant="outline"
+                onClick={handleExport}
+                size="sm"
+                className="w-full sm:w-auto justify-center"
+              >
                 <FileDown className="w-4 h-4 mr-2" />
                 Exportar JSON
               </Button>

@@ -72,7 +72,7 @@ export function EquiposTable({ equipos, onEdit, onDelete }: EquiposTableProps) {
       </div>
 
       <div className="rounded-md border">
-        <Table>
+        <Table className="min-w-[900px]">
           <TableHeader>
             <TableRow>
               <TableHead>Ficha</TableHead>
