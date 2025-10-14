@@ -1,15 +1,13 @@
 import { Layout } from '@/components/Layout';
 import { Navigation } from '@/components/Navigation';
 import { useSupabaseData } from '@/hooks/useSupabaseData';
-import { supabase } from '@/integrations/supabase/client';
-import { useToast } from '@/hooks/use-toast';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Button } from '@/components/ui/button';
-import { Calendar, Search, Filter, Clock, AlertCircle, Download, X } from 'lucide-react';
+import { Calendar, Search, Filter, Clock, AlertCircle, Download, Trash2, X } from 'lucide-react';
 import { useState } from 'react';
 import jsPDF from 'jspdf';
 import 'jspdf-autotable';
@@ -17,8 +15,7 @@ import { Checkbox } from '@/components/ui/checkbox';
 import { Label } from '@/components/ui/label';
 
 export default function Mantenimiento() {
-  const { data, loading, loadData } = useSupabaseData();
-  const { toast } = useToast();
+  const { data, loading, clearDatabase } = useSupabaseData();
   const [modoAvanzado, setModoAvanzado] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
   const [filtros, setFiltros] = useState({
@@ -29,6 +26,7 @@ export default function Mantenimiento() {
     restanteMin: '',
     restanteMax: ''
   });
+  const [clearing, setClearing] = useState(false);
 
   if (loading) {
     return (
@@ -270,10 +268,50 @@ export default function Mantenimiento() {
     setSearchTerm('');
   };
 
+  const handleClearDatabase = async () => {
+    const confirmed = window.confirm('¿Estás seguro de que deseas eliminar todos los datos de la base de datos? Esta acción no se puede deshacer.');
+    if (!confirmed) {
+      return;
+    }
+
+    try {
+      setClearing(true);
+      await clearDatabase();
+    } finally {
+      setClearing(false);
+    }
+  };
+
   return (
     <Layout title="Mantenimiento Programado">
       <Navigation />
-      
+
+      <Card className="mb-6 border-destructive/40">
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2 text-destructive">
+            <Trash2 className="w-5 h-5" />
+            Mantenimiento de datos
+          </CardTitle>
+          <CardDescription>
+            Elimina todos los registros de equipos, inventarios y mantenimientos almacenados en la base de datos.
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+          <p className="text-sm text-muted-foreground">
+            Esta acción es irreversible. Asegúrate de haber realizado una copia de seguridad antes de continuar.
+          </p>
+          <Button
+            variant="destructive"
+            onClick={handleClearDatabase}
+            disabled={clearing}
+            className="w-full sm:w-auto"
+          >
+            <Trash2 className="w-4 h-4 mr-2" />
+            {clearing ? 'Eliminando datos...' : 'Vaciar base de datos'}
+          </Button>
+        </CardContent>
+      </Card>
+
       <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-6">
         <Card>
           <CardHeader className="pb-2">
