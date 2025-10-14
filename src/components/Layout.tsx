@@ -1,6 +1,6 @@
 import { ReactNode } from 'react';
 import { Button } from '@/components/ui/button';
-import { RefreshCw, FileDown, FileUp } from 'lucide-react';
+import { RefreshCw, FileDown, FileUp, Trash2 } from 'lucide-react';
 import { useSupabaseData } from '@/hooks/useSupabaseData';
 import { useLocalStorage } from '@/hooks/useLocalStorage';
 import { useToast } from '@/hooks/use-toast';
@@ -11,12 +11,21 @@ interface LayoutProps {
 }
 
 export function Layout({ children, title }: LayoutProps) {
-  const { migrateFromLocalStorage, data: supabaseData } = useSupabaseData();
+  const { migrateFromLocalStorage, data: supabaseData, clearDatabase } = useSupabaseData();
   const { importData } = useLocalStorage();
   const { toast } = useToast();
 
   const handleMigrate = async () => {
     await migrateFromLocalStorage();
+  };
+
+  const handleClear = async () => {
+    const confirmed = window.confirm('¿Estás seguro de que deseas eliminar todos los datos de la base de datos? Esta acción no se puede deshacer.');
+    if (!confirmed) {
+      return;
+    }
+
+    await clearDatabase();
   };
 
   const handleExport = () => {
@@ -78,6 +87,10 @@ export function Layout({ children, title }: LayoutProps) {
               <Button variant="outline" onClick={handleMigrate} size="sm">
                 <RefreshCw className="w-4 h-4 mr-2" />
                 Migrar a DB
+              </Button>
+              <Button variant="destructive" onClick={handleClear} size="sm">
+                <Trash2 className="w-4 h-4 mr-2" />
+                Vaciar Datos
               </Button>
               <Button variant="outline" onClick={handleExport} size="sm">
                 <FileDown className="w-4 h-4 mr-2" />

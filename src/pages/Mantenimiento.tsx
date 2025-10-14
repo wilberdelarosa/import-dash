@@ -286,25 +286,29 @@ export default function Mantenimiento() {
     <Layout title="Mantenimiento Programado">
       <Navigation />
 
-      <Card className="mb-6 border-destructive/40 bg-destructive/5 shadow-sm">
-        <CardHeader className="space-y-2">
+
+      <Card className="mb-6 border-destructive/40">
+        <CardHeader>
           <CardTitle className="flex items-center gap-2 text-destructive">
             <Trash2 className="w-5 h-5" />
             Mantenimiento de datos
           </CardTitle>
-          <CardDescription className="text-sm sm:text-base text-destructive/80">
+
+          <CardDescription>
             Elimina todos los registros de equipos, inventarios y mantenimientos almacenados en la base de datos.
           </CardDescription>
         </CardHeader>
         <CardContent className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-          <p className="text-sm sm:text-base text-muted-foreground leading-relaxed sm:max-w-2xl">
+
+          <p className="text-sm text-muted-foreground">
             Esta acción es irreversible. Asegúrate de haber realizado una copia de seguridad antes de continuar.
           </p>
           <Button
             variant="destructive"
             onClick={handleClearDatabase}
             disabled={clearing}
-            className="w-full sm:w-auto transition-colors focus-visible:ring-2 focus-visible:ring-destructive focus-visible:ring-offset-2 hover:bg-destructive/90"
+
+            className="w-full sm:w-auto"
           >
             <Trash2 className="w-4 h-4 mr-2" />
             {clearing ? 'Eliminando datos...' : 'Vaciar base de datos'}
@@ -312,7 +316,8 @@ export default function Mantenimiento() {
         </CardContent>
       </Card>
 
-      <div className="grid grid-cols-1 gap-6 mb-6 sm:grid-cols-2 xl:grid-cols-4">
+
+      <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-6">
         <Card>
           <CardHeader className="pb-2">
             <CardDescription>Total Programados</CardDescription>
