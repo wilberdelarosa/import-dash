@@ -3,6 +3,18 @@ import { supabase } from '@/integrations/supabase/client';
 import { toast } from '@/hooks/use-toast';
 import { DatabaseData } from '@/types/equipment';
 
+type MantenimientoPayload = {
+  ficha: string;
+  nombreEquipo: string;
+  tipoMantenimiento: string;
+  horasKmActuales: number;
+  fechaUltimaActualizacion: string;
+  frecuencia: number;
+  fechaUltimoMantenimiento: string | null;
+  horasKmUltimoMantenimiento: number;
+  activo: boolean;
+};
+
 export function useSupabaseData() {
   const [data, setData] = useState<DatabaseData>({
     equipos: [],
@@ -131,6 +143,104 @@ export function useSupabaseData() {
     }
   };
 
+  const mapToDatabasePayload = (mantenimiento: MantenimientoPayload) => {
+    const proximo = mantenimiento.horasKmUltimoMantenimiento + mantenimiento.frecuencia;
+    const restante = proximo - mantenimiento.horasKmActuales;
+
+    return {
+      ficha: mantenimiento.ficha,
+      nombre_equipo: mantenimiento.nombreEquipo,
+      tipo_mantenimiento: mantenimiento.tipoMantenimiento,
+      horas_km_actuales: mantenimiento.horasKmActuales,
+      fecha_ultima_actualizacion: mantenimiento.fechaUltimaActualizacion,
+      frecuencia: mantenimiento.frecuencia,
+      fecha_ultimo_mantenimiento: mantenimiento.fechaUltimoMantenimiento,
+      horas_km_ultimo_mantenimiento: mantenimiento.horasKmUltimoMantenimiento,
+      proximo_mantenimiento: proximo,
+      horas_km_restante: restante,
+      activo: mantenimiento.activo,
+    };
+  };
+
+  const createMantenimiento = async (mantenimiento: MantenimientoPayload) => {
+    try {
+      const payload = mapToDatabasePayload(mantenimiento);
+      const { error } = await supabase
+        .from('mantenimientos_programados')
+        .insert(payload);
+
+      if (error) throw error;
+
+      toast({
+        title: "Éxito",
+        description: "Mantenimiento creado correctamente",
+      });
+
+      await loadData();
+    } catch (error) {
+      console.error('Error creating mantenimiento:', error);
+      toast({
+        title: "Error",
+        description: "No se pudo crear el mantenimiento",
+        variant: "destructive",
+      });
+      throw error;
+    }
+  };
+
+  const updateMantenimiento = async (id: number, mantenimiento: MantenimientoPayload) => {
+    try {
+      const payload = mapToDatabasePayload(mantenimiento);
+      const { error } = await supabase
+        .from('mantenimientos_programados')
+        .update(payload)
+        .eq('id', id);
+
+      if (error) throw error;
+
+      toast({
+        title: "Éxito",
+        description: "Mantenimiento actualizado correctamente",
+      });
+
+      await loadData();
+    } catch (error) {
+      console.error('Error updating mantenimiento:', error);
+      toast({
+        title: "Error",
+        description: "No se pudo actualizar el mantenimiento",
+        variant: "destructive",
+      });
+      throw error;
+    }
+  };
+
+  const deleteMantenimiento = async (id: number) => {
+    try {
+      const { error } = await supabase
+        .from('mantenimientos_programados')
+        .delete()
+        .eq('id', id);
+
+      if (error) throw error;
+
+      toast({
+        title: "Éxito",
+        description: "Mantenimiento eliminado correctamente",
+      });
+
+      await loadData();
+    } catch (error) {
+      console.error('Error deleting mantenimiento:', error);
+      toast({
+        title: "Error",
+        description: "No se pudo eliminar el mantenimiento",
+        variant: "destructive",
+      });
+      throw error;
+    }
+  };
+
   const migrateFromLocalStorage = async () => {
     try {
       const stored = localStorage.getItem('equipment-management-data');
@@ -216,6 +326,9 @@ export function useSupabaseData() {
     loading,
     loadData,
     migrateFromLocalStorage,
-    clearDatabase
+    clearDatabase,
+    createMantenimiento,
+    updateMantenimiento,
+    deleteMantenimiento
   };
 }

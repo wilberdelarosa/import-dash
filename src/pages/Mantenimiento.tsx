@@ -1,6 +1,7 @@
 import { Layout } from '@/components/Layout';
 import { Navigation } from '@/components/Navigation';
 import { useSupabaseData } from '@/hooks/useSupabaseData';
+import type { MantenimientoProgramado } from '@/types/equipment';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
@@ -15,16 +16,109 @@ import {
   SheetTitle,
   SheetTrigger,
 } from '@/components/ui/sheet';
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/ui/dialog';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '@/components/ui/alert-dialog';
+import {
+  Form,
+  FormControl,
+  FormField,
+  FormItem,
+  FormLabel,
+  FormMessage,
+} from '@/components/ui/form';
 import { cn } from '@/lib/utils';
-import { Calendar, Search, Filter, Clock, AlertCircle, Download, Trash2, X, ZoomIn, ZoomOut } from 'lucide-react';
+import {
+  Calendar,
+  Search,
+  Filter,
+  Clock,
+  AlertCircle,
+  Download,
+  Trash2,
+  X,
+  ZoomIn,
+  ZoomOut,
+  Plus,
+  Pencil,
+  Loader2,
+} from 'lucide-react';
 import { useState } from 'react';
 import jsPDF from 'jspdf';
 import 'jspdf-autotable';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Label } from '@/components/ui/label';
+import { Switch } from '@/components/ui/switch';
+import { useForm } from 'react-hook-form';
+import { zodResolver } from '@hookform/resolvers/zod';
+import { z } from 'zod';
+
+const numericField = z
+  .string()
+  .min(1, 'Este campo es obligatorio')
+  .refine((value) => !Number.isNaN(Number(value)), {
+    message: 'Ingresa un número válido',
+  })
+  .refine((value) => Number(value) >= 0, {
+    message: 'El valor no puede ser negativo',
+  });
+
+const mantenimientoSchema = z.object({
+  ficha: z.string().min(1, 'La ficha es obligatoria'),
+  nombreEquipo: z.string().min(1, 'El nombre del equipo es obligatorio'),
+  tipoMantenimiento: z.string().min(1, 'El tipo de mantenimiento es obligatorio'),
+  horasKmActuales: numericField,
+  fechaUltimaActualizacion: z.string().min(1, 'La fecha de actualización es obligatoria'),
+  frecuencia: numericField,
+  horasKmUltimoMantenimiento: numericField,
+  fechaUltimoMantenimiento: z.string().nullable().optional(),
+  activo: z.boolean(),
+});
+
+type MantenimientoFormValues = z.infer<typeof mantenimientoSchema>;
+
+const getDefaultFormValues = (): MantenimientoFormValues => ({
+  ficha: '',
+  nombreEquipo: '',
+  tipoMantenimiento: '',
+  horasKmActuales: '',
+  fechaUltimaActualizacion: new Date().toISOString().split('T')[0],
+  frecuencia: '',
+  horasKmUltimoMantenimiento: '',
+  fechaUltimoMantenimiento: null,
+  activo: true,
+});
+
+const formatDateForInput = (date: string | null | undefined) => {
+  if (!date) {
+    return '';
+  }
+
+  const parsed = new Date(date);
+  if (Number.isNaN(parsed.getTime())) {
+    return '';
+  }
+
+  return parsed.toISOString().split('T')[0];
+};
 
 export default function Mantenimiento() {
-  const { data, loading, clearDatabase } = useSupabaseData();
+  const { data, loading, clearDatabase, createMantenimiento, updateMantenimiento, deleteMantenimiento } = useSupabaseData();
   const [modoAvanzado, setModoAvanzado] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
   const [filtros, setFiltros] = useState({
@@ -37,6 +131,16 @@ export default function Mantenimiento() {
   });
   const [clearing, setClearing] = useState(false);
   const [tableScale, setTableScale] = useState(1);
+  const [isFormOpen, setIsFormOpen] = useState(false);
+  const [editingMantenimiento, setEditingMantenimiento] = useState<MantenimientoProgramado | null>(null);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [deleteTarget, setDeleteTarget] = useState<MantenimientoProgramado | null>(null);
+  const [isDeleting, setIsDeleting] = useState(false);
+
+  const form = useForm<MantenimientoFormValues>({
+    resolver: zodResolver(mantenimientoSchema),
+    defaultValues: getDefaultFormValues(),
+  });
 
   const clampScale = (value: number) => Math.min(1.4, Math.max(0.8, Number(value.toFixed(2))));
 
@@ -47,6 +151,80 @@ export default function Mantenimiento() {
 
   const adjustScale = (delta: number) => {
     setTableScale(prev => clampScale(prev + delta));
+  };
+
+  const handleCloseForm = () => {
+    setIsFormOpen(false);
+    setEditingMantenimiento(null);
+    form.reset(getDefaultFormValues());
+  };
+
+  const handleOpenCreateForm = () => {
+    setEditingMantenimiento(null);
+    form.reset(getDefaultFormValues());
+    setIsFormOpen(true);
+  };
+
+  const handleOpenEditForm = (mantenimiento: MantenimientoProgramado) => {
+    const lastUpdate = formatDateForInput(mantenimiento.fechaUltimaActualizacion) || new Date().toISOString().split('T')[0];
+    const lastMaintenance = formatDateForInput(mantenimiento.fechaUltimoMantenimiento);
+
+    form.reset({
+      ficha: mantenimiento.ficha,
+      nombreEquipo: mantenimiento.nombreEquipo,
+      tipoMantenimiento: mantenimiento.tipoMantenimiento,
+      horasKmActuales: String(mantenimiento.horasKmActuales),
+      fechaUltimaActualizacion: lastUpdate,
+      frecuencia: String(mantenimiento.frecuencia),
+      horasKmUltimoMantenimiento: String(mantenimiento.horasKmUltimoMantenimiento),
+      fechaUltimoMantenimiento: lastMaintenance ? lastMaintenance : null,
+      activo: mantenimiento.activo,
+    });
+
+    setEditingMantenimiento(mantenimiento);
+    setIsFormOpen(true);
+  };
+
+  const onSubmit = async (values: MantenimientoFormValues) => {
+    const payload = {
+      ficha: values.ficha.trim(),
+      nombreEquipo: values.nombreEquipo.trim(),
+      tipoMantenimiento: values.tipoMantenimiento.trim(),
+      horasKmActuales: Number(values.horasKmActuales),
+      fechaUltimaActualizacion: values.fechaUltimaActualizacion,
+      frecuencia: Number(values.frecuencia),
+      fechaUltimoMantenimiento: values.fechaUltimoMantenimiento ?? null,
+      horasKmUltimoMantenimiento: Number(values.horasKmUltimoMantenimiento),
+      activo: values.activo,
+    };
+
+    setIsSubmitting(true);
+    try {
+      if (editingMantenimiento) {
+        await updateMantenimiento(editingMantenimiento.id, payload);
+      } else {
+        await createMantenimiento(payload);
+      }
+      handleCloseForm();
+    } catch (error) {
+      console.error('Error saving mantenimiento:', error);
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  const handleDeleteMantenimiento = async () => {
+    if (!deleteTarget) return;
+
+    setIsDeleting(true);
+    try {
+      await deleteMantenimiento(deleteTarget.id);
+      setDeleteTarget(null);
+    } catch (error) {
+      console.error('Error deleting mantenimiento:', error);
+    } finally {
+      setIsDeleting(false);
+    }
   };
 
   if (loading) {
@@ -605,6 +783,227 @@ export default function Mantenimiento() {
     <Layout title="Mantenimiento Programado">
       <Navigation />
 
+      <Dialog open={isFormOpen} onOpenChange={(open) => { if (!open) handleCloseForm(); }}>
+        <DialogContent className="max-h-[90vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>{editingMantenimiento ? 'Editar mantenimiento' : 'Nuevo mantenimiento'}</DialogTitle>
+            <DialogDescription>
+              Registra o actualiza la programación de mantenimiento preventivo.
+            </DialogDescription>
+          </DialogHeader>
+          <Form {...form}>
+            <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
+              <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+                <FormField
+                  control={form.control}
+                  name="ficha"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Ficha del equipo</FormLabel>
+                      <FormControl>
+                        <Input
+                          {...field}
+                          list="fichas-disponibles"
+                          placeholder="Ej. EQ-001"
+                          onBlur={(event) => {
+                            field.onBlur();
+                            const equipo = data.equipos.find((eq) => eq.ficha === event.target.value);
+                            if (equipo) {
+                              form.setValue('nombreEquipo', equipo.nombre, { shouldValidate: true });
+                            }
+                          }}
+                        />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                <FormField
+                  control={form.control}
+                  name="nombreEquipo"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Nombre del equipo</FormLabel>
+                      <FormControl>
+                        <Input {...field} placeholder="Nombre descriptivo" />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                <FormField
+                  control={form.control}
+                  name="tipoMantenimiento"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Tipo de mantenimiento</FormLabel>
+                      <FormControl>
+                        <Input {...field} list="tipos-mantenimiento" placeholder="Horas, Kilómetros..." />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                <FormField
+                  control={form.control}
+                  name="fechaUltimaActualizacion"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Fecha última actualización</FormLabel>
+                      <FormControl>
+                        <Input
+                          type="date"
+                          value={field.value}
+                          onChange={(event) => field.onChange(event.target.value)}
+                        />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                <FormField
+                  control={form.control}
+                  name="horasKmActuales"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Horas/Km actuales</FormLabel>
+                      <FormControl>
+                        <Input
+                          type="number"
+                          min="0"
+                          step="0.01"
+                          inputMode="decimal"
+                          value={field.value}
+                          onChange={(event) => field.onChange(event.target.value)}
+                        />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                <FormField
+                  control={form.control}
+                  name="frecuencia"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Frecuencia programada</FormLabel>
+                      <FormControl>
+                        <Input
+                          type="number"
+                          min="0"
+                          step="0.01"
+                          inputMode="decimal"
+                          value={field.value}
+                          onChange={(event) => field.onChange(event.target.value)}
+                        />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                <FormField
+                  control={form.control}
+                  name="horasKmUltimoMantenimiento"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Lectura del último mantenimiento</FormLabel>
+                      <FormControl>
+                        <Input
+                          type="number"
+                          min="0"
+                          step="0.01"
+                          inputMode="decimal"
+                          value={field.value}
+                          onChange={(event) => field.onChange(event.target.value)}
+                        />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                <FormField
+                  control={form.control}
+                  name="fechaUltimoMantenimiento"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Fecha último mantenimiento</FormLabel>
+                      <FormControl>
+                        <Input
+                          type="date"
+                          value={field.value ?? ''}
+                          onChange={(event) => field.onChange(event.target.value ? event.target.value : null)}
+                        />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                <FormField
+                  control={form.control}
+                  name="activo"
+                  render={({ field }) => (
+                    <FormItem className="flex flex-col space-y-2">
+                      <FormLabel>Estado</FormLabel>
+                      <FormControl>
+                        <div className="flex items-center gap-2 rounded-md border bg-muted/40 p-3">
+                          <Switch checked={field.value} onCheckedChange={field.onChange} />
+                          <span className="text-sm text-muted-foreground">
+                            {field.value ? 'Activo' : 'Inactivo'}
+                          </span>
+                        </div>
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+              </div>
+              <DialogFooter className="gap-2 sm:space-x-2">
+                <Button type="button" variant="outline" onClick={handleCloseForm} disabled={isSubmitting}>
+                  Cancelar
+                </Button>
+                <Button type="submit" disabled={isSubmitting}>
+                  {isSubmitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                  {editingMantenimiento ? 'Actualizar mantenimiento' : 'Crear mantenimiento'}
+                </Button>
+              </DialogFooter>
+            </form>
+          </Form>
+          <datalist id="fichas-disponibles">
+            {data.equipos.map((equipo) => (
+              <option key={equipo.id} value={equipo.ficha}>
+                {equipo.ficha} - {equipo.nombre}
+              </option>
+            ))}
+          </datalist>
+          <datalist id="tipos-mantenimiento">
+            {tipos.map((tipo) => (
+              <option key={tipo} value={tipo} />
+            ))}
+          </datalist>
+        </DialogContent>
+      </Dialog>
+
+      <AlertDialog open={Boolean(deleteTarget)} onOpenChange={(open) => { if (!open) setDeleteTarget(null); }}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>¿Eliminar mantenimiento?</AlertDialogTitle>
+            <AlertDialogDescription>
+              Esta acción eliminará el mantenimiento programado de la ficha {deleteTarget?.ficha}.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={isDeleting}>Cancelar</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={handleDeleteMantenimiento}
+              disabled={isDeleting}
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+            >
+              {isDeleting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+              Eliminar
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
 
       <Card className="mb-6 border-destructive/40">
         <CardHeader>
@@ -677,12 +1076,13 @@ export default function Mantenimiento() {
             </div>
             <div className="flex flex-col gap-2 sm:flex-row sm:flex-wrap sm:gap-3 lg:justify-end">
               <Button
-                variant={modoAvanzado ? "default" : "outline"}
+                type="button"
+                onClick={handleOpenCreateForm}
                 size="sm"
-                onClick={() => setModoAvanzado(!modoAvanzado)}
-                className="w-full justify-center transition-colors focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-primary sm:w-auto"
+                className="flex w-full items-center justify-center gap-2 sm:w-auto"
               >
-                {modoAvanzado ? "Modo Simple" : "Modo Avanzado"}
+                <Plus className="h-4 w-4" />
+                Nuevo mantenimiento
               </Button>
               <Button
                 onClick={exportarPDF}
@@ -692,6 +1092,14 @@ export default function Mantenimiento() {
               >
                 <Download className="w-4 h-4" />
                 Exportar PDF
+              </Button>
+              <Button
+                variant={modoAvanzado ? "default" : "outline"}
+                size="sm"
+                onClick={() => setModoAvanzado(!modoAvanzado)}
+                className="w-full justify-center transition-colors focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-primary sm:w-auto"
+              >
+                {modoAvanzado ? "Modo Simple" : "Modo Avanzado"}
               </Button>
             </div>
           </div>
@@ -781,6 +1189,7 @@ export default function Mantenimiento() {
                   <TableHead>Restante</TableHead>
                   <TableHead>Fecha Últ.</TableHead>
                   <TableHead>Estado</TableHead>
+                  <TableHead className="text-right">Acciones</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -822,8 +1231,8 @@ export default function Mantenimiento() {
                       </TableCell>
                       <TableCell>{formatearFecha(mant.fechaUltimoMantenimiento)}</TableCell>
                       <TableCell>
-                        <Badge 
-                          variant={estado.variant} 
+                        <Badge
+                          variant={estado.variant}
                           className={
                             estado.label === 'Vencido' ? 'bg-red-100 text-red-700 border-red-200' :
                             estado.label === 'Próximo' ? 'bg-amber-100 text-amber-700 border-amber-200' :
@@ -832,6 +1241,30 @@ export default function Mantenimiento() {
                         >
                           {estado.label}
                         </Badge>
+                      </TableCell>
+                      <TableCell className="text-right">
+                        <div className="flex justify-end gap-1.5">
+                          <Button
+                            type="button"
+                            variant="ghost"
+                            size="icon"
+                            onClick={() => handleOpenEditForm(mant)}
+                            aria-label="Editar mantenimiento"
+                          >
+                            <Pencil className="h-4 w-4" />
+                          </Button>
+                          <Button
+                            type="button"
+                            variant="ghost"
+                            size="icon"
+                            className="text-destructive hover:text-destructive"
+                            onClick={() => setDeleteTarget(mant)}
+                            disabled={isDeleting && deleteTarget?.id === mant.id}
+                            aria-label="Eliminar mantenimiento"
+                          >
+                            <Trash2 className="h-4 w-4" />
+                          </Button>
+                        </div>
                       </TableCell>
                     </TableRow>
                   );
