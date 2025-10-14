@@ -8,12 +8,11 @@ import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Button } from '@/components/ui/button';
 import { Calendar, Search, Filter, Clock, AlertCircle, Download, Trash2, X } from 'lucide-react';
-import { useMemo, useState } from 'react';
+import { useState } from 'react';
 import jsPDF from 'jspdf';
-import autoTable, { RowInput } from 'jspdf-autotable';
+import 'jspdf-autotable';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Label } from '@/components/ui/label';
-import type { Equipo } from '@/types/equipment';
 
 export default function Mantenimiento() {
   const { data, loading, clearDatabase } = useSupabaseData();
@@ -39,35 +38,35 @@ export default function Mantenimiento() {
     );
   }
 
-  const tipos = useMemo(() => [...new Set(data.mantenimientosProgramados.map(m => m.tipoMantenimiento))], [data.mantenimientosProgramados]);
-
+  const tipos = [...new Set(data.mantenimientosProgramados.map(m => m.tipoMantenimiento))];
+  
   // Crear mapa de equipos por ficha para obtener categorías
-  const equiposPorFicha = useMemo(() => data.equipos.reduce<Record<string, Equipo>>((acc, equipo) => {
+  const equiposPorFicha = data.equipos.reduce((acc, equipo) => {
     acc[equipo.ficha] = equipo;
     return acc;
-  }, {} as Record<string, Equipo>), [data.equipos]);
-
-  const categorias = useMemo(() => [...new Set(data.equipos.map(e => e.categoria))], [data.equipos]);
+  }, {});
+  
+  const categorias = [...new Set(data.equipos.map(e => e.categoria))];
 
   // Recalcular próximo y restante según nueva lógica
-  const mantenimientosConCalculos = useMemo(() => data.mantenimientosProgramados.map(mant => {
+  const mantenimientosConCalculos = data.mantenimientosProgramados.map(mant => {
     // Próximo = frecuencia + hr/km último mantenimiento
     const proximoCalculado = mant.horasKmUltimoMantenimiento + mant.frecuencia;
     // Restante = próximo - actual
     const restanteCalculado = proximoCalculado - mant.horasKmActuales;
-
+    
     return {
       ...mant,
       proximoMantenimiento: proximoCalculado,
       horasKmRestante: restanteCalculado
     };
-  }), [data.mantenimientosProgramados]);
+  });
 
-  const fichas = useMemo(() => [...new Set(data.mantenimientosProgramados.map(m => m.ficha))].sort(), [data.mantenimientosProgramados]);
+  const fichas = [...new Set(data.mantenimientosProgramados.map(m => m.ficha))].sort();
 
-  const mantenimientosFiltrados = useMemo(() => mantenimientosConCalculos.filter(mant => {
+  const mantenimientosFiltrados = mantenimientosConCalculos.filter(mant => {
     const equipo = equiposPorFicha[mant.ficha];
-
+    
     const matchesSearch = Object.values(mant)
       .join(' ')
       .toLowerCase()
@@ -91,7 +90,7 @@ export default function Mantenimiento() {
     const matchesRestanteMax = !filtros.restanteMax || restante <= parseFloat(filtros.restanteMax);
 
     return matchesSearch && matchesTipo && matchesCategoria && matchesFicha && matchesEstado && matchesRestanteMin && matchesRestanteMax && mant.activo;
-  }), [mantenimientosConCalculos, equiposPorFicha, searchTerm, filtros]);
+  });
 
   const totalMantenimientos = mantenimientosFiltrados.length;
   const vencidos = mantenimientosFiltrados.filter(m => m.horasKmRestante <= 0).length;
@@ -136,19 +135,11 @@ export default function Mantenimiento() {
     doc.text(`Normales: ${normales}`, 20, 84);
     
     // Preparar datos para la tabla
-    if (mantenimientosFiltrados.length === 0) {
-      doc.setFontSize(12);
-      doc.setTextColor(120, 120, 120);
-      doc.text('No se encontraron mantenimientos que coincidan con los filtros aplicados.', 20, 60);
-      doc.save(`mantenimientos_${new Date().toISOString().split('T')[0]}.pdf`);
-      return;
-    }
-
-    const tableData: RowInput[] = mantenimientosFiltrados.map(mant => {
+    const tableData = mantenimientosFiltrados.map(mant => {
       const estado = obtenerEstadoMantenimiento(mant.horasKmRestante);
       const unidad = mant.tipoMantenimiento === 'Horas' ? 'hrs' : 'km';
       const equipo = equiposPorFicha[mant.ficha];
-
+      
       return [
         mant.ficha,
         mant.nombreEquipo,
@@ -167,7 +158,7 @@ export default function Mantenimiento() {
     });
     
     // Configurar tabla
-    autoTable(doc, {
+    (doc as any).autoTable({
       startY: 95,
       head: [['Ficha', 'Equipo', 'Categoría', 'Tipo', 'Actual', 'Frecuencia', 'Últ. Mant.', 'Próximo', 'Restante', 'Fecha Últ.', 'Estado']],
       body: tableData,
