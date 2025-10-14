@@ -14,7 +14,7 @@ export function useSupabaseData() {
   const loadData = async () => {
     try {
       setLoading(true);
-      
+
       // Cargar equipos
       const { data: equiposData, error: equiposError } = await supabase
         .from('equipos')
@@ -95,6 +95,41 @@ export function useSupabaseData() {
   useEffect(() => {
     loadData();
   }, []);
+
+  const clearDatabase = async () => {
+    try {
+      setLoading(true);
+
+      await supabase
+        .from('mantenimientos_programados')
+        .delete()
+        .neq('id', 0);
+
+      await supabase
+        .from('inventarios')
+        .delete()
+        .neq('id', 0);
+
+      await supabase
+        .from('equipos')
+        .delete()
+        .neq('id', 0);
+
+      toast({
+        title: "Éxito",
+        description: "Todos los datos fueron eliminados de la base de datos.",
+      });
+    } catch (error) {
+      console.error('Error clearing data:', error);
+      toast({
+        title: "Error",
+        description: "No se pudieron eliminar los datos",
+        variant: "destructive",
+      });
+    } finally {
+      await loadData();
+    }
+  };
 
   const migrateFromLocalStorage = async () => {
     try {
@@ -180,6 +215,7 @@ export function useSupabaseData() {
     data,
     loading,
     loadData,
-    migrateFromLocalStorage
+    migrateFromLocalStorage,
+    clearDatabase
   };
 }
