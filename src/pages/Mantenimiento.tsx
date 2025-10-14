@@ -5,9 +5,18 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Button } from '@/components/ui/button';
-import { Calendar, Search, Filter, Clock, AlertCircle, Download, Trash2, X } from 'lucide-react';
+import { Slider } from '@/components/ui/slider';
+import {
+  Sheet,
+  SheetContent,
+  SheetDescription,
+  SheetHeader,
+  SheetTitle,
+  SheetTrigger,
+} from '@/components/ui/sheet';
+import { cn } from '@/lib/utils';
+import { Calendar, Search, Filter, Clock, AlertCircle, Download, Trash2, X, ZoomIn, ZoomOut } from 'lucide-react';
 import { useState } from 'react';
 import jsPDF from 'jspdf';
 import 'jspdf-autotable';
@@ -27,6 +36,18 @@ export default function Mantenimiento() {
     restanteMax: ''
   });
   const [clearing, setClearing] = useState(false);
+  const [tableScale, setTableScale] = useState(1);
+
+  const clampScale = (value: number) => Math.min(1.4, Math.max(0.8, Number(value.toFixed(2))));
+
+  const handleScaleChange = (value: number[]) => {
+    if (!value.length) return;
+    setTableScale(clampScale(value[0]));
+  };
+
+  const adjustScale = (delta: number) => {
+    setTableScale(prev => clampScale(prev + delta));
+  };
 
   if (loading) {
     return (
@@ -282,6 +303,304 @@ export default function Mantenimiento() {
     }
   };
 
+  const filtrosAplicados =
+    filtros.tipos.length > 0 ||
+    filtros.categorias.length > 0 ||
+    filtros.estados.length > 0 ||
+    filtros.fichas.length > 0 ||
+    Boolean(filtros.restanteMin) ||
+    Boolean(filtros.restanteMax) ||
+    Boolean(searchTerm);
+
+  const renderSimpleFilters = () => (
+    <div className="space-y-4">
+      <div className="relative">
+        <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+        <Input
+          placeholder="Buscar mantenimientos..."
+          value={searchTerm}
+          onChange={(e) => setSearchTerm(e.target.value)}
+          className="pl-10"
+        />
+      </div>
+      <div className="grid grid-cols-1 gap-4 md:grid-cols-4">
+        <div>
+          <Label className="mb-2 block">Tipos</Label>
+          <div className="space-y-2">
+            {tipos.map(tipo => (
+              <div
+                key={tipo}
+                className="flex items-center space-x-2 rounded-md px-2 py-1 transition-colors hover:bg-muted/40"
+              >
+                <Checkbox
+                  id={`tipo-${tipo}`}
+                  checked={filtros.tipos.includes(tipo)}
+                  onCheckedChange={() => toggleTipo(tipo)}
+                />
+                <label htmlFor={`tipo-${tipo}`} className="cursor-pointer text-sm">
+                  {tipo}
+                </label>
+              </div>
+            ))}
+          </div>
+        </div>
+        <div>
+          <Label className="mb-2 block">Categorías</Label>
+          <div className="max-h-32 space-y-2 overflow-y-auto rounded-md border p-2">
+            {categorias.map(cat => (
+              <div
+                key={cat}
+                className="flex items-center space-x-2 rounded-md px-2 py-1 transition-colors hover:bg-muted/40"
+              >
+                <Checkbox
+                  id={`cat-simple-${cat}`}
+                  checked={filtros.categorias.includes(cat)}
+                  onCheckedChange={() => toggleCategoria(cat)}
+                />
+                <label htmlFor={`cat-simple-${cat}`} className="cursor-pointer text-sm">
+                  {cat}
+                </label>
+              </div>
+            ))}
+          </div>
+        </div>
+        <div>
+          <Label className="mb-2 block">Estados</Label>
+          <div className="space-y-2">
+            {['vencido', 'proximo', 'normal'].map(estado => (
+              <div
+                key={estado}
+                className="flex items-center space-x-2 rounded-md px-2 py-1 transition-colors hover:bg-muted/40"
+              >
+                <Checkbox
+                  id={`estado-simple-${estado}`}
+                  checked={filtros.estados.includes(estado)}
+                  onCheckedChange={() => toggleEstado(estado)}
+                />
+                <label htmlFor={`estado-simple-${estado}`} className="cursor-pointer text-sm capitalize">
+                  {estado === 'proximo' ? 'Próximos' : estado === 'vencido' ? 'Vencidos' : 'Normales'}
+                </label>
+              </div>
+            ))}
+          </div>
+        </div>
+        <div className="flex items-start">
+          {filtrosAplicados && (
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={limpiarFiltros}
+              className="w-full transition-colors hover:bg-primary/10 focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2"
+            >
+              <X className="mr-2 h-4 w-4" />
+              Limpiar Filtros
+            </Button>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+
+  const renderAdvancedFilters = () => (
+    <div className="space-y-4">
+      <div className="relative">
+        <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+        <Input
+          placeholder="Buscar mantenimientos..."
+          value={searchTerm}
+          onChange={(e) => setSearchTerm(e.target.value)}
+          className="pl-10"
+        />
+      </div>
+
+      <div className="grid grid-cols-1 gap-4 md:grid-cols-4">
+        <div>
+          <Label className="mb-2 block">Tipos (Multi-select)</Label>
+          <div className="space-y-2 rounded-md border bg-muted/30 p-3">
+            {tipos.map(tipo => (
+              <div
+                key={tipo}
+                className="flex items-center space-x-2 rounded-md px-2 py-1 transition-colors hover:bg-muted/40"
+              >
+                <Checkbox
+                  id={`tipo-adv-${tipo}`}
+                  checked={filtros.tipos.includes(tipo)}
+                  onCheckedChange={() => toggleTipo(tipo)}
+                />
+                <label htmlFor={`tipo-adv-${tipo}`} className="flex-1 cursor-pointer text-sm">
+                  {tipo}
+                </label>
+              </div>
+            ))}
+          </div>
+          {filtros.tipos.length > 0 && (
+            <Badge variant="secondary" className="mt-2">
+              {filtros.tipos.length} seleccionado(s)
+            </Badge>
+          )}
+        </div>
+
+        <div>
+          <Label className="mb-2 block">Categorías (Multi-select)</Label>
+          <div className="max-h-40 space-y-2 overflow-y-auto rounded-md border bg-muted/30 p-3">
+            {categorias.map(cat => (
+              <div
+                key={cat}
+                className="flex items-center space-x-2 rounded-md px-2 py-1 transition-colors hover:bg-muted/40"
+              >
+                <Checkbox
+                  id={`cat-adv-${cat}`}
+                  checked={filtros.categorias.includes(cat)}
+                  onCheckedChange={() => toggleCategoria(cat)}
+                />
+                <label htmlFor={`cat-adv-${cat}`} className="flex-1 cursor-pointer text-sm">
+                  {cat}
+                </label>
+              </div>
+            ))}
+          </div>
+          {filtros.categorias.length > 0 && (
+            <Badge variant="secondary" className="mt-2">
+              {filtros.categorias.length} seleccionada(s)
+            </Badge>
+          )}
+        </div>
+
+        <div>
+          <Label className="mb-2 block">Fichas Específicas</Label>
+          <div className="max-h-40 space-y-2 overflow-y-auto rounded-md border bg-muted/30 p-3">
+            {fichas.slice(0, 20).map(ficha => (
+              <div
+                key={ficha}
+                className="flex items-center space-x-2 rounded-md px-2 py-1 transition-colors hover:bg-muted/40"
+              >
+                <Checkbox
+                  id={`ficha-adv-${ficha}`}
+                  checked={filtros.fichas.includes(ficha)}
+                  onCheckedChange={() => toggleFicha(ficha)}
+                />
+                <label htmlFor={`ficha-adv-${ficha}`} className="flex-1 cursor-pointer text-sm font-mono">
+                  {ficha}
+                </label>
+              </div>
+            ))}
+          </div>
+          {filtros.fichas.length > 0 && (
+            <Badge variant="secondary" className="mt-2">
+              {filtros.fichas.length} seleccionada(s)
+            </Badge>
+          )}
+        </div>
+
+        <div>
+          <Label className="mb-2 block">Estados</Label>
+          <div className="space-y-2 rounded-md border bg-muted/30 p-3">
+            {['vencido', 'proximo', 'normal'].map(estado => (
+              <div
+                key={estado}
+                className="flex items-center space-x-2 rounded-md px-2 py-1 transition-colors hover:bg-muted/40"
+              >
+                <Checkbox
+                  id={`estado-adv-${estado}`}
+                  checked={filtros.estados.includes(estado)}
+                  onCheckedChange={() => toggleEstado(estado)}
+                />
+                <label htmlFor={`estado-adv-${estado}`} className="cursor-pointer text-sm capitalize">
+                  {estado === 'proximo' ? 'Próximos' : estado === 'vencido' ? 'Vencidos' : 'Normales'}
+                </label>
+              </div>
+            ))}
+          </div>
+        </div>
+      </div>
+
+      <div className="grid grid-cols-1 gap-4 border-t pt-4 md:grid-cols-3">
+        <div>
+          <Label className="mb-2 block">Hrs/Km Restante Mínimo</Label>
+          <Input
+            type="number"
+            placeholder="Mínimo"
+            value={filtros.restanteMin}
+            onChange={(e) => setFiltros({ ...filtros, restanteMin: e.target.value })}
+          />
+        </div>
+        <div>
+          <Label className="mb-2 block">Hrs/Km Restante Máximo</Label>
+          <Input
+            type="number"
+            placeholder="Máximo"
+            value={filtros.restanteMax}
+            onChange={(e) => setFiltros({ ...filtros, restanteMax: e.target.value })}
+          />
+        </div>
+        <div className="flex items-end">
+          {filtrosAplicados && (
+            <Button
+              variant="outline"
+              onClick={limpiarFiltros}
+              className="w-full transition-colors hover:bg-primary/10 focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2"
+            >
+              <X className="mr-2 h-4 w-4" />
+              Limpiar Todos los Filtros
+            </Button>
+          )}
+        </div>
+      </div>
+
+      {(filtros.tipos.length > 0 || filtros.categorias.length > 0 || filtros.estados.length > 0 || filtros.fichas.length > 0 || filtros.restanteMin || filtros.restanteMax) && (
+        <div className="border-t pt-4">
+          <Label className="mb-2 block text-sm font-semibold">Filtros Aplicados:</Label>
+          <div className="flex flex-wrap gap-2">
+            {filtros.tipos.map(tipo => (
+              <Badge key={tipo} variant="secondary">
+                Tipo: {tipo}
+                <X
+                  className="ml-1 h-3 w-3 cursor-pointer transition-colors hover:text-destructive"
+                  onClick={() => toggleTipo(tipo)}
+                />
+              </Badge>
+            ))}
+            {filtros.categorias.map(cat => (
+              <Badge key={cat} variant="secondary">
+                Cat: {cat}
+                <X
+                  className="ml-1 h-3 w-3 cursor-pointer transition-colors hover:text-destructive"
+                  onClick={() => toggleCategoria(cat)}
+                />
+              </Badge>
+            ))}
+            {filtros.fichas.map(ficha => (
+              <Badge key={ficha} variant="secondary" className="font-mono">
+                Ficha: {ficha}
+                <X
+                  className="ml-1 h-3 w-3 cursor-pointer transition-colors hover:text-destructive"
+                  onClick={() => toggleFicha(ficha)}
+                />
+              </Badge>
+            ))}
+            {filtros.estados.map(estado => (
+              <Badge key={estado} variant="secondary" className="capitalize">
+                {estado === 'proximo' ? 'Próximo' : estado === 'vencido' ? 'Vencido' : 'Normal'}
+                <X
+                  className="ml-1 h-3 w-3 cursor-pointer transition-colors hover:text-destructive"
+                  onClick={() => toggleEstado(estado)}
+                />
+              </Badge>
+            ))}
+            {filtros.restanteMin && (
+              <Badge variant="secondary">Restante ≥ {filtros.restanteMin}</Badge>
+            )}
+            {filtros.restanteMax && (
+              <Badge variant="secondary">Restante ≤ {filtros.restanteMax}</Badge>
+            )}
+          </div>
+        </div>
+      )}
+    </div>
+  );
+
+  const renderFilterContent = () => (modoAvanzado ? renderAdvancedFilters() : renderSimpleFilters());
+
   return (
     <Layout title="Mantenimiento Programado">
       <Navigation />
@@ -345,8 +664,8 @@ export default function Mantenimiento() {
       </div>
 
       <Card>
-        <CardHeader>
-          <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between mb-4">
+        <CardHeader className="space-y-4">
+          <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
             <div>
               <CardTitle className="flex items-center">
                 <Calendar className="w-5 h-5 mr-2" />
@@ -376,303 +695,80 @@ export default function Mantenimiento() {
               </Button>
             </div>
           </div>
-          
-          {!modoAvanzado ? (
-            // Filtros simples
-            <div className="space-y-4">
-              <div className="flex-1 relative">
-                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground w-4 h-4" />
-                <Input
-                  placeholder="Buscar mantenimientos..."
-                  value={searchTerm}
-                  onChange={(e) => setSearchTerm(e.target.value)}
-                  className="pl-10"
-                />
+          <div className="flex flex-col gap-4">
+            <Sheet>
+              <div className="flex items-center justify-between gap-2 sm:hidden">
+                <span className="text-sm font-semibold text-primary">Filtros</span>
+                <SheetTrigger asChild>
+                  <Button variant="outline" size="sm" className="gap-2">
+                    <Filter className="h-4 w-4" />
+                    Ajustar filtros
+                  </Button>
+                </SheetTrigger>
               </div>
-              <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-                <div>
-                  <Label className="mb-2 block">Tipos</Label>
-                  <div className="space-y-2">
-                    {tipos.map(tipo => (
-                      <div
-                        key={tipo}
-                        className="flex items-center space-x-2 rounded-md px-2 py-1 transition-colors hover:bg-muted/40"
-                      >
-                        <Checkbox 
-                          id={`tipo-${tipo}`}
-                          checked={filtros.tipos.includes(tipo)}
-                          onCheckedChange={() => toggleTipo(tipo)}
-                        />
-                        <label htmlFor={`tipo-${tipo}`} className="text-sm cursor-pointer">
-                          {tipo}
-                        </label>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-                <div>
-                  <Label className="mb-2 block">Categorías</Label>
-                  <div className="space-y-2 max-h-32 overflow-y-auto border rounded-md p-2">
-                    {categorias.map(cat => (
-                      <div
-                        key={cat}
-                        className="flex items-center space-x-2 rounded-md px-2 py-1 transition-colors hover:bg-muted/40"
-                      >
-                        <Checkbox 
-                          id={`cat-simple-${cat}`}
-                          checked={filtros.categorias.includes(cat)}
-                          onCheckedChange={() => toggleCategoria(cat)}
-                        />
-                        <label htmlFor={`cat-simple-${cat}`} className="text-sm cursor-pointer">
-                          {cat}
-                        </label>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-                <div>
-                  <Label className="mb-2 block">Estados</Label>
-                  <div className="space-y-2">
-                    {['vencido', 'proximo', 'normal'].map(estado => (
-                      <div
-                        key={estado}
-                        className="flex items-center space-x-2 rounded-md px-2 py-1 transition-colors hover:bg-muted/40"
-                      >
-                        <Checkbox 
-                          id={`estado-simple-${estado}`}
-                          checked={filtros.estados.includes(estado)}
-                          onCheckedChange={() => toggleEstado(estado)}
-                        />
-                        <label htmlFor={`estado-simple-${estado}`} className="text-sm cursor-pointer capitalize">
-                          {estado === 'proximo' ? 'Próximos' : estado === 'vencido' ? 'Vencidos' : 'Normales'}
-                        </label>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-                <div>
-                  {(filtros.tipos.length > 0 || filtros.categorias.length > 0 || filtros.estados.length > 0 || filtros.fichas.length > 0 || searchTerm) && (
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={limpiarFiltros}
-                      className="w-full transition-colors hover:bg-primary/10 focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-primary"
-                    >
-                      <X className="w-4 h-4 mr-2" />
-                      Limpiar Filtros
-                    </Button>
-                  )}
-                </div>
+              <div className="hidden sm:block">{renderFilterContent()}</div>
+              <SheetContent side="bottom" className="sm:hidden overflow-y-auto">
+                <SheetHeader className="text-left">
+                  <SheetTitle>Filtros y búsqueda</SheetTitle>
+                  <SheetDescription>Refina la tabla para encontrar el mantenimiento que necesitas.</SheetDescription>
+                </SheetHeader>
+                <div className="mt-6 space-y-4 pb-6">{renderFilterContent()}</div>
+              </SheetContent>
+            </Sheet>
+
+            <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:gap-3">
+              <span className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Zoom</span>
+              <div className="flex items-center gap-2">
+                <Button
+                  type="button"
+                  size="icon"
+                  variant="outline"
+                  onClick={() => adjustScale(-0.1)}
+                  aria-label="Reducir zoom de la tabla"
+                >
+                  <ZoomOut className="h-4 w-4" />
+                </Button>
+                <Slider
+                  value={[tableScale]}
+                  min={0.8}
+                  max={1.4}
+                  step={0.05}
+                  onValueChange={handleScaleChange}
+                  className="w-32 sm:w-40"
+                  aria-label="Control de zoom"
+                />
+                <Button
+                  type="button"
+                  size="icon"
+                  variant="outline"
+                  onClick={() => adjustScale(0.1)}
+                  aria-label="Aumentar zoom de la tabla"
+                >
+                  <ZoomIn className="h-4 w-4" />
+                </Button>
+                <span className="w-12 text-center text-sm font-medium text-muted-foreground">
+                  {Math.round(tableScale * 100)}%
+                </span>
               </div>
             </div>
-          ) : (
-            // Filtros avanzados
-            <div className="space-y-4">
-              <div className="flex-1 relative">
-                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground w-4 h-4" />
-                <Input
-                  placeholder="Buscar mantenimientos..."
-                  value={searchTerm}
-                  onChange={(e) => setSearchTerm(e.target.value)}
-                  className="pl-10"
-                />
-              </div>
-              
-              <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-                <div>
-                  <Label className="mb-2 block">Tipos (Multi-select)</Label>
-                  <div className="space-y-2 border rounded-md p-3 bg-muted/30">
-                    {tipos.map(tipo => (
-                      <div
-                        key={tipo}
-                        className="flex items-center space-x-2 rounded-md px-2 py-1 transition-colors hover:bg-muted/40"
-                      >
-                        <Checkbox 
-                          id={`tipo-adv-${tipo}`}
-                          checked={filtros.tipos.includes(tipo)}
-                          onCheckedChange={() => toggleTipo(tipo)}
-                        />
-                        <label htmlFor={`tipo-adv-${tipo}`} className="text-sm cursor-pointer flex-1">
-                          {tipo}
-                        </label>
-                      </div>
-                    ))}
-                  </div>
-                  {filtros.tipos.length > 0 && (
-                    <Badge variant="secondary" className="mt-2">
-                      {filtros.tipos.length} seleccionado(s)
-                    </Badge>
-                  )}
-                </div>
-
-                <div>
-                  <Label className="mb-2 block">Categorías (Multi-select)</Label>
-                  <div className="space-y-2 max-h-40 overflow-y-auto border rounded-md p-3 bg-muted/30">
-                    {categorias.map(cat => (
-                      <div
-                        key={cat}
-                        className="flex items-center space-x-2 rounded-md px-2 py-1 transition-colors hover:bg-muted/40"
-                      >
-                        <Checkbox 
-                          id={`cat-adv-${cat}`}
-                          checked={filtros.categorias.includes(cat)}
-                          onCheckedChange={() => toggleCategoria(cat)}
-                        />
-                        <label htmlFor={`cat-adv-${cat}`} className="text-sm cursor-pointer flex-1">
-                          {cat}
-                        </label>
-                      </div>
-                    ))}
-                  </div>
-                  {filtros.categorias.length > 0 && (
-                    <Badge variant="secondary" className="mt-2">
-                      {filtros.categorias.length} seleccionada(s)
-                    </Badge>
-                  )}
-                </div>
-
-                <div>
-                  <Label className="mb-2 block">Fichas Específicas</Label>
-                  <div className="space-y-2 max-h-40 overflow-y-auto border rounded-md p-3 bg-muted/30">
-                    {fichas.slice(0, 20).map(ficha => (
-                      <div
-                        key={ficha}
-                        className="flex items-center space-x-2 rounded-md px-2 py-1 transition-colors hover:bg-muted/40"
-                      >
-                        <Checkbox 
-                          id={`ficha-adv-${ficha}`}
-                          checked={filtros.fichas.includes(ficha)}
-                          onCheckedChange={() => toggleFicha(ficha)}
-                        />
-                        <label htmlFor={`ficha-adv-${ficha}`} className="text-sm cursor-pointer flex-1 font-mono">
-                          {ficha}
-                        </label>
-                      </div>
-                    ))}
-                  </div>
-                  {filtros.fichas.length > 0 && (
-                    <Badge variant="secondary" className="mt-2">
-                      {filtros.fichas.length} seleccionada(s)
-                    </Badge>
-                  )}
-                </div>
-
-                <div>
-                  <Label className="mb-2 block">Estados</Label>
-                  <div className="space-y-2 border rounded-md p-3 bg-muted/30">
-                    {['vencido', 'proximo', 'normal'].map(estado => (
-                      <div
-                        key={estado}
-                        className="flex items-center space-x-2 rounded-md px-2 py-1 transition-colors hover:bg-muted/40"
-                      >
-                        <Checkbox 
-                          id={`estado-adv-${estado}`}
-                          checked={filtros.estados.includes(estado)}
-                          onCheckedChange={() => toggleEstado(estado)}
-                        />
-                        <label htmlFor={`estado-adv-${estado}`} className="text-sm cursor-pointer capitalize">
-                          {estado === 'proximo' ? 'Próximos' : estado === 'vencido' ? 'Vencidos' : 'Normales'}
-                        </label>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              </div>
-
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-4 pt-4 border-t">
-                <div>
-                  <Label className="mb-2 block">Hrs/Km Restante Mínimo</Label>
-                  <Input 
-                    type="number"
-                    placeholder="Mínimo"
-                    value={filtros.restanteMin}
-                    onChange={(e) => setFiltros({...filtros, restanteMin: e.target.value})}
-                  />
-                </div>
-                <div>
-                  <Label className="mb-2 block">Hrs/Km Restante Máximo</Label>
-                  <Input 
-                    type="number"
-                    placeholder="Máximo"
-                    value={filtros.restanteMax}
-                    onChange={(e) => setFiltros({...filtros, restanteMax: e.target.value})}
-                  />
-                </div>
-                <div className="flex items-end">
-                  {(filtros.tipos.length > 0 || filtros.categorias.length > 0 || filtros.estados.length > 0 || filtros.fichas.length > 0 || filtros.restanteMin || filtros.restanteMax || searchTerm) && (
-                    <Button
-                      variant="outline"
-                      onClick={limpiarFiltros}
-                      className="w-full transition-colors hover:bg-primary/10 focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-primary"
-                    >
-                      <X className="w-4 h-4 mr-2" />
-                      Limpiar Todos los Filtros
-                    </Button>
-                  )}
-                </div>
-              </div>
-
-              {/* Resumen de filtros activos */}
-              {(filtros.tipos.length > 0 || filtros.categorias.length > 0 || filtros.estados.length > 0 || filtros.fichas.length > 0 || filtros.restanteMin || filtros.restanteMax) && (
-                <div className="pt-4 border-t">
-                  <Label className="mb-2 block text-sm font-semibold">Filtros Aplicados:</Label>
-                  <div className="flex flex-wrap gap-2">
-                    {filtros.tipos.map(tipo => (
-                      <Badge key={tipo} variant="secondary">
-                        Tipo: {tipo}
-                        <X
-                          className="w-3 h-3 ml-1 cursor-pointer transition-colors hover:text-destructive"
-                          onClick={() => toggleTipo(tipo)}
-                        />
-                      </Badge>
-                    ))}
-                    {filtros.categorias.map(cat => (
-                      <Badge key={cat} variant="secondary">
-                        Cat: {cat}
-                        <X
-                          className="w-3 h-3 ml-1 cursor-pointer transition-colors hover:text-destructive"
-                          onClick={() => toggleCategoria(cat)}
-                        />
-                      </Badge>
-                    ))}
-                    {filtros.fichas.map(ficha => (
-                      <Badge key={ficha} variant="secondary" className="font-mono">
-                        Ficha: {ficha}
-                        <X
-                          className="w-3 h-3 ml-1 cursor-pointer transition-colors hover:text-destructive"
-                          onClick={() => toggleFicha(ficha)}
-                        />
-                      </Badge>
-                    ))}
-                    {filtros.estados.map(estado => (
-                      <Badge key={estado} variant="secondary" className="capitalize">
-                        {estado === 'proximo' ? 'Próximo' : estado === 'vencido' ? 'Vencido' : 'Normal'}
-                        <X
-                          className="w-3 h-3 ml-1 cursor-pointer transition-colors hover:text-destructive"
-                          onClick={() => toggleEstado(estado)}
-                        />
-                      </Badge>
-                    ))}
-                    {filtros.restanteMin && (
-                      <Badge variant="secondary">
-                        Restante ≥ {filtros.restanteMin}
-                      </Badge>
-                    )}
-                    {filtros.restanteMax && (
-                      <Badge variant="secondary">
-                        Restante ≤ {filtros.restanteMax}
-                      </Badge>
-                    )}
-                  </div>
-                </div>
-              )}
-            </div>
-          )}
+          </div>
         </CardHeader>
         <CardContent>
-          <div className="rounded-md border">
-            <Table className="min-w-[1000px]">
-              <TableHeader>
+          <div className="rounded-md border bg-white p-2 sm:p-4">
+            <div
+              className={cn('overflow-x-auto', tableScale > 1 ? 'pb-4' : undefined)}
+              style={{ touchAction: 'pan-y pinch-zoom' }}
+            >
+              <div
+                className="origin-top-left"
+                style={{
+                  transform: `scale(${tableScale})`,
+                  transformOrigin: 'top left',
+                  width: `${100 / tableScale}%`,
+                }}
+              >
+                <Table className="min-w-[1000px]">
+                  <TableHeader>
                 <TableRow>
                   <TableHead>Ficha</TableHead>
                   <TableHead>Equipo</TableHead>
@@ -743,7 +839,9 @@ export default function Mantenimiento() {
               </TableBody>
             </Table>
           </div>
-          
+        </div>
+      </div>
+
           {mantenimientosFiltrados.length === 0 && (
             <div className="text-center py-8 text-muted-foreground">
               No se encontraron mantenimientos que coincidan con los filtros seleccionados.
