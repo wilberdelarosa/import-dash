@@ -311,21 +311,22 @@ export default function Reportes() {
       {/* Barra de filtros avanzados */}
       <Card className="mb-6">
         <CardHeader>
-          <div className="flex justify-between items-center">
+          <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
             <CardTitle className="flex items-center">
               <Filter className="w-5 h-5 mr-2" />
               Filtros de Reporte
             </CardTitle>
-            <div className="flex gap-2">
-              <Button 
-                variant={modoAvanzado ? "default" : "outline"} 
+            <div className="flex flex-col gap-2 sm:flex-row sm:flex-wrap sm:gap-3">
+              <Button
+                variant={modoAvanzado ? "default" : "outline"}
                 size="sm"
                 onClick={() => setModoAvanzado(!modoAvanzado)}
+                className="w-full justify-center sm:w-auto"
               >
                 {modoAvanzado ? "Modo Simple" : "Modo Avanzado"}
               </Button>
               {(filtros.categorias.length > 0 || filtros.marcas.length > 0 || filtros.estados.length > 0 || filtros.fichas.length > 0) && (
-                <Button variant="ghost" size="sm" onClick={limpiarFiltros}>
+                <Button variant="ghost" size="sm" onClick={limpiarFiltros} className="w-full justify-center sm:w-auto">
                   <X className="w-4 h-4 mr-2" />
                   Limpiar Filtros
                 </Button>
@@ -400,11 +401,11 @@ export default function Reportes() {
               </div>
 
               <div className="flex flex-col gap-2">
-                <Button onClick={exportarPDF} className="flex-1">
+                <Button onClick={exportarPDF} className="w-full">
                   <FileText className="w-4 h-4 mr-2" />
                   Exportar PDF
                 </Button>
-                <Button onClick={exportarJSON} variant="outline" className="flex-1">
+                <Button onClick={exportarJSON} variant="outline" className="w-full">
                   <FileDown className="w-4 h-4 mr-2" />
                   Exportar JSON
                 </Button>
@@ -529,11 +530,11 @@ export default function Reportes() {
                   </div>
                 </div>
                 <div className="flex flex-col gap-2">
-                  <Button onClick={exportarPDF} className="flex-1">
+                  <Button onClick={exportarPDF} className="w-full">
                     <FileText className="w-4 h-4 mr-2" />
                     Exportar PDF
                   </Button>
-                  <Button onClick={exportarJSON} variant="outline" className="flex-1">
+                  <Button onClick={exportarJSON} variant="outline" className="w-full">
                     <FileDown className="w-4 h-4 mr-2" />
                     Exportar JSON
                   </Button>
@@ -636,7 +637,7 @@ export default function Reportes() {
             <CardTitle>Resumen por Categoría</CardTitle>
           </CardHeader>
           <CardContent>
-            <Table>
+            <Table className="min-w-[500px]">
               <TableHeader>
                 <TableRow>
                   <TableHead>Categoría</TableHead>
@@ -668,7 +669,7 @@ export default function Reportes() {
           <CardContent>
             <div className="space-y-3">
               {mantenimientosVencidos.slice(0, 5).map((mant) => (
-                <div key={mant.id} className="flex justify-between items-center p-3 rounded-lg border">
+                <div key={mant.id} className="flex flex-col gap-3 rounded-lg border p-3 sm:flex-row sm:items-center sm:justify-between">
                   <div>
                     <p className="font-medium">{mant.nombreEquipo}</p>
                     <p className="text-sm text-muted-foreground">{mant.ficha}</p>
@@ -679,7 +680,7 @@ export default function Reportes() {
                 </div>
               ))}
               {mantenimientosPorVencer.slice(0, 3).map((mant) => (
-                <div key={mant.id} className="flex justify-between items-center p-3 rounded-lg border">
+                <div key={mant.id} className="flex flex-col gap-3 rounded-lg border p-3 sm:flex-row sm:items-center sm:justify-between">
                   <div>
                     <p className="font-medium">{mant.nombreEquipo}</p>
                     <p className="text-sm text-muted-foreground">{mant.ficha}</p>

@@ -59,11 +59,11 @@ export function EquipoDialog({ equipo, onSave, trigger }: EquipoDialogProps) {
           </Button>
         )}
       </DialogTrigger>
-      <DialogContent className="max-w-2xl">
+      <DialogContent className="w-full max-w-2xl">
         <DialogHeader>
           <DialogTitle>{equipo ? 'Editar Equipo' : 'Agregar Nuevo Equipo'}</DialogTitle>
         </DialogHeader>
-        <div className="grid grid-cols-2 gap-4 py-4">
+        <div className="grid grid-cols-1 gap-4 py-4 md:grid-cols-2">
           <div>
             <Label htmlFor="ficha">Ficha</Label>
             <Input
@@ -118,10 +118,10 @@ export function EquipoDialog({ equipo, onSave, trigger }: EquipoDialogProps) {
               placeholder="ABC-123"
             />
           </div>
-          <div className="col-span-2">
+          <div className="md:col-span-2">
             <Label htmlFor="categoria">Categoría</Label>
             <Select value={formData.categoria} onValueChange={(value) => setFormData({ ...formData, categoria: value })}>
-              <SelectTrigger>
+              <SelectTrigger className="w-full">
                 <SelectValue placeholder="Seleccionar categoría" />
               </SelectTrigger>
               <SelectContent>
@@ -131,8 +131,8 @@ export function EquipoDialog({ equipo, onSave, trigger }: EquipoDialogProps) {
               </SelectContent>
             </Select>
           </div>
-          <div className="col-span-2 flex items-center space-x-2">
-            <Switch 
+          <div className="flex items-center space-x-2 md:col-span-2">
+            <Switch
               id="activo"
               checked={formData.activo}
               onCheckedChange={(checked) => setFormData({ ...formData, activo: checked })}
@@ -140,7 +140,7 @@ export function EquipoDialog({ equipo, onSave, trigger }: EquipoDialogProps) {
             <Label htmlFor="activo">Equipo activo</Label>
           </div>
           {!formData.activo && (
-            <div className="col-span-2">
+            <div className="md:col-span-2">
               <Label htmlFor="motivoInactividad">Motivo de Inactividad</Label>
               <Textarea
                 id="motivoInactividad"
@@ -151,9 +151,9 @@ export function EquipoDialog({ equipo, onSave, trigger }: EquipoDialogProps) {
             </div>
           )}
         </div>
-        <div className="flex justify-end space-x-2">
-          <Button variant="outline" onClick={() => setOpen(false)}>Cancelar</Button>
-          <Button onClick={handleSave}>Guardar</Button>
+        <div className="flex flex-col-reverse gap-2 sm:flex-row sm:justify-end sm:space-x-2">
+          <Button variant="outline" onClick={() => setOpen(false)} className="w-full sm:w-auto">Cancelar</Button>
+          <Button onClick={handleSave} className="w-full sm:w-auto">Guardar</Button>
         </div>
       </DialogContent>
     </Dialog>

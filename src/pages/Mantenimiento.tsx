@@ -346,7 +346,7 @@ export default function Mantenimiento() {
 
       <Card>
         <CardHeader>
-          <div className="flex justify-between items-center mb-4">
+          <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between mb-4">
             <div>
               <CardTitle className="flex items-center">
                 <Calendar className="w-5 h-5 mr-2" />
@@ -356,12 +356,12 @@ export default function Mantenimiento() {
                 Control y seguimiento de mantenimientos preventivos
               </CardDescription>
             </div>
-            <div className="flex gap-2">
+            <div className="flex flex-col gap-2 sm:flex-row sm:flex-wrap sm:gap-3 lg:justify-end">
               <Button
                 variant={modoAvanzado ? "default" : "outline"}
                 size="sm"
                 onClick={() => setModoAvanzado(!modoAvanzado)}
-                className="transition-colors focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-primary"
+                className="w-full justify-center transition-colors focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-primary sm:w-auto"
               >
                 {modoAvanzado ? "Modo Simple" : "Modo Avanzado"}
               </Button>
@@ -369,7 +369,7 @@ export default function Mantenimiento() {
                 onClick={exportarPDF}
                 variant="outline"
                 size="sm"
-                className="flex items-center gap-2 transition-colors hover:bg-primary/10 focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-primary"
+                className="flex w-full items-center justify-center gap-2 transition-colors hover:bg-primary/10 focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-primary sm:w-auto"
               >
                 <Download className="w-4 h-4" />
                 Exportar PDF
@@ -671,7 +671,7 @@ export default function Mantenimiento() {
         </CardHeader>
         <CardContent>
           <div className="rounded-md border">
-            <Table>
+            <Table className="min-w-[1000px]">
               <TableHeader>
                 <TableRow>
                   <TableHead>Ficha</TableHead>

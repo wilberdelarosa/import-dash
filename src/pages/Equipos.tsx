@@ -143,7 +143,7 @@ export default function Equipos() {
 
       <Card>
         <CardHeader>
-          <div className="flex justify-between items-center">
+          <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
             <div>
               <CardTitle>Equipos</CardTitle>
               <CardDescription>
