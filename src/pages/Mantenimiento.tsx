@@ -286,17 +286,20 @@ export default function Mantenimiento() {
     <Layout title="Mantenimiento Programado">
       <Navigation />
 
+
       <Card className="mb-6 border-destructive/40">
         <CardHeader>
           <CardTitle className="flex items-center gap-2 text-destructive">
             <Trash2 className="w-5 h-5" />
             Mantenimiento de datos
           </CardTitle>
+
           <CardDescription>
             Elimina todos los registros de equipos, inventarios y mantenimientos almacenados en la base de datos.
           </CardDescription>
         </CardHeader>
         <CardContent className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+
           <p className="text-sm text-muted-foreground">
             Esta acción es irreversible. Asegúrate de haber realizado una copia de seguridad antes de continuar.
           </p>
@@ -304,6 +307,7 @@ export default function Mantenimiento() {
             variant="destructive"
             onClick={handleClearDatabase}
             disabled={clearing}
+
             className="w-full sm:w-auto"
           >
             <Trash2 className="w-4 h-4 mr-2" />
@@ -311,6 +315,7 @@ export default function Mantenimiento() {
           </Button>
         </CardContent>
       </Card>
+
 
       <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-6">
         <Card>
@@ -352,14 +357,20 @@ export default function Mantenimiento() {
               </CardDescription>
             </div>
             <div className="flex gap-2">
-              <Button 
-                variant={modoAvanzado ? "default" : "outline"} 
+              <Button
+                variant={modoAvanzado ? "default" : "outline"}
                 size="sm"
                 onClick={() => setModoAvanzado(!modoAvanzado)}
+                className="transition-colors focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-primary"
               >
                 {modoAvanzado ? "Modo Simple" : "Modo Avanzado"}
               </Button>
-              <Button onClick={exportarPDF} variant="outline" size="sm" className="flex items-center gap-2">
+              <Button
+                onClick={exportarPDF}
+                variant="outline"
+                size="sm"
+                className="flex items-center gap-2 transition-colors hover:bg-primary/10 focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-primary"
+              >
                 <Download className="w-4 h-4" />
                 Exportar PDF
               </Button>
@@ -383,7 +394,10 @@ export default function Mantenimiento() {
                   <Label className="mb-2 block">Tipos</Label>
                   <div className="space-y-2">
                     {tipos.map(tipo => (
-                      <div key={tipo} className="flex items-center space-x-2">
+                      <div
+                        key={tipo}
+                        className="flex items-center space-x-2 rounded-md px-2 py-1 transition-colors hover:bg-muted/40"
+                      >
                         <Checkbox 
                           id={`tipo-${tipo}`}
                           checked={filtros.tipos.includes(tipo)}
@@ -400,7 +414,10 @@ export default function Mantenimiento() {
                   <Label className="mb-2 block">Categorías</Label>
                   <div className="space-y-2 max-h-32 overflow-y-auto border rounded-md p-2">
                     {categorias.map(cat => (
-                      <div key={cat} className="flex items-center space-x-2">
+                      <div
+                        key={cat}
+                        className="flex items-center space-x-2 rounded-md px-2 py-1 transition-colors hover:bg-muted/40"
+                      >
                         <Checkbox 
                           id={`cat-simple-${cat}`}
                           checked={filtros.categorias.includes(cat)}
@@ -417,7 +434,10 @@ export default function Mantenimiento() {
                   <Label className="mb-2 block">Estados</Label>
                   <div className="space-y-2">
                     {['vencido', 'proximo', 'normal'].map(estado => (
-                      <div key={estado} className="flex items-center space-x-2">
+                      <div
+                        key={estado}
+                        className="flex items-center space-x-2 rounded-md px-2 py-1 transition-colors hover:bg-muted/40"
+                      >
                         <Checkbox 
                           id={`estado-simple-${estado}`}
                           checked={filtros.estados.includes(estado)}
@@ -432,7 +452,12 @@ export default function Mantenimiento() {
                 </div>
                 <div>
                   {(filtros.tipos.length > 0 || filtros.categorias.length > 0 || filtros.estados.length > 0 || filtros.fichas.length > 0 || searchTerm) && (
-                    <Button variant="outline" size="sm" onClick={limpiarFiltros} className="w-full">
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={limpiarFiltros}
+                      className="w-full transition-colors hover:bg-primary/10 focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-primary"
+                    >
                       <X className="w-4 h-4 mr-2" />
                       Limpiar Filtros
                     </Button>
@@ -458,7 +483,10 @@ export default function Mantenimiento() {
                   <Label className="mb-2 block">Tipos (Multi-select)</Label>
                   <div className="space-y-2 border rounded-md p-3 bg-muted/30">
                     {tipos.map(tipo => (
-                      <div key={tipo} className="flex items-center space-x-2">
+                      <div
+                        key={tipo}
+                        className="flex items-center space-x-2 rounded-md px-2 py-1 transition-colors hover:bg-muted/40"
+                      >
                         <Checkbox 
                           id={`tipo-adv-${tipo}`}
                           checked={filtros.tipos.includes(tipo)}
@@ -481,7 +509,10 @@ export default function Mantenimiento() {
                   <Label className="mb-2 block">Categorías (Multi-select)</Label>
                   <div className="space-y-2 max-h-40 overflow-y-auto border rounded-md p-3 bg-muted/30">
                     {categorias.map(cat => (
-                      <div key={cat} className="flex items-center space-x-2">
+                      <div
+                        key={cat}
+                        className="flex items-center space-x-2 rounded-md px-2 py-1 transition-colors hover:bg-muted/40"
+                      >
                         <Checkbox 
                           id={`cat-adv-${cat}`}
                           checked={filtros.categorias.includes(cat)}
@@ -504,7 +535,10 @@ export default function Mantenimiento() {
                   <Label className="mb-2 block">Fichas Específicas</Label>
                   <div className="space-y-2 max-h-40 overflow-y-auto border rounded-md p-3 bg-muted/30">
                     {fichas.slice(0, 20).map(ficha => (
-                      <div key={ficha} className="flex items-center space-x-2">
+                      <div
+                        key={ficha}
+                        className="flex items-center space-x-2 rounded-md px-2 py-1 transition-colors hover:bg-muted/40"
+                      >
                         <Checkbox 
                           id={`ficha-adv-${ficha}`}
                           checked={filtros.fichas.includes(ficha)}
@@ -527,7 +561,10 @@ export default function Mantenimiento() {
                   <Label className="mb-2 block">Estados</Label>
                   <div className="space-y-2 border rounded-md p-3 bg-muted/30">
                     {['vencido', 'proximo', 'normal'].map(estado => (
-                      <div key={estado} className="flex items-center space-x-2">
+                      <div
+                        key={estado}
+                        className="flex items-center space-x-2 rounded-md px-2 py-1 transition-colors hover:bg-muted/40"
+                      >
                         <Checkbox 
                           id={`estado-adv-${estado}`}
                           checked={filtros.estados.includes(estado)}
@@ -563,7 +600,11 @@ export default function Mantenimiento() {
                 </div>
                 <div className="flex items-end">
                   {(filtros.tipos.length > 0 || filtros.categorias.length > 0 || filtros.estados.length > 0 || filtros.fichas.length > 0 || filtros.restanteMin || filtros.restanteMax || searchTerm) && (
-                    <Button variant="outline" onClick={limpiarFiltros} className="w-full">
+                    <Button
+                      variant="outline"
+                      onClick={limpiarFiltros}
+                      className="w-full transition-colors hover:bg-primary/10 focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-primary"
+                    >
                       <X className="w-4 h-4 mr-2" />
                       Limpiar Todos los Filtros
                     </Button>
@@ -579,8 +620,8 @@ export default function Mantenimiento() {
                     {filtros.tipos.map(tipo => (
                       <Badge key={tipo} variant="secondary">
                         Tipo: {tipo}
-                        <X 
-                          className="w-3 h-3 ml-1 cursor-pointer" 
+                        <X
+                          className="w-3 h-3 ml-1 cursor-pointer transition-colors hover:text-destructive"
                           onClick={() => toggleTipo(tipo)}
                         />
                       </Badge>
@@ -588,8 +629,8 @@ export default function Mantenimiento() {
                     {filtros.categorias.map(cat => (
                       <Badge key={cat} variant="secondary">
                         Cat: {cat}
-                        <X 
-                          className="w-3 h-3 ml-1 cursor-pointer" 
+                        <X
+                          className="w-3 h-3 ml-1 cursor-pointer transition-colors hover:text-destructive"
                           onClick={() => toggleCategoria(cat)}
                         />
                       </Badge>
@@ -597,8 +638,8 @@ export default function Mantenimiento() {
                     {filtros.fichas.map(ficha => (
                       <Badge key={ficha} variant="secondary" className="font-mono">
                         Ficha: {ficha}
-                        <X 
-                          className="w-3 h-3 ml-1 cursor-pointer" 
+                        <X
+                          className="w-3 h-3 ml-1 cursor-pointer transition-colors hover:text-destructive"
                           onClick={() => toggleFicha(ficha)}
                         />
                       </Badge>
@@ -606,8 +647,8 @@ export default function Mantenimiento() {
                     {filtros.estados.map(estado => (
                       <Badge key={estado} variant="secondary" className="capitalize">
                         {estado === 'proximo' ? 'Próximo' : estado === 'vencido' ? 'Vencido' : 'Normal'}
-                        <X 
-                          className="w-3 h-3 ml-1 cursor-pointer" 
+                        <X
+                          className="w-3 h-3 ml-1 cursor-pointer transition-colors hover:text-destructive"
                           onClick={() => toggleEstado(estado)}
                         />
                       </Badge>
