@@ -1,6 +1,8 @@
 import { Layout } from '@/components/Layout';
 import { Navigation } from '@/components/Navigation';
-import { useLocalStorage } from '@/hooks/useLocalStorage';
+import { useSupabaseData } from '@/hooks/useSupabaseData';
+import { supabase } from '@/integrations/supabase/client';
+import { useToast } from '@/hooks/use-toast';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
@@ -15,7 +17,8 @@ import { Checkbox } from '@/components/ui/checkbox';
 import { Label } from '@/components/ui/label';
 
 export default function Mantenimiento() {
-  const { data, loading } = useLocalStorage();
+  const { data, loading, loadData } = useSupabaseData();
+  const { toast } = useToast();
   const [modoAvanzado, setModoAvanzado] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
   const [filtros, setFiltros] = useState({

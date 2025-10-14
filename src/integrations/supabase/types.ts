@@ -14,7 +14,141 @@ export type Database = {
   }
   public: {
     Tables: {
-      [_ in never]: never
+      equipos: {
+        Row: {
+          activo: boolean
+          categoria: string
+          created_at: string | null
+          ficha: string
+          id: number
+          marca: string
+          modelo: string
+          motivo_inactividad: string | null
+          nombre: string
+          numero_serie: string
+          placa: string
+        }
+        Insert: {
+          activo?: boolean
+          categoria: string
+          created_at?: string | null
+          ficha: string
+          id?: number
+          marca: string
+          modelo: string
+          motivo_inactividad?: string | null
+          nombre: string
+          numero_serie: string
+          placa: string
+        }
+        Update: {
+          activo?: boolean
+          categoria?: string
+          created_at?: string | null
+          ficha?: string
+          id?: number
+          marca?: string
+          modelo?: string
+          motivo_inactividad?: string | null
+          nombre?: string
+          numero_serie?: string
+          placa?: string
+        }
+        Relationships: []
+      }
+      inventarios: {
+        Row: {
+          activo: boolean
+          cantidad: number
+          categoria_equipo: string
+          codigo_identificacion: string
+          created_at: string | null
+          empresa_suplidora: string
+          id: number
+          marcas_compatibles: string[] | null
+          modelos_compatibles: string[] | null
+          movimientos: Json | null
+          nombre: string
+          tipo: string
+        }
+        Insert: {
+          activo?: boolean
+          cantidad?: number
+          categoria_equipo: string
+          codigo_identificacion: string
+          created_at?: string | null
+          empresa_suplidora: string
+          id?: number
+          marcas_compatibles?: string[] | null
+          modelos_compatibles?: string[] | null
+          movimientos?: Json | null
+          nombre: string
+          tipo: string
+        }
+        Update: {
+          activo?: boolean
+          cantidad?: number
+          categoria_equipo?: string
+          codigo_identificacion?: string
+          created_at?: string | null
+          empresa_suplidora?: string
+          id?: number
+          marcas_compatibles?: string[] | null
+          modelos_compatibles?: string[] | null
+          movimientos?: Json | null
+          nombre?: string
+          tipo?: string
+        }
+        Relationships: []
+      }
+      mantenimientos_programados: {
+        Row: {
+          activo: boolean
+          created_at: string | null
+          fecha_ultima_actualizacion: string
+          fecha_ultimo_mantenimiento: string | null
+          ficha: string
+          frecuencia: number
+          horas_km_actuales: number
+          horas_km_restante: number
+          horas_km_ultimo_mantenimiento: number
+          id: number
+          nombre_equipo: string
+          proximo_mantenimiento: number
+          tipo_mantenimiento: string
+        }
+        Insert: {
+          activo?: boolean
+          created_at?: string | null
+          fecha_ultima_actualizacion?: string
+          fecha_ultimo_mantenimiento?: string | null
+          ficha: string
+          frecuencia: number
+          horas_km_actuales?: number
+          horas_km_restante: number
+          horas_km_ultimo_mantenimiento?: number
+          id?: number
+          nombre_equipo: string
+          proximo_mantenimiento: number
+          tipo_mantenimiento: string
+        }
+        Update: {
+          activo?: boolean
+          created_at?: string | null
+          fecha_ultima_actualizacion?: string
+          fecha_ultimo_mantenimiento?: string | null
+          ficha?: string
+          frecuencia?: number
+          horas_km_actuales?: number
+          horas_km_restante?: number
+          horas_km_ultimo_mantenimiento?: number
+          id?: number
+          nombre_equipo?: string
+          proximo_mantenimiento?: number
+          tipo_mantenimiento?: string
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never

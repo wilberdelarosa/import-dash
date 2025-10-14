@@ -1,6 +1,6 @@
 import { Layout } from '@/components/Layout';
 import { Navigation } from '@/components/Navigation';
-import { useLocalStorage } from '@/hooks/useLocalStorage';
+import { useSupabaseData } from '@/hooks/useSupabaseData';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Input } from '@/components/ui/input';
@@ -15,7 +15,7 @@ import jsPDF from 'jspdf';
 import 'jspdf-autotable';
 
 export default function Reportes() {
-  const { data, loading } = useLocalStorage();
+  const { data, loading } = useSupabaseData();
   const [modoAvanzado, setModoAvanzado] = useState(false);
   const [filtros, setFiltros] = useState({
     categorias: [] as string[],

@@ -2,52 +2,104 @@ import { Layout } from '@/components/Layout';
 import { Navigation } from '@/components/Navigation';
 import { EquiposTable } from '@/components/equipos/EquiposTable';
 import { EquipoDialog } from '@/components/equipos/EquipoDialog';
-import { useLocalStorage } from '@/hooks/useLocalStorage';
+import { useSupabaseData } from '@/hooks/useSupabaseData';
+import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 import { Equipo } from '@/types/equipment';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 
 export default function Equipos() {
-  const { data, saveData, loading } = useLocalStorage();
+  const { data, loading, loadData } = useSupabaseData();
   const { toast } = useToast();
 
-  const handleAddEquipo = (equipoData: Omit<Equipo, 'id'>) => {
-    const newId = Math.max(0, ...data.equipos.map(e => e.id)) + 1;
-    const newEquipo = { ...equipoData, id: newId };
-    const updatedData = {
-      ...data,
-      equipos: [...data.equipos, newEquipo]
-    };
-    saveData(updatedData);
-    toast({
-      title: "Equipo agregado",
-      description: "El equipo ha sido agregado exitosamente.",
-    });
-  };
-
-  const handleEditEquipo = (equipoData: Equipo) => {
-    const updatedData = {
-      ...data,
-      equipos: data.equipos.map(e => e.id === equipoData.id ? equipoData : e)
-    };
-    saveData(updatedData);
-    toast({
-      title: "Equipo actualizado",
-      description: "El equipo ha sido actualizado exitosamente.",
-    });
-  };
-
-  const handleDeleteEquipo = (id: number) => {
-    if (confirm('¿Está seguro de que desea eliminar este equipo?')) {
-      const updatedData = {
-        ...data,
-        equipos: data.equipos.filter(e => e.id !== id)
-      };
-      saveData(updatedData);
-      toast({
-        title: "Equipo eliminado",
-        description: "El equipo ha sido eliminado exitosamente.",
+  const handleAddEquipo = async (equipo: Omit<Equipo, 'id'>) => {
+    try {
+      const { error } = await supabase.from('equipos').insert({
+        ficha: equipo.ficha,
+        nombre: equipo.nombre,
+        marca: equipo.marca,
+        modelo: equipo.modelo,
+        numero_serie: equipo.numeroSerie,
+        placa: equipo.placa,
+        categoria: equipo.categoria,
+        activo: equipo.activo,
+        motivo_inactividad: equipo.motivoInactividad
       });
+
+      if (error) throw error;
+
+      await loadData();
+      toast({
+        title: "Éxito",
+        description: "Equipo agregado correctamente",
+      });
+    } catch (error) {
+      console.error('Error adding equipo:', error);
+      toast({
+        title: "Error",
+        description: "No se pudo agregar el equipo",
+        variant: "destructive"
+      });
+    }
+  };
+
+  const handleEditEquipo = async (equipo: Equipo) => {
+    try {
+      const { error } = await supabase
+        .from('equipos')
+        .update({
+          ficha: equipo.ficha,
+          nombre: equipo.nombre,
+          marca: equipo.marca,
+          modelo: equipo.modelo,
+          numero_serie: equipo.numeroSerie,
+          placa: equipo.placa,
+          categoria: equipo.categoria,
+          activo: equipo.activo,
+          motivo_inactividad: equipo.motivoInactividad
+        })
+        .eq('id', equipo.id);
+
+      if (error) throw error;
+
+      await loadData();
+      toast({
+        title: "Éxito",
+        description: "Equipo actualizado correctamente",
+      });
+    } catch (error) {
+      console.error('Error updating equipo:', error);
+      toast({
+        title: "Error",
+        description: "No se pudo actualizar el equipo",
+        variant: "destructive"
+      });
+    }
+  };
+
+  const handleDeleteEquipo = async (id: number) => {
+    if (window.confirm('¿Está seguro de eliminar este equipo?')) {
+      try {
+        const { error } = await supabase
+          .from('equipos')
+          .delete()
+          .eq('id', id);
+
+        if (error) throw error;
+
+        await loadData();
+        toast({
+          title: "Éxito",
+          description: "Equipo eliminado correctamente",
+        });
+      } catch (error) {
+        console.error('Error deleting equipo:', error);
+        toast({
+          title: "Error",
+          description: "No se pudo eliminar el equipo",
+          variant: "destructive"
+        });
+      }
     }
   };
 

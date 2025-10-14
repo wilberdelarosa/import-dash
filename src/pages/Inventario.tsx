@@ -1,6 +1,6 @@
 import { Layout } from '@/components/Layout';
 import { Navigation } from '@/components/Navigation';
-import { useLocalStorage } from '@/hooks/useLocalStorage';
+import { useSupabaseData } from '@/hooks/useSupabaseData';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
@@ -10,7 +10,7 @@ import { Package, Search, Filter, AlertTriangle } from 'lucide-react';
 import { useState } from 'react';
 
 export default function Inventario() {
-  const { data, loading } = useLocalStorage();
+  const { data, loading } = useSupabaseData();
   const [searchTerm, setSearchTerm] = useState('');
   const [filterTipo, setFilterTipo] = useState('all');
 
