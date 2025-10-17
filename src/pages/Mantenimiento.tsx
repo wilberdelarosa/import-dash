@@ -314,22 +314,20 @@ export default function Mantenimiento() {
   const exportarPDF = (mode: 'all' | 'categories' = 'all', categoriasSeleccionadas: string[] = []) => {
     const doc = new jsPDF();
     
-    // Filtrar mantenimientos según categorías seleccionadas
-    let mantenimientosAImprimir = mantenimientosFiltrados;
-    
-    if (mode === 'categories' && categoriasSeleccionadas.length > 0) {
-      mantenimientosAImprimir = mantenimientosFiltrados.filter(mant => {
+    if (mode === 'all') {
+      // Modo: Todo junto - todos los mantenimientos filtrados
+      generarPDFCompleto(doc, mantenimientosFiltrados);
+    } else if (mode === 'categories' && categoriasSeleccionadas.length > 0) {
+      // Modo: Por categorías - filtrar por categorías seleccionadas
+      const mantenimientosPorCategoria = mantenimientosFiltrados.filter(mant => {
         const equipo = equiposPorFicha[mant.ficha];
         return equipo && categoriasSeleccionadas.includes(equipo.categoria);
       });
-    }
-    
-    if (mode === 'all' || categoriasSeleccionadas.length === 0) {
-      // Modo: Todo junto
-      generarPDFCompleto(doc, mantenimientosAImprimir);
+      
+      generarPDFPorCategorias(doc, mantenimientosPorCategoria, categoriasSeleccionadas);
     } else {
-      // Modo: Por categorías segmentado
-      generarPDFPorCategorias(doc, mantenimientosAImprimir, categoriasSeleccionadas);
+      // Fallback: si no hay categorías seleccionadas, imprimir todo
+      generarPDFCompleto(doc, mantenimientosFiltrados);
     }
     
     // Guardar el PDF
