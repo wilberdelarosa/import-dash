@@ -312,26 +312,40 @@ export default function Mantenimiento() {
   };
 
   const exportarPDF = (mode: 'all' | 'categories' = 'all', categoriasSeleccionadas: string[] = []) => {
-    const doc = new jsPDF();
-    
-    if (mode === 'all') {
-      // Modo: Todo junto - todos los mantenimientos filtrados
-      generarPDFCompleto(doc, mantenimientosFiltrados);
-    } else if (mode === 'categories' && categoriasSeleccionadas.length > 0) {
-      // Modo: Por categorías - filtrar por categorías seleccionadas
-      const mantenimientosPorCategoria = mantenimientosFiltrados.filter(mant => {
-        const equipo = equiposPorFicha[mant.ficha];
-        return equipo && categoriasSeleccionadas.includes(equipo.categoria);
-      });
+    try {
+      const doc = new jsPDF();
       
-      generarPDFPorCategorias(doc, mantenimientosPorCategoria, categoriasSeleccionadas);
-    } else {
-      // Fallback: si no hay categorías seleccionadas, imprimir todo
-      generarPDFCompleto(doc, mantenimientosFiltrados);
+      if (mode === 'all') {
+        // Modo: Todo junto - todos los mantenimientos filtrados
+        generarPDFCompleto(doc, mantenimientosFiltrados);
+      } else if (mode === 'categories' && categoriasSeleccionadas.length > 0) {
+        // Modo: Por categorías - filtrar por categorías seleccionadas
+        const mantenimientosPorCategoria = mantenimientosFiltrados.filter(mant => {
+          const equipo = equiposPorFicha[mant.ficha];
+          return equipo && categoriasSeleccionadas.includes(equipo.categoria);
+        });
+        
+        if (mantenimientosPorCategoria.length === 0) {
+          throw new Error('No hay mantenimientos para las categorías seleccionadas');
+        }
+        
+        generarPDFPorCategorias(doc, mantenimientosPorCategoria, categoriasSeleccionadas);
+      } else {
+        // Fallback: si no hay categorías seleccionadas, imprimir todo
+        generarPDFCompleto(doc, mantenimientosFiltrados);
+      }
+      
+      // Guardar el PDF con nombre descriptivo
+      const fecha = new Date().toISOString().split('T')[0];
+      const nombreArchivo = mode === 'all' 
+        ? `mantenimientos_completo_${fecha}.pdf`
+        : `mantenimientos_categorias_${fecha}.pdf`;
+      
+      doc.save(nombreArchivo);
+    } catch (error) {
+      console.error('Error al exportar PDF:', error);
+      throw error;
     }
-    
-    // Guardar el PDF
-    doc.save(`mantenimientos_${new Date().toISOString().split('T')[0]}.pdf`);
   };
 
   const generarPDFCompleto = (doc: jsPDF, mantenimientos: any[]) => {
@@ -576,8 +590,29 @@ export default function Mantenimiento() {
   };
 
   const handlePrint = () => {
-    exportarPDF(printMode, selectedCategories);
-    setIsPrintDialogOpen(false);
+    try {
+      exportarPDF(printMode, selectedCategories);
+      setIsPrintDialogOpen(false);
+      
+      // Mostrar notificación de éxito
+      const toastModule = import('@/hooks/use-toast').then(module => {
+        module.toast({
+          title: "PDF generado exitosamente",
+          description: "El archivo ha sido descargado correctamente.",
+        });
+      });
+    } catch (error) {
+      console.error('Error al generar PDF:', error);
+      
+      // Mostrar notificación de error
+      const toastModule = import('@/hooks/use-toast').then(module => {
+        module.toast({
+          title: "Error al generar PDF",
+          description: "Hubo un problema al crear el documento. Por favor, inténtalo de nuevo.",
+          variant: "destructive",
+        });
+      });
+    }
   };
 
   const togglePrintCategory = (categoria: string) => {
@@ -1289,8 +1324,8 @@ export default function Mantenimiento() {
               onClick={handlePrint}
               disabled={printMode === 'categories' && selectedCategories.length === 0}
             >
-              <Printer className="mr-2 h-4 w-4" />
-              Imprimir
+              <Download className="mr-2 h-4 w-4" />
+              Generar y Descargar
             </Button>
           </DialogFooter>
         </DialogContent>
@@ -1380,9 +1415,10 @@ export default function Mantenimiento() {
                 variant="outline"
                 size="sm"
                 className="flex w-full items-center justify-center gap-2 transition-colors hover:bg-primary/10 focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-primary sm:w-auto"
+                title="Descargar PDF de mantenimientos"
               >
-                <Printer className="w-4 h-4" />
-                Imprimir PDF
+                <Download className="w-4 h-4" />
+                Descargar PDF
               </Button>
               <Button
                 variant={modoAvanzado ? "default" : "outline"}
