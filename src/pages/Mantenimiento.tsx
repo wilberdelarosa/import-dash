@@ -57,6 +57,7 @@ import {
   Plus,
   Pencil,
   Loader2,
+  Printer,
 } from 'lucide-react';
 import { useState } from 'react';
 import jsPDF from 'jspdf';
@@ -136,6 +137,9 @@ export default function Mantenimiento() {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [deleteTarget, setDeleteTarget] = useState<MantenimientoProgramado | null>(null);
   const [isDeleting, setIsDeleting] = useState(false);
+  const [isPrintDialogOpen, setIsPrintDialogOpen] = useState(false);
+  const [printMode, setPrintMode] = useState<'all' | 'categories'>('all');
+  const [selectedCategories, setSelectedCategories] = useState<string[]>([]);
 
   const form = useForm<MantenimientoFormValues>({
     resolver: zodResolver(mantenimientoSchema),
@@ -307,9 +311,32 @@ export default function Mantenimiento() {
     return { label: 'Normal', variant: 'default' as const };
   };
 
-  const exportarPDF = () => {
+  const exportarPDF = (mode: 'all' | 'categories' = 'all', categoriasSeleccionadas: string[] = []) => {
     const doc = new jsPDF();
     
+    // Filtrar mantenimientos según categorías seleccionadas
+    let mantenimientosAImprimir = mantenimientosFiltrados;
+    
+    if (mode === 'categories' && categoriasSeleccionadas.length > 0) {
+      mantenimientosAImprimir = mantenimientosFiltrados.filter(mant => {
+        const equipo = equiposPorFicha[mant.ficha];
+        return equipo && categoriasSeleccionadas.includes(equipo.categoria);
+      });
+    }
+    
+    if (mode === 'all' || categoriasSeleccionadas.length === 0) {
+      // Modo: Todo junto
+      generarPDFCompleto(doc, mantenimientosAImprimir);
+    } else {
+      // Modo: Por categorías segmentado
+      generarPDFPorCategorias(doc, mantenimientosAImprimir, categoriasSeleccionadas);
+    }
+    
+    // Guardar el PDF
+    doc.save(`mantenimientos_${new Date().toISOString().split('T')[0]}.pdf`);
+  };
+
+  const generarPDFCompleto = (doc: jsPDF, mantenimientos: any[]) => {
     // Configurar fuente
     doc.setFont('helvetica');
     
@@ -324,17 +351,22 @@ export default function Mantenimiento() {
     doc.text(`Generado el: ${new Date().toLocaleDateString('es-ES')} a las ${new Date().toLocaleTimeString('es-ES')}`, 20, 35);
     
     // Resumen estadístico
+    const totalMant = mantenimientos.length;
+    const venc = mantenimientos.filter(m => m.horasKmRestante <= 0).length;
+    const prox = mantenimientos.filter(m => m.horasKmRestante > 0 && m.horasKmRestante <= 100).length;
+    const norm = mantenimientos.filter(m => m.horasKmRestante > 100).length;
+    
     doc.setFontSize(12);
     doc.setTextColor(40, 40, 40);
     doc.text('Resumen:', 20, 50);
     doc.setFontSize(10);
-    doc.text(`Total de mantenimientos: ${totalMantenimientos}`, 20, 60);
-    doc.text(`Vencidos: ${vencidos}`, 20, 68);
-    doc.text(`Próximos (≤100): ${proximos}`, 20, 76);
-    doc.text(`Normales: ${normales}`, 20, 84);
+    doc.text(`Total de mantenimientos: ${totalMant}`, 20, 60);
+    doc.text(`Vencidos: ${venc}`, 20, 68);
+    doc.text(`Próximos (≤100): ${prox}`, 20, 76);
+    doc.text(`Normales: ${norm}`, 20, 84);
     
     // Preparar datos para la tabla
-    const tableData = mantenimientosFiltrados.map(mant => {
+    const tableData = mantenimientos.map(mant => {
       const estado = obtenerEstadoMantenimiento(mant.horasKmRestante);
       const unidad = mant.tipoMantenimiento === 'Horas' ? 'hrs' : 'km';
       const equipo = equiposPorFicha[mant.ficha];
@@ -367,37 +399,36 @@ export default function Mantenimiento() {
         cellPadding: 3,
       },
       headStyles: {
-        fillColor: [34, 197, 94], // Verde
+        fillColor: [34, 197, 94],
         textColor: 255,
         fontStyle: 'bold',
         fontSize: 9,
       },
       columnStyles: {
-        0: { cellWidth: 15 }, // Ficha
-        1: { cellWidth: 25 }, // Equipo
-        2: { cellWidth: 20 }, // Categoría
-        3: { cellWidth: 15 }, // Tipo
-        4: { cellWidth: 20 }, // Actual
-        5: { cellWidth: 20 }, // Frecuencia
-        6: { cellWidth: 20 }, // Últ. Mant.
-        7: { cellWidth: 20 }, // Próximo
-        8: { cellWidth: 25 }, // Restante
-        9: { cellWidth: 20 }, // Fecha Últ.
-        10: { cellWidth: 15 }, // Estado
+        0: { cellWidth: 15 },
+        1: { cellWidth: 25 },
+        2: { cellWidth: 20 },
+        3: { cellWidth: 15 },
+        4: { cellWidth: 20 },
+        5: { cellWidth: 20 },
+        6: { cellWidth: 20 },
+        7: { cellWidth: 20 },
+        8: { cellWidth: 25 },
+        9: { cellWidth: 20 },
+        10: { cellWidth: 15 },
       },
       didParseCell: (data: any) => {
-        // Colorear filas según estado
         if (data.section === 'body') {
-          const estado = data.row.raw[10]; // Estado está en la columna 10
+          const estado = data.row.raw[10];
           if (estado === 'Vencido') {
-            data.cell.styles.fillColor = [254, 242, 242]; // Rojo claro
-            data.cell.styles.textColor = [220, 38, 38]; // Rojo
+            data.cell.styles.fillColor = [254, 242, 242];
+            data.cell.styles.textColor = [220, 38, 38];
           } else if (estado === 'Próximo') {
-            data.cell.styles.fillColor = [255, 251, 235]; // Amarillo claro
-            data.cell.styles.textColor = [180, 83, 9]; // Amarillo oscuro
+            data.cell.styles.fillColor = [255, 251, 235];
+            data.cell.styles.textColor = [180, 83, 9];
           } else {
-            data.cell.styles.fillColor = [240, 253, 244]; // Verde claro
-            data.cell.styles.textColor = [22, 163, 74]; // Verde
+            data.cell.styles.fillColor = [240, 253, 244];
+            data.cell.styles.textColor = [22, 163, 74];
           }
         }
       },
@@ -414,9 +445,149 @@ export default function Mantenimiento() {
       doc.setTextColor(100, 100, 100);
       doc.text(`Página ${i} de ${pageCount}`, doc.internal.pageSize.width - 30, doc.internal.pageSize.height - 10);
     }
+  };
+
+  const generarPDFPorCategorias = (doc: jsPDF, mantenimientos: any[], categoriasSeleccionadas: string[]) => {
+    let isFirstCategory = true;
     
-    // Guardar el PDF
-    doc.save(`mantenimientos_${new Date().toISOString().split('T')[0]}.pdf`);
+    categoriasSeleccionadas.forEach(categoria => {
+      const mantenimientosCategoria = mantenimientos.filter(mant => {
+        const equipo = equiposPorFicha[mant.ficha];
+        return equipo && equipo.categoria === categoria;
+      });
+      
+      if (mantenimientosCategoria.length === 0) return;
+      
+      if (!isFirstCategory) {
+        doc.addPage();
+      }
+      isFirstCategory = false;
+      
+      // Configurar fuente
+      doc.setFont('helvetica');
+      
+      // Título de la categoría
+      doc.setFontSize(18);
+      doc.setTextColor(40, 40, 40);
+      doc.text(`Mantenimientos - ${categoria}`, 20, 25);
+      
+      // Fecha de generación
+      doc.setFontSize(10);
+      doc.setTextColor(100, 100, 100);
+      doc.text(`Generado el: ${new Date().toLocaleDateString('es-ES')} a las ${new Date().toLocaleTimeString('es-ES')}`, 20, 35);
+      
+      // Resumen de la categoría
+      const totalCat = mantenimientosCategoria.length;
+      const vencCat = mantenimientosCategoria.filter(m => m.horasKmRestante <= 0).length;
+      const proxCat = mantenimientosCategoria.filter(m => m.horasKmRestante > 0 && m.horasKmRestante <= 100).length;
+      const normCat = mantenimientosCategoria.filter(m => m.horasKmRestante > 100).length;
+      
+      doc.setFontSize(12);
+      doc.setTextColor(40, 40, 40);
+      doc.text('Resumen:', 20, 50);
+      doc.setFontSize(10);
+      doc.text(`Total: ${totalCat}`, 20, 60);
+      doc.text(`Vencidos: ${vencCat}`, 20, 68);
+      doc.text(`Próximos (≤100): ${proxCat}`, 20, 76);
+      doc.text(`Normales: ${normCat}`, 20, 84);
+      
+      // Preparar datos para la tabla
+      const tableData = mantenimientosCategoria.map(mant => {
+        const estado = obtenerEstadoMantenimiento(mant.horasKmRestante);
+        const unidad = mant.tipoMantenimiento === 'Horas' ? 'hrs' : 'km';
+        
+        return [
+          mant.ficha,
+          mant.nombreEquipo,
+          mant.tipoMantenimiento,
+          `${mant.horasKmActuales.toLocaleString()} ${unidad}`,
+          `${mant.frecuencia.toLocaleString()} ${unidad}`,
+          `${mant.horasKmUltimoMantenimiento.toLocaleString()} ${unidad}`,
+          `${mant.proximoMantenimiento.toLocaleString()} ${unidad}`,
+          mant.horasKmRestante <= 0 ? 
+            `${Math.abs(mant.horasKmRestante).toFixed(0)} ${unidad} vencido` :
+            `${mant.horasKmRestante.toFixed(0)} ${unidad}`,
+          formatearFecha(mant.fechaUltimoMantenimiento),
+          estado.label
+        ];
+      });
+      
+      // Configurar tabla
+      (doc as any).autoTable({
+        startY: 95,
+        head: [['Ficha', 'Equipo', 'Tipo', 'Actual', 'Frecuencia', 'Últ. Mant.', 'Próximo', 'Restante', 'Fecha Últ.', 'Estado']],
+        body: tableData,
+        theme: 'grid',
+        styles: {
+          fontSize: 8,
+          cellPadding: 3,
+        },
+        headStyles: {
+          fillColor: [34, 197, 94],
+          textColor: 255,
+          fontStyle: 'bold',
+          fontSize: 9,
+        },
+        columnStyles: {
+          0: { cellWidth: 18 },
+          1: { cellWidth: 28 },
+          2: { cellWidth: 18 },
+          3: { cellWidth: 22 },
+          4: { cellWidth: 22 },
+          5: { cellWidth: 22 },
+          6: { cellWidth: 22 },
+          7: { cellWidth: 28 },
+          8: { cellWidth: 22 },
+          9: { cellWidth: 18 },
+        },
+        didParseCell: (data: any) => {
+          if (data.section === 'body') {
+            const estado = data.row.raw[9];
+            if (estado === 'Vencido') {
+              data.cell.styles.fillColor = [254, 242, 242];
+              data.cell.styles.textColor = [220, 38, 38];
+            } else if (estado === 'Próximo') {
+              data.cell.styles.fillColor = [255, 251, 235];
+              data.cell.styles.textColor = [180, 83, 9];
+            } else {
+              data.cell.styles.fillColor = [240, 253, 244];
+              data.cell.styles.textColor = [22, 163, 74];
+            }
+          }
+        },
+        margin: { top: 20, right: 15, bottom: 20, left: 15 },
+        pageBreak: 'auto',
+        showHead: 'everyPage',
+      });
+    });
+    
+    // Pie de página
+    const pageCount = (doc as any).internal.getNumberOfPages();
+    for (let i = 1; i <= pageCount; i++) {
+      doc.setPage(i);
+      doc.setFontSize(8);
+      doc.setTextColor(100, 100, 100);
+      doc.text(`Página ${i} de ${pageCount}`, doc.internal.pageSize.width - 30, doc.internal.pageSize.height - 10);
+    }
+  };
+
+  const handlePrintClick = () => {
+    setSelectedCategories([]);
+    setPrintMode('all');
+    setIsPrintDialogOpen(true);
+  };
+
+  const handlePrint = () => {
+    exportarPDF(printMode, selectedCategories);
+    setIsPrintDialogOpen(false);
+  };
+
+  const togglePrintCategory = (categoria: string) => {
+    setSelectedCategories(prev => 
+      prev.includes(categoria) 
+        ? prev.filter(c => c !== categoria)
+        : [...prev, categoria]
+    );
   };
 
   const toggleTipo = (tipo: string) => {
@@ -1005,6 +1176,128 @@ export default function Mantenimiento() {
         </AlertDialogContent>
       </AlertDialog>
 
+      <Dialog open={isPrintDialogOpen} onOpenChange={setIsPrintDialogOpen}>
+        <DialogContent className="max-w-lg">
+          <DialogHeader>
+            <DialogTitle>Configurar impresión</DialogTitle>
+            <DialogDescription>
+              Elige cómo deseas imprimir los mantenimientos programados
+            </DialogDescription>
+          </DialogHeader>
+          
+          <div className="space-y-6 py-4">
+            <div className="space-y-4">
+              <Label className="text-base font-semibold">Modo de impresión</Label>
+              <div className="space-y-3">
+                <div className="flex items-center space-x-3 rounded-lg border p-4 cursor-pointer hover:bg-muted/50 transition-colors"
+                     onClick={() => setPrintMode('all')}>
+                  <Checkbox
+                    id="print-all"
+                    checked={printMode === 'all'}
+                    onCheckedChange={() => setPrintMode('all')}
+                  />
+                  <div className="flex-1">
+                    <label htmlFor="print-all" className="cursor-pointer">
+                      <div className="font-medium">Todo junto</div>
+                      <div className="text-sm text-muted-foreground">
+                        Imprime todos los mantenimientos en un solo documento
+                      </div>
+                    </label>
+                  </div>
+                </div>
+                
+                <div className="flex items-center space-x-3 rounded-lg border p-4 cursor-pointer hover:bg-muted/50 transition-colors"
+                     onClick={() => setPrintMode('categories')}>
+                  <Checkbox
+                    id="print-categories"
+                    checked={printMode === 'categories'}
+                    onCheckedChange={() => setPrintMode('categories')}
+                  />
+                  <div className="flex-1">
+                    <label htmlFor="print-categories" className="cursor-pointer">
+                      <div className="font-medium">Por categorías</div>
+                      <div className="text-sm text-muted-foreground">
+                        Segmenta los mantenimientos por categoría de equipo
+                      </div>
+                    </label>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {printMode === 'categories' && (
+              <div className="space-y-3 border-t pt-4">
+                <Label className="text-base font-semibold">Seleccionar categorías</Label>
+                <div className="max-h-64 space-y-2 overflow-y-auto rounded-md border bg-muted/30 p-3">
+                  {categorias.length > 0 ? (
+                    categorias.map(categoria => (
+                      <div
+                        key={categoria}
+                        className="flex items-center space-x-2 rounded-md px-2 py-2 transition-colors hover:bg-muted/40 cursor-pointer"
+                        onClick={() => togglePrintCategory(categoria)}
+                      >
+                        <Checkbox
+                          id={`print-cat-${categoria}`}
+                          checked={selectedCategories.includes(categoria)}
+                          onCheckedChange={() => togglePrintCategory(categoria)}
+                        />
+                        <label htmlFor={`print-cat-${categoria}`} className="flex-1 cursor-pointer text-sm">
+                          {categoria}
+                        </label>
+                      </div>
+                    ))
+                  ) : (
+                    <div className="text-sm text-muted-foreground text-center py-4">
+                      No hay categorías disponibles
+                    </div>
+                  )}
+                </div>
+                {selectedCategories.length > 0 && (
+                  <Badge variant="secondary" className="mt-2">
+                    {selectedCategories.length} categoría(s) seleccionada(s)
+                  </Badge>
+                )}
+              </div>
+            )}
+
+            <div className="rounded-lg bg-muted/50 p-4">
+              <div className="flex items-start gap-3">
+                <AlertCircle className="h-5 w-5 text-primary mt-0.5" />
+                <div className="text-sm space-y-1">
+                  <div className="font-medium">Información de impresión</div>
+                  <div className="text-muted-foreground">
+                    {printMode === 'all' 
+                      ? `Se imprimirán ${mantenimientosFiltrados.length} mantenimientos en total.`
+                      : selectedCategories.length > 0
+                        ? `Se imprimirán los mantenimientos de ${selectedCategories.length} categoría(s).`
+                        : 'Selecciona al menos una categoría para imprimir.'
+                    }
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <DialogFooter className="gap-2">
+            <Button 
+              type="button" 
+              variant="outline" 
+              onClick={() => setIsPrintDialogOpen(false)}
+            >
+              Cancelar
+            </Button>
+            <Button 
+              type="button" 
+              onClick={handlePrint}
+              disabled={printMode === 'categories' && selectedCategories.length === 0}
+            >
+              <Printer className="mr-2 h-4 w-4" />
+              Imprimir
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
       <Card className="mb-6 border-destructive/40">
         <CardHeader>
           <CardTitle className="flex items-center gap-2 text-destructive">
@@ -1085,13 +1378,13 @@ export default function Mantenimiento() {
                 Nuevo mantenimiento
               </Button>
               <Button
-                onClick={exportarPDF}
+                onClick={handlePrintClick}
                 variant="outline"
                 size="sm"
                 className="flex w-full items-center justify-center gap-2 transition-colors hover:bg-primary/10 focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-primary sm:w-auto"
               >
-                <Download className="w-4 h-4" />
-                Exportar PDF
+                <Printer className="w-4 h-4" />
+                Imprimir PDF
               </Button>
               <Button
                 variant={modoAvanzado ? "default" : "outline"}
