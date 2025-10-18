@@ -68,6 +68,7 @@ import { Switch } from '@/components/ui/switch';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
+import { useToast } from '@/hooks/use-toast';
 
 const numericField = z
   .string()
@@ -140,6 +141,7 @@ export default function Mantenimiento() {
   const [isPrintDialogOpen, setIsPrintDialogOpen] = useState(false);
   const [printMode, setPrintMode] = useState<'all' | 'categories'>('all');
   const [selectedCategories, setSelectedCategories] = useState<string[]>([]);
+  const { toast } = useToast();
 
   const form = useForm<MantenimientoFormValues>({
     resolver: zodResolver(mantenimientoSchema),
@@ -593,24 +595,20 @@ export default function Mantenimiento() {
     try {
       exportarPDF(printMode, selectedCategories);
       setIsPrintDialogOpen(false);
-      
+
       // Mostrar notificación de éxito
-      const toastModule = import('@/hooks/use-toast').then(module => {
-        module.toast({
-          title: "PDF generado exitosamente",
-          description: "El archivo ha sido descargado correctamente.",
-        });
+      toast({
+        title: "PDF generado exitosamente",
+        description: "El archivo ha sido descargado correctamente.",
       });
     } catch (error) {
       console.error('Error al generar PDF:', error);
-      
+
       // Mostrar notificación de error
-      const toastModule = import('@/hooks/use-toast').then(module => {
-        module.toast({
-          title: "Error al generar PDF",
-          description: "Hubo un problema al crear el documento. Por favor, inténtalo de nuevo.",
-          variant: "destructive",
-        });
+      toast({
+        title: "Error al generar PDF",
+        description: "Hubo un problema al crear el documento. Por favor, inténtalo de nuevo.",
+        variant: "destructive",
       });
     }
   };
