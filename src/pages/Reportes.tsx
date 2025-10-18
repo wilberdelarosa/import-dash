@@ -7,7 +7,7 @@ import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Calendar, Filter, FileDown, FileText, X } from 'lucide-react';
-import { useState } from 'react';
+import { useMemo, useState } from 'react';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Label } from '@/components/ui/label';
@@ -27,6 +27,7 @@ export default function Reportes() {
     horasDesde: '',
     horasHasta: ''
   });
+  const [estadoMantenimiento, setEstadoMantenimiento] = useState<'todos' | 'normal' | 'proximo' | 'vencido'>('todos');
 
   if (loading) {
     return (
@@ -42,10 +43,34 @@ export default function Reportes() {
   const marcas = [...new Set(data.equipos.map(e => e.marca))];
   const fichas = [...new Set(data.equipos.map(e => e.ficha))].sort();
 
-  const equiposFiltrados = data.equipos.filter(equipo => {
+  const equiposConEstado = useMemo(() => (
+    data.equipos.map(equipo => {
+      const mantenimiento = data.mantenimientosProgramados.find(m => m.ficha === equipo.ficha);
+      const horasRestante = mantenimiento?.horasKmRestante;
+
+      let estado: 'normal' | 'proximo' | 'vencido' | 'sin-programar';
+      if (horasRestante === undefined || horasRestante === null || Number.isNaN(horasRestante)) {
+        estado = 'sin-programar';
+      } else if (horasRestante <= 0) {
+        estado = 'vencido';
+      } else if (horasRestante <= 100) {
+        estado = 'proximo';
+      } else {
+        estado = 'normal';
+      }
+
+      return {
+        ...equipo,
+        estadoMantenimiento: estado,
+        mantenimientoHorasRestante: horasRestante,
+      };
+    })
+  ), [data.equipos, data.mantenimientosProgramados]);
+
+  const equiposFiltrados = equiposConEstado.filter(equipo => {
     // Filtro de categorías (multi-select)
     const pasaCategoria = filtros.categorias.length === 0 || filtros.categorias.includes(equipo.categoria);
-    
+
     // Filtro de marcas (multi-select)
     const pasaMarca = filtros.marcas.length === 0 || filtros.marcas.includes(equipo.marca);
     
@@ -65,6 +90,12 @@ export default function Reportes() {
     
     return pasaCategoria && pasaMarca && pasaEstado && pasaFicha && pasaHorasMin && pasaHorasMax;
   });
+
+  const equiposPorEstado = useMemo(() => (
+    equiposConEstado.filter(equipo => (
+      estadoMantenimiento === 'todos' || equipo.estadoMantenimiento === estadoMantenimiento
+    ))
+  ), [equiposConEstado, estadoMantenimiento]);
 
   const resumenPorCategoria = categorias.map(categoria => {
     const equiposCategoria = equiposFiltrados.filter(e => e.categoria === categoria);
@@ -302,6 +333,13 @@ export default function Reportes() {
       horasDesde: '',
       horasHasta: ''
     });
+  };
+
+  const estadoLabels: Record<'normal' | 'proximo' | 'vencido' | 'sin-programar', { label: string; badgeClass: string }> = {
+    normal: { label: 'Normal', badgeClass: 'bg-emerald-100 text-emerald-700' },
+    proximo: { label: 'Próximo', badgeClass: 'bg-amber-100 text-amber-700' },
+    vencido: { label: 'Vencido', badgeClass: 'bg-red-100 text-red-700' },
+    'sin-programar': { label: 'Sin programar', badgeClass: 'bg-slate-100 text-slate-600' }
   };
 
   return (
@@ -629,6 +667,55 @@ export default function Reportes() {
           </CardHeader>
         </Card>
       </div>
+
+      <Card className="mb-6">
+        <CardHeader className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+          <div>
+            <CardTitle>Equipos por estado de mantenimiento</CardTitle>
+            <CardDescription>Consulta rápidamente la ficha de cada equipo según su estado.</CardDescription>
+          </div>
+          <Select
+            value={estadoMantenimiento}
+            onValueChange={(value) => setEstadoMantenimiento(value as 'todos' | 'normal' | 'proximo' | 'vencido')}
+          >
+            <SelectTrigger className="w-full sm:w-56">
+              <SelectValue placeholder="Filtrar por estado" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="todos">Todos los estados</SelectItem>
+              <SelectItem value="normal">Normal</SelectItem>
+              <SelectItem value="proximo">Próximo</SelectItem>
+              <SelectItem value="vencido">Vencido</SelectItem>
+            </SelectContent>
+          </Select>
+        </CardHeader>
+        <CardContent>
+          {equiposPorEstado.length > 0 ? (
+            <div className="space-y-3">
+              {equiposPorEstado.map((equipo) => (
+                <div
+                  key={equipo.id}
+                  className="flex flex-col gap-1 rounded-lg border p-3 transition hover:bg-muted/50"
+                >
+                  <div className="flex items-center gap-2">
+                    <span className="font-medium">{equipo.nombre}</span>
+                    {equipo.estadoMantenimiento !== 'sin-programar' && (
+                      <Badge className={`${estadoLabels[equipo.estadoMantenimiento].badgeClass} border-0`}> 
+                        {estadoLabels[equipo.estadoMantenimiento].label}
+                      </Badge>
+                    )}
+                  </div>
+                  <span className="text-sm font-mono text-muted-foreground">{equipo.ficha}</span>
+                </div>
+              ))}
+            </div>
+          ) : (
+            <p className="text-sm text-muted-foreground">
+              No hay equipos que coincidan con el estado seleccionado.
+            </p>
+          )}
+        </CardContent>
+      </Card>
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         {/* Resumen por categoría */}
