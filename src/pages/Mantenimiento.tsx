@@ -314,12 +314,23 @@ export default function Mantenimiento() {
     return { label: 'Normal', variant: 'default' as const };
   };
 
+  type AutoTable = (doc: jsPDF, options: Record<string, any>) => jsPDF;
+
   const exportarPDF = async (mode: 'all' | 'categories' = 'all', categoriasSeleccionadas: string[] = []) => {
     try {
-      const { jsPDF } = await import('jspdf');
-      const autoTable = (await import('jspdf-autotable')).default;
+      const [{ jsPDF }, autoTableModule] = await Promise.all([
+        import('jspdf'),
+        import('jspdf-autotable'),
+      ]);
 
-      const doc = new jsPDF();
+      const autoTable = (autoTableModule.default ?? (autoTableModule as { autoTable?: AutoTable }).autoTable) as AutoTable | undefined;
+
+      if (!autoTable) {
+        throw new Error('No se pudo cargar el generador de tablas para el PDF');
+      }
+
+      const doc = new jsPDF({ orientation: 'landscape', unit: 'mm', format: 'a4' });
+
 
       if (mantenimientosFiltrados.length === 0) {
         throw new Error('No hay mantenimientos disponibles para generar el PDF');
@@ -358,7 +369,8 @@ export default function Mantenimiento() {
     }
   };
 
-  const generarPDFCompleto = (doc: jsPDF, autoTable: any, mantenimientos: any[]) => {
+  const generarPDFCompleto = (doc: jsPDF, autoTable: AutoTable, mantenimientos: any[]) => {
+
     // Configurar fuente
     doc.setFont('helvetica');
     
@@ -411,19 +423,21 @@ export default function Mantenimiento() {
     });
     
     // Configurar tabla
-    autoTable(doc, {
-      startY: 95,
-      head: [['Ficha', 'Equipo', 'Categoría', 'Tipo', 'Actual', 'Frecuencia', 'Últ. Mant.', 'Próximo', 'Restante', 'Fecha Últ.', 'Estado']],
-      body: tableData,
-      theme: 'grid',
-      styles: {
-        fontSize: 8,
-        cellPadding: 3,
-      },
-      headStyles: {
-        fillColor: [34, 197, 94],
-        textColor: 255,
-        fontStyle: 'bold',
+      autoTable(doc, {
+        startY: 95,
+        head: [['Ficha', 'Equipo', 'Categoría', 'Tipo', 'Actual', 'Frecuencia', 'Últ. Mant.', 'Próximo', 'Restante', 'Fecha Últ.', 'Estado']],
+        body: tableData,
+        theme: 'grid',
+        styles: {
+          fontSize: 8,
+          cellPadding: 2.5,
+          overflow: 'linebreak',
+        },
+        headStyles: {
+          fillColor: [34, 197, 94],
+          textColor: 255,
+          fontStyle: 'bold',
+
         fontSize: 9,
       },
       columnStyles: {
@@ -471,7 +485,8 @@ export default function Mantenimiento() {
 
   const generarPDFPorCategorias = (
     doc: jsPDF,
-    autoTable: any,
+    autoTable: AutoTable,
+
     mantenimientos: any[],
     categoriasSeleccionadas: string[],
   ) => {
@@ -547,7 +562,8 @@ export default function Mantenimiento() {
         theme: 'grid',
         styles: {
           fontSize: 8,
-          cellPadding: 3,
+          cellPadding: 2.5,
+          overflow: 'linebreak',
         },
         headStyles: {
           fillColor: [34, 197, 94],
