@@ -314,20 +314,10 @@ export default function Mantenimiento() {
     return { label: 'Normal', variant: 'default' as const };
   };
 
-  type AutoTable = (doc: jsPDF, options: Record<string, any>) => jsPDF;
-
   const exportarPDF = async (mode: 'all' | 'categories' = 'all', categoriasSeleccionadas: string[] = []) => {
     try {
-      const [{ jsPDF }, autoTableModule] = await Promise.all([
-        import('jspdf'),
-        import('jspdf-autotable'),
-      ]);
-
-      const autoTable = (autoTableModule.default ?? (autoTableModule as { autoTable?: AutoTable }).autoTable) as AutoTable | undefined;
-
-      if (!autoTable) {
-        throw new Error('No se pudo cargar el generador de tablas para el PDF');
-      }
+      const { jsPDF } = await import('jspdf');
+      const autoTable = (await import('jspdf-autotable')).default;
 
       const doc = new jsPDF();
 
@@ -368,7 +358,7 @@ export default function Mantenimiento() {
     }
   };
 
-  const generarPDFCompleto = (doc: jsPDF, autoTable: AutoTable, mantenimientos: any[]) => {
+  const generarPDFCompleto = (doc: jsPDF, autoTable: any, mantenimientos: any[]) => {
     // Configurar fuente
     doc.setFont('helvetica');
     
@@ -481,7 +471,7 @@ export default function Mantenimiento() {
 
   const generarPDFPorCategorias = (
     doc: jsPDF,
-    autoTable: AutoTable,
+    autoTable: any,
     mantenimientos: any[],
     categoriasSeleccionadas: string[],
   ) => {
