@@ -141,6 +141,7 @@ export default function Mantenimiento() {
   const [printMode, setPrintMode] = useState<'all' | 'categories'>('all');
   const [selectedCategories, setSelectedCategories] = useState<string[]>([]);
   const [isGeneratingPDF, setIsGeneratingPDF] = useState(false);
+
   const { toast } = useToast();
 
   const form = useForm<MantenimientoFormValues>({
@@ -638,6 +639,7 @@ export default function Mantenimiento() {
       toast({
         title: "Error al generar PDF",
         description,
+
         variant: "destructive",
       });
     } finally {
