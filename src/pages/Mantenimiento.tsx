@@ -60,8 +60,7 @@ import {
   Printer,
 } from 'lucide-react';
 import { useState } from 'react';
-import jsPDF from 'jspdf';
-import 'jspdf-autotable';
+import type { jsPDF } from 'jspdf';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Label } from '@/components/ui/label';
 import { Switch } from '@/components/ui/switch';
@@ -141,6 +140,8 @@ export default function Mantenimiento() {
   const [isPrintDialogOpen, setIsPrintDialogOpen] = useState(false);
   const [printMode, setPrintMode] = useState<'all' | 'categories'>('all');
   const [selectedCategories, setSelectedCategories] = useState<string[]>([]);
+  const [isGeneratingPDF, setIsGeneratingPDF] = useState(false);
+
   const { toast } = useToast();
 
   const form = useForm<MantenimientoFormValues>({
@@ -313,36 +314,53 @@ export default function Mantenimiento() {
     return { label: 'Normal', variant: 'default' as const };
   };
 
-  const exportarPDF = (mode: 'all' | 'categories' = 'all', categoriasSeleccionadas: string[] = []) => {
+  type AutoTable = (doc: jsPDF, options: Record<string, any>) => jsPDF;
+
+  const exportarPDF = async (mode: 'all' | 'categories' = 'all', categoriasSeleccionadas: string[] = []) => {
     try {
+      const [{ jsPDF }, autoTableModule] = await Promise.all([
+        import('jspdf'),
+        import('jspdf-autotable'),
+      ]);
+
+      const autoTable = (autoTableModule.default ?? (autoTableModule as { autoTable?: AutoTable }).autoTable) as AutoTable | undefined;
+
+      if (!autoTable) {
+        throw new Error('No se pudo cargar el generador de tablas para el PDF');
+      }
+
       const doc = new jsPDF();
-      
+
+      if (mantenimientosFiltrados.length === 0) {
+        throw new Error('No hay mantenimientos disponibles para generar el PDF');
+      }
+
       if (mode === 'all') {
         // Modo: Todo junto - todos los mantenimientos filtrados
-        generarPDFCompleto(doc, mantenimientosFiltrados);
+        generarPDFCompleto(doc, autoTable, mantenimientosFiltrados);
       } else if (mode === 'categories' && categoriasSeleccionadas.length > 0) {
         // Modo: Por categorías - filtrar por categorías seleccionadas
         const mantenimientosPorCategoria = mantenimientosFiltrados.filter(mant => {
           const equipo = equiposPorFicha[mant.ficha];
           return equipo && categoriasSeleccionadas.includes(equipo.categoria);
         });
-        
+
         if (mantenimientosPorCategoria.length === 0) {
           throw new Error('No hay mantenimientos para las categorías seleccionadas');
         }
-        
-        generarPDFPorCategorias(doc, mantenimientosPorCategoria, categoriasSeleccionadas);
+
+        generarPDFPorCategorias(doc, autoTable, mantenimientosPorCategoria, categoriasSeleccionadas);
       } else {
         // Fallback: si no hay categorías seleccionadas, imprimir todo
-        generarPDFCompleto(doc, mantenimientosFiltrados);
+        generarPDFCompleto(doc, autoTable, mantenimientosFiltrados);
       }
-      
+
       // Guardar el PDF con nombre descriptivo
       const fecha = new Date().toISOString().split('T')[0];
-      const nombreArchivo = mode === 'all' 
+      const nombreArchivo = mode === 'all'
         ? `mantenimientos_completo_${fecha}.pdf`
         : `mantenimientos_categorias_${fecha}.pdf`;
-      
+
       doc.save(nombreArchivo);
     } catch (error) {
       console.error('Error al exportar PDF:', error);
@@ -350,7 +368,7 @@ export default function Mantenimiento() {
     }
   };
 
-  const generarPDFCompleto = (doc: jsPDF, mantenimientos: any[]) => {
+  const generarPDFCompleto = (doc: jsPDF, autoTable: AutoTable, mantenimientos: any[]) => {
     // Configurar fuente
     doc.setFont('helvetica');
     
@@ -403,7 +421,7 @@ export default function Mantenimiento() {
     });
     
     // Configurar tabla
-    (doc as any).autoTable({
+    autoTable(doc, {
       startY: 95,
       head: [['Ficha', 'Equipo', 'Categoría', 'Tipo', 'Actual', 'Frecuencia', 'Últ. Mant.', 'Próximo', 'Restante', 'Fecha Últ.', 'Estado']],
       body: tableData,
@@ -461,7 +479,12 @@ export default function Mantenimiento() {
     }
   };
 
-  const generarPDFPorCategorias = (doc: jsPDF, mantenimientos: any[], categoriasSeleccionadas: string[]) => {
+  const generarPDFPorCategorias = (
+    doc: jsPDF,
+    autoTable: AutoTable,
+    mantenimientos: any[],
+    categoriasSeleccionadas: string[],
+  ) => {
     let isFirstCategory = true;
     
     categoriasSeleccionadas.forEach(categoria => {
@@ -527,7 +550,7 @@ export default function Mantenimiento() {
       });
       
       // Configurar tabla
-      (doc as any).autoTable({
+      autoTable(doc, {
         startY: 95,
         head: [['Ficha', 'Equipo', 'Tipo', 'Actual', 'Frecuencia', 'Últ. Mant.', 'Próximo', 'Restante', 'Fecha Últ.', 'Estado']],
         body: tableData,
@@ -591,9 +614,13 @@ export default function Mantenimiento() {
     setIsPrintDialogOpen(true);
   };
 
-  const handlePrint = () => {
+  const handlePrint = async () => {
+    if (isGeneratingPDF) return;
+
+    setIsGeneratingPDF(true);
+
     try {
-      exportarPDF(printMode, selectedCategories);
+      await exportarPDF(printMode, selectedCategories);
       setIsPrintDialogOpen(false);
 
       // Mostrar notificación de éxito
@@ -604,12 +631,19 @@ export default function Mantenimiento() {
     } catch (error) {
       console.error('Error al generar PDF:', error);
 
+      const description = error instanceof Error
+        ? error.message
+        : 'Hubo un problema al crear el documento. Por favor, inténtalo de nuevo.';
+
       // Mostrar notificación de error
       toast({
         title: "Error al generar PDF",
-        description: "Hubo un problema al crear el documento. Por favor, inténtalo de nuevo.",
+        description,
+
         variant: "destructive",
       });
+    } finally {
+      setIsGeneratingPDF(false);
     }
   };
 
@@ -1317,13 +1351,20 @@ export default function Mantenimiento() {
             >
               Cancelar
             </Button>
-            <Button 
-              type="button" 
+            <Button
+              type="button"
               onClick={handlePrint}
-              disabled={printMode === 'categories' && selectedCategories.length === 0}
+              disabled={
+                isGeneratingPDF ||
+                (printMode === 'categories' && selectedCategories.length === 0)
+              }
             >
-              <Download className="mr-2 h-4 w-4" />
-              Generar y Descargar
+              {isGeneratingPDF ? (
+                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+              ) : (
+                <Download className="mr-2 h-4 w-4" />
+              )}
+              {isGeneratingPDF ? 'Generando…' : 'Generar y Descargar'}
             </Button>
           </DialogFooter>
         </DialogContent>
