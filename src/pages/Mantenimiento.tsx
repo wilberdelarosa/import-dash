@@ -141,6 +141,7 @@ export default function Mantenimiento() {
   const [printMode, setPrintMode] = useState<'all' | 'categories'>('all');
   const [selectedCategories, setSelectedCategories] = useState<string[]>([]);
   const [isGeneratingPDF, setIsGeneratingPDF] = useState(false);
+
   const { toast } = useToast();
 
   const form = useForm<MantenimientoFormValues>({
@@ -330,6 +331,7 @@ export default function Mantenimiento() {
 
       const doc = new jsPDF({ orientation: 'landscape', unit: 'mm', format: 'a4' });
 
+
       if (mantenimientosFiltrados.length === 0) {
         throw new Error('No hay mantenimientos disponibles para generar el PDF');
       }
@@ -368,6 +370,7 @@ export default function Mantenimiento() {
   };
 
   const generarPDFCompleto = (doc: jsPDF, autoTable: AutoTable, mantenimientos: any[]) => {
+
     // Configurar fuente
     doc.setFont('helvetica');
     
@@ -434,6 +437,7 @@ export default function Mantenimiento() {
           fillColor: [34, 197, 94],
           textColor: 255,
           fontStyle: 'bold',
+
         fontSize: 9,
       },
       columnStyles: {
@@ -482,6 +486,7 @@ export default function Mantenimiento() {
   const generarPDFPorCategorias = (
     doc: jsPDF,
     autoTable: AutoTable,
+
     mantenimientos: any[],
     categoriasSeleccionadas: string[],
   ) => {
@@ -640,6 +645,7 @@ export default function Mantenimiento() {
       toast({
         title: "Error al generar PDF",
         description,
+
         variant: "destructive",
       });
     } finally {

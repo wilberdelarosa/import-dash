@@ -29,6 +29,7 @@ export default function Reportes() {
   });
   const [estadoMantenimiento, setEstadoMantenimiento] = useState<'todos' | 'normal' | 'proximo' | 'vencido'>('todos');
 
+
   const categorias = [...new Set(data.equipos.map(e => e.categoria))];
   const marcas = [...new Set(data.equipos.map(e => e.marca))];
   const fichas = [...new Set(data.equipos.map(e => e.ficha))].sort();
@@ -332,15 +333,6 @@ export default function Reportes() {
     'sin-programar': { label: 'Sin programar', badgeClass: 'bg-slate-100 text-slate-600' }
   };
 
-  if (loading) {
-    return (
-      <Layout title="Reportes y Analytics">
-        <div className="flex justify-center items-center h-64">
-          <div className="text-lg">Cargando...</div>
-        </div>
-      </Layout>
-    );
-  }
 
   return (
     <Layout title="Reportes y Analytics">
