@@ -29,15 +29,6 @@ export default function Reportes() {
   });
   const [estadoMantenimiento, setEstadoMantenimiento] = useState<'todos' | 'normal' | 'proximo' | 'vencido'>('todos');
 
-  if (loading) {
-    return (
-      <Layout title="Reportes y Analytics">
-        <div className="flex justify-center items-center h-64">
-          <div className="text-lg">Cargando...</div>
-        </div>
-      </Layout>
-    );
-  }
 
   const categorias = [...new Set(data.equipos.map(e => e.categoria))];
   const marcas = [...new Set(data.equipos.map(e => e.marca))];
@@ -341,6 +332,7 @@ export default function Reportes() {
     vencido: { label: 'Vencido', badgeClass: 'bg-red-100 text-red-700' },
     'sin-programar': { label: 'Sin programar', badgeClass: 'bg-slate-100 text-slate-600' }
   };
+
 
   return (
     <Layout title="Reportes y Analytics">
