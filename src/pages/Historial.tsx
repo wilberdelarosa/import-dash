@@ -1,12 +1,15 @@
 import { useMemo, useState } from 'react';
 import { Layout } from '@/components/Layout';
+import { Navigation } from '@/components/Navigation';
 import { useHistorial } from '@/hooks/useHistorial';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Separator } from '@/components/ui/separator';
 import { ScrollArea } from '@/components/ui/scroll-area';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { Progress } from '@/components/ui/progress';
 import {
   Select,
   SelectContent,
@@ -26,6 +29,11 @@ import {
   AlertDialogTrigger,
 } from '@/components/ui/alert-dialog';
 import {
+  Collapsible,
+  CollapsibleContent,
+  CollapsibleTrigger,
+} from '@/components/ui/collapsible';
+import {
   Search,
   Filter,
   Download,
@@ -42,9 +50,18 @@ import {
   PlusCircle,
   RefreshCw,
   TrendingUp,
-  Clock3
+  Clock3,
+  Activity,
+  BarChart3,
+  Database,
+  User,
+  Eye,
+  EyeOff,
+  ChevronDown,
+  Archive,
+  Zap
 } from 'lucide-react';
-import { format, formatDistanceToNow } from 'date-fns';
+import { format } from 'date-fns';
 import { es } from 'date-fns/locale';
 import { cn } from '@/lib/utils';
 
@@ -58,6 +75,8 @@ export default function Historial() {
   } = useHistorial();
 
   const [mostrarFiltros, setMostrarFiltros] = useState(false);
+  const [vistaActiva, setVistaActiva] = useState<'timeline' | 'tabla' | 'estadisticas'>('timeline');
+  const [mostrarDetallesTecnicos, setMostrarDetallesTecnicos] = useState(false);
 
   const getIconoNivel = (nivel: string) => {
     switch (nivel) {
@@ -67,6 +86,21 @@ export default function Historial() {
         return <AlertTriangle className="h-4 w-4 text-amber-500" />;
       default:
         return <Info className="h-4 w-4 text-blue-500" />;
+    }
+  };
+
+  const getIconoModulo = (modulo: string) => {
+    switch (modulo) {
+      case 'equipos':
+        return <Activity className="h-4 w-4" />;
+      case 'inventarios':
+        return <Package className="h-4 w-4" />;
+      case 'mantenimientos':
+        return <Settings className="h-4 w-4" />;
+      case 'sistema':
+        return <Database className="h-4 w-4" />;
+      default:
+        return <FileText className="h-4 w-4" />;
     }
   };
 
@@ -93,6 +127,7 @@ export default function Historial() {
     switch (tipo) {
       case 'crear':
         return {
+          label: 'Crear',
           icon: <PlusCircle className="h-4 w-4" />,
           iconBgClass: 'bg-emerald-50 text-emerald-600',
           dotClass: 'bg-emerald-500 ring-emerald-200',
@@ -100,6 +135,7 @@ export default function Historial() {
         };
       case 'actualizar':
         return {
+          label: 'Actualizar',
           icon: <RefreshCw className="h-4 w-4" />,
           iconBgClass: 'bg-sky-50 text-sky-600',
           dotClass: 'bg-sky-500 ring-sky-200',
@@ -107,6 +143,7 @@ export default function Historial() {
         };
       case 'eliminar':
         return {
+          label: 'Eliminar',
           icon: <Trash2 className="h-4 w-4" />,
           iconBgClass: 'bg-rose-50 text-rose-600',
           dotClass: 'bg-rose-500 ring-rose-200',
@@ -114,6 +151,7 @@ export default function Historial() {
         };
       case 'mantenimiento_realizado':
         return {
+          label: 'Mantenimiento',
           icon: <Wrench className="h-4 w-4" />,
           iconBgClass: 'bg-amber-50 text-amber-600',
           dotClass: 'bg-amber-500 ring-amber-200',
@@ -121,6 +159,7 @@ export default function Historial() {
         };
       case 'lectura_actualizada':
         return {
+          label: 'Lectura',
           icon: <TrendingUp className="h-4 w-4" />,
           iconBgClass: 'bg-indigo-50 text-indigo-600',
           dotClass: 'bg-indigo-500 ring-indigo-200',
@@ -128,6 +167,7 @@ export default function Historial() {
         };
       case 'stock_movido':
         return {
+          label: 'Stock',
           icon: <Package className="h-4 w-4" />,
           iconBgClass: 'bg-purple-50 text-purple-600',
           dotClass: 'bg-purple-500 ring-purple-200',
@@ -135,6 +175,7 @@ export default function Historial() {
         };
       case 'sistema':
         return {
+          label: 'Sistema',
           icon: <Settings className="h-4 w-4" />,
           iconBgClass: 'bg-slate-50 text-slate-600',
           dotClass: 'bg-slate-500 ring-slate-200',
@@ -142,6 +183,7 @@ export default function Historial() {
         };
       default:
         return {
+          label: tipo,
           icon: <Info className="h-4 w-4" />,
           iconBgClass: 'bg-primary/10 text-primary',
           dotClass: 'bg-primary ring-primary/30',
@@ -185,6 +227,47 @@ export default function Historial() {
     return Array.from(grupos.entries());
   }, [eventos]);
 
+  // Estadísticas avanzadas
+  const estadisticasAvanzadas = useMemo(() => {
+    const porModulo = eventos.reduce((acc, evento) => {
+      acc[evento.modulo] = (acc[evento.modulo] || 0) + 1;
+      return acc;
+    }, {} as Record<string, number>);
+
+    const porTipo = eventos.reduce((acc, evento) => {
+      acc[evento.tipoEvento] = (acc[evento.tipoEvento] || 0) + 1;
+      return acc;
+    }, {} as Record<string, number>);
+
+    const porEquipo = eventos
+      .filter(e => e.fichaEquipo)
+      .reduce((acc, evento) => {
+        const key = `${evento.fichaEquipo} - ${evento.nombreEquipo}`;
+        acc[key] = (acc[key] || 0) + 1;
+        return acc;
+      }, {} as Record<string, number>);
+
+    const topEquipos = Object.entries(porEquipo)
+      .sort((a, b) => b[1] - a[1])
+      .slice(0, 10);
+
+    const ultimosSieteDias = eventos.filter(e => {
+      const fecha = new Date(e.createdAt);
+      const haceUnaSemana = new Date();
+      haceUnaSemana.setDate(haceUnaSemana.getDate() - 7);
+      return fecha >= haceUnaSemana;
+    }).length;
+
+    return {
+      porModulo,
+      porTipo,
+      porEquipo,
+      topEquipos,
+      ultimosSieteDias,
+      promedioEventosPorDia: eventos.length > 0 ? (eventos.length / 30).toFixed(1) : '0'
+    };
+  }, [eventos]);
+
   const exportarPDF = () => {
     // TODO: Implementar exportación a PDF
     console.log('Exportar a PDF');
@@ -196,63 +279,95 @@ export default function Historial() {
 
   return (
     <Layout title="Historial de Eventos">
+      <Navigation />
       <div className="space-y-6">
-        {/* Header */}
-        <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+        {/* Header con Tabs */}
+        <div className="flex flex-col gap-4">
           <div>
             <h1 className="text-3xl font-bold">Historial de Eventos</h1>
             <p className="text-muted-foreground">
-              Registro completo de todas las operaciones del sistema
+              Registro cronológico y análisis de todas las actividades del sistema
             </p>
           </div>
-          <div className="flex gap-2">
-            <Button
-              variant="outline"
-              onClick={exportarPDF}
-              className="gap-2"
-            >
-              <Download className="h-4 w-4" />
-              Exportar
-            </Button>
-            <AlertDialog>
-              <AlertDialogTrigger asChild>
-                <Button variant="destructive" className="gap-2">
-                  <Trash2 className="h-4 w-4" />
-                  Limpiar
-                </Button>
-              </AlertDialogTrigger>
-              <AlertDialogContent>
-                <AlertDialogHeader>
-                  <AlertDialogTitle>¿Limpiar todo el historial?</AlertDialogTitle>
-                  <AlertDialogDescription>
-                    Esta acción eliminará permanentemente todos los eventos del historial.
-                    Esta operación no se puede deshacer.
-                  </AlertDialogDescription>
-                </AlertDialogHeader>
-                <AlertDialogFooter>
-                  <AlertDialogCancel>Cancelar</AlertDialogCancel>
-                  <AlertDialogAction onClick={limpiarHistorial}>
-                    Confirmar
-                  </AlertDialogAction>
-                </AlertDialogFooter>
-              </AlertDialogContent>
-            </AlertDialog>
+
+          <div className="flex flex-col sm:flex-row gap-2 items-start sm:items-center justify-between">
+            <Tabs value={vistaActiva} onValueChange={(v) => setVistaActiva(v as any)} className="w-full sm:w-auto">
+              <TabsList className="grid w-full grid-cols-3">
+                <TabsTrigger value="timeline" className="gap-2">
+                  <Clock3 className="h-4 w-4" />
+                  Timeline
+                </TabsTrigger>
+                <TabsTrigger value="tabla" className="gap-2">
+                  <FileText className="h-4 w-4" />
+                  Tabla
+                </TabsTrigger>
+                <TabsTrigger value="estadisticas" className="gap-2">
+                  <BarChart3 className="h-4 w-4" />
+                  Analytics
+                </TabsTrigger>
+              </TabsList>
+            </Tabs>
+
+            <div className="flex gap-2 w-full sm:w-auto">
+              <Button 
+                onClick={() => setMostrarDetallesTecnicos(!mostrarDetallesTecnicos)}
+                variant="outline" 
+                size="sm"
+                className="flex-1 sm:flex-none"
+              >
+                {mostrarDetallesTecnicos ? <EyeOff className="h-4 w-4 mr-2" /> : <Eye className="h-4 w-4 mr-2" />}
+                {mostrarDetallesTecnicos ? 'Ocultar' : 'Ver'} Datos
+              </Button>
+              
+              <Button onClick={exportarPDF} variant="outline" size="sm" className="flex-1 sm:flex-none">
+                <Download className="h-4 w-4 mr-2" />
+                Exportar
+              </Button>
+
+              <AlertDialog>
+                <AlertDialogTrigger asChild>
+                  <Button variant="destructive" size="sm" className="flex-1 sm:flex-none">
+                    <Trash2 className="h-4 w-4 mr-2" />
+                    Limpiar
+                  </Button>
+                </AlertDialogTrigger>
+                <AlertDialogContent>
+                  <AlertDialogHeader>
+                    <AlertDialogTitle>¿Limpiar todo el historial?</AlertDialogTitle>
+                    <AlertDialogDescription>
+                      Esta acción eliminará permanentemente todos los eventos del historial.
+                      Esta operación no se puede deshacer.
+                    </AlertDialogDescription>
+                  </AlertDialogHeader>
+                  <AlertDialogFooter>
+                    <AlertDialogCancel>Cancelar</AlertDialogCancel>
+                    <AlertDialogAction onClick={limpiarHistorial}>
+                      Confirmar
+                    </AlertDialogAction>
+                  </AlertDialogFooter>
+                </AlertDialogContent>
+              </AlertDialog>
+            </div>
           </div>
         </div>
 
-        {/* Estadísticas */}
-        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-          <Card>
-            <CardHeader className="flex flex-row items-center justify-between pb-2">
+        {/* Estadísticas Mejoradas */}
+        <div className="grid gap-4 grid-cols-1 sm:grid-cols-2 lg:grid-cols-5">
+          <Card className="hover:shadow-lg transition-shadow">
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
               <CardTitle className="text-sm font-medium">Total Eventos</CardTitle>
               <FileText className="h-4 w-4 text-muted-foreground" />
             </CardHeader>
             <CardContent>
               <div className="text-2xl font-bold">{eventos.length}</div>
+              <p className="text-xs text-muted-foreground mt-1">
+                Últimos 7 días: {estadisticasAvanzadas.ultimosSieteDias}
+              </p>
             </CardContent>
           </Card>
-          <Card>
-            <CardHeader className="flex flex-row items-center justify-between pb-2">
+
+          <Card className="hover:shadow-lg transition-shadow">
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
               <CardTitle className="text-sm font-medium">Críticos</CardTitle>
               <AlertCircle className="h-4 w-4 text-destructive" />
             </CardHeader>
@@ -260,10 +375,15 @@ export default function Historial() {
               <div className="text-2xl font-bold text-destructive">
                 {eventos.filter(e => e.nivelImportancia === 'critical').length}
               </div>
+              <Progress 
+                value={(eventos.filter(e => e.nivelImportancia === 'critical').length / (eventos.length || 1)) * 100}
+                className="mt-2 h-1"
+              />
             </CardContent>
           </Card>
-          <Card>
-            <CardHeader className="flex flex-row items-center justify-between pb-2">
+
+          <Card className="hover:shadow-lg transition-shadow">
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
               <CardTitle className="text-sm font-medium">Advertencias</CardTitle>
               <AlertTriangle className="h-4 w-4 text-amber-500" />
             </CardHeader>
@@ -271,10 +391,15 @@ export default function Historial() {
               <div className="text-2xl font-bold text-amber-600">
                 {eventos.filter(e => e.nivelImportancia === 'warning').length}
               </div>
+              <Progress 
+                value={(eventos.filter(e => e.nivelImportancia === 'warning').length / (eventos.length || 1)) * 100}
+                className="mt-2 h-1"
+              />
             </CardContent>
           </Card>
-          <Card>
-            <CardHeader className="flex flex-row items-center justify-between pb-2">
+
+          <Card className="hover:shadow-lg transition-shadow">
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
               <CardTitle className="text-sm font-medium">Información</CardTitle>
               <Info className="h-4 w-4 text-blue-500" />
             </CardHeader>
@@ -282,6 +407,23 @@ export default function Historial() {
               <div className="text-2xl font-bold text-blue-600">
                 {eventos.filter(e => e.nivelImportancia === 'info').length}
               </div>
+              <Progress 
+                value={(eventos.filter(e => e.nivelImportancia === 'info').length / (eventos.length || 1)) * 100}
+                className="mt-2 h-1"
+              />
+            </CardContent>
+          </Card>
+
+          <Card className="hover:shadow-lg transition-shadow">
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+              <CardTitle className="text-sm font-medium">Promedio/Día</CardTitle>
+              <TrendingUp className="h-4 w-4 text-muted-foreground" />
+            </CardHeader>
+            <CardContent>
+              <div className="text-2xl font-bold">{estadisticasAvanzadas.promedioEventosPorDia}</div>
+              <p className="text-xs text-muted-foreground mt-1">
+                Últimos 30 días
+              </p>
             </CardContent>
           </Card>
         </div>
@@ -316,12 +458,7 @@ export default function Historial() {
                     </Badge>
                   )}
                 </Button>
-                {(filtros.tipoEvento.length > 0 || 
-                  filtros.modulo.length > 0 || 
-                  filtros.nivelImportancia.length > 0 ||
-                  filtros.fichaEquipo ||
-                  filtros.fechaDesde ||
-                  filtros.fechaHasta) && (
+                {filtrosActivos > 0 && (
                   <Button
                     variant="ghost"
                     onClick={limpiarFiltros}
@@ -349,7 +486,7 @@ export default function Historial() {
                       <SelectContent>
                         <SelectItem value="todos">Todos</SelectItem>
                         {tiposEvento.map(tipo => (
-                          <SelectItem key={tipo} value={tipo}>{tipo}</SelectItem>
+                          <SelectItem key={tipo} value={tipo}>{getEventoVisual(tipo).label}</SelectItem>
                         ))}
                       </SelectContent>
                     </Select>
@@ -369,7 +506,7 @@ export default function Historial() {
                       <SelectContent>
                         <SelectItem value="todos">Todos</SelectItem>
                         {modulos.map(mod => (
-                          <SelectItem key={mod} value={mod}>{mod}</SelectItem>
+                          <SelectItem key={mod} value={mod} className="capitalize">{mod}</SelectItem>
                         ))}
                       </SelectContent>
                     </Select>
@@ -389,7 +526,7 @@ export default function Historial() {
                       <SelectContent>
                         <SelectItem value="todos">Todos</SelectItem>
                         {niveles.map(nivel => (
-                          <SelectItem key={nivel} value={nivel}>{nivel}</SelectItem>
+                          <SelectItem key={nivel} value={nivel} className="capitalize">{nivel}</SelectItem>
                         ))}
                       </SelectContent>
                     </Select>
@@ -439,151 +576,314 @@ export default function Historial() {
           </CardContent>
         </Card>
 
-        {/* Lista de eventos */}
-        <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <Calendar className="h-5 w-5" />
-              Línea de Tiempo
-            </CardTitle>
-          </CardHeader>
-          <CardContent className="p-0">
-            <ScrollArea className="h-[600px]">
-              {loading ? (
-                <div className="p-8 text-center text-muted-foreground">
-                  Cargando eventos...
-                </div>
-              ) : eventosAgrupados.length === 0 ? (
-                <div className="p-10 text-center">
-                  <FileText className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
-                  <p className="text-muted-foreground">
-                    No hay eventos que mostrar
-                  </p>
-                </div>
-              ) : (
-                <div className="relative px-6 py-8">
-                  <div className="absolute left-8 top-0 h-full w-px bg-gradient-to-b from-primary/40 via-border to-transparent" />
-                  <div className="space-y-10">
-                    {eventosAgrupados.map(([fecha, eventosDia]) => (
-                      <div key={fecha} className="space-y-4">
-                        <div className="flex items-center gap-3">
-                          <div className="text-sm font-semibold uppercase tracking-wide text-muted-foreground">
-                            {fecha}
+        {/* Contenido según vista activa */}
+        {vistaActiva === 'timeline' && (
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <Calendar className="h-5 w-5" />
+                Línea de Tiempo
+              </CardTitle>
+              <CardDescription>
+                {eventos.length > 0 
+                  ? `Mostrando ${eventos.length} evento(s) ordenados cronológicamente`
+                  : 'No hay eventos registrados'
+                }
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="p-0">
+              <ScrollArea className="h-[600px]">
+                {loading ? (
+                  <div className="p-8 text-center text-muted-foreground">
+                    Cargando eventos...
+                  </div>
+                ) : eventosAgrupados.length === 0 ? (
+                  <div className="p-10 text-center">
+                    <FileText className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
+                    <p className="text-muted-foreground">
+                      No hay eventos que mostrar
+                    </p>
+                  </div>
+                ) : (
+                  <div className="relative px-6 py-8">
+                    <div className="absolute left-8 top-0 h-full w-px bg-gradient-to-b from-primary/40 via-border to-transparent" />
+                    <div className="space-y-10">
+                      {eventosAgrupados.map(([fecha, eventosDia]) => (
+                        <div key={fecha} className="space-y-4">
+                          <div className="flex items-center gap-3">
+                            <div className="text-sm font-semibold uppercase tracking-wide text-muted-foreground">
+                              {fecha}
+                            </div>
+                            <div className="h-px flex-1 bg-gradient-to-r from-border to-transparent" />
+                            <Badge variant="secondary" className="gap-1">
+                              <Activity className="h-3 w-3" />
+                              {eventosDia.length}
+                            </Badge>
                           </div>
-                          <div className="h-px flex-1 bg-border" />
-                          <Badge variant="outline" className="bg-primary/5 text-primary">
-                            {eventosDia.length} {eventosDia.length === 1 ? "evento" : "eventos"}
-                          </Badge>
-                        </div>
 
-                        <div className="space-y-4">
-                          {eventosDia.map((evento) => {
-                            const visual = getEventoVisual(evento.tipoEvento);
-
-                            return (
-                              <div key={evento.id} className="group relative pl-16">
-                                <div
-                                  className={cn(
-                                    'absolute left-6 top-7 h-3 w-3 -translate-x-1/2 rounded-full border-2 border-background ring-4 transition-transform duration-300 group-hover:scale-110',
-                                    visual.dotClass
-                                  )}
-                                />
-                                <div className="absolute left-0 top-2 flex h-12 w-12 items-center justify-center">
-                                  <span className="flex h-12 w-12 items-center justify-center rounded-full bg-background shadow-sm transition-all duration-300 group-hover:shadow-md">
-                                    <span
-                                      className={cn(
-                                        'flex h-9 w-9 items-center justify-center rounded-full transition-transform duration-300 group-hover:scale-105',
-                                        visual.iconBgClass
-                                      )}
-                                    >
-                                      {visual.icon}
-                                    </span>
-                                  </span>
-                                </div>
-
-                                <div
-                                  className={cn(
-                                    'rounded-xl border bg-card/95 p-5 shadow-sm transition-all duration-300 hover:-translate-y-1 hover:shadow-lg',
-                                    visual.cardClass
-                                  )}
-                                >
-                                  <div className="flex flex-col gap-3">
-                                    <div className="flex flex-wrap items-start justify-between gap-3">
-                                      <div className="flex flex-wrap items-center gap-2">
-                                        <Badge variant={getBadgeVariant(evento.tipoEvento)} className="capitalize">
-                                          {evento.tipoEvento.replace(/_/g, ' ')}
-                                        </Badge>
-                                        <Badge variant="outline">{evento.modulo}</Badge>
-                                        {evento.fichaEquipo && (
-                                          <Badge variant="secondary">{evento.fichaEquipo}</Badge>
-                                        )}
-                                      </div>
-                                      <div className="flex items-center gap-2 text-xs text-muted-foreground">
-                                        <Clock3 className="h-3 w-3" />
-                                        {formatDistanceToNow(new Date(evento.createdAt), {
-                                          addSuffix: true,
-                                          locale: es,
-                                        })}
-                                      </div>
+                          <div className="space-y-4 pl-6">
+                            {eventosDia.map((evento) => {
+                              const visual = getEventoVisual(evento.tipoEvento);
+                              
+                              return (
+                                <Collapsible key={evento.id}>
+                                  <div className="flex items-start gap-3 group relative">
+                                    <div className="absolute -left-9 mt-2 flex h-6 w-6 items-center justify-center rounded-full border-2 border-background bg-card shadow-sm ring-2 ring-primary/20 z-10">
+                                      {getIconoNivel(evento.nivelImportancia)}
                                     </div>
 
-                                    <div>
-                                      <p className="text-base font-semibold leading-tight">{evento.descripcion}</p>
-                                      {evento.nombreEquipo && (
-                                        <p className="text-sm text-muted-foreground">Equipo: {evento.nombreEquipo}</p>
-                                      )}
-                                    </div>
-
-                                    <div className="flex flex-wrap items-center gap-x-4 gap-y-2 text-xs text-muted-foreground">
-                                      <span className="font-medium text-foreground">Responsable:</span>
-                                      <span className="rounded-full bg-muted px-3 py-1 text-xs font-medium text-foreground">
-                                        {evento.usuarioResponsable}
-                                      </span>
-                                      <span className="flex items-center gap-1">
-                                        {getIconoNivel(evento.nivelImportancia)}
-                                        {evento.nivelImportancia.toUpperCase()}
-                                      </span>
-                                    </div>
-
-                                    {(evento.datosAntes || evento.datosDespues) && (
-                                      <details className="group/open mt-2 rounded-lg border border-dashed border-border/60 bg-muted/40 p-3 text-xs transition-colors hover:border-border">
-                                        <summary className="cursor-pointer select-none font-medium text-muted-foreground transition-colors group-open:text-foreground">
-                                          Ver detalle técnico
-                                        </summary>
-                                        <div className="mt-2 grid gap-3 md:grid-cols-2">
-                                          {evento.datosAntes && (
-                                            <div className="rounded-md bg-background/80 p-2 shadow-inner">
-                                              <p className="text-[11px] font-semibold uppercase text-muted-foreground">Antes</p>
-                                              <pre className="mt-1 max-h-40 overflow-auto text-[11px] leading-tight">
-                                                {JSON.stringify(evento.datosAntes, null, 2)}
-                                              </pre>
+                                    <Card className={cn(
+                                      "flex-1 hover:shadow-lg transition-all border-l-4",
+                                      visual.cardClass
+                                    )} style={{
+                                      borderLeftColor: evento.nivelImportancia === 'critical' ? 'hsl(var(--destructive))' :
+                                                      evento.nivelImportancia === 'warning' ? 'rgb(245, 158, 11)' :
+                                                      'hsl(var(--primary))'
+                                    }}>
+                                      <CardHeader className="pb-3">
+                                        <div className="flex items-start justify-between gap-2">
+                                          <div className="flex-1 space-y-2">
+                                            <div className="flex items-center gap-2 flex-wrap">
+                                              <Badge variant={getBadgeVariant(evento.tipoEvento)} className="gap-1">
+                                                <Zap className="h-3 w-3" />
+                                                {visual.label}
+                                              </Badge>
+                                              <Badge variant="outline" className="gap-1">
+                                                {getIconoModulo(evento.modulo)}
+                                                <span className="capitalize">{evento.modulo}</span>
+                                              </Badge>
+                                              {evento.fichaEquipo && (
+                                                <Badge variant="secondary" className="gap-1">
+                                                  <Archive className="h-3 w-3" />
+                                                  {evento.fichaEquipo}
+                                                </Badge>
+                                              )}
                                             </div>
-                                          )}
-                                          {evento.datosDespues && (
-                                            <div className="rounded-md bg-background/80 p-2 shadow-inner">
-                                              <p className="text-[11px] font-semibold uppercase text-muted-foreground">Después</p>
-                                              <pre className="mt-1 max-h-40 overflow-auto text-[11px] leading-tight">
-                                                {JSON.stringify(evento.datosDespues, null, 2)}
-                                              </pre>
-                                            </div>
-                                          )}
+                                            
+                                            <p className="text-sm font-medium leading-relaxed">
+                                              {evento.descripcion}
+                                            </p>
+                                            
+                                            {evento.nombreEquipo && (
+                                              <p className="text-sm text-muted-foreground flex items-center gap-1">
+                                                <Activity className="h-3 w-3" />
+                                                {evento.nombreEquipo}
+                                              </p>
+                                            )}
+                                          </div>
                                         </div>
-                                      </details>
-                                    )}
+                                      </CardHeader>
+
+                                      <CardContent className="pt-0 space-y-3">
+                                        <Separator />
+                                        
+                                        <div className="flex items-center gap-4 text-xs text-muted-foreground flex-wrap">
+                                          <div className="flex items-center gap-1.5 bg-muted px-2 py-1 rounded">
+                                            <User className="h-3 w-3" />
+                                            <span className="font-medium">{evento.usuarioResponsable}</span>
+                                          </div>
+                                          <div className="flex items-center gap-1.5 bg-muted px-2 py-1 rounded">
+                                            <Clock3 className="h-3 w-3" />
+                                            {new Date(evento.createdAt).toLocaleTimeString('es-ES', {
+                                              hour: '2-digit',
+                                              minute: '2-digit',
+                                              second: '2-digit'
+                                            })}
+                                          </div>
+                                        </div>
+
+                                        {mostrarDetallesTecnicos && (evento.datosAntes || evento.datosDespues) && (
+                                          <div className="space-y-2 pt-2">
+                                            {evento.datosAntes && (
+                                              <div className="rounded-lg bg-muted/50 p-3 space-y-1 border">
+                                                <p className="text-xs font-semibold flex items-center gap-1 text-muted-foreground">
+                                                  <Database className="h-3 w-3" />
+                                                  Datos anteriores:
+                                                </p>
+                                                <pre className="text-xs overflow-x-auto bg-background p-2 rounded font-mono">
+                                                  {JSON.stringify(evento.datosAntes, null, 2)}
+                                                </pre>
+                                              </div>
+                                            )}
+                                            
+                                            {evento.datosDespues && (
+                                              <div className="rounded-lg bg-muted/50 p-3 space-y-1 border">
+                                                <p className="text-xs font-semibold flex items-center gap-1 text-muted-foreground">
+                                                  <Database className="h-3 w-3" />
+                                                  Datos nuevos:
+                                                </p>
+                                                <pre className="text-xs overflow-x-auto bg-background p-2 rounded font-mono">
+                                                  {JSON.stringify(evento.datosDespues, null, 2)}
+                                                </pre>
+                                              </div>
+                                            )}
+                                          </div>
+                                        )}
+                                      </CardContent>
+                                    </Card>
                                   </div>
-                                </div>
-                              </div>
-                            );
-                          })}
+                                </Collapsible>
+                              );
+                            })}
+                          </div>
                         </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+              </ScrollArea>
+            </CardContent>
+          </Card>
+        )}
+
+        {vistaActiva === 'tabla' && (
+          <Card>
+            <CardHeader>
+              <CardTitle>Vista de Tabla</CardTitle>
+              <CardDescription>Todos los eventos en formato tabular</CardDescription>
+            </CardHeader>
+            <CardContent>
+              <ScrollArea className="h-[600px]">
+                <div className="rounded-md border">
+                  <table className="w-full">
+                    <thead className="bg-muted/50 sticky top-0 z-10">
+                      <tr className="border-b">
+                        <th className="px-4 py-3 text-left text-xs font-medium">Fecha/Hora</th>
+                        <th className="px-4 py-3 text-left text-xs font-medium">Tipo</th>
+                        <th className="px-4 py-3 text-left text-xs font-medium">Módulo</th>
+                        <th className="px-4 py-3 text-left text-xs font-medium">Descripción</th>
+                        <th className="px-4 py-3 text-left text-xs font-medium">Equipo</th>
+                        <th className="px-4 py-3 text-left text-xs font-medium">Usuario</th>
+                        <th className="px-4 py-3 text-left text-xs font-medium">Nivel</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {eventos.map((evento, idx) => (
+                        <tr key={evento.id} className={cn(
+                          "border-b transition-colors hover:bg-muted/50",
+                          idx % 2 === 0 ? 'bg-background' : 'bg-muted/20'
+                        )}>
+                          <td className="px-4 py-3 text-xs whitespace-nowrap">
+                            {new Date(evento.createdAt).toLocaleString('es-ES')}
+                          </td>
+                          <td className="px-4 py-3">
+                            <Badge variant={getBadgeVariant(evento.tipoEvento)} className="text-xs">
+                              {getEventoVisual(evento.tipoEvento).label}
+                            </Badge>
+                          </td>
+                          <td className="px-4 py-3">
+                            <div className="flex items-center gap-1">
+                              {getIconoModulo(evento.modulo)}
+                              <span className="text-xs capitalize">{evento.modulo}</span>
+                            </div>
+                          </td>
+                          <td className="px-4 py-3 text-xs max-w-xs truncate">
+                            {evento.descripcion}
+                          </td>
+                          <td className="px-4 py-3 text-xs">
+                            {evento.fichaEquipo ? (
+                              <Badge variant="secondary" className="text-xs">
+                                {evento.fichaEquipo}
+                              </Badge>
+                            ) : '-'}
+                          </td>
+                          <td className="px-4 py-3 text-xs">{evento.usuarioResponsable}</td>
+                          <td className="px-4 py-3">
+                            <div className="flex items-center gap-1">
+                              {getIconoNivel(evento.nivelImportancia)}
+                            </div>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              </ScrollArea>
+            </CardContent>
+          </Card>
+        )}
+
+        {vistaActiva === 'estadisticas' && (
+          <div className="grid gap-6 lg:grid-cols-2">
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <BarChart3 className="h-5 w-5" />
+                  Eventos por Módulo
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="space-y-3">
+                  {Object.entries(estadisticasAvanzadas.porModulo).map(([modulo, cantidad]) => (
+                    <div key={modulo} className="space-y-1">
+                      <div className="flex items-center justify-between text-sm">
+                        <div className="flex items-center gap-2">
+                          {getIconoModulo(modulo)}
+                          <span className="capitalize font-medium">{modulo}</span>
+                        </div>
+                        <span className="font-bold">{cantidad}</span>
+                      </div>
+                      <Progress value={(cantidad / eventos.length) * 100} className="h-2" />
+                    </div>
+                  ))}
+                </div>
+              </CardContent>
+            </Card>
+
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <Activity className="h-5 w-5" />
+                  Tipos de Eventos
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="space-y-3">
+                  {Object.entries(estadisticasAvanzadas.porTipo).map(([tipo, cantidad]) => (
+                    <div key={tipo} className="space-y-1">
+                      <div className="flex items-center justify-between text-sm">
+                        <span className="capitalize font-medium">{getEventoVisual(tipo as any).label}</span>
+                        <span className="font-bold">{cantidad}</span>
+                      </div>
+                      <Progress value={(cantidad / eventos.length) * 100} className="h-2" />
+                    </div>
+                  ))}
+                </div>
+              </CardContent>
+            </Card>
+
+            <Card className="lg:col-span-2">
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <TrendingUp className="h-5 w-5" />
+                  Top 10 Equipos con Más Actividad
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                {estadisticasAvanzadas.topEquipos.length === 0 ? (
+                  <p className="text-center text-muted-foreground py-8">
+                    No hay datos de equipos disponibles
+                  </p>
+                ) : (
+                  <div className="space-y-3">
+                    {estadisticasAvanzadas.topEquipos.map(([equipo, cantidad], idx) => (
+                      <div key={equipo} className="space-y-1">
+                        <div className="flex items-center justify-between text-sm">
+                          <div className="flex items-center gap-2">
+                            <Badge variant="outline" className="text-xs">#{idx + 1}</Badge>
+                            <span className="font-medium">{equipo}</span>
+                          </div>
+                          <span className="font-bold">{cantidad} eventos</span>
+                        </div>
+                        <Progress value={(cantidad / eventos.length) * 100} className="h-2" />
                       </div>
                     ))}
                   </div>
-                </div>
-              )}
-            </ScrollArea>
-          </CardContent>
-        </Card>
+                )}
+              </CardContent>
+            </Card>
+          </div>
+        )}
       </div>
     </Layout>
   );
