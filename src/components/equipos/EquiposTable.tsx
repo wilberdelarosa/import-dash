@@ -22,9 +22,10 @@ interface EquiposTableProps {
   equipos: Equipo[];
   onEdit: (equipo: Equipo) => void;
   onDelete: (id: number) => void;
+  onVerDetalle?: (ficha: string) => void;
 }
 
-export function EquiposTable({ equipos, onEdit, onDelete }: EquiposTableProps) {
+export function EquiposTable({ equipos, onEdit, onDelete, onVerDetalle }: EquiposTableProps) {
   const [searchTerm, setSearchTerm] = useState('');
   const [filterCategoria, setFilterCategoria] = useState('all');
   const [filterActivo, setFilterActivo] = useState('all');
@@ -203,6 +204,15 @@ export function EquiposTable({ equipos, onEdit, onDelete }: EquiposTableProps) {
                     </TableCell>
                     <TableCell>
                       <div className="flex space-x-2">
+                        {onVerDetalle && (
+                          <Button
+                            variant="default"
+                            size="sm"
+                            onClick={() => onVerDetalle(equipo.ficha)}
+                          >
+                            Ver Detalle
+                          </Button>
+                        )}
                         <EquipoDialog
                           equipo={equipo}
                           onSave={onEdit}

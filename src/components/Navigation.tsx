@@ -1,8 +1,9 @@
 import { Link, useLocation } from 'react-router-dom';
 import { useMemo } from 'react';
 import { cn } from '@/lib/utils';
-import { Truck, Package, Calendar, BarChart3, Menu } from 'lucide-react';
+import { Truck, Package, Calendar, BarChart3, Menu, History } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import { NotificacionesCentro } from '@/components/NotificacionesCentro';
 import {
   Sheet,
   SheetContent,
@@ -17,6 +18,7 @@ const navItems = [
   { path: '/', label: 'Equipos', icon: Truck },
   { path: '/inventario', label: 'Inventario', icon: Package },
   { path: '/mantenimiento', label: 'Mantenimiento', icon: Calendar },
+  { path: '/historial', label: 'Historial', icon: History },
   { path: '/reportes', label: 'Reportes', icon: BarChart3 },
 ];
 
@@ -49,15 +51,21 @@ export function Navigation() {
         <div className="container mx-auto px-4 py-3">
           <div className="flex items-center justify-between sm:hidden">
             <span className="text-sm font-semibold text-primary">Navegación</span>
-            <SheetTrigger asChild>
-              <Button variant="outline" size="sm" className="gap-2">
-                <Menu className="h-4 w-4" />
-                Abrir menú
-              </Button>
-            </SheetTrigger>
+            <div className="flex gap-2">
+              <NotificacionesCentro />
+              <SheetTrigger asChild>
+                <Button variant="outline" size="sm" className="gap-2">
+                  <Menu className="h-4 w-4" />
+                  Abrir menú
+                </Button>
+              </SheetTrigger>
+            </div>
           </div>
-          <div className="hidden sm:flex sm:flex-wrap sm:items-center sm:gap-4">
-            {navLinks}
+          <div className="hidden sm:flex sm:flex-wrap sm:items-center sm:justify-between sm:gap-4">
+            <div className="flex gap-4">
+              {navLinks}
+            </div>
+            <NotificacionesCentro />
           </div>
         </div>
         <SheetContent side="left" className="sm:hidden w-[280px]">

@@ -6,6 +6,7 @@ import { BrowserRouter, Routes, Route } from "react-router-dom";
 import Equipos from "./pages/Equipos";
 import Inventario from "./pages/Inventario";
 import Mantenimiento from "./pages/Mantenimiento";
+import Historial from "./pages/Historial";
 import Reportes from "./pages/Reportes";
 import NotFound from "./pages/NotFound";
 import { SupabaseDataProvider } from "@/context/SupabaseDataContext";
@@ -23,6 +24,7 @@ const App = () => (
             <Route path="/" element={<Equipos />} />
             <Route path="/inventario" element={<Inventario />} />
             <Route path="/mantenimiento" element={<Mantenimiento />} />
+            <Route path="/historial" element={<Historial />} />
             <Route path="/reportes" element={<Reportes />} />
             {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
             <Route path="*" element={<NotFound />} />

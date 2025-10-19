@@ -1,7 +1,9 @@
+import { useState } from 'react';
 import { Layout } from '@/components/Layout';
 import { Navigation } from '@/components/Navigation';
 import { EquiposTable } from '@/components/equipos/EquiposTable';
 import { EquipoDialog } from '@/components/equipos/EquipoDialog';
+import { EquipoDetalleUnificado } from '@/components/EquipoDetalleUnificado';
 import { useSupabaseDataContext } from '@/context/SupabaseDataContext';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
@@ -11,6 +13,13 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 export default function Equipos() {
   const { data, loading, loadData } = useSupabaseDataContext();
   const { toast } = useToast();
+  const [fichaSeleccionada, setFichaSeleccionada] = useState<string | null>(null);
+  const [detalleAbierto, setDetalleAbierto] = useState(false);
+
+  const handleVerDetalle = (ficha: string) => {
+    setFichaSeleccionada(ficha);
+    setDetalleAbierto(true);
+  };
 
   const handleAddEquipo = async (equipo: Omit<Equipo, 'id'>) => {
     try {
@@ -158,9 +167,16 @@ export default function Equipos() {
             equipos={data.equipos}
             onEdit={handleEditEquipo}
             onDelete={handleDeleteEquipo}
+            onVerDetalle={handleVerDetalle}
           />
         </CardContent>
       </Card>
+
+      <EquipoDetalleUnificado
+        ficha={fichaSeleccionada}
+        open={detalleAbierto}
+        onOpenChange={setDetalleAbierto}
+      />
     </Layout>
   );
 }
