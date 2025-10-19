@@ -72,7 +72,6 @@ export interface Empleado {
   activo: boolean;
 }
 
-in
 export interface MantenimientoProgramado {
   id: number;
   ficha: string;

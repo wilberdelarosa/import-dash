@@ -609,7 +609,6 @@ export function useSupabaseData() {
       toast({
         title: "✅ Migración completada",
         description: `Se migraron ${summary.equiposMigrados} equipos, ${summary.inventariosMigrados} inventarios, ${summary.mantenimientosProgramadosMigrados} mantenimientos programados, ${summary.mantenimientosRealizadosMigrados} mantenimientos realizados y ${summary.actualizacionesMigradas} actualizaciones de horas/kilómetros`,
-
       });
     } catch (error) {
       console.error('Error migrating data:', error);
