@@ -33,6 +33,35 @@ export interface Movimiento {
   motivo: string;
 }
 
+export interface ActualizacionHorasKm {
+  id: number;
+  ficha: string;
+  nombreEquipo: string | null;
+  fecha: string;
+  horasKm: number;
+  incremento: number;
+  usuarioResponsable: string;
+}
+
+export interface FiltroUtilizado {
+  idInventario?: number;
+  nombre: string;
+  cantidad: number;
+}
+
+export interface MantenimientoRealizado {
+  id: number;
+  ficha: string;
+  nombreEquipo: string | null;
+  fechaMantenimiento: string;
+  horasKmAlMomento: number;
+  idEmpleado: number | null;
+  observaciones: string;
+  incrementoDesdeUltimo: number;
+  filtrosUtilizados: FiltroUtilizado[];
+  usuarioResponsable: string;
+}
+
 export interface MantenimientoProgramado {
   id: number;
   ficha: string;
@@ -52,4 +81,6 @@ export interface DatabaseData {
   equipos: Equipo[];
   inventarios: Inventario[];
   mantenimientosProgramados: MantenimientoProgramado[];
+  mantenimientosRealizados: MantenimientoRealizado[];
+  actualizacionesHorasKm: ActualizacionHorasKm[];
 }

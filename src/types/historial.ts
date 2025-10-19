@@ -1,6 +1,6 @@
 export interface HistorialEvento {
   id: number;
-  tipoEvento: 'crear' | 'actualizar' | 'eliminar' | 'mantenimiento_realizado' | 'stock_movido' | 'sistema';
+  tipoEvento: 'crear' | 'actualizar' | 'eliminar' | 'mantenimiento_realizado' | 'stock_movido' | 'lectura_actualizada' | 'sistema';
   modulo: 'equipos' | 'inventarios' | 'mantenimientos' | 'sistema';
   fichaEquipo: string | null;
   nombreEquipo: string | null;

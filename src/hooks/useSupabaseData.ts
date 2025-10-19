@@ -19,7 +19,9 @@ export function useSupabaseData() {
   const [data, setData] = useState<DatabaseData>({
     equipos: [],
     inventarios: [],
-    mantenimientosProgramados: []
+    mantenimientosProgramados: [],
+    mantenimientosRealizados: [],
+    actualizacionesHorasKm: [],
   });
   const [loading, setLoading] = useState(true);
   const [isMigrating, setIsMigrating] = useState(false);
@@ -51,6 +53,85 @@ export function useSupabaseData() {
         .order('id', { ascending: true });
 
       if (mantenimientosError) throw mantenimientosError;
+
+      const { data: historialData, error: historialError } = await supabase
+        .from('historial_eventos')
+        .select('*')
+        .in('tipo_evento', ['mantenimiento_realizado', 'lectura_actualizada'])
+        .order('created_at', { ascending: true });
+
+      if (historialError) throw historialError;
+
+      const actualizacionesHorasKm = (historialData || [])
+        .filter(evento => evento.tipo_evento === 'lectura_actualizada')
+        .map(evento => {
+          const metadata = (evento.metadata as any) ?? {};
+          const datosDespues = (evento.datos_despues as any) ?? {};
+
+          const horas = Number(
+            metadata.horasKm ??
+            metadata.horas_km ??
+            datosDespues.horasKm ??
+            datosDespues.horas_km ??
+            metadata.horasKmAlMomento ??
+            0
+          );
+
+          const incremento = Number(
+            metadata.incremento ??
+            metadata.incrementoDesdeUltimo ??
+            datosDespues.incremento ??
+            datosDespues.incrementoDesdeUltimo ??
+            0
+          );
+
+          return {
+            id: Number(evento.id),
+            ficha: evento.ficha_equipo ?? metadata.ficha ?? '',
+            nombreEquipo: evento.nombre_equipo ?? metadata.nombreEquipo ?? null,
+            fecha: metadata.fecha ?? metadata.fechaMantenimiento ?? evento.created_at,
+            horasKm: horas,
+            incremento,
+            usuarioResponsable: evento.usuario_responsable ?? metadata.usuarioResponsable ?? 'Sistema',
+          };
+        });
+
+      const mantenimientosRealizados = (historialData || [])
+        .filter(evento => evento.tipo_evento === 'mantenimiento_realizado')
+        .map(evento => {
+          const metadata = (evento.metadata as any) ?? {};
+          const datosDespues = (evento.datos_despues as any) ?? {};
+          const filtros = Array.isArray(metadata.filtrosUtilizados)
+            ? metadata.filtrosUtilizados
+            : Array.isArray(datosDespues.filtrosUtilizados)
+            ? datosDespues.filtrosUtilizados
+            : [];
+
+          return {
+            id: Number(metadata.id ?? evento.id),
+            ficha: evento.ficha_equipo ?? metadata.ficha ?? '',
+            nombreEquipo: evento.nombre_equipo ?? metadata.nombreEquipo ?? null,
+            fechaMantenimiento: metadata.fechaMantenimiento ?? metadata.fecha ?? evento.created_at,
+            horasKmAlMomento: Number(
+              metadata.horasKmAlMomento ??
+              metadata.horasKm ??
+              datosDespues.horasKmAlMomento ??
+              datosDespues.horasKm ??
+              0
+            ),
+            idEmpleado: metadata.idEmpleado ?? metadata.empleadoId ?? null,
+            observaciones: metadata.observaciones ?? evento.descripcion ?? '',
+            incrementoDesdeUltimo: Number(
+              metadata.incrementoDesdeUltimo ??
+              metadata.incremento ??
+              datosDespues.incrementoDesdeUltimo ??
+              datosDespues.incremento ??
+              0
+            ),
+            filtrosUtilizados: filtros,
+            usuarioResponsable: evento.usuario_responsable ?? metadata.usuarioResponsable ?? 'Sistema',
+          };
+        });
 
       setData({
         equipos: equiposData.map(e => ({
@@ -91,7 +172,9 @@ export function useSupabaseData() {
           proximoMantenimiento: Number(m.proximo_mantenimiento),
           horasKmRestante: Number(m.horas_km_restante),
           activo: m.activo
-        }))
+        })),
+        mantenimientosRealizados,
+        actualizacionesHorasKm,
       });
       
       if (showToast) {
@@ -137,10 +220,18 @@ export function useSupabaseData() {
       })
       .subscribe();
 
+    const historialChannel = supabase
+      .channel('historial-changes-sync')
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'historial_eventos' }, () => {
+        loadData();
+      })
+      .subscribe();
+
     return () => {
       supabase.removeChannel(equiposChannel);
       supabase.removeChannel(inventariosChannel);
       supabase.removeChannel(mantenimientosChannel);
+      supabase.removeChannel(historialChannel);
     };
   }, []);
 
@@ -165,6 +256,16 @@ export function useSupabaseData() {
 
       await supabase
         .from('equipos')
+        .delete()
+        .neq('id', 0);
+
+      await supabase
+        .from('historial_eventos')
+        .delete()
+        .neq('id', 0);
+
+      await supabase
+        .from('notificaciones')
         .delete()
         .neq('id', 0);
 
@@ -300,12 +401,39 @@ export function useSupabaseData() {
       });
 
       const localData = JSON.parse(stored);
+
+      const equiposLocal = Array.isArray(localData.equipos) ? localData.equipos : [];
+      const inventariosLocal = Array.isArray(localData.inventarios) ? localData.inventarios : [];
+      const mantenimientosProgramadosLocal = Array.isArray(localData.mantenimientosProgramados) ? localData.mantenimientosProgramados : [];
+      const mantenimientosRealizadosLocal = Array.isArray(localData.mantenimientosRealizados) ? localData.mantenimientosRealizados : [];
+      const actualizacionesLocal = Array.isArray(localData.actualizacionesHorasKm) ? localData.actualizacionesHorasKm : [];
+      const empleadosLocal = Array.isArray(localData.empleados) ? localData.empleados : [];
+
+      const equiposMap = new Map<string, string | null>(
+        equiposLocal.map((equipo: any) => [equipo.ficha, equipo.nombre ?? null])
+      );
+
+      const empleadosMap = new Map<number, string>(
+        empleadosLocal.map((empleado: any) => {
+          const nombreCompleto = `${empleado.nombre ?? ''} ${empleado.apellido ?? ''}`.trim();
+          return [Number(empleado.id), nombreCompleto || empleado.nombre || 'Equipo de mantenimiento'];
+        })
+      );
+
+      const toISOStringIfValid = (valor?: string | null) => {
+        if (!valor) return undefined;
+        const fecha = new Date(valor);
+        return Number.isNaN(fecha.getTime()) ? undefined : fecha.toISOString();
+      };
+
       let equiposMigrados = 0;
       let inventariosMigrados = 0;
-      let mantenimientosMigrados = 0;
+      let mantenimientosProgramadosMigrados = 0;
+      let mantenimientosRealizadosMigrados = 0;
+      let actualizacionesMigradas = 0;
 
       // Migrar equipos
-      for (const equipo of localData.equipos || []) {
+      for (const equipo of equiposLocal) {
         const { id, ...equipoData } = equipo;
         await supabase.from('equipos').insert({
           ficha: equipoData.ficha,
@@ -322,7 +450,7 @@ export function useSupabaseData() {
       }
 
       // Migrar inventarios
-      for (const inventario of localData.inventarios || []) {
+      for (const inventario of inventariosLocal) {
         const { id, ...inventarioData } = inventario;
         await supabase.from('inventarios').insert({
           nombre: inventarioData.nombre,
@@ -339,8 +467,8 @@ export function useSupabaseData() {
         inventariosMigrados++;
       }
 
-      // Migrar mantenimientos
-      for (const mantenimiento of localData.mantenimientosProgramados || []) {
+      // Migrar mantenimientos programados
+      for (const mantenimiento of mantenimientosProgramadosLocal) {
         const { id, ...mantenimientoData } = mantenimiento;
         await supabase.from('mantenimientos_programados').insert({
           ficha: mantenimientoData.ficha,
@@ -355,12 +483,91 @@ export function useSupabaseData() {
           horas_km_restante: mantenimientoData.horasKmRestante,
           activo: mantenimientoData.activo
         });
-        mantenimientosMigrados++;
+        mantenimientosProgramadosMigrados++;
+      }
+
+      // Migrar mantenimientos realizados al historial
+      for (const mantenimiento of mantenimientosRealizadosLocal) {
+        const nombreEquipo = equiposMap.get(mantenimiento.ficha) ?? null;
+        const empleadoNombre = mantenimiento.idEmpleado
+          ? empleadosMap.get(Number(mantenimiento.idEmpleado)) ?? `Empleado ${mantenimiento.idEmpleado}`
+          : mantenimiento.usuarioResponsable || 'Equipo de mantenimiento';
+
+        const metadata = {
+          ...mantenimiento,
+          nombreEquipo,
+          usuarioResponsable: empleadoNombre,
+        };
+
+        const payload: any = {
+          tipo_evento: 'mantenimiento_realizado',
+          modulo: 'mantenimientos',
+          ficha_equipo: mantenimiento.ficha,
+          nombre_equipo: nombreEquipo,
+          usuario_responsable: empleadoNombre,
+          descripcion: mantenimiento.observaciones || `Mantenimiento realizado al equipo ${nombreEquipo ?? mantenimiento.ficha}`,
+          datos_despues: {
+            horasKmAlMomento: mantenimiento.horasKmAlMomento,
+            incrementoDesdeUltimo: mantenimiento.incrementoDesdeUltimo,
+            filtrosUtilizados: mantenimiento.filtrosUtilizados ?? [],
+          },
+          nivel_importancia: 'info',
+          metadata,
+        };
+
+        const fechaIso = toISOStringIfValid(mantenimiento.fechaMantenimiento);
+        if (fechaIso) {
+          payload.created_at = fechaIso;
+        }
+
+        const { error } = await supabase.from('historial_eventos').insert(payload);
+        if (error) throw error;
+
+        mantenimientosRealizadosMigrados++;
+      }
+
+      // Migrar actualizaciones de horas/km al historial
+      for (const actualizacion of actualizacionesLocal) {
+        const nombreEquipo = equiposMap.get(actualizacion.ficha) ?? null;
+        const responsable = actualizacion.usuarioResponsable || actualizacion.responsable || 'Sistema';
+
+        const metadata = {
+          ...actualizacion,
+          nombreEquipo,
+          usuarioResponsable: responsable,
+        };
+
+        const payload: any = {
+          tipo_evento: 'lectura_actualizada',
+          modulo: 'mantenimientos',
+          ficha_equipo: actualizacion.ficha,
+          nombre_equipo: nombreEquipo,
+          usuario_responsable: responsable,
+          descripcion: nombreEquipo
+            ? `Lectura actualizada para ${nombreEquipo}: ${actualizacion.horasKm}`
+            : `Lectura actualizada a ${actualizacion.horasKm}`,
+          datos_despues: {
+            horasKm: actualizacion.horasKm,
+            incremento: actualizacion.incremento,
+          },
+          nivel_importancia: actualizacion.incremento < 0 ? 'warning' : 'info',
+          metadata,
+        };
+
+        const fechaIso = toISOStringIfValid(actualizacion.fecha);
+        if (fechaIso) {
+          payload.created_at = fechaIso;
+        }
+
+        const { error } = await supabase.from('historial_eventos').insert(payload);
+        if (error) throw error;
+
+        actualizacionesMigradas++;
       }
 
       toast({
         title: "✅ Migración completada",
-        description: `Se migraron ${equiposMigrados} equipos, ${inventariosMigrados} inventarios y ${mantenimientosMigrados} mantenimientos`,
+        description: `Se migraron ${equiposMigrados} equipos, ${inventariosMigrados} inventarios, ${mantenimientosProgramadosMigrados} mantenimientos programados, ${mantenimientosRealizadosMigrados} mantenimientos realizados y ${actualizacionesMigradas} actualizaciones de horas/kilómetros`,
       });
 
       await loadData(true);
