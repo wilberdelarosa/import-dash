@@ -10,6 +10,7 @@ const defaultData: DatabaseData = {
   mantenimientosRealizados: [],
   actualizacionesHorasKm: [],
   empleados: [],
+
 };
 
 export function useLocalStorage() {
@@ -70,6 +71,8 @@ export function useLocalStorage() {
         try {
           const importedData = JSON.parse(e.target?.result as string);
           const normalizedData: DatabaseData = {
+
+          saveData({
             equipos: importedData.equipos ?? [],
             inventarios: importedData.inventarios ?? [],
             mantenimientosProgramados: importedData.mantenimientosProgramados ?? [],
