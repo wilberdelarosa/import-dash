@@ -1,7 +1,7 @@
 import { ReactNode } from 'react';
 import { Button } from '@/components/ui/button';
 import { RefreshCw, FileDown, FileUp, Trash2 } from 'lucide-react';
-import { useSupabaseData } from '@/hooks/useSupabaseData';
+import { useSupabaseDataContext } from '@/context/SupabaseDataContext';
 import { useLocalStorage } from '@/hooks/useLocalStorage';
 import { useToast } from '@/hooks/use-toast';
 
@@ -11,7 +11,7 @@ interface LayoutProps {
 }
 
 export function Layout({ children, title }: LayoutProps) {
-  const { migrateFromLocalStorage, data: supabaseData, clearDatabase } = useSupabaseData();
+  const { migrateFromLocalStorage, data: supabaseData, clearDatabase } = useSupabaseDataContext();
   const { importData } = useLocalStorage();
   const { toast } = useToast();
 

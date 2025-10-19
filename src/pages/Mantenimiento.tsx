@@ -1,6 +1,6 @@
 import { Layout } from '@/components/Layout';
 import { Navigation } from '@/components/Navigation';
-import { useSupabaseData } from '@/hooks/useSupabaseData';
+import { useSupabaseDataContext } from '@/context/SupabaseDataContext';
 import type { MantenimientoProgramado } from '@/types/equipment';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
@@ -119,7 +119,7 @@ const formatDateForInput = (date: string | null | undefined) => {
 };
 
 export default function Mantenimiento() {
-  const { data, loading, clearDatabase, createMantenimiento, updateMantenimiento, deleteMantenimiento } = useSupabaseData();
+  const { data, loading, clearDatabase, createMantenimiento, updateMantenimiento, deleteMantenimiento } = useSupabaseDataContext();
   const [modoAvanzado, setModoAvanzado] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
   const [filtros, setFiltros] = useState({
