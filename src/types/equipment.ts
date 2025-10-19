@@ -62,6 +62,17 @@ export interface MantenimientoRealizado {
   usuarioResponsable: string;
 }
 
+export interface Empleado {
+  id: number;
+  nombre: string;
+  apellido: string;
+  cargo: string;
+  categoria: string;
+  fechaNacimiento: string;
+  activo: boolean;
+}
+
+in
 export interface MantenimientoProgramado {
   id: number;
   ficha: string;
@@ -83,4 +94,5 @@ export interface DatabaseData {
   mantenimientosProgramados: MantenimientoProgramado[];
   mantenimientosRealizados: MantenimientoRealizado[];
   actualizacionesHorasKm: ActualizacionHorasKm[];
+  empleados?: Empleado[];
 }

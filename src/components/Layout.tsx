@@ -11,7 +11,7 @@ interface LayoutProps {
 }
 
 export function Layout({ children, title }: LayoutProps) {
-  const { migrateFromLocalStorage, data: supabaseData, clearDatabase } = useSupabaseDataContext();
+  const { migrateFromLocalStorage, importJsonData, data: supabaseData, clearDatabase } = useSupabaseDataContext();
   const { importData } = useLocalStorage();
   const { toast } = useToast();
 
@@ -53,11 +53,8 @@ export function Layout({ children, title }: LayoutProps) {
       const file = (e.target as HTMLInputElement).files?.[0];
       if (file) {
         try {
-          await importData(file);
-          toast({
-            title: "Éxito",
-            description: "Datos importados a localStorage correctamente. Usa 'Migrar a DB' para pasarlos a la base de datos.",
-          });
+          const imported = await importData(file);
+          await importJsonData(imported);
         } catch (error) {
           toast({
             title: "Error",

@@ -9,6 +9,8 @@ const defaultData: DatabaseData = {
   mantenimientosProgramados: [],
   mantenimientosRealizados: [],
   actualizacionesHorasKm: [],
+  empleados: [],
+
 };
 
 export function useLocalStorage() {
@@ -26,6 +28,7 @@ export function useLocalStorage() {
           mantenimientosProgramados: parsedData.mantenimientosProgramados ?? [],
           mantenimientosRealizados: parsedData.mantenimientosRealizados ?? [],
           actualizacionesHorasKm: parsedData.actualizacionesHorasKm ?? [],
+          empleados: parsedData.empleados ?? [],
         });
       }
     } catch (error) {
@@ -37,8 +40,12 @@ export function useLocalStorage() {
 
   const saveData = (newData: DatabaseData) => {
     try {
-      localStorage.setItem(STORAGE_KEY, JSON.stringify(newData));
-      setData(newData);
+      const normalizedData: DatabaseData = {
+        ...newData,
+        empleados: newData.empleados ?? [],
+      };
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(normalizedData));
+      setData(normalizedData);
     } catch (error) {
       console.error('Error saving data to localStorage:', error);
     }
@@ -57,20 +64,24 @@ export function useLocalStorage() {
     URL.revokeObjectURL(url);
   };
 
-  const importData = (file: File): Promise<void> => {
+  const importData = (file: File): Promise<DatabaseData> => {
     return new Promise((resolve, reject) => {
       const reader = new FileReader();
       reader.onload = (e) => {
         try {
           const importedData = JSON.parse(e.target?.result as string);
+          const normalizedData: DatabaseData = {
+
           saveData({
             equipos: importedData.equipos ?? [],
             inventarios: importedData.inventarios ?? [],
             mantenimientosProgramados: importedData.mantenimientosProgramados ?? [],
             mantenimientosRealizados: importedData.mantenimientosRealizados ?? [],
             actualizacionesHorasKm: importedData.actualizacionesHorasKm ?? [],
-          });
-          resolve();
+            empleados: importedData.empleados ?? [],
+          };
+          saveData(normalizedData);
+          resolve(normalizedData);
         } catch (error) {
           reject(new Error('Archivo JSON inválido'));
         }
@@ -84,7 +95,14 @@ export function useLocalStorage() {
     try {
       const response = await fetch('/sample-data.json');
       const sampleData = await response.json();
-      saveData(sampleData);
+      saveData({
+        equipos: sampleData.equipos ?? [],
+        inventarios: sampleData.inventarios ?? [],
+        mantenimientosProgramados: sampleData.mantenimientosProgramados ?? [],
+        mantenimientosRealizados: sampleData.mantenimientosRealizados ?? [],
+        actualizacionesHorasKm: sampleData.actualizacionesHorasKm ?? [],
+        empleados: sampleData.empleados ?? [],
+      });
     } catch (error) {
       console.error('Error loading sample data:', error);
     }
