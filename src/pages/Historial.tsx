@@ -338,16 +338,16 @@ export default function Historial() {
                   <div>
                     <label className="text-sm font-medium mb-2 block">Tipo de Evento</label>
                     <Select
-                      value={filtros.tipoEvento[0] || ""}
+                      value={filtros.tipoEvento[0] || "todos"}
                       onValueChange={(value) => 
-                        setFiltros({ ...filtros, tipoEvento: value ? [value] : [] })
+                        setFiltros({ ...filtros, tipoEvento: value === "todos" ? [] : [value] })
                       }
                     >
                       <SelectTrigger>
                         <SelectValue placeholder="Todos" />
                       </SelectTrigger>
                       <SelectContent>
-                        <SelectItem value="">Todos</SelectItem>
+                        <SelectItem value="todos">Todos</SelectItem>
                         {tiposEvento.map(tipo => (
                           <SelectItem key={tipo} value={tipo}>{tipo}</SelectItem>
                         ))}
@@ -358,16 +358,16 @@ export default function Historial() {
                   <div>
                     <label className="text-sm font-medium mb-2 block">Módulo</label>
                     <Select
-                      value={filtros.modulo[0] || ""}
+                      value={filtros.modulo[0] || "todos"}
                       onValueChange={(value) => 
-                        setFiltros({ ...filtros, modulo: value ? [value] : [] })
+                        setFiltros({ ...filtros, modulo: value === "todos" ? [] : [value] })
                       }
                     >
                       <SelectTrigger>
                         <SelectValue placeholder="Todos" />
                       </SelectTrigger>
                       <SelectContent>
-                        <SelectItem value="">Todos</SelectItem>
+                        <SelectItem value="todos">Todos</SelectItem>
                         {modulos.map(mod => (
                           <SelectItem key={mod} value={mod}>{mod}</SelectItem>
                         ))}
@@ -378,16 +378,16 @@ export default function Historial() {
                   <div>
                     <label className="text-sm font-medium mb-2 block">Nivel</label>
                     <Select
-                      value={filtros.nivelImportancia[0] || ""}
+                      value={filtros.nivelImportancia[0] || "todos"}
                       onValueChange={(value) => 
-                        setFiltros({ ...filtros, nivelImportancia: value ? [value] : [] })
+                        setFiltros({ ...filtros, nivelImportancia: value === "todos" ? [] : [value] })
                       }
                     >
                       <SelectTrigger>
                         <SelectValue placeholder="Todos" />
                       </SelectTrigger>
                       <SelectContent>
-                        <SelectItem value="">Todos</SelectItem>
+                        <SelectItem value="todos">Todos</SelectItem>
                         {niveles.map(nivel => (
                           <SelectItem key={nivel} value={nivel}>{nivel}</SelectItem>
                         ))}
