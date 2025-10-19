@@ -9,19 +9,19 @@ import {
 } from '@/components/ui/dialog';
 import { Badge } from '@/components/ui/badge';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Separator } from '@/components/ui/separator';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { 
-  Truck, 
-  Wrench, 
-  Package, 
+import {
+  Truck,
+  Wrench,
+  Package,
   History as HistoryIcon,
   Calendar,
   AlertCircle,
-  CheckCircle,
-  TrendingUp
+  TrendingUp,
+  Activity,
+  Clock3
 } from 'lucide-react';
-import { formatDistanceToNow } from 'date-fns';
+import { format, formatDistanceToNow } from 'date-fns';
 import { es } from 'date-fns/locale';
 
 interface Props {
@@ -37,6 +37,8 @@ export function EquipoDetalleUnificado({ ficha, open, onOpenChange }: Props) {
   const [mantenimientos, setMantenimientos] = useState<any[]>([]);
   const [inventariosRelacionados, setInventariosRelacionados] = useState<any[]>([]);
   const [historialEquipo, setHistorialEquipo] = useState<any[]>([]);
+  const [mantenimientosRealizadosData, setMantenimientosRealizadosData] = useState<any[]>([]);
+  const [actualizacionesHorasKmData, setActualizacionesHorasKmData] = useState<any[]>([]);
 
   useEffect(() => {
     if (ficha && open) {
@@ -59,6 +61,18 @@ export function EquipoDetalleUnificado({ ficha, open, onOpenChange }: Props) {
       // Filtrar historial del equipo
       const historial = eventos.filter(e => e.fichaEquipo === ficha);
       setHistorialEquipo(historial);
+
+      // Mantenimientos realizados
+      const realizados = data.mantenimientosRealizados
+        .filter(m => m.ficha === ficha)
+        .sort((a, b) => new Date(a.fechaMantenimiento).getTime() - new Date(b.fechaMantenimiento).getTime());
+      setMantenimientosRealizadosData(realizados);
+
+      // Actualizaciones de horas/km
+      const lecturas = data.actualizacionesHorasKm
+        .filter(a => a.ficha === ficha)
+        .sort((a, b) => new Date(a.fecha).getTime() - new Date(b.fecha).getTime());
+      setActualizacionesHorasKmData(lecturas);
     }
   }, [ficha, open, data, eventos]);
 
@@ -66,6 +80,14 @@ export function EquipoDetalleUnificado({ ficha, open, onOpenChange }: Props) {
 
   const mantenimientoVencido = mantenimientos.some(m => m.horasKmRestante < 0);
   const mantenimientoProximo = mantenimientos.some(m => m.horasKmRestante > 0 && m.horasKmRestante <= 50);
+  const ultimoMantenimientoRealizado =
+    mantenimientosRealizadosData.length > 0
+      ? mantenimientosRealizadosData[mantenimientosRealizadosData.length - 1]
+      : null;
+  const ultimaLectura =
+    actualizacionesHorasKmData.length > 0
+      ? actualizacionesHorasKmData[actualizacionesHorasKmData.length - 1]
+      : null;
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -177,6 +199,25 @@ export function EquipoDetalleUnificado({ ficha, open, onOpenChange }: Props) {
                   <span className="text-sm">Eventos registrados</span>
                   <Badge>{historialEquipo.length}</Badge>
                 </div>
+                <div className="flex items-center justify-between">
+                  <span className="text-sm">Último mantenimiento realizado</span>
+                  <Badge variant={ultimoMantenimientoRealizado ? "secondary" : "outline"}>
+                    {ultimoMantenimientoRealizado
+                      ? format(new Date(ultimoMantenimientoRealizado.fechaMantenimiento), 'dd MMM yyyy', { locale: es })
+                      : 'Sin registros'}
+                  </Badge>
+                </div>
+                <div className="flex items-center justify-between">
+                  <span className="text-sm">Última lectura registrada</span>
+                  <Badge variant={ultimaLectura ? "outline" : "outline"}>
+                    {ultimaLectura
+                      ? `${ultimaLectura.horasKm} • ${formatDistanceToNow(new Date(ultimaLectura.fecha), {
+                          addSuffix: true,
+                          locale: es,
+                        })}`
+                      : 'Sin registros'}
+                  </Badge>
+                </div>
               </CardContent>
             </Card>
           </TabsContent>
@@ -237,6 +278,93 @@ export function EquipoDetalleUnificado({ ficha, open, onOpenChange }: Props) {
                   </CardContent>
                 </Card>
               ))
+            )}
+            {mantenimientosRealizadosData.length > 0 && (
+              <Card className="border border-amber-200/70 bg-amber-50/40">
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2 text-amber-700">
+                    <HistoryIcon className="h-5 w-5" />
+                    Mantenimientos realizados
+                  </CardTitle>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                  {mantenimientosRealizadosData.map((realizado) => (
+                    <div
+                      key={realizado.id}
+                      className="rounded-xl border border-amber-200/60 bg-white/70 p-4 transition-all duration-300 hover:-translate-y-0.5 hover:shadow-md"
+                    >
+                      <div className="flex flex-wrap items-center justify-between gap-3">
+                        <span className="text-sm font-semibold text-amber-800">
+                          {format(new Date(realizado.fechaMantenimiento), 'dd MMM yyyy', { locale: es })}
+                        </span>
+                        <Badge variant="outline">Lectura: {realizado.horasKmAlMomento}</Badge>
+                      </div>
+                      <p className="mt-2 text-sm text-muted-foreground">
+                        {realizado.observaciones || 'Sin observaciones registradas.'}
+                      </p>
+                      <div className="mt-3 flex flex-wrap items-center gap-3 text-xs text-muted-foreground">
+                        <span className="rounded-full bg-amber-100 px-3 py-1 font-medium text-amber-700">
+                          {realizado.usuarioResponsable}
+                        </span>
+                        <span className="flex items-center gap-1">
+                          <TrendingUp className="h-3 w-3 text-amber-600" />
+                          Incremento: {realizado.incrementoDesdeUltimo}
+                        </span>
+                      </div>
+                      {realizado.filtrosUtilizados?.length > 0 && (
+                        <div className="mt-3 rounded-lg border border-amber-200/60 bg-amber-50/60 p-3 text-xs">
+                          <p className="font-semibold text-amber-700">Insumos utilizados</p>
+                          <ul className="mt-2 grid gap-1 sm:grid-cols-2">
+                            {realizado.filtrosUtilizados.map((filtro: any, index: number) => (
+                              <li key={`${realizado.id}-${index}`} className="flex items-center justify-between">
+                                <span>{filtro.nombre}</span>
+                                <span className="font-medium text-amber-800">{filtro.cantidad}</span>
+                              </li>
+                            ))}
+                          </ul>
+                        </div>
+                      )}
+                    </div>
+                  ))}
+                </CardContent>
+              </Card>
+            )}
+            {actualizacionesHorasKmData.length > 0 && (
+              <Card className="border border-sky-200/70 bg-sky-50/40">
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2 text-sky-700">
+                    <Activity className="h-5 w-5" />
+                    Actualizaciones de horas/km
+                  </CardTitle>
+                </CardHeader>
+                <CardContent className="space-y-3">
+                  {actualizacionesHorasKmData.map((lectura) => (
+                    <div
+                      key={lectura.id}
+                      className="rounded-xl border border-sky-200/60 bg-white/70 p-4 transition-all duration-300 hover:-translate-y-0.5 hover:shadow-md"
+                    >
+                      <div className="flex flex-wrap items-center justify-between gap-3">
+                        <span className="text-sm font-semibold text-sky-800">
+                          {format(new Date(lectura.fecha), 'dd MMM yyyy', { locale: es })}
+                        </span>
+                        <Badge variant="outline">{lectura.horasKm} horas/km</Badge>
+                      </div>
+                      <div className="mt-2 flex flex-wrap items-center gap-3 text-xs text-muted-foreground">
+                        <span className="flex items-center gap-1">
+                          <TrendingUp className="h-3 w-3 text-sky-500" />
+                          Incremento: {lectura.incremento}
+                        </span>
+                        <span className="rounded-full bg-sky-100 px-3 py-1 font-medium text-sky-700">
+                          {lectura.usuarioResponsable}
+                        </span>
+                      </div>
+                      <p className="text-[11px] text-muted-foreground">
+                        Registrado {formatDistanceToNow(new Date(lectura.fecha), { addSuffix: true, locale: es })}
+                      </p>
+                    </div>
+                  ))}
+                </CardContent>
+              </Card>
             )}
           </TabsContent>
 

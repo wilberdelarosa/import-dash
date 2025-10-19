@@ -42,8 +42,18 @@ export function useNotificaciones() {
   };
 
   useEffect(() => {
-    loadNotificaciones();
-    
+    const inicializar = async () => {
+      try {
+        await supabase.rpc('generar_notificaciones_mantenimientos');
+      } catch (error) {
+        console.error('Error generating automatic maintenance notifications:', error);
+      }
+
+      await loadNotificaciones();
+    };
+
+    inicializar();
+
     // Realtime updates
     const channel = supabase
       .channel('notificaciones-changes')

@@ -1,7 +1,15 @@
 import { useState, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from '@/hooks/use-toast';
-import { DatabaseData } from '@/types/equipment';
+import {
+  DatabaseData,
+  Equipo,
+  Inventario,
+  MantenimientoProgramado,
+  MantenimientoRealizado,
+  ActualizacionHorasKm,
+  Empleado,
+} from '@/types/equipment';
 
 type MantenimientoPayload = {
   ficha: string;
@@ -15,11 +23,23 @@ type MantenimientoPayload = {
   activo: boolean;
 };
 
+type ImportBundle = {
+  equipos?: Equipo[];
+  inventarios?: Inventario[];
+  mantenimientosProgramados?: MantenimientoProgramado[];
+  mantenimientosRealizados?: MantenimientoRealizado[];
+  actualizacionesHorasKm?: ActualizacionHorasKm[];
+  empleados?: Empleado[];
+};
+
 export function useSupabaseData() {
   const [data, setData] = useState<DatabaseData>({
     equipos: [],
     inventarios: [],
-    mantenimientosProgramados: []
+    mantenimientosProgramados: [],
+    mantenimientosRealizados: [],
+    actualizacionesHorasKm: [],
+    empleados: [],
   });
   const [loading, setLoading] = useState(true);
   const [isMigrating, setIsMigrating] = useState(false);
@@ -51,6 +71,85 @@ export function useSupabaseData() {
         .order('id', { ascending: true });
 
       if (mantenimientosError) throw mantenimientosError;
+
+      const { data: historialData, error: historialError } = await supabase
+        .from('historial_eventos')
+        .select('*')
+        .in('tipo_evento', ['mantenimiento_realizado', 'lectura_actualizada'])
+        .order('created_at', { ascending: true });
+
+      if (historialError) throw historialError;
+
+      const actualizacionesHorasKm = (historialData || [])
+        .filter(evento => evento.tipo_evento === 'lectura_actualizada')
+        .map(evento => {
+          const metadata = (evento.metadata as any) ?? {};
+          const datosDespues = (evento.datos_despues as any) ?? {};
+
+          const horas = Number(
+            metadata.horasKm ??
+            metadata.horas_km ??
+            datosDespues.horasKm ??
+            datosDespues.horas_km ??
+            metadata.horasKmAlMomento ??
+            0
+          );
+
+          const incremento = Number(
+            metadata.incremento ??
+            metadata.incrementoDesdeUltimo ??
+            datosDespues.incremento ??
+            datosDespues.incrementoDesdeUltimo ??
+            0
+          );
+
+          return {
+            id: Number(evento.id),
+            ficha: evento.ficha_equipo ?? metadata.ficha ?? '',
+            nombreEquipo: evento.nombre_equipo ?? metadata.nombreEquipo ?? null,
+            fecha: metadata.fecha ?? metadata.fechaMantenimiento ?? evento.created_at,
+            horasKm: horas,
+            incremento,
+            usuarioResponsable: evento.usuario_responsable ?? metadata.usuarioResponsable ?? 'Sistema',
+          };
+        });
+
+      const mantenimientosRealizados = (historialData || [])
+        .filter(evento => evento.tipo_evento === 'mantenimiento_realizado')
+        .map(evento => {
+          const metadata = (evento.metadata as any) ?? {};
+          const datosDespues = (evento.datos_despues as any) ?? {};
+          const filtros = Array.isArray(metadata.filtrosUtilizados)
+            ? metadata.filtrosUtilizados
+            : Array.isArray(datosDespues.filtrosUtilizados)
+            ? datosDespues.filtrosUtilizados
+            : [];
+
+          return {
+            id: Number(metadata.id ?? evento.id),
+            ficha: evento.ficha_equipo ?? metadata.ficha ?? '',
+            nombreEquipo: evento.nombre_equipo ?? metadata.nombreEquipo ?? null,
+            fechaMantenimiento: metadata.fechaMantenimiento ?? metadata.fecha ?? evento.created_at,
+            horasKmAlMomento: Number(
+              metadata.horasKmAlMomento ??
+              metadata.horasKm ??
+              datosDespues.horasKmAlMomento ??
+              datosDespues.horasKm ??
+              0
+            ),
+            idEmpleado: metadata.idEmpleado ?? metadata.empleadoId ?? null,
+            observaciones: metadata.observaciones ?? evento.descripcion ?? '',
+            incrementoDesdeUltimo: Number(
+              metadata.incrementoDesdeUltimo ??
+              metadata.incremento ??
+              datosDespues.incrementoDesdeUltimo ??
+              datosDespues.incremento ??
+              0
+            ),
+            filtrosUtilizados: filtros,
+            usuarioResponsable: evento.usuario_responsable ?? metadata.usuarioResponsable ?? 'Sistema',
+          };
+        });
 
       setData({
         equipos: equiposData.map(e => ({
@@ -91,7 +190,10 @@ export function useSupabaseData() {
           proximoMantenimiento: Number(m.proximo_mantenimiento),
           horasKmRestante: Number(m.horas_km_restante),
           activo: m.activo
-        }))
+        })),
+        mantenimientosRealizados,
+        actualizacionesHorasKm,
+        empleados: [],
       });
       
       if (showToast) {
@@ -137,10 +239,18 @@ export function useSupabaseData() {
       })
       .subscribe();
 
+    const historialChannel = supabase
+      .channel('historial-changes-sync')
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'historial_eventos' }, () => {
+        loadData();
+      })
+      .subscribe();
+
     return () => {
       supabase.removeChannel(equiposChannel);
       supabase.removeChannel(inventariosChannel);
       supabase.removeChannel(mantenimientosChannel);
+      supabase.removeChannel(historialChannel);
     };
   }, []);
 
@@ -165,6 +275,16 @@ export function useSupabaseData() {
 
       await supabase
         .from('equipos')
+        .delete()
+        .neq('id', 0);
+
+      await supabase
+        .from('historial_eventos')
+        .delete()
+        .neq('id', 0);
+
+      await supabase
+        .from('notificaciones')
         .delete()
         .neq('id', 0);
 
@@ -282,6 +402,193 @@ export function useSupabaseData() {
     }
   };
 
+  const migrateBundleToSupabase = async (bundle: ImportBundle) => {
+    const equiposLocal: Equipo[] = Array.isArray(bundle.equipos) ? bundle.equipos : [];
+    const inventariosLocal: Inventario[] = Array.isArray(bundle.inventarios) ? bundle.inventarios : [];
+    const mantenimientosProgramadosLocal: MantenimientoProgramado[] = Array.isArray(
+      bundle.mantenimientosProgramados
+    )
+      ? bundle.mantenimientosProgramados
+      : [];
+    const mantenimientosRealizadosLocal: MantenimientoRealizado[] = Array.isArray(
+      bundle.mantenimientosRealizados
+    )
+      ? bundle.mantenimientosRealizados
+      : [];
+    const actualizacionesLocal: ActualizacionHorasKm[] = Array.isArray(bundle.actualizacionesHorasKm)
+      ? bundle.actualizacionesHorasKm
+      : [];
+    const empleadosLocal: Empleado[] = Array.isArray(bundle.empleados) ? bundle.empleados : [];
+
+    const equiposMap = new Map<string, string | null>(
+      equiposLocal.map((equipo: Equipo) => [equipo.ficha, equipo.nombre ?? null])
+    );
+
+    const empleadosMap = new Map<number, string>(
+      empleadosLocal.map((empleado: Empleado) => {
+        const nombreCompleto = `${empleado.nombre ?? ''} ${empleado.apellido ?? ''}`.trim();
+        return [
+          Number(empleado.id),
+          nombreCompleto || empleado.nombre || 'Equipo de mantenimiento'
+        ];
+      })
+    );
+
+    const toISOStringIfValid = (valor?: string | null) => {
+      if (!valor) return undefined;
+      const fecha = new Date(valor);
+      return Number.isNaN(fecha.getTime()) ? undefined : fecha.toISOString();
+    };
+
+    let equiposMigrados = 0;
+    let inventariosMigrados = 0;
+    let mantenimientosProgramadosMigrados = 0;
+    let mantenimientosRealizadosMigrados = 0;
+    let actualizacionesMigradas = 0;
+
+    for (const equipo of equiposLocal) {
+      const { id, ...equipoData } = equipo;
+      const { error } = await supabase.from('equipos').insert({
+        ficha: equipoData.ficha,
+        nombre: equipoData.nombre,
+        marca: equipoData.marca,
+        modelo: equipoData.modelo,
+        numero_serie: equipoData.numeroSerie,
+        placa: equipoData.placa,
+        categoria: equipoData.categoria,
+        activo: equipoData.activo,
+        motivo_inactividad: equipoData.motivoInactividad ?? null,
+      });
+      if (error) throw error;
+      equiposMigrados++;
+    }
+
+    for (const inventario of inventariosLocal) {
+      const { id, ...inventarioData } = inventario;
+      const { error } = await supabase.from('inventarios').insert({
+        nombre: inventarioData.nombre,
+        tipo: inventarioData.tipo,
+        categoria_equipo: inventarioData.categoriaEquipo,
+        cantidad: Number(inventarioData.cantidad ?? 0),
+        movimientos: Array.isArray(inventarioData.movimientos) ? inventarioData.movimientos : [],
+        activo: inventarioData.activo ?? true,
+        codigo_identificacion: inventarioData.codigoIdentificacion ?? '',
+        empresa_suplidora: inventarioData.empresaSuplidora ?? '',
+        marcas_compatibles: inventarioData.marcasCompatibles ?? [],
+        modelos_compatibles: inventarioData.modelosCompatibles ?? [],
+      });
+      if (error) throw error;
+      inventariosMigrados++;
+    }
+
+    for (const mantenimiento of mantenimientosProgramadosLocal) {
+      const { id, ...mantenimientoData } = mantenimiento;
+      const { error } = await supabase.from('mantenimientos_programados').insert({
+        ficha: mantenimientoData.ficha,
+        nombre_equipo: mantenimientoData.nombreEquipo,
+        tipo_mantenimiento: mantenimientoData.tipoMantenimiento,
+        horas_km_actuales: Number(mantenimientoData.horasKmActuales ?? 0),
+        fecha_ultima_actualizacion: mantenimientoData.fechaUltimaActualizacion,
+        frecuencia: Number(mantenimientoData.frecuencia ?? 0),
+        fecha_ultimo_mantenimiento: mantenimientoData.fechaUltimoMantenimiento,
+        horas_km_ultimo_mantenimiento: Number(mantenimientoData.horasKmUltimoMantenimiento ?? 0),
+        proximo_mantenimiento: Number(mantenimientoData.proximoMantenimiento ?? 0),
+        horas_km_restante: Number(mantenimientoData.horasKmRestante ?? 0),
+        activo: mantenimientoData.activo ?? true,
+      });
+      if (error) throw error;
+      mantenimientosProgramadosMigrados++;
+    }
+
+    for (const mantenimiento of mantenimientosRealizadosLocal) {
+      const nombreEquipo = equiposMap.get(mantenimiento.ficha) ?? null;
+      const empleadoNombre = mantenimiento.idEmpleado
+        ? empleadosMap.get(Number(mantenimiento.idEmpleado)) ?? `Empleado ${mantenimiento.idEmpleado}`
+        : mantenimiento.usuarioResponsable || 'Equipo de mantenimiento';
+
+      const metadata = {
+        ...mantenimiento,
+        nombreEquipo,
+        usuarioResponsable: empleadoNombre,
+      };
+
+      const payload: Record<string, any> = {
+        tipo_evento: 'mantenimiento_realizado',
+        modulo: 'mantenimientos',
+        ficha_equipo: mantenimiento.ficha,
+        nombre_equipo: nombreEquipo,
+        usuario_responsable: empleadoNombre,
+        descripcion:
+          mantenimiento.observaciones || `Mantenimiento realizado al equipo ${nombreEquipo ?? mantenimiento.ficha}`,
+        datos_despues: {
+          horasKmAlMomento: mantenimiento.horasKmAlMomento,
+          incrementoDesdeUltimo: mantenimiento.incrementoDesdeUltimo,
+          filtrosUtilizados: Array.isArray(mantenimiento.filtrosUtilizados)
+            ? mantenimiento.filtrosUtilizados
+            : [],
+        },
+        nivel_importancia: 'info',
+        metadata,
+      };
+
+      const fechaIso = toISOStringIfValid(mantenimiento.fechaMantenimiento);
+      if (fechaIso) {
+        payload.created_at = fechaIso;
+      }
+
+      const { error } = await supabase.from('historial_eventos').insert(payload);
+      if (error) throw error;
+
+      mantenimientosRealizadosMigrados++;
+    }
+
+    for (const actualizacion of actualizacionesLocal) {
+      const nombreEquipo = equiposMap.get(actualizacion.ficha) ?? null;
+      const responsable = actualizacion.usuarioResponsable || actualizacion.responsable || 'Sistema';
+
+      const metadata = {
+        ...actualizacion,
+        nombreEquipo,
+        usuarioResponsable: responsable,
+      };
+
+      const payload: Record<string, any> = {
+        tipo_evento: 'lectura_actualizada',
+        modulo: 'mantenimientos',
+        ficha_equipo: actualizacion.ficha,
+        nombre_equipo: nombreEquipo,
+        usuario_responsable: responsable,
+        descripcion: nombreEquipo
+          ? `Lectura actualizada para ${nombreEquipo}: ${actualizacion.horasKm}`
+          : `Lectura actualizada a ${actualizacion.horasKm}`,
+        datos_despues: {
+          horasKm: actualizacion.horasKm,
+          incremento: actualizacion.incremento,
+        },
+        nivel_importancia: Number(actualizacion.incremento ?? 0) < 0 ? 'warning' : 'info',
+        metadata,
+      };
+
+      const fechaIso = toISOStringIfValid(actualizacion.fecha);
+      if (fechaIso) {
+        payload.created_at = fechaIso;
+      }
+
+      const { error } = await supabase.from('historial_eventos').insert(payload);
+      if (error) throw error;
+
+      actualizacionesMigradas++;
+    }
+
+    return {
+      equiposMigrados,
+      inventariosMigrados,
+      mantenimientosProgramadosMigrados,
+      mantenimientosRealizadosMigrados,
+      actualizacionesMigradas,
+    };
+  };
+
   const migrateFromLocalStorage = async () => {
     try {
       setIsMigrating(true);
@@ -294,82 +601,45 @@ export function useSupabaseData() {
         return;
       }
 
-      toast({
-        title: "🔄 Migrando datos...",
-        description: "Por favor espera, esto puede tomar unos momentos",
-      });
-
       const localData = JSON.parse(stored);
-      let equiposMigrados = 0;
-      let inventariosMigrados = 0;
-      let mantenimientosMigrados = 0;
+      const summary = await migrateBundleToSupabase(localData);
 
-      // Migrar equipos
-      for (const equipo of localData.equipos || []) {
-        const { id, ...equipoData } = equipo;
-        await supabase.from('equipos').insert({
-          ficha: equipoData.ficha,
-          nombre: equipoData.nombre,
-          marca: equipoData.marca,
-          modelo: equipoData.modelo,
-          numero_serie: equipoData.numeroSerie,
-          placa: equipoData.placa,
-          categoria: equipoData.categoria,
-          activo: equipoData.activo,
-          motivo_inactividad: equipoData.motivoInactividad
-        });
-        equiposMigrados++;
-      }
-
-      // Migrar inventarios
-      for (const inventario of localData.inventarios || []) {
-        const { id, ...inventarioData } = inventario;
-        await supabase.from('inventarios').insert({
-          nombre: inventarioData.nombre,
-          tipo: inventarioData.tipo,
-          categoria_equipo: inventarioData.categoriaEquipo,
-          cantidad: inventarioData.cantidad,
-          movimientos: inventarioData.movimientos,
-          activo: inventarioData.activo,
-          codigo_identificacion: inventarioData.codigoIdentificacion,
-          empresa_suplidora: inventarioData.empresaSuplidora,
-          marcas_compatibles: inventarioData.marcasCompatibles,
-          modelos_compatibles: inventarioData.modelosCompatibles
-        });
-        inventariosMigrados++;
-      }
-
-      // Migrar mantenimientos
-      for (const mantenimiento of localData.mantenimientosProgramados || []) {
-        const { id, ...mantenimientoData } = mantenimiento;
-        await supabase.from('mantenimientos_programados').insert({
-          ficha: mantenimientoData.ficha,
-          nombre_equipo: mantenimientoData.nombreEquipo,
-          tipo_mantenimiento: mantenimientoData.tipoMantenimiento,
-          horas_km_actuales: mantenimientoData.horasKmActuales,
-          fecha_ultima_actualizacion: mantenimientoData.fechaUltimaActualizacion,
-          frecuencia: mantenimientoData.frecuencia,
-          fecha_ultimo_mantenimiento: mantenimientoData.fechaUltimoMantenimiento,
-          horas_km_ultimo_mantenimiento: mantenimientoData.horasKmUltimoMantenimiento,
-          proximo_mantenimiento: mantenimientoData.proximoMantenimiento,
-          horas_km_restante: mantenimientoData.horasKmRestante,
-          activo: mantenimientoData.activo
-        });
-        mantenimientosMigrados++;
-      }
+      await loadData();
 
       toast({
         title: "✅ Migración completada",
-        description: `Se migraron ${equiposMigrados} equipos, ${inventariosMigrados} inventarios y ${mantenimientosMigrados} mantenimientos`,
+        description: `Se migraron ${summary.equiposMigrados} equipos, ${summary.inventariosMigrados} inventarios, ${summary.mantenimientosProgramadosMigrados} mantenimientos programados, ${summary.mantenimientosRealizadosMigrados} mantenimientos realizados y ${summary.actualizacionesMigradas} actualizaciones de horas/kilómetros`,
       });
-
-      await loadData(true);
     } catch (error) {
       console.error('Error migrating data:', error);
       toast({
         title: "❌ Error en migración",
         description: "Error al migrar los datos. Por favor intenta de nuevo",
-        variant: "destructive"
+        variant: "destructive",
+      });
+    } finally {
+      setIsMigrating(false);
+    }
+  };
+
+  const importJsonData = async (bundle: ImportBundle) => {
+    try {
+      setIsMigrating(true);
+
+      const summary = await migrateBundleToSupabase(bundle);
+
+      await loadData();
+
+      toast({
+        title: "✅ Importación completada",
+        description: `Se importaron ${summary.equiposMigrados} equipos, ${summary.inventariosMigrados} inventarios, ${summary.mantenimientosProgramadosMigrados} mantenimientos programados, ${summary.mantenimientosRealizadosMigrados} mantenimientos realizados y ${summary.actualizacionesMigradas} actualizaciones de horas/kilómetros`,
+      });
+    } catch (error) {
+      console.error('Error importing data:', error);
+      toast({
+        title: "❌ Error en importación",
+        description: "Error al importar los datos. Por favor intenta de nuevo",
+        variant: "destructive",
       });
     } finally {
       setIsMigrating(false);
@@ -382,6 +652,7 @@ export function useSupabaseData() {
     isMigrating,
     loadData,
     migrateFromLocalStorage,
+    importJsonData,
     clearDatabase,
     createMantenimiento,
     updateMantenimiento,
