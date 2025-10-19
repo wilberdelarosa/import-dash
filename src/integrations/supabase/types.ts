@@ -56,6 +56,51 @@ export type Database = {
         }
         Relationships: []
       }
+      historial_eventos: {
+        Row: {
+          created_at: string
+          datos_antes: Json | null
+          datos_despues: Json | null
+          descripcion: string
+          ficha_equipo: string | null
+          id: number
+          metadata: Json | null
+          modulo: string
+          nivel_importancia: string
+          nombre_equipo: string | null
+          tipo_evento: string
+          usuario_responsable: string
+        }
+        Insert: {
+          created_at?: string
+          datos_antes?: Json | null
+          datos_despues?: Json | null
+          descripcion: string
+          ficha_equipo?: string | null
+          id?: number
+          metadata?: Json | null
+          modulo: string
+          nivel_importancia?: string
+          nombre_equipo?: string | null
+          tipo_evento: string
+          usuario_responsable?: string
+        }
+        Update: {
+          created_at?: string
+          datos_antes?: Json | null
+          datos_despues?: Json | null
+          descripcion?: string
+          ficha_equipo?: string | null
+          id?: number
+          metadata?: Json | null
+          modulo?: string
+          nivel_importancia?: string
+          nombre_equipo?: string | null
+          tipo_evento?: string
+          usuario_responsable?: string
+        }
+        Relationships: []
+      }
       inventarios: {
         Row: {
           activo: boolean
@@ -149,12 +194,61 @@ export type Database = {
         }
         Relationships: []
       }
+      notificaciones: {
+        Row: {
+          accion_url: string | null
+          created_at: string
+          ficha_equipo: string | null
+          id: number
+          leida: boolean
+          mensaje: string
+          metadata: Json | null
+          nivel: string
+          nombre_equipo: string | null
+          tipo: string
+          titulo: string
+        }
+        Insert: {
+          accion_url?: string | null
+          created_at?: string
+          ficha_equipo?: string | null
+          id?: number
+          leida?: boolean
+          mensaje: string
+          metadata?: Json | null
+          nivel?: string
+          nombre_equipo?: string | null
+          tipo: string
+          titulo: string
+        }
+        Update: {
+          accion_url?: string | null
+          created_at?: string
+          ficha_equipo?: string | null
+          id?: number
+          leida?: boolean
+          mensaje?: string
+          metadata?: Json | null
+          nivel?: string
+          nombre_equipo?: string | null
+          tipo?: string
+          titulo?: string
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never
     }
     Functions: {
-      [_ in never]: never
+      generar_notificaciones_mantenimientos: {
+        Args: Record<PropertyKey, never>
+        Returns: undefined
+      }
+      generar_notificaciones_stock_bajo: {
+        Args: Record<PropertyKey, never>
+        Returns: undefined
+      }
     }
     Enums: {
       [_ in never]: never
