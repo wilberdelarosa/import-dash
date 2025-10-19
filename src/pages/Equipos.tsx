@@ -2,14 +2,14 @@ import { Layout } from '@/components/Layout';
 import { Navigation } from '@/components/Navigation';
 import { EquiposTable } from '@/components/equipos/EquiposTable';
 import { EquipoDialog } from '@/components/equipos/EquipoDialog';
-import { useSupabaseData } from '@/hooks/useSupabaseData';
+import { useSupabaseDataContext } from '@/context/SupabaseDataContext';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 import { Equipo } from '@/types/equipment';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 
 export default function Equipos() {
-  const { data, loading, loadData } = useSupabaseData();
+  const { data, loading, loadData } = useSupabaseDataContext();
   const { toast } = useToast();
 
   const handleAddEquipo = async (equipo: Omit<Equipo, 'id'>) => {

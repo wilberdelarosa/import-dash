@@ -8,6 +8,7 @@ import Inventario from "./pages/Inventario";
 import Mantenimiento from "./pages/Mantenimiento";
 import Reportes from "./pages/Reportes";
 import NotFound from "./pages/NotFound";
+import { SupabaseDataProvider } from "@/context/SupabaseDataContext";
 
 const queryClient = new QueryClient();
 
@@ -16,16 +17,18 @@ const App = () => (
     <TooltipProvider>
       <Toaster />
       <Sonner />
-      <BrowserRouter>
-        <Routes>
-          <Route path="/" element={<Equipos />} />
-          <Route path="/inventario" element={<Inventario />} />
-          <Route path="/mantenimiento" element={<Mantenimiento />} />
-          <Route path="/reportes" element={<Reportes />} />
-          {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
-          <Route path="*" element={<NotFound />} />
-        </Routes>
-      </BrowserRouter>
+      <SupabaseDataProvider>
+        <BrowserRouter>
+          <Routes>
+            <Route path="/" element={<Equipos />} />
+            <Route path="/inventario" element={<Inventario />} />
+            <Route path="/mantenimiento" element={<Mantenimiento />} />
+            <Route path="/reportes" element={<Reportes />} />
+            {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
+            <Route path="*" element={<NotFound />} />
+          </Routes>
+        </BrowserRouter>
+      </SupabaseDataProvider>
     </TooltipProvider>
   </QueryClientProvider>
 );
