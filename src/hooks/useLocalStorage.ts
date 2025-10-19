@@ -6,7 +6,9 @@ const STORAGE_KEY = 'equipment-management-data';
 const defaultData: DatabaseData = {
   equipos: [],
   inventarios: [],
-  mantenimientosProgramados: []
+  mantenimientosProgramados: [],
+  mantenimientosRealizados: [],
+  actualizacionesHorasKm: [],
 };
 
 export function useLocalStorage() {
@@ -18,7 +20,13 @@ export function useLocalStorage() {
       const stored = localStorage.getItem(STORAGE_KEY);
       if (stored) {
         const parsedData = JSON.parse(stored);
-        setData(parsedData);
+        setData({
+          equipos: parsedData.equipos ?? [],
+          inventarios: parsedData.inventarios ?? [],
+          mantenimientosProgramados: parsedData.mantenimientosProgramados ?? [],
+          mantenimientosRealizados: parsedData.mantenimientosRealizados ?? [],
+          actualizacionesHorasKm: parsedData.actualizacionesHorasKm ?? [],
+        });
       }
     } catch (error) {
       console.error('Error loading data from localStorage:', error);
@@ -55,7 +63,13 @@ export function useLocalStorage() {
       reader.onload = (e) => {
         try {
           const importedData = JSON.parse(e.target?.result as string);
-          saveData(importedData);
+          saveData({
+            equipos: importedData.equipos ?? [],
+            inventarios: importedData.inventarios ?? [],
+            mantenimientosProgramados: importedData.mantenimientosProgramados ?? [],
+            mantenimientosRealizados: importedData.mantenimientosRealizados ?? [],
+            actualizacionesHorasKm: importedData.actualizacionesHorasKm ?? [],
+          });
           resolve();
         } catch (error) {
           reject(new Error('Archivo JSON inválido'));

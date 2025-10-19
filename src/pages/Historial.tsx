@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useMemo, useState } from 'react';
 import { Layout } from '@/components/Layout';
 import { useHistorial } from '@/hooks/useHistorial';
 import { Button } from '@/components/ui/button';
@@ -25,24 +25,28 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from '@/components/ui/alert-dialog';
-import { 
-  Search, 
-  Filter, 
-  Download, 
-  Trash2, 
+import {
+  Search,
+  Filter,
+  Download,
+  Trash2,
   Calendar,
   AlertCircle,
   AlertTriangle,
   Info,
   Package,
-  Truck,
   Wrench,
   Settings,
   FileText,
-  X
+  X,
+  PlusCircle,
+  RefreshCw,
+  TrendingUp,
+  Clock3
 } from 'lucide-react';
-import { formatDistanceToNow } from 'date-fns';
+import { format, formatDistanceToNow } from 'date-fns';
 import { es } from 'date-fns/locale';
+import { cn } from '@/lib/utils';
 
 export default function Historial() {
   const {
@@ -54,19 +58,6 @@ export default function Historial() {
   } = useHistorial();
 
   const [mostrarFiltros, setMostrarFiltros] = useState(false);
-
-  const getIconoModulo = (modulo: string) => {
-    switch (modulo) {
-      case 'equipos':
-        return <Truck className="h-4 w-4" />;
-      case 'inventarios':
-        return <Package className="h-4 w-4" />;
-      case 'mantenimientos':
-        return <Wrench className="h-4 w-4" />;
-      default:
-        return <Settings className="h-4 w-4" />;
-    }
-  };
 
   const getIconoNivel = (nivel: string) => {
     switch (nivel) {
@@ -87,8 +78,75 @@ export default function Historial() {
         return 'secondary';
       case 'eliminar':
         return 'destructive';
+      case 'mantenimiento_realizado':
+        return 'default';
+      case 'lectura_actualizada':
+        return 'outline';
+      case 'stock_movido':
+        return 'secondary';
       default:
         return 'outline';
+    }
+  };
+
+  const getEventoVisual = (tipo: string) => {
+    switch (tipo) {
+      case 'crear':
+        return {
+          icon: <PlusCircle className="h-4 w-4" />,
+          iconBgClass: 'bg-emerald-50 text-emerald-600',
+          dotClass: 'bg-emerald-500 ring-emerald-200',
+          cardClass: 'border-emerald-200/60 hover:border-emerald-300/80',
+        };
+      case 'actualizar':
+        return {
+          icon: <RefreshCw className="h-4 w-4" />,
+          iconBgClass: 'bg-sky-50 text-sky-600',
+          dotClass: 'bg-sky-500 ring-sky-200',
+          cardClass: 'border-sky-200/60 hover:border-sky-300/80',
+        };
+      case 'eliminar':
+        return {
+          icon: <Trash2 className="h-4 w-4" />,
+          iconBgClass: 'bg-rose-50 text-rose-600',
+          dotClass: 'bg-rose-500 ring-rose-200',
+          cardClass: 'border-rose-200/60 hover:border-rose-300/80',
+        };
+      case 'mantenimiento_realizado':
+        return {
+          icon: <Wrench className="h-4 w-4" />,
+          iconBgClass: 'bg-amber-50 text-amber-600',
+          dotClass: 'bg-amber-500 ring-amber-200',
+          cardClass: 'border-amber-200/60 hover:border-amber-300/80',
+        };
+      case 'lectura_actualizada':
+        return {
+          icon: <TrendingUp className="h-4 w-4" />,
+          iconBgClass: 'bg-indigo-50 text-indigo-600',
+          dotClass: 'bg-indigo-500 ring-indigo-200',
+          cardClass: 'border-indigo-200/60 hover:border-indigo-300/80',
+        };
+      case 'stock_movido':
+        return {
+          icon: <Package className="h-4 w-4" />,
+          iconBgClass: 'bg-purple-50 text-purple-600',
+          dotClass: 'bg-purple-500 ring-purple-200',
+          cardClass: 'border-purple-200/60 hover:border-purple-300/80',
+        };
+      case 'sistema':
+        return {
+          icon: <Settings className="h-4 w-4" />,
+          iconBgClass: 'bg-slate-50 text-slate-600',
+          dotClass: 'bg-slate-500 ring-slate-200',
+          cardClass: 'border-slate-200/60 hover:border-slate-300/80',
+        };
+      default:
+        return {
+          icon: <Info className="h-4 w-4" />,
+          iconBgClass: 'bg-primary/10 text-primary',
+          dotClass: 'bg-primary ring-primary/30',
+          cardClass: 'border-border hover:border-primary/60',
+        };
     }
   };
 
@@ -104,12 +162,35 @@ export default function Historial() {
     });
   };
 
+  const filtrosActivos = [
+    filtros.tipoEvento.length > 0,
+    filtros.modulo.length > 0,
+    filtros.nivelImportancia.length > 0,
+    Boolean(filtros.fichaEquipo),
+    Boolean(filtros.fechaDesde),
+    Boolean(filtros.fechaHasta),
+  ].filter(Boolean).length;
+
+  const eventosAgrupados = useMemo(() => {
+    const grupos = new Map<string, typeof eventos>();
+
+    eventos.forEach(evento => {
+      const fecha = format(new Date(evento.createdAt), "EEEE d 'de' MMMM yyyy", { locale: es });
+      if (!grupos.has(fecha)) {
+        grupos.set(fecha, []);
+      }
+      grupos.get(fecha)?.push(evento);
+    });
+
+    return Array.from(grupos.entries());
+  }, [eventos]);
+
   const exportarPDF = () => {
     // TODO: Implementar exportación a PDF
     console.log('Exportar a PDF');
   };
 
-  const tiposEvento = ['crear', 'actualizar', 'eliminar', 'mantenimiento_realizado', 'stock_movido', 'sistema'];
+  const tiposEvento = ['crear', 'actualizar', 'eliminar', 'mantenimiento_realizado', 'lectura_actualizada', 'stock_movido', 'sistema'];
   const modulos = ['equipos', 'inventarios', 'mantenimientos', 'sistema'];
   const niveles = ['info', 'warning', 'critical'];
 
@@ -220,12 +301,20 @@ export default function Historial() {
                   />
                 </div>
                 <Button
-                  variant={mostrarFiltros ? "default" : "outline"}
+                  variant={mostrarFiltros || filtrosActivos ? "default" : "outline"}
                   onClick={() => setMostrarFiltros(!mostrarFiltros)}
-                  className="gap-2"
+                  className="relative gap-2"
                 >
                   <Filter className="h-4 w-4" />
                   Filtros
+                  {filtrosActivos > 0 && (
+                    <Badge
+                      variant="destructive"
+                      className="ml-1 h-5 w-5 rounded-full p-0 text-[10px] font-semibold flex items-center justify-center"
+                    >
+                      {filtrosActivos}
+                    </Badge>
+                  )}
                 </Button>
                 {(filtros.tipoEvento.length > 0 || 
                   filtros.modulo.length > 0 || 
@@ -245,7 +334,7 @@ export default function Historial() {
               </div>
 
               {mostrarFiltros && (
-                <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3 p-4 border rounded-lg bg-muted/50">
+                <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3 rounded-2xl border border-dashed border-border/60 bg-muted/40 p-6 shadow-inner">
                   <div>
                     <label className="text-sm font-medium mb-2 block">Tipo de Evento</label>
                     <Select
@@ -364,93 +453,132 @@ export default function Historial() {
                 <div className="p-8 text-center text-muted-foreground">
                   Cargando eventos...
                 </div>
-              ) : eventos.length === 0 ? (
-                <div className="p-8 text-center">
-                  <FileText className="h-12 w-12 mx-auto text-muted-foreground mb-2" />
+              ) : eventosAgrupados.length === 0 ? (
+                <div className="p-10 text-center">
+                  <FileText className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
                   <p className="text-muted-foreground">
                     No hay eventos que mostrar
                   </p>
                 </div>
               ) : (
-                <div className="divide-y">
-                  {eventos.map((evento, index) => (
-                    <div
-                      key={evento.id}
-                      className="p-4 hover:bg-muted/50 transition-colors"
-                    >
-                      <div className="flex gap-4">
-                        <div className="flex flex-col items-center gap-2">
-                          <div className="p-2 rounded-full bg-primary/10">
-                            {getIconoModulo(evento.modulo)}
+                <div className="relative px-6 py-8">
+                  <div className="absolute left-8 top-0 h-full w-px bg-gradient-to-b from-primary/40 via-border to-transparent" />
+                  <div className="space-y-10">
+                    {eventosAgrupados.map(([fecha, eventosDia]) => (
+                      <div key={fecha} className="space-y-4">
+                        <div className="flex items-center gap-3">
+                          <div className="text-sm font-semibold uppercase tracking-wide text-muted-foreground">
+                            {fecha}
                           </div>
-                          {index < eventos.length - 1 && (
-                            <Separator orientation="vertical" className="flex-1" />
-                          )}
+                          <div className="h-px flex-1 bg-border" />
+                          <Badge variant="outline" className="bg-primary/5 text-primary">
+                            {eventosDia.length} {eventosDia.length === 1 ? "evento" : "eventos"}
+                          </Badge>
                         </div>
-                        
-                        <div className="flex-1 min-w-0">
-                          <div className="flex items-start justify-between gap-2 mb-2">
-                            <div className="flex items-center gap-2 flex-wrap">
-                              <Badge variant={getBadgeVariant(evento.tipoEvento)}>
-                                {evento.tipoEvento}
-                              </Badge>
-                              <Badge variant="outline">{evento.modulo}</Badge>
-                              {evento.fichaEquipo && (
-                                <Badge variant="secondary">{evento.fichaEquipo}</Badge>
-                              )}
-                            </div>
-                            <div className="flex items-center gap-2">
-                              {getIconoNivel(evento.nivelImportancia)}
-                              <span className="text-xs text-muted-foreground whitespace-nowrap">
-                                {formatDistanceToNow(new Date(evento.createdAt), {
-                                  addSuffix: true,
-                                  locale: es,
-                                })}
-                              </span>
-                            </div>
-                          </div>
-                          
-                          <p className="font-medium mb-1">{evento.descripcion}</p>
-                          
-                          {evento.nombreEquipo && (
-                            <p className="text-sm text-muted-foreground mb-1">
-                              Equipo: {evento.nombreEquipo}
-                            </p>
-                          )}
-                          
-                          <p className="text-xs text-muted-foreground">
-                            Por: {evento.usuarioResponsable}
-                          </p>
 
-                          {(evento.datosAntes || evento.datosDespues) && (
-                            <details className="mt-2">
-                              <summary className="text-xs text-muted-foreground cursor-pointer hover:text-foreground">
-                                Ver detalles técnicos
-                              </summary>
-                              <div className="mt-2 p-2 bg-muted rounded text-xs">
-                                {evento.datosAntes && (
-                                  <div className="mb-2">
-                                    <strong>Antes:</strong>
-                                    <pre className="mt-1 overflow-x-auto">
-                                      {JSON.stringify(evento.datosAntes, null, 2)}
-                                    </pre>
+                        <div className="space-y-4">
+                          {eventosDia.map((evento) => {
+                            const visual = getEventoVisual(evento.tipoEvento);
+
+                            return (
+                              <div key={evento.id} className="group relative pl-16">
+                                <div
+                                  className={cn(
+                                    'absolute left-6 top-7 h-3 w-3 -translate-x-1/2 rounded-full border-2 border-background ring-4 transition-transform duration-300 group-hover:scale-110',
+                                    visual.dotClass
+                                  )}
+                                />
+                                <div className="absolute left-0 top-2 flex h-12 w-12 items-center justify-center">
+                                  <span className="flex h-12 w-12 items-center justify-center rounded-full bg-background shadow-sm transition-all duration-300 group-hover:shadow-md">
+                                    <span
+                                      className={cn(
+                                        'flex h-9 w-9 items-center justify-center rounded-full transition-transform duration-300 group-hover:scale-105',
+                                        visual.iconBgClass
+                                      )}
+                                    >
+                                      {visual.icon}
+                                    </span>
+                                  </span>
+                                </div>
+
+                                <div
+                                  className={cn(
+                                    'rounded-xl border bg-card/95 p-5 shadow-sm transition-all duration-300 hover:-translate-y-1 hover:shadow-lg',
+                                    visual.cardClass
+                                  )}
+                                >
+                                  <div className="flex flex-col gap-3">
+                                    <div className="flex flex-wrap items-start justify-between gap-3">
+                                      <div className="flex flex-wrap items-center gap-2">
+                                        <Badge variant={getBadgeVariant(evento.tipoEvento)} className="capitalize">
+                                          {evento.tipoEvento.replace(/_/g, ' ')}
+                                        </Badge>
+                                        <Badge variant="outline">{evento.modulo}</Badge>
+                                        {evento.fichaEquipo && (
+                                          <Badge variant="secondary">{evento.fichaEquipo}</Badge>
+                                        )}
+                                      </div>
+                                      <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                                        <Clock3 className="h-3 w-3" />
+                                        {formatDistanceToNow(new Date(evento.createdAt), {
+                                          addSuffix: true,
+                                          locale: es,
+                                        })}
+                                      </div>
+                                    </div>
+
+                                    <div>
+                                      <p className="text-base font-semibold leading-tight">{evento.descripcion}</p>
+                                      {evento.nombreEquipo && (
+                                        <p className="text-sm text-muted-foreground">Equipo: {evento.nombreEquipo}</p>
+                                      )}
+                                    </div>
+
+                                    <div className="flex flex-wrap items-center gap-x-4 gap-y-2 text-xs text-muted-foreground">
+                                      <span className="font-medium text-foreground">Responsable:</span>
+                                      <span className="rounded-full bg-muted px-3 py-1 text-xs font-medium text-foreground">
+                                        {evento.usuarioResponsable}
+                                      </span>
+                                      <span className="flex items-center gap-1">
+                                        {getIconoNivel(evento.nivelImportancia)}
+                                        {evento.nivelImportancia.toUpperCase()}
+                                      </span>
+                                    </div>
+
+                                    {(evento.datosAntes || evento.datosDespues) && (
+                                      <details className="group/open mt-2 rounded-lg border border-dashed border-border/60 bg-muted/40 p-3 text-xs transition-colors hover:border-border">
+                                        <summary className="cursor-pointer select-none font-medium text-muted-foreground transition-colors group-open:text-foreground">
+                                          Ver detalle técnico
+                                        </summary>
+                                        <div className="mt-2 grid gap-3 md:grid-cols-2">
+                                          {evento.datosAntes && (
+                                            <div className="rounded-md bg-background/80 p-2 shadow-inner">
+                                              <p className="text-[11px] font-semibold uppercase text-muted-foreground">Antes</p>
+                                              <pre className="mt-1 max-h-40 overflow-auto text-[11px] leading-tight">
+                                                {JSON.stringify(evento.datosAntes, null, 2)}
+                                              </pre>
+                                            </div>
+                                          )}
+                                          {evento.datosDespues && (
+                                            <div className="rounded-md bg-background/80 p-2 shadow-inner">
+                                              <p className="text-[11px] font-semibold uppercase text-muted-foreground">Después</p>
+                                              <pre className="mt-1 max-h-40 overflow-auto text-[11px] leading-tight">
+                                                {JSON.stringify(evento.datosDespues, null, 2)}
+                                              </pre>
+                                            </div>
+                                          )}
+                                        </div>
+                                      </details>
+                                    )}
                                   </div>
-                                )}
-                                {evento.datosDespues && (
-                                  <div>
-                                    <strong>Después:</strong>
-                                    <pre className="mt-1 overflow-x-auto">
-                                      {JSON.stringify(evento.datosDespues, null, 2)}
-                                    </pre>
-                                  </div>
-                                )}
+                                </div>
                               </div>
-                            </details>
-                          )}
+                            );
+                          })}
                         </div>
                       </div>
-                    </div>
-                  ))}
+                    ))}
+                  </div>
                 </div>
               )}
             </ScrollArea>
