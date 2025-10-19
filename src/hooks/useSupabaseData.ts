@@ -22,10 +22,11 @@ export function useSupabaseData() {
     mantenimientosProgramados: []
   });
   const [loading, setLoading] = useState(true);
+  const [isMigrating, setIsMigrating] = useState(false);
 
-  const loadData = async () => {
+  const loadData = async (showToast = false) => {
     try {
-      setLoading(true);
+      if (showToast) setLoading(true);
 
       // Cargar equipos
       const { data: equiposData, error: equiposError } = await supabase
@@ -92,6 +93,13 @@ export function useSupabaseData() {
           activo: m.activo
         }))
       });
+      
+      if (showToast) {
+        toast({
+          title: "Datos actualizados",
+          description: "Los datos se han actualizado correctamente",
+        });
+      }
     } catch (error) {
       console.error('Error loading data:', error);
       toast({
@@ -106,11 +114,44 @@ export function useSupabaseData() {
 
   useEffect(() => {
     loadData();
+    
+    // Configurar Supabase Realtime para actualizaciones en tiempo real
+    const equiposChannel = supabase
+      .channel('equipos-changes')
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'equipos' }, () => {
+        loadData();
+      })
+      .subscribe();
+
+    const inventariosChannel = supabase
+      .channel('inventarios-changes')
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'inventarios' }, () => {
+        loadData();
+      })
+      .subscribe();
+
+    const mantenimientosChannel = supabase
+      .channel('mantenimientos-changes')
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'mantenimientos_programados' }, () => {
+        loadData();
+      })
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(equiposChannel);
+      supabase.removeChannel(inventariosChannel);
+      supabase.removeChannel(mantenimientosChannel);
+    };
   }, []);
 
   const clearDatabase = async () => {
     try {
       setLoading(true);
+      
+      toast({
+        title: "Limpiando base de datos...",
+        description: "Por favor espera mientras se eliminan los datos",
+      });
 
       await supabase
         .from('mantenimientos_programados')
@@ -128,18 +169,18 @@ export function useSupabaseData() {
         .neq('id', 0);
 
       toast({
-        title: "Éxito",
+        title: "✅ Éxito",
         description: "Todos los datos fueron eliminados de la base de datos.",
       });
     } catch (error) {
       console.error('Error clearing data:', error);
       toast({
-        title: "Error",
+        title: "❌ Error",
         description: "No se pudieron eliminar los datos",
         variant: "destructive",
       });
     } finally {
-      await loadData();
+      await loadData(true);
     }
   };
 
@@ -172,15 +213,15 @@ export function useSupabaseData() {
       if (error) throw error;
 
       toast({
-        title: "Éxito",
-        description: "Mantenimiento creado correctamente",
+        title: "✅ Mantenimiento creado",
+        description: `Se creó el mantenimiento para ${mantenimiento.nombreEquipo}`,
       });
 
-      await loadData();
+      await loadData(true);
     } catch (error) {
       console.error('Error creating mantenimiento:', error);
       toast({
-        title: "Error",
+        title: "❌ Error",
         description: "No se pudo crear el mantenimiento",
         variant: "destructive",
       });
@@ -199,15 +240,15 @@ export function useSupabaseData() {
       if (error) throw error;
 
       toast({
-        title: "Éxito",
-        description: "Mantenimiento actualizado correctamente",
+        title: "✅ Mantenimiento actualizado",
+        description: `Se actualizó el mantenimiento de ${mantenimiento.nombreEquipo}`,
       });
 
-      await loadData();
+      await loadData(true);
     } catch (error) {
       console.error('Error updating mantenimiento:', error);
       toast({
-        title: "Error",
+        title: "❌ Error",
         description: "No se pudo actualizar el mantenimiento",
         variant: "destructive",
       });
@@ -225,15 +266,15 @@ export function useSupabaseData() {
       if (error) throw error;
 
       toast({
-        title: "Éxito",
-        description: "Mantenimiento eliminado correctamente",
+        title: "✅ Mantenimiento eliminado",
+        description: "El mantenimiento fue eliminado correctamente",
       });
 
-      await loadData();
+      await loadData(true);
     } catch (error) {
       console.error('Error deleting mantenimiento:', error);
       toast({
-        title: "Error",
+        title: "❌ Error",
         description: "No se pudo eliminar el mantenimiento",
         variant: "destructive",
       });
@@ -243,16 +284,25 @@ export function useSupabaseData() {
 
   const migrateFromLocalStorage = async () => {
     try {
+      setIsMigrating(true);
       const stored = localStorage.getItem('equipment-management-data');
       if (!stored) {
         toast({
-          title: "Info",
+          title: "ℹ️ Sin datos",
           description: "No hay datos en localStorage para migrar",
         });
         return;
       }
 
+      toast({
+        title: "🔄 Migrando datos...",
+        description: "Por favor espera, esto puede tomar unos momentos",
+      });
+
       const localData = JSON.parse(stored);
+      let equiposMigrados = 0;
+      let inventariosMigrados = 0;
+      let mantenimientosMigrados = 0;
 
       // Migrar equipos
       for (const equipo of localData.equipos || []) {
@@ -268,6 +318,7 @@ export function useSupabaseData() {
           activo: equipoData.activo,
           motivo_inactividad: equipoData.motivoInactividad
         });
+        equiposMigrados++;
       }
 
       // Migrar inventarios
@@ -285,6 +336,7 @@ export function useSupabaseData() {
           marcas_compatibles: inventarioData.marcasCompatibles,
           modelos_compatibles: inventarioData.modelosCompatibles
         });
+        inventariosMigrados++;
       }
 
       // Migrar mantenimientos
@@ -303,27 +355,31 @@ export function useSupabaseData() {
           horas_km_restante: mantenimientoData.horasKmRestante,
           activo: mantenimientoData.activo
         });
+        mantenimientosMigrados++;
       }
 
       toast({
-        title: "Éxito",
-        description: "Datos migrados correctamente desde localStorage",
+        title: "✅ Migración completada",
+        description: `Se migraron ${equiposMigrados} equipos, ${inventariosMigrados} inventarios y ${mantenimientosMigrados} mantenimientos`,
       });
 
-      await loadData();
+      await loadData(true);
     } catch (error) {
       console.error('Error migrating data:', error);
       toast({
-        title: "Error",
-        description: "Error al migrar los datos",
+        title: "❌ Error en migración",
+        description: "Error al migrar los datos. Por favor intenta de nuevo",
         variant: "destructive"
       });
+    } finally {
+      setIsMigrating(false);
     }
   };
 
   return {
     data,
     loading,
+    isMigrating,
     loadData,
     migrateFromLocalStorage,
     clearDatabase,
