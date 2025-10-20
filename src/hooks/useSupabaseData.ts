@@ -1089,18 +1089,27 @@ export function useSupabaseData() {
   };
 
   const mapToDatabasePayload = (mantenimiento: MantenimientoPayload) => {
-    const proximo = mantenimiento.horasKmUltimoMantenimiento + mantenimiento.frecuencia;
-    const restante = proximo - mantenimiento.horasKmActuales;
+    const horasUltimo = Number(mantenimiento.horasKmUltimoMantenimiento ?? 0);
+    const frecuencia = Number(mantenimiento.frecuencia ?? 0);
+    const horasActuales = Number(mantenimiento.horasKmActuales ?? 0);
+
+    const proximo = horasUltimo + frecuencia;
+    const restante = proximo - horasActuales;
+
+    const fechaUltimaActualizacion =
+      toISOStringIfValid(mantenimiento.fechaUltimaActualizacion) ?? new Date().toISOString();
+    const fechaUltimoMantenimiento =
+      toISOStringIfValid(mantenimiento.fechaUltimoMantenimiento) ?? null;
 
     return {
       ficha: mantenimiento.ficha,
       nombre_equipo: mantenimiento.nombreEquipo,
       tipo_mantenimiento: mantenimiento.tipoMantenimiento,
-      horas_km_actuales: mantenimiento.horasKmActuales,
-      fecha_ultima_actualizacion: mantenimiento.fechaUltimaActualizacion,
-      frecuencia: mantenimiento.frecuencia,
-      fecha_ultimo_mantenimiento: mantenimiento.fechaUltimoMantenimiento,
-      horas_km_ultimo_mantenimiento: mantenimiento.horasKmUltimoMantenimiento,
+      horas_km_actuales: horasActuales,
+      fecha_ultima_actualizacion: fechaUltimaActualizacion,
+      frecuencia,
+      fecha_ultimo_mantenimiento: fechaUltimoMantenimiento,
+      horas_km_ultimo_mantenimiento: horasUltimo,
       proximo_mantenimiento: proximo,
       horas_km_restante: restante,
       activo: mantenimiento.activo,
