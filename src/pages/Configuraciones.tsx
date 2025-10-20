@@ -11,61 +11,73 @@ import { Badge } from '@/components/ui/badge';
 import { useToast } from '@/hooks/use-toast';
 import { Separator } from '@/components/ui/separator';
 import { Settings2, Bell, MoonStar } from 'lucide-react';
-
-const CONFIG_KEY = 'equipos-dashboard-settings';
-
-const defaultConfig = {
-  alertaCritica: 15,
-  alertaPreventiva: 50,
-  permitirImportaciones: true,
-  notificarEmail: true,
-  notificarWhatsapp: false,
-  modoOscuroAutomatico: true,
-  correoSoporte: '',
-};
-
-type Config = typeof defaultConfig;
+import { useNotificationSettingsState } from '@/hooks/useNotificationSettings';
+import { defaultNotificationSettings } from '@/lib/notification-settings';
 
 export default function Configuraciones() {
   const { toast } = useToast();
-  const [config, setConfig] = useState<Config>(() => {
-    if (typeof window === 'undefined') {
-      return defaultConfig;
-    }
-    try {
-      const stored = window.localStorage.getItem(CONFIG_KEY);
-      if (stored) {
-        const parsed = JSON.parse(stored);
-        return { ...defaultConfig, ...parsed } as Config;
-      }
-    } catch (error) {
-      console.error('Error parsing configuration', error);
-    }
-    return defaultConfig;
-  });
+  const { settings, loading: loadingSettings, saveSettings } = useNotificationSettingsState();
+  const [config, setConfig] = useState(defaultNotificationSettings);
+  const [saving, setSaving] = useState(false);
 
   useEffect(() => {
-    if (typeof window !== 'undefined') {
-      window.localStorage.setItem(CONFIG_KEY, JSON.stringify(config));
-    }
-  }, [config]);
+    setConfig(settings);
+  }, [settings]);
 
   const umbrales = useMemo(() => ({
     critica: config.alertaCritica,
     preventiva: config.alertaPreventiva,
   }), [config.alertaCritica, config.alertaPreventiva]);
 
-  const handleReset = () => {
-    setConfig(defaultConfig);
-    toast({
-      title: 'Configuraciones restauradas',
-      description: 'Se aplicaron los valores predeterminados del sistema.',
-    });
+  const handleChange = <Key extends keyof typeof config>(key: Key, value: (typeof config)[Key]) => {
+    setConfig((prev) => ({ ...prev, [key]: value }));
   };
+
+  const handleSave = async (nextConfig = config) => {
+    try {
+      setSaving(true);
+      await saveSettings(nextConfig);
+      toast({
+        title: 'Preferencias guardadas',
+        description: 'Se actualizaron las automatizaciones y alertas.',
+      });
+    } catch (error) {
+      console.error('Error saving settings', error);
+      toast({
+        title: 'Error',
+        description: 'No se pudo guardar la configuración.',
+        variant: 'destructive',
+      });
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const handleReset = async () => {
+    setConfig(defaultNotificationSettings);
+    await handleSave(defaultNotificationSettings);
+  };
+
+  if (loadingSettings) {
+    return (
+      <Layout title="Preferencias y automatizaciones">
+        <Navigation />
+        <div className="flex h-64 items-center justify-center">
+          <p className="text-muted-foreground">Cargando configuraciones...</p>
+        </div>
+      </Layout>
+    );
+  }
 
   return (
     <Layout title="Preferencias y automatizaciones">
       <Navigation />
+
+      <div className="flex justify-end mb-4">
+        <Button onClick={() => handleSave()} disabled={saving}>
+          {saving ? 'Guardando...' : 'Guardar cambios'}
+        </Button>
+      </div>
 
       <div className="grid gap-6 lg:grid-cols-2">
         <Card>
@@ -84,7 +96,7 @@ export default function Configuraciones() {
                 min={5}
                 max={100}
                 step={5}
-                onValueChange={([value]) => setConfig((prev) => ({ ...prev, alertaCritica: value }))}
+                onValueChange={([value]) => handleChange('alertaCritica', value)}
               />
               <p className="mt-2 text-sm text-muted-foreground">
                 Se resaltarán en rojo los equipos con {config.alertaCritica} o menos horas/km restantes.
@@ -98,7 +110,7 @@ export default function Configuraciones() {
                 min={10}
                 max={200}
                 step={10}
-                onValueChange={([value]) => setConfig((prev) => ({ ...prev, alertaPreventiva: value }))}
+                onValueChange={([value]) => handleChange('alertaPreventiva', value)}
               />
               <p className="mt-2 text-sm text-muted-foreground">
                 Los mantenimientos se marcarán en amarillo cuando resten {config.alertaPreventiva} horas/km.
@@ -129,7 +141,7 @@ export default function Configuraciones() {
               </div>
               <Switch
                 checked={config.notificarEmail}
-                onCheckedChange={(value) => setConfig((prev) => ({ ...prev, notificarEmail: value }))}
+                onCheckedChange={(value) => handleChange('notificarEmail', Boolean(value))}
               />
             </div>
             <div className="flex items-center justify-between">
@@ -139,7 +151,7 @@ export default function Configuraciones() {
               </div>
               <Switch
                 checked={config.notificarWhatsapp}
-                onCheckedChange={(value) => setConfig((prev) => ({ ...prev, notificarWhatsapp: value }))}
+                onCheckedChange={(value) => handleChange('notificarWhatsapp', Boolean(value))}
               />
             </div>
             <Separator />
@@ -148,7 +160,7 @@ export default function Configuraciones() {
               <Input
                 placeholder="soporte@empresa.com"
                 value={config.correoSoporte}
-                onChange={(event) => setConfig((prev) => ({ ...prev, correoSoporte: event.target.value }))}
+                onChange={(event) => handleChange('correoSoporte', event.target.value)}
               />
               <p className="mt-2 text-xs text-muted-foreground">
                 Se usará como remitente en las notificaciones automáticas.
@@ -175,7 +187,7 @@ export default function Configuraciones() {
             </div>
             <Switch
               checked={config.modoOscuroAutomatico}
-              onCheckedChange={(value) => setConfig((prev) => ({ ...prev, modoOscuroAutomatico: value }))}
+              onCheckedChange={(value) => handleChange('modoOscuroAutomatico', Boolean(value))}
             />
           </div>
           <div className="flex items-center justify-between">
@@ -187,11 +199,11 @@ export default function Configuraciones() {
             </div>
             <Switch
               checked={config.permitirImportaciones}
-              onCheckedChange={(value) => setConfig((prev) => ({ ...prev, permitirImportaciones: value }))}
+              onCheckedChange={(value) => handleChange('permitirImportaciones', Boolean(value))}
             />
           </div>
           <div className="flex justify-end">
-            <Button variant="outline" onClick={handleReset}>
+            <Button variant="outline" onClick={handleReset} disabled={saving}>
               Restaurar valores por defecto
             </Button>
           </div>

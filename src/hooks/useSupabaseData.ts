@@ -32,6 +32,24 @@ type ImportBundle = {
   empleados?: Empleado[];
 };
 
+type EntityChangeSummary = {
+  added: string[];
+  updated: string[];
+  unchanged: string[];
+};
+
+interface SyncSummary {
+  equipos: EntityChangeSummary;
+  inventarios: EntityChangeSummary;
+  mantenimientosProgramados: EntityChangeSummary;
+  empleados: EntityChangeSummary;
+  historial: {
+    mantenimientosRealizados: number;
+    lecturasRegistradas: number;
+    omitidos: number;
+  };
+}
+
 interface ActualizacionHorasPayload {
   mantenimientoId: number;
   horasKm: number;
@@ -47,6 +65,20 @@ interface RegistrarMantenimientoPayload {
   observaciones?: string;
   filtrosUtilizados?: MantenimientoRealizado['filtrosUtilizados'];
   usuarioResponsable?: string;
+}
+
+interface HistorialLogPayload {
+  tipoEvento: string;
+  modulo: string;
+  descripcion: string;
+  fichaEquipo?: string | null;
+  nombreEquipo?: string | null;
+  usuarioResponsable?: string;
+  datosAntes?: unknown;
+  datosDespues?: unknown;
+  metadata?: Record<string, unknown>;
+  nivel?: 'info' | 'warning' | 'critical';
+  fecha?: string;
 }
 
 export function useSupabaseData() {
@@ -88,6 +120,13 @@ export function useSupabaseData() {
         .order('id', { ascending: true });
 
       if (mantenimientosError) throw mantenimientosError;
+
+      const { data: empleadosData, error: empleadosError } = await supabase
+        .from('empleados')
+        .select('*')
+        .order('id', { ascending: true });
+
+      if (empleadosError) throw empleadosError;
 
       const { data: historialData, error: historialError } = await supabase
         .from('historial_eventos')
@@ -210,7 +249,17 @@ export function useSupabaseData() {
         })),
         mantenimientosRealizados,
         actualizacionesHorasKm,
-        empleados: [],
+        empleados: (empleadosData ?? []).map((empleado) => ({
+          id: Number(empleado.id),
+          nombre: empleado.nombre,
+          apellido: empleado.apellido,
+          cargo: empleado.cargo,
+          categoria: empleado.categoria,
+          fechaNacimiento: empleado.fecha_nacimiento ?? '',
+          activo: Boolean(empleado.activo),
+          email: empleado.email,
+          telefono: empleado.telefono,
+        })),
       });
       
       if (showToast) {
@@ -229,6 +278,519 @@ export function useSupabaseData() {
     } finally {
       setLoading(false);
     }
+  };
+
+  const logHistorialEvent = async ({
+    tipoEvento,
+    modulo,
+    descripcion,
+    fichaEquipo = null,
+    nombreEquipo = null,
+    usuarioResponsable = 'Sistema',
+    datosAntes = null,
+    datosDespues = null,
+    metadata = {},
+    nivel = 'info',
+    fecha,
+  }: HistorialLogPayload) => {
+    try {
+      const createdAt = fecha ? new Date(fecha).toISOString() : new Date().toISOString();
+      const payload = {
+        tipo_evento: tipoEvento,
+        modulo,
+        descripcion,
+        ficha_equipo: fichaEquipo,
+        nombre_equipo: nombreEquipo,
+        usuario_responsable: usuarioResponsable,
+        nivel_importancia: nivel,
+        datos_antes: datosAntes,
+        datos_despues: datosDespues,
+        metadata,
+        created_at: createdAt,
+      };
+
+      const { error } = await supabase.from('historial_eventos').insert([payload]);
+
+      if (error) {
+        throw error;
+      }
+    } catch (error) {
+      console.error('Error logging historial event:', error);
+    }
+  };
+
+  const toISOStringIfValid = (valor?: string | null) => {
+    if (!valor) return undefined;
+    const fecha = new Date(valor);
+    return Number.isNaN(fecha.getTime()) ? undefined : fecha.toISOString();
+  };
+
+  const syncJsonData = async (
+    bundle: ImportBundle,
+    options: { silent?: boolean; mode?: 'sync' | 'migrate' } = {}
+  ): Promise<SyncSummary> => {
+    const { silent = false } = options;
+
+    const summary: SyncSummary = {
+      equipos: { added: [], updated: [], unchanged: [] },
+      inventarios: { added: [], updated: [], unchanged: [] },
+      mantenimientosProgramados: { added: [], updated: [], unchanged: [] },
+      empleados: { added: [], updated: [], unchanged: [] },
+      historial: {
+        mantenimientosRealizados: 0,
+        lecturasRegistradas: 0,
+        omitidos: 0,
+      },
+    };
+
+    const equiposBundle = Array.isArray(bundle.equipos) ? bundle.equipos : [];
+    const inventariosBundle = Array.isArray(bundle.inventarios) ? bundle.inventarios : [];
+    const mantenimientosBundle = Array.isArray(bundle.mantenimientosProgramados)
+      ? bundle.mantenimientosProgramados
+      : [];
+    const mantenimientosRealizadosBundle = Array.isArray(bundle.mantenimientosRealizados)
+      ? bundle.mantenimientosRealizados
+      : [];
+    const actualizacionesBundle = Array.isArray(bundle.actualizacionesHorasKm)
+      ? bundle.actualizacionesHorasKm
+      : [];
+    const empleadosBundle = Array.isArray(bundle.empleados) ? bundle.empleados : [];
+
+    const normalizeEquipo = (equipo: Equipo): Equipo => ({
+      id: Number(equipo.id ?? 0),
+      ficha: equipo.ficha,
+      nombre: equipo.nombre,
+      marca: equipo.marca,
+      modelo: equipo.modelo,
+      numeroSerie: equipo.numeroSerie,
+      placa: equipo.placa,
+      categoria: equipo.categoria,
+      activo: Boolean(equipo.activo ?? true),
+      motivoInactividad: equipo.motivoInactividad ?? null,
+    });
+
+    const hasEquipoChanges = (a: Equipo, b: Equipo) =>
+      a.nombre !== b.nombre ||
+      a.marca !== b.marca ||
+      a.modelo !== b.modelo ||
+      a.numeroSerie !== b.numeroSerie ||
+      a.placa !== b.placa ||
+      a.categoria !== b.categoria ||
+      a.activo !== b.activo ||
+      (a.motivoInactividad ?? '') !== (b.motivoInactividad ?? '');
+
+    const normalizeInventario = (inventario: Inventario): Inventario => ({
+      id: Number(inventario.id ?? 0),
+      nombre: inventario.nombre ?? inventario.tipo,
+      tipo: inventario.tipo ?? inventario.nombre,
+      categoriaEquipo: inventario.categoriaEquipo ?? '',
+      cantidad: Number(inventario.cantidad ?? 0),
+      movimientos: Array.isArray(inventario.movimientos) ? inventario.movimientos : [],
+      activo: inventario.activo ?? true,
+      codigoIdentificacion: inventario.codigoIdentificacion ?? '',
+      empresaSuplidora: inventario.empresaSuplidora ?? '',
+      marcasCompatibles: inventario.marcasCompatibles ?? [],
+      modelosCompatibles: inventario.modelosCompatibles ?? [],
+    });
+
+    const mapInventarioToDatabase = (inventario: Inventario) => ({
+      nombre: inventario.nombre,
+      tipo: inventario.tipo,
+      categoria_equipo: inventario.categoriaEquipo,
+      cantidad: inventario.cantidad,
+      movimientos: inventario.movimientos as any,
+      activo: inventario.activo,
+      codigo_identificacion: inventario.codigoIdentificacion,
+      empresa_suplidora: inventario.empresaSuplidora,
+      marcas_compatibles: inventario.marcasCompatibles,
+      modelos_compatibles: inventario.modelosCompatibles,
+    });
+
+    const hasInventarioChanges = (a: Inventario, b: Inventario) =>
+      a.nombre !== b.nombre ||
+      a.tipo !== b.tipo ||
+      a.categoriaEquipo !== b.categoriaEquipo ||
+      a.cantidad !== b.cantidad ||
+      a.activo !== b.activo ||
+      a.empresaSuplidora !== b.empresaSuplidora ||
+      a.codigoIdentificacion !== b.codigoIdentificacion ||
+      JSON.stringify(a.movimientos) !== JSON.stringify(b.movimientos) ||
+      JSON.stringify(a.marcasCompatibles) !== JSON.stringify(b.marcasCompatibles) ||
+      JSON.stringify(a.modelosCompatibles) !== JSON.stringify(b.modelosCompatibles);
+
+    const normalizeMantenimiento = (mantenimiento: MantenimientoProgramado): MantenimientoProgramado => ({
+      id: Number(mantenimiento.id ?? 0),
+      ficha: mantenimiento.ficha,
+      nombreEquipo: mantenimiento.nombreEquipo,
+      tipoMantenimiento: mantenimiento.tipoMantenimiento,
+      horasKmActuales: Number(mantenimiento.horasKmActuales ?? 0),
+      fechaUltimaActualizacion: mantenimiento.fechaUltimaActualizacion,
+      frecuencia: Number(mantenimiento.frecuencia ?? 0),
+      fechaUltimoMantenimiento: mantenimiento.fechaUltimoMantenimiento ?? null,
+      horasKmUltimoMantenimiento: Number(mantenimiento.horasKmUltimoMantenimiento ?? 0),
+      proximoMantenimiento: Number(mantenimiento.proximoMantenimiento ?? 0),
+      horasKmRestante: Number(mantenimiento.horasKmRestante ?? 0),
+      activo: mantenimiento.activo ?? true,
+    });
+
+    const hasMantenimientoChanges = (a: MantenimientoProgramado, b: MantenimientoProgramado) =>
+      a.nombreEquipo !== b.nombreEquipo ||
+      a.tipoMantenimiento !== b.tipoMantenimiento ||
+      a.horasKmActuales !== b.horasKmActuales ||
+      a.frecuencia !== b.frecuencia ||
+      a.fechaUltimoMantenimiento !== b.fechaUltimoMantenimiento ||
+      a.proximoMantenimiento !== b.proximoMantenimiento ||
+      a.horasKmRestante !== b.horasKmRestante ||
+      a.activo !== b.activo;
+
+    const normalizeEmpleado = (empleado: Empleado): Empleado => ({
+      id: Number(empleado.id ?? 0),
+      nombre: empleado.nombre,
+      apellido: empleado.apellido,
+      cargo: empleado.cargo,
+      categoria: empleado.categoria,
+      fechaNacimiento: empleado.fechaNacimiento ?? '',
+      activo: empleado.activo ?? true,
+      email: empleado.email ?? null,
+      telefono: empleado.telefono ?? null,
+    });
+
+    const mapEmpleadoToDatabase = (empleado: Empleado) => ({
+      nombre: empleado.nombre,
+      apellido: empleado.apellido,
+      cargo: empleado.cargo,
+      categoria: empleado.categoria,
+      fecha_nacimiento: empleado.fechaNacimiento || null,
+      activo: empleado.activo,
+      email: empleado.email,
+      telefono: empleado.telefono,
+    });
+
+    const hasEmpleadoChanges = (a: Empleado, b: Empleado) =>
+      a.nombre !== b.nombre ||
+      a.apellido !== b.apellido ||
+      a.cargo !== b.cargo ||
+      a.categoria !== b.categoria ||
+      a.fechaNacimiento !== b.fechaNacimiento ||
+      a.activo !== b.activo ||
+      (a.email ?? '') !== (b.email ?? '') ||
+      (a.telefono ?? '') !== (b.telefono ?? '');
+
+    const buildEmpleadoKey = (empleado: Partial<Empleado>) => {
+      if (empleado.email) {
+        return empleado.email.toLowerCase();
+      }
+      if (empleado.id) {
+        return `id-${empleado.id}`;
+      }
+      return `${(empleado.nombre ?? '').toLowerCase()}-${(empleado.apellido ?? '').toLowerCase()}-${(empleado.cargo ?? '').toLowerCase()}`;
+    };
+
+    const equiposIndex = new Map<string, Equipo>();
+    data.equipos.forEach((eq) => equiposIndex.set(eq.ficha, eq));
+
+    const inventariosIndex = new Map<string, Inventario>();
+    data.inventarios.forEach((inv) => inventariosIndex.set(inv.codigoIdentificacion, inv));
+
+    const mantenimientosIndex = new Map<string, MantenimientoProgramado>();
+    data.mantenimientosProgramados.forEach((mant) => {
+      mantenimientosIndex.set(`${mant.ficha}::${mant.tipoMantenimiento}`.toLowerCase(), mant);
+    });
+
+    const empleadosIndex = new Map<string, Empleado>();
+    (data.empleados ?? []).forEach((emp) => empleadosIndex.set(buildEmpleadoKey(emp), emp));
+
+    const empleadosNombre = new Map<number, string>();
+    (data.empleados ?? []).forEach((emp) => {
+      const nombreCompleto = `${emp.nombre ?? ''} ${emp.apellido ?? ''}`.trim();
+      empleadosNombre.set(Number(emp.id), nombreCompleto || emp.nombre);
+    });
+
+    const existingRealizadosKeys = new Set<string>();
+    data.mantenimientosRealizados.forEach((evento) => {
+      const fecha = toISOStringIfValid(evento.fechaMantenimiento) ?? new Date(evento.fechaMantenimiento).toISOString();
+      existingRealizadosKeys.add(`${evento.ficha}::${fecha}`);
+    });
+
+    const existingLecturasKeys = new Set<string>();
+    data.actualizacionesHorasKm.forEach((evento) => {
+      const fecha = toISOStringIfValid(evento.fecha) ?? new Date(evento.fecha).toISOString();
+      existingLecturasKeys.add(`${evento.ficha}::${fecha}::${Number(evento.horasKm)}`);
+    });
+
+    for (const equipoRaw of equiposBundle) {
+      const equipo = normalizeEquipo(equipoRaw);
+      const { id: _omit, ...equipoSinId } = equipo;
+      const existente = equiposIndex.get(equipo.ficha);
+
+      if (!existente) {
+        await createEquipo(equipoSinId, { skipReload: true, silent: true });
+        summary.equipos.added.push(`${equipo.ficha} - ${equipo.nombre}`);
+      } else if (hasEquipoChanges(existente, equipo)) {
+        await updateEquipo({ ...existente, ...equipo, id: existente.id }, { skipReload: true, silent: true });
+        summary.equipos.updated.push(`${equipo.ficha} - ${equipo.nombre}`);
+      } else {
+        summary.equipos.unchanged.push(`${equipo.ficha} - ${equipo.nombre}`);
+      }
+    }
+
+    for (const inventarioRaw of inventariosBundle) {
+      const inventario = normalizeInventario(inventarioRaw);
+      const existente = inventariosIndex.get(inventario.codigoIdentificacion);
+
+      if (!existente) {
+        const { error } = await supabase
+          .from('inventarios')
+          .insert([mapInventarioToDatabase(inventario)]);
+        if (error) throw error;
+        summary.inventarios.added.push(`${inventario.codigoIdentificacion} - ${inventario.nombre}`);
+        await logHistorialEvent({
+          tipoEvento: 'inventario_creado',
+          modulo: 'inventarios',
+          descripcion: `Se agregó el inventario ${inventario.nombre}`,
+          datosAntes: null,
+          datosDespues: inventario,
+          metadata: { codigo: inventario.codigoIdentificacion },
+        });
+      } else if (hasInventarioChanges(existente, inventario)) {
+        const { error } = await supabase
+          .from('inventarios')
+          .update(mapInventarioToDatabase(inventario))
+          .eq('id', existente.id);
+        if (error) throw error;
+        summary.inventarios.updated.push(`${inventario.codigoIdentificacion} - ${inventario.nombre}`);
+        await logHistorialEvent({
+          tipoEvento: 'inventario_actualizado',
+          modulo: 'inventarios',
+          descripcion: `Se actualizó el inventario ${inventario.nombre}`,
+          datosAntes: existente,
+          datosDespues: inventario,
+          metadata: { codigo: inventario.codigoIdentificacion },
+        });
+      } else {
+        summary.inventarios.unchanged.push(`${inventario.codigoIdentificacion} - ${inventario.nombre}`);
+      }
+    }
+
+    for (const mantenimientoRaw of mantenimientosBundle) {
+      const mantenimiento = normalizeMantenimiento(mantenimientoRaw);
+      const key = `${mantenimiento.ficha}::${mantenimiento.tipoMantenimiento}`.toLowerCase();
+      const existente = mantenimientosIndex.get(key);
+
+      const payload: MantenimientoPayload = {
+        ficha: mantenimiento.ficha,
+        nombreEquipo: mantenimiento.nombreEquipo,
+        tipoMantenimiento: mantenimiento.tipoMantenimiento,
+        horasKmActuales: mantenimiento.horasKmActuales,
+        fechaUltimaActualizacion: mantenimiento.fechaUltimaActualizacion,
+        frecuencia: mantenimiento.frecuencia,
+        fechaUltimoMantenimiento: mantenimiento.fechaUltimoMantenimiento,
+        horasKmUltimoMantenimiento: mantenimiento.horasKmUltimoMantenimiento,
+        activo: mantenimiento.activo,
+      };
+
+      if (!existente) {
+        await createMantenimiento(payload, { skipReload: true, silent: true });
+        summary.mantenimientosProgramados.added.push(`${mantenimiento.ficha} - ${mantenimiento.tipoMantenimiento}`);
+      } else if (hasMantenimientoChanges(existente, mantenimiento)) {
+        await updateMantenimiento(existente.id, payload, { skipReload: true, silent: true });
+        summary.mantenimientosProgramados.updated.push(`${mantenimiento.ficha} - ${mantenimiento.tipoMantenimiento}`);
+      } else {
+        summary.mantenimientosProgramados.unchanged.push(`${mantenimiento.ficha} - ${mantenimiento.tipoMantenimiento}`);
+      }
+    }
+
+    for (const empleadoRaw of empleadosBundle) {
+      const empleado = normalizeEmpleado(empleadoRaw);
+      const key = buildEmpleadoKey(empleado);
+      const existente = empleadosIndex.get(key);
+      const nombreCompleto = `${empleado.nombre} ${empleado.apellido}`.trim();
+
+      if (!existente) {
+        const { data: inserted, error } = await supabase
+          .from('empleados')
+          .insert(mapEmpleadoToDatabase(empleado))
+          .select('*')
+          .single();
+        if (error) throw error;
+        summary.empleados.added.push(nombreCompleto || empleado.nombre);
+        if (inserted?.id) {
+          empleadosNombre.set(Number(inserted.id), nombreCompleto || empleado.nombre);
+        }
+        await logHistorialEvent({
+          tipoEvento: 'empleado_registrado',
+          modulo: 'empleados',
+          descripcion: `Se registró ${nombreCompleto || empleado.nombre}`,
+          datosAntes: null,
+          datosDespues: inserted ?? empleado,
+          metadata: { cargo: empleado.cargo, categoria: empleado.categoria },
+        });
+      } else if (hasEmpleadoChanges(existente, empleado)) {
+        const { data: updatedRow, error } = await supabase
+          .from('empleados')
+          .update(mapEmpleadoToDatabase(empleado))
+          .eq('id', existente.id)
+          .select('*')
+          .single();
+        if (error) throw error;
+        summary.empleados.updated.push(nombreCompleto || empleado.nombre);
+        const targetId = Number(updatedRow?.id ?? existente.id);
+        empleadosNombre.set(targetId, nombreCompleto || empleado.nombre);
+        await logHistorialEvent({
+          tipoEvento: 'empleado_actualizado',
+          modulo: 'empleados',
+          descripcion: `Se actualizó ${nombreCompleto || empleado.nombre}`,
+          datosAntes: existente,
+          datosDespues: updatedRow ?? empleado,
+          metadata: { cargo: empleado.cargo, categoria: empleado.categoria },
+        });
+      } else {
+        summary.empleados.unchanged.push(nombreCompleto || empleado.nombre);
+      }
+    }
+
+    const equiposNombreMap = new Map<string, string | null>();
+    data.equipos.forEach((eq) => equiposNombreMap.set(eq.ficha, eq.nombre));
+    equiposBundle.forEach((eq) => {
+      const normalizado = normalizeEquipo(eq);
+      if (!equiposNombreMap.has(normalizado.ficha)) {
+        equiposNombreMap.set(normalizado.ficha, normalizado.nombre);
+      }
+    });
+
+    for (const mantenimiento of mantenimientosRealizadosBundle) {
+      const fechaIso = toISOStringIfValid(mantenimiento.fechaMantenimiento) ?? new Date().toISOString();
+      const key = `${mantenimiento.ficha}::${fechaIso}`;
+      if (existingRealizadosKeys.has(key)) {
+        summary.historial.omitidos++;
+        continue;
+      }
+
+      const nombreEquipo = equiposNombreMap.get(mantenimiento.ficha) ?? mantenimiento.nombreEquipo ?? null;
+      const responsable = mantenimiento.idEmpleado
+        ? empleadosNombre.get(Number(mantenimiento.idEmpleado)) ?? `Empleado ${mantenimiento.idEmpleado}`
+        : mantenimiento.usuarioResponsable || 'Equipo de mantenimiento';
+
+      const metadata = {
+        ...mantenimiento,
+        nombreEquipo,
+        usuarioResponsable: responsable,
+      };
+
+      const payload = {
+        tipo_evento: 'mantenimiento_realizado',
+        modulo: 'mantenimientos',
+        ficha_equipo: mantenimiento.ficha,
+        nombre_equipo: nombreEquipo,
+        usuario_responsable: responsable,
+        descripcion:
+          mantenimiento.observaciones || `Mantenimiento realizado al equipo ${nombreEquipo ?? mantenimiento.ficha}`,
+        datos_despues: {
+          horasKmAlMomento: mantenimiento.horasKmAlMomento,
+          incrementoDesdeUltimo: mantenimiento.incrementoDesdeUltimo,
+          filtrosUtilizados: Array.isArray(mantenimiento.filtrosUtilizados)
+            ? mantenimiento.filtrosUtilizados
+            : [],
+        } as any,
+        nivel_importancia: 'info',
+        metadata: metadata as any,
+        created_at: fechaIso,
+      };
+
+      const { error } = await supabase.from('historial_eventos').insert([payload]);
+      if (error) throw error;
+      summary.historial.mantenimientosRealizados += 1;
+      existingRealizadosKeys.add(key);
+    }
+
+    for (const actualizacion of actualizacionesBundle) {
+      const fechaIso = toISOStringIfValid(actualizacion.fecha) ?? new Date().toISOString();
+      const key = `${actualizacion.ficha}::${fechaIso}::${Number(actualizacion.horasKm ?? 0)}`;
+      if (existingLecturasKeys.has(key)) {
+        summary.historial.omitidos++;
+        continue;
+      }
+
+      const nombreEquipo = equiposNombreMap.get(actualizacion.ficha) ?? actualizacion.nombreEquipo ?? null;
+      const responsable = actualizacion.usuarioResponsable || 'Sistema';
+
+      const metadata = {
+        ...actualizacion,
+        nombreEquipo,
+        usuarioResponsable: responsable,
+      };
+
+      const payload = {
+        tipo_evento: 'lectura_actualizada',
+        modulo: 'mantenimientos',
+        ficha_equipo: actualizacion.ficha,
+        nombre_equipo: nombreEquipo,
+        usuario_responsable: responsable,
+        descripcion: nombreEquipo
+          ? `Lectura actualizada para ${nombreEquipo}: ${actualizacion.horasKm}`
+          : `Lectura actualizada a ${actualizacion.horasKm}`,
+        datos_despues: {
+          horasKm: Number(actualizacion.horasKm ?? 0),
+          incremento: Number(actualizacion.incremento ?? 0),
+        } as any,
+        nivel_importancia: Number(actualizacion.incremento ?? 0) < 0 ? 'warning' : 'info',
+        metadata: metadata as any,
+        created_at: fechaIso,
+      };
+
+      const { error } = await supabase.from('historial_eventos').insert([payload]);
+      if (error) throw error;
+      summary.historial.lecturasRegistradas += 1;
+      existingLecturasKeys.add(key);
+    }
+
+    await loadData();
+
+    if (!silent) {
+      const cambios =
+        summary.equipos.added.length +
+        summary.equipos.updated.length +
+        summary.inventarios.added.length +
+        summary.inventarios.updated.length +
+        summary.mantenimientosProgramados.added.length +
+        summary.mantenimientosProgramados.updated.length +
+        summary.empleados.added.length +
+        summary.empleados.updated.length +
+        summary.historial.mantenimientosRealizados +
+        summary.historial.lecturasRegistradas;
+
+      if (cambios === 0) {
+        toast({
+          title: 'Sin cambios detectados',
+          description: 'Todo está sincronizado con la base de datos.',
+        });
+      } else {
+        const detalles = [
+          `Equipos: +${summary.equipos.added.length} / ✎${summary.equipos.updated.length}`,
+          `Inventarios: +${summary.inventarios.added.length} / ✎${summary.inventarios.updated.length}`,
+          `Mant. programados: +${summary.mantenimientosProgramados.added.length} / ✎${summary.mantenimientosProgramados.updated.length}`,
+          `Empleados: +${summary.empleados.added.length} / ✎${summary.empleados.updated.length}`,
+          `Historial añadido: ${summary.historial.mantenimientosRealizados + summary.historial.lecturasRegistradas}`,
+        ];
+
+        toast({
+          title: 'Sincronización aplicada',
+          description: detalles.join('\n'),
+        });
+      }
+    }
+
+    return summary;
+  };
+
+  const summarizeSyncResult = (summary: SyncSummary) => {
+    return [
+      `Equipos ➜ +${summary.equipos.added.length} / ✎${summary.equipos.updated.length}`,
+      `Inventarios ➜ +${summary.inventarios.added.length} / ✎${summary.inventarios.updated.length}`,
+      `Mant. programados ➜ +${summary.mantenimientosProgramados.added.length} / ✎${summary.mantenimientosProgramados.updated.length}`,
+      `Empleados ➜ +${summary.empleados.added.length} / ✎${summary.empleados.updated.length}`,
+      `Historial ➜ ${summary.historial.mantenimientosRealizados + summary.historial.lecturasRegistradas} nuevos (${summary.historial.omitidos} omitidos)`
+    ].join('\n');
   };
 
   useEffect(() => {
@@ -296,6 +858,11 @@ export function useSupabaseData() {
         .neq('id', 0);
 
       await supabase
+        .from('empleados')
+        .delete()
+        .neq('id', 0);
+
+      await supabase
         .from('historial_eventos')
         .delete()
         .neq('id', 0);
@@ -304,6 +871,11 @@ export function useSupabaseData() {
         .from('notificaciones')
         .delete()
         .neq('id', 0);
+
+      await supabase
+        .from('configuraciones')
+        .delete()
+        .neq('clave', '');
 
       toast({
         title: "✅ Éxito",
@@ -318,6 +890,201 @@ export function useSupabaseData() {
       });
     } finally {
       await loadData(true);
+    }
+  };
+
+  const mapEquipoToDatabasePayload = (equipo: Omit<Equipo, 'id'>) => ({
+    ficha: equipo.ficha,
+    nombre: equipo.nombre,
+    marca: equipo.marca,
+    modelo: equipo.modelo,
+    numero_serie: equipo.numeroSerie,
+    placa: equipo.placa,
+    categoria: equipo.categoria,
+    activo: equipo.activo,
+    motivo_inactividad: equipo.motivoInactividad,
+  });
+
+  const mapDatabaseEquipoToLocal = (equipo: any): Equipo => ({
+    id: Number(equipo.id),
+    ficha: equipo.ficha,
+    nombre: equipo.nombre,
+    marca: equipo.marca,
+    modelo: equipo.modelo,
+    numeroSerie: equipo.numero_serie,
+    placa: equipo.placa,
+    categoria: equipo.categoria,
+    activo: Boolean(equipo.activo),
+    motivoInactividad: equipo.motivo_inactividad ?? null,
+  });
+
+  const createEquipo = async (
+    equipo: Omit<Equipo, 'id'>,
+    options: { skipReload?: boolean; silent?: boolean } = {}
+  ) => {
+    const { skipReload = false, silent = false } = options;
+
+    try {
+      const payload = mapEquipoToDatabasePayload(equipo);
+      const { data: inserted, error } = await supabase
+        .from('equipos')
+        .insert(payload)
+        .select('*')
+        .single();
+
+      if (error) throw error;
+
+      const equipoCreado = inserted ? mapDatabaseEquipoToLocal(inserted) : { ...equipo, id: 0 } as Equipo;
+
+      await logHistorialEvent({
+        tipoEvento: 'equipo_creado',
+        modulo: 'equipos',
+        descripcion: `Se registró el equipo ${equipo.nombre} (${equipo.ficha})`,
+        fichaEquipo: equipo.ficha,
+        nombreEquipo: equipo.nombre,
+        datosAntes: null,
+        datosDespues: equipoCreado,
+        metadata: {
+          categoria: equipo.categoria,
+          marca: equipo.marca,
+          modelo: equipo.modelo,
+          placa: equipo.placa,
+        },
+      });
+
+      if (!silent) {
+        toast({
+          title: '✅ Equipo creado',
+          description: `El equipo ${equipo.nombre} se registró correctamente`,
+        });
+      }
+
+      if (!skipReload) {
+        await loadData(true);
+      }
+
+      return equipoCreado;
+    } catch (error) {
+      console.error('Error creating equipo:', error);
+      toast({
+        title: '❌ Error',
+        description: 'No se pudo registrar el equipo',
+        variant: 'destructive',
+      });
+      throw error;
+    }
+  };
+
+  const updateEquipo = async (
+    equipo: Equipo,
+    options: { skipReload?: boolean; silent?: boolean } = {}
+  ) => {
+    const { skipReload = false, silent = false } = options;
+
+    try {
+      const equipoPrevio = data.equipos.find((item) => item.id === equipo.id) ?? null;
+      const payload = mapEquipoToDatabasePayload(equipo);
+      const { data: updatedRow, error } = await supabase
+        .from('equipos')
+        .update(payload)
+        .eq('id', equipo.id)
+        .select('*')
+        .single();
+
+      if (error) throw error;
+
+      const equipoActualizado = updatedRow ? mapDatabaseEquipoToLocal(updatedRow) : equipo;
+
+      await logHistorialEvent({
+        tipoEvento: 'equipo_actualizado',
+        modulo: 'equipos',
+        descripcion: `Se actualizaron los datos del equipo ${equipo.nombre} (${equipo.ficha})`,
+        fichaEquipo: equipo.ficha,
+        nombreEquipo: equipo.nombre,
+        datosAntes: equipoPrevio,
+        datosDespues: equipoActualizado,
+        metadata: {
+          categoria: equipo.categoria,
+          marca: equipo.marca,
+          modelo: equipo.modelo,
+          placa: equipo.placa,
+        },
+      });
+
+      if (!silent) {
+        toast({
+          title: '✅ Equipo actualizado',
+          description: `El equipo ${equipo.nombre} se actualizó correctamente`,
+        });
+      }
+
+      if (!skipReload) {
+        await loadData(true);
+      }
+
+      return equipoActualizado;
+    } catch (error) {
+      console.error('Error updating equipo:', error);
+      toast({
+        title: '❌ Error',
+        description: 'No se pudo actualizar el equipo',
+        variant: 'destructive',
+      });
+      throw error;
+    }
+  };
+
+  const deleteEquipo = async (
+    id: number,
+    options: { skipReload?: boolean; silent?: boolean } = {}
+  ) => {
+    const { skipReload = false, silent = false } = options;
+    const equipoPrevio = data.equipos.find((item) => item.id === id) ?? null;
+
+    try {
+      const { error } = await supabase
+        .from('equipos')
+        .delete()
+        .eq('id', id);
+
+      if (error) throw error;
+
+      if (equipoPrevio) {
+        await logHistorialEvent({
+          tipoEvento: 'equipo_eliminado',
+          modulo: 'equipos',
+          descripcion: `Se eliminó el equipo ${equipoPrevio.nombre} (${equipoPrevio.ficha})`,
+          fichaEquipo: equipoPrevio.ficha,
+          nombreEquipo: equipoPrevio.nombre,
+          datosAntes: equipoPrevio,
+          datosDespues: null,
+          metadata: {
+            categoria: equipoPrevio.categoria,
+            marca: equipoPrevio.marca,
+            modelo: equipoPrevio.modelo,
+            placa: equipoPrevio.placa,
+          },
+        });
+      }
+
+      if (!silent) {
+        toast({
+          title: '✅ Equipo eliminado',
+          description: 'El equipo fue eliminado de la base de datos',
+        });
+      }
+
+      if (!skipReload) {
+        await loadData(true);
+      }
+    } catch (error) {
+      console.error('Error deleting equipo:', error);
+      toast({
+        title: '❌ Error',
+        description: 'No se pudo eliminar el equipo',
+        variant: 'destructive',
+      });
+      throw error;
     }
   };
 
@@ -340,21 +1107,48 @@ export function useSupabaseData() {
     };
   };
 
-  const createMantenimiento = async (mantenimiento: MantenimientoPayload) => {
+  const createMantenimiento = async (
+    mantenimiento: MantenimientoPayload,
+    options: { skipReload?: boolean; silent?: boolean } = {}
+  ) => {
+    const { skipReload = false, silent = false } = options;
     try {
       const payload = mapToDatabasePayload(mantenimiento);
-      const { error } = await supabase
+      const { data: inserted, error } = await supabase
         .from('mantenimientos_programados')
-        .insert(payload);
+        .insert(payload)
+        .select('*')
+        .single();
 
       if (error) throw error;
 
-      toast({
-        title: "✅ Mantenimiento creado",
-        description: `Se creó el mantenimiento para ${mantenimiento.nombreEquipo}`,
+      await logHistorialEvent({
+        tipoEvento: 'mantenimiento_programado_creado',
+        modulo: 'mantenimientos',
+        descripcion: `Se programó el mantenimiento ${mantenimiento.tipoMantenimiento} para ${mantenimiento.nombreEquipo}`,
+        fichaEquipo: mantenimiento.ficha,
+        nombreEquipo: mantenimiento.nombreEquipo,
+        datosAntes: null,
+        datosDespues: inserted,
+        metadata: {
+          frecuencia: mantenimiento.frecuencia,
+          horasKmActuales: mantenimiento.horasKmActuales,
+          horasKmUltimoMantenimiento: mantenimiento.horasKmUltimoMantenimiento,
+        },
       });
 
-      await loadData(true);
+      if (!silent) {
+        toast({
+          title: "✅ Mantenimiento creado",
+          description: `Se creó el mantenimiento para ${mantenimiento.nombreEquipo}`,
+        });
+      }
+
+      if (!skipReload) {
+        await loadData(true);
+      }
+
+      return inserted;
     } catch (error) {
       console.error('Error creating mantenimiento:', error);
       toast({
@@ -366,22 +1160,51 @@ export function useSupabaseData() {
     }
   };
 
-  const updateMantenimiento = async (id: number, mantenimiento: MantenimientoPayload) => {
+  const updateMantenimiento = async (
+    id: number,
+    mantenimiento: MantenimientoPayload,
+    options: { skipReload?: boolean; silent?: boolean } = {}
+  ) => {
+    const { skipReload = false, silent = false } = options;
     try {
+      const mantenimientoPrevio = data.mantenimientosProgramados.find((item) => item.id === id) ?? null;
       const payload = mapToDatabasePayload(mantenimiento);
-      const { error } = await supabase
+      const { data: actualizado, error } = await supabase
         .from('mantenimientos_programados')
         .update(payload)
-        .eq('id', id);
+        .eq('id', id)
+        .select('*')
+        .single();
 
       if (error) throw error;
 
-      toast({
-        title: "✅ Mantenimiento actualizado",
-        description: `Se actualizó el mantenimiento de ${mantenimiento.nombreEquipo}`,
+      await logHistorialEvent({
+        tipoEvento: 'mantenimiento_programado_actualizado',
+        modulo: 'mantenimientos',
+        descripcion: `Se actualizó el mantenimiento ${mantenimiento.tipoMantenimiento} para ${mantenimiento.nombreEquipo}`,
+        fichaEquipo: mantenimiento.ficha,
+        nombreEquipo: mantenimiento.nombreEquipo,
+        datosAntes: mantenimientoPrevio,
+        datosDespues: actualizado ?? mantenimiento,
+        metadata: {
+          frecuencia: mantenimiento.frecuencia,
+          horasKmActuales: mantenimiento.horasKmActuales,
+          horasKmUltimoMantenimiento: mantenimiento.horasKmUltimoMantenimiento,
+        },
       });
 
-      await loadData(true);
+      if (!silent) {
+        toast({
+          title: "✅ Mantenimiento actualizado",
+          description: `Se actualizó el mantenimiento de ${mantenimiento.nombreEquipo}`,
+        });
+      }
+
+      if (!skipReload) {
+        await loadData(true);
+      }
+
+      return actualizado ?? payload;
     } catch (error) {
       console.error('Error updating mantenimiento:', error);
       toast({
@@ -393,8 +1216,13 @@ export function useSupabaseData() {
     }
   };
 
-  const deleteMantenimiento = async (id: number) => {
+  const deleteMantenimiento = async (
+    id: number,
+    options: { skipReload?: boolean; silent?: boolean } = {}
+  ) => {
+    const { skipReload = false, silent = false } = options;
     try {
+      const mantenimientoPrevio = data.mantenimientosProgramados.find((item) => item.id === id) ?? null;
       const { error } = await supabase
         .from('mantenimientos_programados')
         .delete()
@@ -402,12 +1230,32 @@ export function useSupabaseData() {
 
       if (error) throw error;
 
-      toast({
-        title: "✅ Mantenimiento eliminado",
-        description: "El mantenimiento fue eliminado correctamente",
-      });
+      if (mantenimientoPrevio) {
+        await logHistorialEvent({
+          tipoEvento: 'mantenimiento_programado_eliminado',
+          modulo: 'mantenimientos',
+          descripcion: `Se eliminó el mantenimiento ${mantenimientoPrevio.tipoMantenimiento} del equipo ${mantenimientoPrevio.nombreEquipo}`,
+          fichaEquipo: mantenimientoPrevio.ficha,
+          nombreEquipo: mantenimientoPrevio.nombreEquipo,
+          datosAntes: mantenimientoPrevio,
+          datosDespues: null,
+          metadata: {
+            frecuencia: mantenimientoPrevio.frecuencia,
+            horasKmUltimoMantenimiento: mantenimientoPrevio.horasKmUltimoMantenimiento,
+          },
+        });
+      }
 
-      await loadData(true);
+      if (!silent) {
+        toast({
+          title: "✅ Mantenimiento eliminado",
+          description: "El mantenimiento fue eliminado correctamente",
+        });
+      }
+
+      if (!skipReload) {
+        await loadData(true);
+      }
     } catch (error) {
       console.error('Error deleting mantenimiento:', error);
       toast({
@@ -595,189 +1443,6 @@ export function useSupabaseData() {
     }
   };
 
-  const migrateBundleToSupabase = async (bundle: ImportBundle) => {
-    const equiposLocal: Equipo[] = Array.isArray(bundle.equipos) ? bundle.equipos : [];
-    const inventariosLocal: Inventario[] = Array.isArray(bundle.inventarios) ? bundle.inventarios : [];
-    const mantenimientosProgramadosLocal: MantenimientoProgramado[] = Array.isArray(
-      bundle.mantenimientosProgramados
-    )
-      ? bundle.mantenimientosProgramados
-      : [];
-    const mantenimientosRealizadosLocal: MantenimientoRealizado[] = Array.isArray(
-      bundle.mantenimientosRealizados
-    )
-      ? bundle.mantenimientosRealizados
-      : [];
-    const actualizacionesLocal: ActualizacionHorasKm[] = Array.isArray(bundle.actualizacionesHorasKm)
-      ? bundle.actualizacionesHorasKm
-      : [];
-    const empleadosLocal: Empleado[] = Array.isArray(bundle.empleados) ? bundle.empleados : [];
-
-    const equiposMap = new Map<string, string | null>(
-      equiposLocal.map((equipo: Equipo) => [equipo.ficha, equipo.nombre ?? null])
-    );
-
-    const empleadosMap = new Map<number, string>(
-      empleadosLocal.map((empleado: Empleado) => {
-        const nombreCompleto = `${empleado.nombre ?? ''} ${empleado.apellido ?? ''}`.trim();
-        return [
-          Number(empleado.id),
-          nombreCompleto || empleado.nombre || 'Equipo de mantenimiento'
-        ];
-      })
-    );
-
-    const toISOStringIfValid = (valor?: string | null) => {
-      if (!valor) return undefined;
-      const fecha = new Date(valor);
-      return Number.isNaN(fecha.getTime()) ? undefined : fecha.toISOString();
-    };
-
-    let equiposMigrados = 0;
-    let inventariosMigrados = 0;
-    let mantenimientosProgramadosMigrados = 0;
-    let mantenimientosRealizadosMigrados = 0;
-    let actualizacionesMigradas = 0;
-
-    for (const equipo of equiposLocal) {
-      const { id, ...equipoData } = equipo;
-      const { error } = await supabase.from('equipos').insert({
-        ficha: equipoData.ficha,
-        nombre: equipoData.nombre,
-        marca: equipoData.marca,
-        modelo: equipoData.modelo,
-        numero_serie: equipoData.numeroSerie,
-        placa: equipoData.placa,
-        categoria: equipoData.categoria,
-        activo: equipoData.activo,
-        motivo_inactividad: equipoData.motivoInactividad ?? null,
-      });
-      if (error) throw error;
-      equiposMigrados++;
-    }
-
-    for (const inventario of inventariosLocal) {
-      const { id, ...inventarioData } = inventario;
-      const { error } = await supabase.from('inventarios').insert([{
-        nombre: inventarioData.tipo, // Using tipo as nombre since nombre doesn't exist in original data
-        tipo: inventarioData.tipo,
-        categoria_equipo: inventarioData.categoriaEquipo,
-        cantidad: Number(inventarioData.cantidad ?? 0),
-        movimientos: (Array.isArray(inventarioData.movimientos) ? inventarioData.movimientos : []) as any,
-        activo: inventarioData.activo ?? true,
-        codigo_identificacion: inventarioData.codigoIdentificacion ?? '',
-        empresa_suplidora: inventarioData.empresaSuplidora ?? '',
-        marcas_compatibles: inventarioData.marcasCompatibles ?? [],
-        modelos_compatibles: inventarioData.modelosCompatibles ?? [],
-      }]);
-      if (error) throw error;
-      inventariosMigrados++;
-    }
-
-    for (const mantenimiento of mantenimientosProgramadosLocal) {
-      const { id, ...mantenimientoData } = mantenimiento;
-      const { error } = await supabase.from('mantenimientos_programados').insert({
-        ficha: mantenimientoData.ficha,
-        nombre_equipo: mantenimientoData.nombreEquipo,
-        tipo_mantenimiento: mantenimientoData.tipoMantenimiento,
-        horas_km_actuales: Number(mantenimientoData.horasKmActuales ?? 0),
-        fecha_ultima_actualizacion: mantenimientoData.fechaUltimaActualizacion,
-        frecuencia: Number(mantenimientoData.frecuencia ?? 0),
-        fecha_ultimo_mantenimiento: mantenimientoData.fechaUltimoMantenimiento,
-        horas_km_ultimo_mantenimiento: Number(mantenimientoData.horasKmUltimoMantenimiento ?? 0),
-        proximo_mantenimiento: Number(mantenimientoData.proximoMantenimiento ?? 0),
-        horas_km_restante: Number(mantenimientoData.horasKmRestante ?? 0),
-        activo: mantenimientoData.activo ?? true,
-      });
-      if (error) throw error;
-      mantenimientosProgramadosMigrados++;
-    }
-
-    for (const mantenimiento of mantenimientosRealizadosLocal) {
-      const nombreEquipo = equiposMap.get(mantenimiento.ficha) ?? null;
-      const empleadoNombre = mantenimiento.idEmpleado
-        ? empleadosMap.get(Number(mantenimiento.idEmpleado)) ?? `Empleado ${mantenimiento.idEmpleado}`
-        : mantenimiento.usuarioResponsable || 'Equipo de mantenimiento';
-
-      const metadata = {
-        ...mantenimiento,
-        nombreEquipo,
-        usuarioResponsable: empleadoNombre,
-      };
-
-      const payload = {
-        tipo_evento: 'mantenimiento_realizado',
-        modulo: 'mantenimientos',
-        ficha_equipo: mantenimiento.ficha,
-        nombre_equipo: nombreEquipo,
-        usuario_responsable: empleadoNombre,
-        descripcion:
-          mantenimiento.observaciones || `Mantenimiento realizado al equipo ${nombreEquipo ?? mantenimiento.ficha}`,
-        datos_despues: {
-          horasKmAlMomento: mantenimiento.horasKmAlMomento,
-          incrementoDesdeUltimo: mantenimiento.incrementoDesdeUltimo,
-          filtrosUtilizados: Array.isArray(mantenimiento.filtrosUtilizados)
-            ? mantenimiento.filtrosUtilizados
-            : [],
-        } as any,
-        nivel_importancia: 'info',
-        metadata: metadata as any,
-      };
-
-      const fechaIso = toISOStringIfValid(mantenimiento.fechaMantenimiento);
-      const insertPayload = fechaIso ? { ...payload, created_at: fechaIso } : payload;
-
-      const { error } = await supabase.from('historial_eventos').insert([insertPayload]);
-      if (error) throw error;
-
-      mantenimientosRealizadosMigrados++;
-    }
-
-    for (const actualizacion of actualizacionesLocal) {
-      const nombreEquipo = equiposMap.get(actualizacion.ficha) ?? null;
-      const responsable = actualizacion.usuarioResponsable || 'Sistema';
-
-      const metadata = {
-        ...actualizacion,
-        nombreEquipo,
-        usuarioResponsable: responsable,
-      };
-
-      const payload = {
-        tipo_evento: 'lectura_actualizada',
-        modulo: 'mantenimientos',
-        ficha_equipo: actualizacion.ficha,
-        nombre_equipo: nombreEquipo,
-        usuario_responsable: responsable,
-        descripcion: nombreEquipo
-          ? `Lectura actualizada para ${nombreEquipo}: ${actualizacion.horasKm}`
-          : `Lectura actualizada a ${actualizacion.horasKm}`,
-        datos_despues: {
-          horasKm: actualizacion.horasKm,
-          incremento: actualizacion.incremento,
-        } as any,
-        nivel_importancia: Number(actualizacion.incremento ?? 0) < 0 ? 'warning' : 'info',
-        metadata: metadata as any,
-      };
-
-      const fechaIso = toISOStringIfValid(actualizacion.fecha);
-      const insertPayload = fechaIso ? { ...payload, created_at: fechaIso } : payload;
-
-      const { error } = await supabase.from('historial_eventos').insert([insertPayload]);
-      if (error) throw error;
-
-      actualizacionesMigradas++;
-    }
-
-    return {
-      equiposMigrados,
-      inventariosMigrados,
-      mantenimientosProgramadosMigrados,
-      mantenimientosRealizadosMigrados,
-      actualizacionesMigradas,
-    };
-  };
-
   const migrateFromLocalStorage = async () => {
     try {
       setIsMigrating(true);
@@ -791,13 +1456,11 @@ export function useSupabaseData() {
       }
 
       const localData = JSON.parse(stored);
-      const summary = await migrateBundleToSupabase(localData);
-
-      await loadData();
+      const summary = await syncJsonData(localData, { silent: true, mode: 'migrate' });
 
       toast({
         title: "✅ Migración completada",
-        description: `Se migraron ${summary.equiposMigrados} equipos, ${summary.inventariosMigrados} inventarios, ${summary.mantenimientosProgramadosMigrados} mantenimientos programados, ${summary.mantenimientosRealizadosMigrados} mantenimientos realizados y ${summary.actualizacionesMigradas} actualizaciones de horas/kilómetros`,
+        description: summarizeSyncResult(summary),
       });
     } catch (error) {
       console.error('Error migrating data:', error);
@@ -815,13 +1478,11 @@ export function useSupabaseData() {
     try {
       setIsMigrating(true);
 
-      const summary = await migrateBundleToSupabase(bundle);
-
-      await loadData();
+      const summary = await syncJsonData(bundle, { silent: true, mode: 'migrate' });
 
       toast({
         title: "✅ Importación completada",
-        description: `Se importaron ${summary.equiposMigrados} equipos, ${summary.inventariosMigrados} inventarios, ${summary.mantenimientosProgramadosMigrados} mantenimientos programados, ${summary.mantenimientosRealizadosMigrados} mantenimientos realizados y ${summary.actualizacionesMigradas} actualizaciones de horas/kilómetros`,
+        description: summarizeSyncResult(summary),
       });
     } catch (error) {
       console.error('Error importing data:', error);
@@ -842,7 +1503,11 @@ export function useSupabaseData() {
     loadData,
     migrateFromLocalStorage,
     importJsonData,
+    syncJsonData,
     clearDatabase,
+    createEquipo,
+    updateEquipo,
+    deleteEquipo,
     createMantenimiento,
     updateMantenimiento,
     deleteMantenimiento,
