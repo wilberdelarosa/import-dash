@@ -4,15 +4,25 @@ import { cn } from "@/lib/utils";
 
 const Table = React.forwardRef<HTMLTableElement, React.HTMLAttributes<HTMLTableElement>>(
   ({ className, ...props }, ref) => (
-    <div className="relative w-full overflow-auto">
-      <table ref={ref} className={cn("w-full caption-bottom text-sm", className)} {...props} />
+    <div className="relative w-full overflow-auto rounded-lg border border-border/60 bg-background/80 dark:border-border/40 dark:bg-muted/20">
+      <table
+        ref={ref}
+        className={cn("w-full caption-bottom text-sm text-foreground dark:text-slate-100", className)}
+        {...props}
+      />
     </div>
   ),
 );
 Table.displayName = "Table";
 
 const TableHeader = React.forwardRef<HTMLTableSectionElement, React.HTMLAttributes<HTMLTableSectionElement>>(
-  ({ className, ...props }, ref) => <thead ref={ref} className={cn("[&_tr]:border-b", className)} {...props} />,
+  ({ className, ...props }, ref) => (
+    <thead
+      ref={ref}
+      className={cn("[&_tr]:border-b [&_tr]:bg-muted/30 dark:[&_tr]:bg-slate-900/60", className)}
+      {...props}
+    />
+  ),
 );
 TableHeader.displayName = "TableHeader";
 
@@ -34,7 +44,10 @@ const TableRow = React.forwardRef<HTMLTableRowElement, React.HTMLAttributes<HTML
   ({ className, ...props }, ref) => (
     <tr
       ref={ref}
-      className={cn("border-b transition-colors data-[state=selected]:bg-muted hover:bg-muted/50", className)}
+      className={cn(
+        "border-b border-border/70 transition-colors data-[state=selected]:bg-muted/60 dark:border-border/40 dark:data-[state=selected]:bg-primary/15 hover:bg-muted/40 dark:hover:bg-muted/25",
+        className,
+      )}
       {...props}
     />
   ),
@@ -57,7 +70,11 @@ TableHead.displayName = "TableHead";
 
 const TableCell = React.forwardRef<HTMLTableCellElement, React.TdHTMLAttributes<HTMLTableCellElement>>(
   ({ className, ...props }, ref) => (
-    <td ref={ref} className={cn("p-4 align-middle [&:has([role=checkbox])]:pr-0", className)} {...props} />
+    <td
+      ref={ref}
+      className={cn("p-4 align-middle text-foreground/90 dark:text-slate-100 [&:has([role=checkbox])]:pr-0", className)}
+      {...props}
+    />
   ),
 );
 TableCell.displayName = "TableCell";

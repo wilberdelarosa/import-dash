@@ -5,14 +5,11 @@ import { EquiposTable } from '@/components/equipos/EquiposTable';
 import { EquipoDialog } from '@/components/equipos/EquipoDialog';
 import { EquipoDetalleUnificado } from '@/components/EquipoDetalleUnificado';
 import { useSupabaseDataContext } from '@/context/SupabaseDataContext';
-import { supabase } from '@/integrations/supabase/client';
-import { useToast } from '@/hooks/use-toast';
 import { Equipo } from '@/types/equipment';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 
 export default function Equipos() {
-  const { data, loading, loadData } = useSupabaseDataContext();
-  const { toast } = useToast();
+  const { data, loading, createEquipo, updateEquipo, deleteEquipo } = useSupabaseDataContext();
   const [fichaSeleccionada, setFichaSeleccionada] = useState<string | null>(null);
   const [detalleAbierto, setDetalleAbierto] = useState(false);
 
@@ -22,93 +19,17 @@ export default function Equipos() {
   };
 
   const handleAddEquipo = async (equipo: Omit<Equipo, 'id'>) => {
-    try {
-      const { error } = await supabase.from('equipos').insert({
-        ficha: equipo.ficha,
-        nombre: equipo.nombre,
-        marca: equipo.marca,
-        modelo: equipo.modelo,
-        numero_serie: equipo.numeroSerie,
-        placa: equipo.placa,
-        categoria: equipo.categoria,
-        activo: equipo.activo,
-        motivo_inactividad: equipo.motivoInactividad
-      });
-
-      if (error) throw error;
-
-      await loadData();
-      toast({
-        title: "Éxito",
-        description: "Equipo agregado correctamente",
-      });
-    } catch (error) {
-      console.error('Error adding equipo:', error);
-      toast({
-        title: "Error",
-        description: "No se pudo agregar el equipo",
-        variant: "destructive"
-      });
-    }
+    await createEquipo(equipo);
   };
 
   const handleEditEquipo = async (equipo: Equipo) => {
-    try {
-      const { error } = await supabase
-        .from('equipos')
-        .update({
-          ficha: equipo.ficha,
-          nombre: equipo.nombre,
-          marca: equipo.marca,
-          modelo: equipo.modelo,
-          numero_serie: equipo.numeroSerie,
-          placa: equipo.placa,
-          categoria: equipo.categoria,
-          activo: equipo.activo,
-          motivo_inactividad: equipo.motivoInactividad
-        })
-        .eq('id', equipo.id);
-
-      if (error) throw error;
-
-      await loadData();
-      toast({
-        title: "Éxito",
-        description: "Equipo actualizado correctamente",
-      });
-    } catch (error) {
-      console.error('Error updating equipo:', error);
-      toast({
-        title: "Error",
-        description: "No se pudo actualizar el equipo",
-        variant: "destructive"
-      });
-    }
+    const { id, ...payload } = equipo;
+    await updateEquipo(id, payload);
   };
 
   const handleDeleteEquipo = async (id: number) => {
     if (window.confirm('¿Está seguro de eliminar este equipo?')) {
-      try {
-        const { error } = await supabase
-          .from('equipos')
-          .delete()
-          .eq('id', id);
-
-        if (error) throw error;
-
-        await loadData();
-        toast({
-          title: "Éxito",
-          description: "Equipo eliminado correctamente",
-        });
-      } catch (error) {
-        console.error('Error deleting equipo:', error);
-        toast({
-          title: "Error",
-          description: "No se pudo eliminar el equipo",
-          variant: "destructive"
-        });
-      }
+      await deleteEquipo(id);
     }
   };
 

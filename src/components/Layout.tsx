@@ -1,12 +1,13 @@
 import { ReactNode } from 'react';
 import { Button } from '@/components/ui/button';
-import { RefreshCw, FileDown, FileUp, Trash2 } from 'lucide-react';
+import { RefreshCw, FileDown, FileUp, Trash2, ListChecks } from 'lucide-react';
 import { useSupabaseDataContext } from '@/context/SupabaseDataContext';
 import { useLocalStorage } from '@/hooks/useLocalStorage';
 import { useToast } from '@/hooks/use-toast';
 import { ThemeToggle } from '@/components/ThemeToggle';
 import { NotificationButton } from '@/components/NotificationButton';
 import { Badge } from '@/components/ui/badge';
+import { useSystemConfig } from '@/context/SystemConfigContext';
 
 interface LayoutProps {
   children: ReactNode;
@@ -14,9 +15,12 @@ interface LayoutProps {
 }
 
 export function Layout({ children, title }: LayoutProps) {
-  const { migrateFromLocalStorage, importJsonData, data: supabaseData, clearDatabase } = useSupabaseDataContext();
+  const { migrateFromLocalStorage, importJsonData, syncJsonData, data: supabaseData, clearDatabase } = useSupabaseDataContext();
   const { importData } = useLocalStorage();
   const { toast } = useToast();
+  const { config } = useSystemConfig();
+
+  const importDisabled = !config.permitirImportaciones;
 
   const handleMigrate = async () => {
     await migrateFromLocalStorage();
@@ -49,6 +53,15 @@ export function Layout({ children, title }: LayoutProps) {
   };
 
   const handleImport = () => {
+    if (importDisabled) {
+      toast({
+        title: 'Importaciones deshabilitadas',
+        description: 'Activa las importaciones manuales desde Configuraciones.',
+        variant: 'destructive',
+      });
+      return;
+    }
+
     const input = document.createElement('input');
     input.type = 'file';
     input.accept = '.json';
@@ -63,6 +76,91 @@ export function Layout({ children, title }: LayoutProps) {
             title: "Error",
             description: error instanceof Error ? error.message : "Error desconocido",
             variant: "destructive",
+          });
+        }
+      }
+    };
+    input.click();
+  };
+
+  const handleSmartImport = () => {
+    if (importDisabled) {
+      toast({
+        title: 'Importaciones deshabilitadas',
+        description: 'Activa las importaciones manuales desde Configuraciones.',
+        variant: 'destructive',
+      });
+      return;
+    }
+
+    const input = document.createElement('input');
+    input.type = 'file';
+    input.accept = '.json';
+    input.onchange = async (e) => {
+      const file = (e.target as HTMLInputElement).files?.[0];
+      if (file) {
+        try {
+          const imported = await importData(file);
+          const summary = await syncJsonData(imported);
+
+          const messages: string[] = [];
+
+          if (summary.equipos.inserted.length) {
+            messages.push(`Equipos nuevos: ${summary.equipos.inserted.join(', ')}`);
+          }
+          if (summary.equipos.updated.length) {
+            messages.push(
+              `Equipos actualizados: ${summary.equipos.updated
+                .map((item) => `${item.ficha} (${item.cambios.join('; ')})`)
+                .join(' | ')}`,
+            );
+          }
+          if (summary.inventarios.inserted.length) {
+            messages.push(`Inventarios nuevos: ${summary.inventarios.inserted.join(', ')}`);
+          }
+          if (summary.inventarios.updated.length) {
+            messages.push(
+              `Inventarios actualizados: ${summary.inventarios.updated
+                .map((item) => `${item.codigo} (${item.cambios.join('; ')})`)
+                .join(' | ')}`,
+            );
+          }
+          if (summary.mantenimientosProgramados.inserted.length) {
+            messages.push(
+              `Mantenimientos nuevos: ${summary.mantenimientosProgramados.inserted.join(', ')}`,
+            );
+          }
+          if (summary.mantenimientosProgramados.updated.length) {
+            messages.push(
+              `Mantenimientos actualizados: ${summary.mantenimientosProgramados.updated
+                .map((item) => `${item.ficha} (${item.tipo}) [${item.cambios.join('; ')}]`)
+                .join(' | ')}`,
+            );
+          }
+
+          if (summary.warnings.length) {
+            console.warn('Advertencias de importación:', summary.warnings);
+          }
+
+          const description = messages.length
+            ? messages.join('\n')
+            : 'Cambios registrados en la base de datos.';
+
+          toast({
+            title:
+              summary.totalChanges > 0
+                ? 'Sincronización completada'
+                : 'Sincronización sin cambios',
+            description:
+              summary.totalChanges > 0
+                ? description
+                : 'No se detectaron cambios nuevos en el archivo importado.',
+          });
+        } catch (error) {
+          toast({
+            title: 'Error',
+            description: error instanceof Error ? error.message : 'Error desconocido',
+            variant: 'destructive',
           });
         }
       }
@@ -93,9 +191,22 @@ export function Layout({ children, title }: LayoutProps) {
                 onClick={handleImport}
                 size="sm"
                 className="w-full sm:w-auto justify-center"
+                disabled={importDisabled}
+                title={importDisabled ? 'Importaciones manuales deshabilitadas' : undefined}
               >
                 <FileUp className="w-4 h-4 mr-2" />
                 Importar JSON
+              </Button>
+              <Button
+                variant="outline"
+                onClick={handleSmartImport}
+                size="sm"
+                className="w-full sm:w-auto justify-center"
+                disabled={importDisabled}
+                title={importDisabled ? 'Importaciones manuales deshabilitadas' : undefined}
+              >
+                <ListChecks className="w-4 h-4 mr-2" />
+                Sincronizar cambios
               </Button>
               <Button
                 variant="outline"
