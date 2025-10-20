@@ -1,7 +1,7 @@
 import { Link, useLocation } from 'react-router-dom';
 import { useMemo } from 'react';
 import { cn } from '@/lib/utils';
-import { Truck, Package, Calendar, BarChart3, Menu, History } from 'lucide-react';
+import { Truck, Package, Calendar, BarChart3, Menu, History, LayoutDashboard, Settings, Wrench } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { NotificacionesCentro } from '@/components/NotificacionesCentro';
 import {
@@ -15,11 +15,14 @@ import {
 } from '@/components/ui/sheet';
 
 const navItems = [
-  { path: '/', label: 'Equipos', icon: Truck },
+  { path: '/', label: 'Dashboard', icon: LayoutDashboard },
+  { path: '/equipos', label: 'Equipos', icon: Truck },
+  { path: '/control-mantenimiento', label: 'Control Mantenimiento', icon: Wrench },
   { path: '/inventario', label: 'Inventario', icon: Package },
   { path: '/mantenimiento', label: 'Mantenimiento', icon: Calendar },
   { path: '/historial', label: 'Historial', icon: History },
   { path: '/reportes', label: 'Reportes', icon: BarChart3 },
+  { path: '/configuraciones', label: 'Configuraciones', icon: Settings },
 ];
 
 export function Navigation() {
@@ -35,7 +38,7 @@ export function Navigation() {
             "inline-flex w-full items-center justify-center gap-2 rounded-md px-3 py-3 text-sm font-medium transition-colors sm:w-auto sm:rounded-none sm:py-4",
             location.pathname === path
               ? "bg-primary/10 text-primary sm:border-b-2 sm:border-primary sm:bg-transparent"
-              : "text-muted-foreground hover:bg-muted sm:border-b-2 sm:border-transparent sm:hover:border-gray-300 sm:hover:text-foreground"
+              : "text-muted-foreground hover:bg-muted sm:border-b-2 sm:border-transparent sm:hover:border-border sm:hover:text-foreground"
           )}
         >
           <Icon className="h-4 w-4" />
@@ -46,7 +49,7 @@ export function Navigation() {
   );
 
   return (
-    <nav className="border-b bg-white mb-6">
+    <nav className="border-b border-border/60 bg-card/80 backdrop-blur supports-[backdrop-filter]:bg-card/60 dark:border-border/40 dark:bg-card/70 mb-6">
       <Sheet>
         <div className="container mx-auto px-4 py-3">
           <div className="flex items-center justify-between sm:hidden">
@@ -68,7 +71,7 @@ export function Navigation() {
             <NotificacionesCentro />
           </div>
         </div>
-        <SheetContent side="left" className="sm:hidden w-[280px]">
+        <SheetContent side="left" className="sm:hidden w-[280px] bg-background text-foreground">
           <SheetHeader className="text-left">
             <SheetTitle>Ir a</SheetTitle>
             <SheetDescription>Selecciona una sección para gestionar.</SheetDescription>
@@ -82,7 +85,7 @@ export function Navigation() {
                     "rounded-md border px-3 py-2 text-sm font-medium transition-colors",
                     location.pathname === path
                       ? "border-primary bg-primary/10 text-primary"
-                      : "border-transparent text-foreground hover:border-primary/50 hover:bg-muted"
+                      : "border-border/60 text-foreground hover:border-primary/50 hover:bg-muted"
                   )}
                 >
                   {label}

@@ -32,6 +32,23 @@ type ImportBundle = {
   empleados?: Empleado[];
 };
 
+interface ActualizacionHorasPayload {
+  mantenimientoId: number;
+  horasKm: number;
+  fecha?: string;
+  usuarioResponsable?: string;
+  observaciones?: string;
+}
+
+interface RegistrarMantenimientoPayload {
+  mantenimientoId: number;
+  fecha?: string;
+  horasKm: number;
+  observaciones?: string;
+  filtrosUtilizados?: MantenimientoRealizado['filtrosUtilizados'];
+  usuarioResponsable?: string;
+}
+
 export function useSupabaseData() {
   const [data, setData] = useState<DatabaseData>({
     equipos: [],
@@ -402,6 +419,182 @@ export function useSupabaseData() {
     }
   };
 
+  const updateHorasActuales = async ({
+    mantenimientoId,
+    horasKm,
+    fecha,
+    usuarioResponsable = 'Equipo de mantenimiento',
+    observaciones,
+  }: ActualizacionHorasPayload) => {
+    const mantenimiento = data.mantenimientosProgramados.find((m) => m.id === mantenimientoId);
+
+    if (!mantenimiento) {
+      toast({
+        title: "❌ Error",
+        description: "No se encontró el mantenimiento seleccionado",
+        variant: "destructive",
+      });
+      throw new Error('Mantenimiento no encontrado');
+    }
+
+    const horasActuales = Number(horasKm);
+    const incremento = horasActuales - Number(mantenimiento.horasKmActuales ?? 0);
+    const fechaIso = fecha ? new Date(fecha).toISOString() : new Date().toISOString();
+    const restanteCalculado = Math.max(mantenimiento.proximoMantenimiento - horasActuales, 0);
+
+    try {
+      const { error: updateError } = await supabase
+        .from('mantenimientos_programados')
+        .update({
+          horas_km_actuales: horasActuales,
+          fecha_ultima_actualizacion: fechaIso,
+          horas_km_restante: restanteCalculado,
+        })
+        .eq('id', mantenimientoId);
+
+      if (updateError) throw updateError;
+
+      const unidad = mantenimiento.tipoMantenimiento.toLowerCase().includes('km') ? 'km' : 'horas';
+      const descripcion = observaciones
+        ? observaciones
+        : `Lectura actualizada a ${horasActuales} ${unidad}`;
+
+      const metadata = {
+        id: mantenimientoId,
+        ficha: mantenimiento.ficha,
+        nombreEquipo: mantenimiento.nombreEquipo,
+        horasKm: horasActuales,
+        incremento,
+        fecha: fechaIso,
+        usuarioResponsable,
+        observaciones,
+      };
+
+      const { error: historialError } = await supabase.from('historial_eventos').insert({
+        tipo_evento: 'lectura_actualizada',
+        modulo: 'mantenimientos',
+        ficha_equipo: mantenimiento.ficha,
+        nombre_equipo: mantenimiento.nombreEquipo,
+        usuario_responsable: usuarioResponsable,
+        descripcion,
+        datos_despues: {
+          horasKm: horasActuales,
+          incremento,
+        },
+        metadata,
+        created_at: fechaIso,
+      });
+
+      if (historialError) throw historialError;
+
+      toast({
+        title: "✅ Horas actualizadas",
+        description: `Se registró la nueva lectura para ${mantenimiento.nombreEquipo}`,
+      });
+
+      await loadData(true);
+    } catch (error) {
+      console.error('Error updating horas actuales:', error);
+      toast({
+        title: "❌ Error",
+        description: "No se pudo actualizar la lectura de horas/kilómetros",
+        variant: "destructive",
+      });
+      throw error;
+    }
+  };
+
+  const registrarMantenimientoRealizado = async ({
+    mantenimientoId,
+    fecha,
+    horasKm,
+    observaciones,
+    filtrosUtilizados = [],
+    usuarioResponsable = 'Equipo de mantenimiento',
+  }: RegistrarMantenimientoPayload) => {
+    const mantenimiento = data.mantenimientosProgramados.find((m) => m.id === mantenimientoId);
+
+    if (!mantenimiento) {
+      toast({
+        title: "❌ Error",
+        description: "No se encontró el mantenimiento seleccionado",
+        variant: "destructive",
+      });
+      throw new Error('Mantenimiento no encontrado');
+    }
+
+    const fechaIso = fecha ? new Date(fecha).toISOString() : new Date().toISOString();
+    const lectura = Number(horasKm);
+    const incremento = lectura - Number(mantenimiento.horasKmUltimoMantenimiento ?? 0);
+    const proximo = lectura + Number(mantenimiento.frecuencia ?? 0);
+    const restante = Math.max(proximo - lectura, 0);
+
+    try {
+      const { error: updateError } = await supabase
+        .from('mantenimientos_programados')
+        .update({
+          fecha_ultimo_mantenimiento: fechaIso,
+          horas_km_ultimo_mantenimiento: lectura,
+          proximo_mantenimiento: proximo,
+          horas_km_restante: restante,
+          horas_km_actuales: lectura,
+          fecha_ultima_actualizacion: fechaIso,
+        })
+        .eq('id', mantenimientoId);
+
+      if (updateError) throw updateError;
+
+      const descripcion = observaciones
+        ? observaciones
+        : `Mantenimiento ${mantenimiento.tipoMantenimiento} realizado para ${mantenimiento.nombreEquipo}`;
+
+      const metadata = {
+        id: mantenimientoId,
+        ficha: mantenimiento.ficha,
+        nombreEquipo: mantenimiento.nombreEquipo,
+        fechaMantenimiento: fechaIso,
+        horasKmAlMomento: lectura,
+        incrementoDesdeUltimo: incremento,
+        filtrosUtilizados,
+        usuarioResponsable,
+        observaciones,
+      };
+
+      const { error: historialError } = await supabase.from('historial_eventos').insert({
+        tipo_evento: 'mantenimiento_realizado',
+        modulo: 'mantenimientos',
+        ficha_equipo: mantenimiento.ficha,
+        nombre_equipo: mantenimiento.nombreEquipo,
+        usuario_responsable: usuarioResponsable,
+        descripcion,
+        datos_despues: {
+          horasKmAlMomento: lectura,
+          incrementoDesdeUltimo: incremento,
+          filtrosUtilizados,
+        },
+        metadata,
+        created_at: fechaIso,
+      });
+
+      if (historialError) throw historialError;
+
+      toast({
+        title: "✅ Mantenimiento registrado",
+        description: `Se registró el mantenimiento de ${mantenimiento.nombreEquipo}`,
+      });
+
+      await loadData(true);
+    } catch (error) {
+      console.error('Error registrando mantenimiento realizado:', error);
+      toast({
+        title: "❌ Error",
+        description: "No se pudo registrar el mantenimiento realizado",
+        variant: "destructive",
+      });
+      throw error;
+    }
+  };
+
   const migrateBundleToSupabase = async (bundle: ImportBundle) => {
     const equiposLocal: Equipo[] = Array.isArray(bundle.equipos) ? bundle.equipos : [];
     const inventariosLocal: Inventario[] = Array.isArray(bundle.inventarios) ? bundle.inventarios : [];
@@ -656,6 +849,8 @@ export function useSupabaseData() {
     clearDatabase,
     createMantenimiento,
     updateMantenimiento,
-    deleteMantenimiento
+    deleteMantenimiento,
+    updateHorasActuales,
+    registrarMantenimientoRealizado,
   };
 }
