@@ -40,64 +40,143 @@ export function useHistorial() {
       ? supabaseData.actualizacionesHorasKm
       : [];
 
-    const mantenimientoEventos = mantenimientos.map((mantenimiento, index) => {
-      const baseId = Number(mantenimiento.id ?? index + 1);
-      const id = Number.isFinite(baseId) ? baseId : index + 1;
-      const createdAt = toSafeDate(mantenimiento.fechaMantenimiento) ?? new Date();
-      const descripcionBase = mantenimiento.observaciones?.trim();
-      const descripcion = descripcionBase && descripcionBase.length > 0
-        ? descripcionBase
-        : `Mantenimiento realizado al equipo ${mantenimiento.nombreEquipo ?? mantenimiento.ficha}`;
+    const equiposPorFicha = new Map<string, string>();
+    const fichasRegistradas = Array.isArray(supabaseData.mantenimientosProgramados)
+      ? supabaseData.mantenimientosProgramados
+      : [];
 
-      return {
-        id,
-        tipoEvento: 'mantenimiento_realizado',
-        modulo: 'mantenimientos',
-        fichaEquipo: mantenimiento.ficha,
-        nombreEquipo: mantenimiento.nombreEquipo ?? null,
-        usuarioResponsable: mantenimiento.usuarioResponsable ?? 'Sistema',
-        descripcion,
-        datosAntes: null,
-        datosDespues: {
-          horasKmAlMomento: mantenimiento.horasKmAlMomento,
-          incrementoDesdeUltimo: mantenimiento.incrementoDesdeUltimo,
-          filtrosUtilizados: Array.isArray(mantenimiento.filtrosUtilizados)
-            ? mantenimiento.filtrosUtilizados
-            : [],
-        },
-        nivelImportancia: 'info',
-        metadata: mantenimiento,
-        createdAt: createdAt.toISOString(),
-      } satisfies HistorialEvento;
+    fichasRegistradas.forEach((mantenimiento) => {
+      if (mantenimiento?.ficha) {
+        equiposPorFicha.set(mantenimiento.ficha, mantenimiento.nombreEquipo ?? '');
+      }
     });
 
-    const actualizacionEventos = actualizaciones.map((actualizacion, index) => {
-      const baseId = Number(actualizacion.id ?? index + 1);
-      const id = (Number.isFinite(baseId) ? baseId : index + 1) + ACTUALIZACION_ID_OFFSET;
-      const createdAt = toSafeDate(actualizacion.fecha) ?? new Date();
-      const incremento = Number(actualizacion.incremento ?? 0);
-      const descripcion = actualizacion.nombreEquipo
-        ? `Lectura actualizada para ${actualizacion.nombreEquipo}: ${actualizacion.horasKm}`
-        : `Lectura actualizada a ${actualizacion.horasKm}`;
+    const equiposCatalogo = Array.isArray(supabaseData.equipos)
+      ? supabaseData.equipos
+      : [];
 
-      return {
-        id,
-        tipoEvento: 'lectura_actualizada',
-        modulo: 'mantenimientos',
-        fichaEquipo: actualizacion.ficha,
-        nombreEquipo: actualizacion.nombreEquipo ?? null,
-        usuarioResponsable: actualizacion.usuarioResponsable ?? 'Sistema',
-        descripcion,
-        datosAntes: null,
-        datosDespues: {
-          horasKm: actualizacion.horasKm,
-          incremento,
-        },
-        nivelImportancia: incremento < 0 ? 'warning' : 'info',
-        metadata: actualizacion,
-        createdAt: createdAt.toISOString(),
-      } satisfies HistorialEvento;
+    equiposCatalogo.forEach((equipo) => {
+      if (equipo?.ficha && equipo?.nombre) {
+        equiposPorFicha.set(equipo.ficha, equipo.nombre);
+      }
     });
+
+    const empleadosMap = new Map<number, string>();
+    const empleados = Array.isArray(supabaseData.empleados)
+      ? supabaseData.empleados
+      : [];
+
+    empleados.forEach((empleado) => {
+      if (typeof empleado?.id === 'number') {
+        const nombre = `${empleado.nombre ?? ''} ${empleado.apellido ?? ''}`.trim();
+        if (nombre) {
+          empleadosMap.set(empleado.id, nombre);
+        }
+      }
+    });
+
+    const mantenimientoEventos = mantenimientos
+      .map((mantenimiento, index) => {
+        const baseId = Number(mantenimiento.id ?? index + 1);
+        const id = Number.isFinite(baseId) ? baseId : index + 1;
+        const createdAt = toSafeDate(mantenimiento.fechaMantenimiento);
+        if (!createdAt) {
+          console.warn('Fecha inválida en mantenimiento realizado, se omite del historial', mantenimiento);
+          return null;
+        }
+
+        const descripcionBase = mantenimiento.observaciones?.trim();
+        const nombreEquipo = mantenimiento.nombreEquipo
+          ?? equiposPorFicha.get(mantenimiento.ficha)
+          ?? null;
+        const descripcion = descripcionBase && descripcionBase.length > 0
+          ? descripcionBase
+          : nombreEquipo
+            ? `Mantenimiento realizado al equipo ${nombreEquipo}`
+            : `Mantenimiento realizado a la ficha ${mantenimiento.ficha}`;
+
+        const responsable = (() => {
+          if (typeof mantenimiento.idEmpleado === 'number' && empleadosMap.has(mantenimiento.idEmpleado)) {
+            return empleadosMap.get(mantenimiento.idEmpleado)!;
+          }
+          if (mantenimiento.usuarioResponsable && mantenimiento.usuarioResponsable.trim().length > 0) {
+            return mantenimiento.usuarioResponsable.trim();
+          }
+          return 'No especificado';
+        })();
+
+        return {
+          id,
+          tipoEvento: 'mantenimiento_realizado',
+          modulo: 'mantenimientos',
+          fichaEquipo: mantenimiento.ficha,
+          nombreEquipo,
+          usuarioResponsable: responsable,
+          descripcion,
+          datosAntes: null,
+          datosDespues: {
+            horasKmAlMomento: mantenimiento.horasKmAlMomento,
+            incrementoDesdeUltimo: mantenimiento.incrementoDesdeUltimo,
+            filtrosUtilizados: Array.isArray(mantenimiento.filtrosUtilizados)
+              ? mantenimiento.filtrosUtilizados
+              : [],
+          },
+          nivelImportancia: 'info',
+          metadata: {
+            ...mantenimiento,
+            nombreEquipo,
+            usuarioResponsable: responsable,
+          },
+          createdAt: createdAt.toISOString(),
+        } satisfies HistorialEvento;
+      })
+      .filter((evento): evento is HistorialEvento => Boolean(evento));
+
+    const actualizacionEventos = actualizaciones
+      .map((actualizacion, index) => {
+        const baseId = Number(actualizacion.id ?? index + 1);
+        const id = (Number.isFinite(baseId) ? baseId : index + 1) + ACTUALIZACION_ID_OFFSET;
+        const createdAt = toSafeDate(actualizacion.fecha);
+        if (!createdAt) {
+          console.warn('Fecha inválida en actualización de horas/km, se omite del historial', actualizacion);
+          return null;
+        }
+
+        const incremento = Number(actualizacion.incremento ?? 0);
+        const nombreEquipo = actualizacion.nombreEquipo
+          ?? equiposPorFicha.get(actualizacion.ficha)
+          ?? null;
+        const descripcion = nombreEquipo
+          ? `Lectura actualizada para ${nombreEquipo}: ${actualizacion.horasKm}`
+          : `Lectura actualizada a ${actualizacion.horasKm}`;
+
+        const responsable = actualizacion.usuarioResponsable && actualizacion.usuarioResponsable.trim().length > 0
+          ? actualizacion.usuarioResponsable.trim()
+          : 'No especificado';
+
+        return {
+          id,
+          tipoEvento: 'lectura_actualizada',
+          modulo: 'mantenimientos',
+          fichaEquipo: actualizacion.ficha,
+          nombreEquipo,
+          usuarioResponsable: responsable,
+          descripcion,
+          datosAntes: null,
+          datosDespues: {
+            horasKm: actualizacion.horasKm,
+            incremento,
+          },
+          nivelImportancia: incremento < 0 ? 'warning' : 'info',
+          metadata: {
+            ...actualizacion,
+            nombreEquipo,
+            usuarioResponsable: responsable,
+          },
+          createdAt: createdAt.toISOString(),
+        } satisfies HistorialEvento;
+      })
+      .filter((evento): evento is HistorialEvento => Boolean(evento));
 
     const combined = [...mantenimientoEventos, ...actualizacionEventos];
     return combined.sort(
