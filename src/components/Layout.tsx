@@ -4,6 +4,9 @@ import { RefreshCw, FileDown, FileUp, Trash2 } from 'lucide-react';
 import { useSupabaseDataContext } from '@/context/SupabaseDataContext';
 import { useLocalStorage } from '@/hooks/useLocalStorage';
 import { useToast } from '@/hooks/use-toast';
+import { ThemeToggle } from '@/components/ThemeToggle';
+import { NotificationButton } from '@/components/NotificationButton';
+import { Badge } from '@/components/ui/badge';
 
 interface LayoutProps {
   children: ReactNode;
@@ -70,13 +73,21 @@ export function Layout({ children, title }: LayoutProps) {
   return (
     <div className="min-h-screen bg-background text-foreground">
       <header className="border-b border-border/60 bg-card/80 shadow-sm backdrop-blur supports-[backdrop-filter]:bg-card/60 dark:border-border/40 dark:bg-card/70">
+
         <div className="container mx-auto px-4 py-4">
           <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
-            <div className="space-y-1">
-              <h1 className="text-2xl font-bold text-primary">Sistema de Gestión de Equipos</h1>
-              <p className="text-muted-foreground">{title}</p>
+            <div className="space-y-1 flex items-center gap-4">
+              <div>
+                <h1 className="text-2xl font-bold text-primary">ALITO GROUP SRL</h1>
+                <p className="text-muted-foreground">{title}</p>
+              </div>
+              <Badge variant="outline" className="text-xs">v1.0.0</Badge>
             </div>
-            <div className="flex flex-col gap-2 sm:flex-row sm:flex-wrap sm:gap-3 lg:justify-end">
+            <div className="flex items-center gap-2">
+              <NotificationButton />
+              <ThemeToggle />
+              <div className="h-6 w-px bg-border mx-2" />
+              <div className="flex flex-col gap-2 sm:flex-row sm:flex-wrap sm:gap-3 lg:justify-end">
               <Button
                 variant="outline"
                 onClick={handleImport}
@@ -113,6 +124,7 @@ export function Layout({ children, title }: LayoutProps) {
                 <FileDown className="w-4 h-4 mr-2" />
                 Exportar JSON
               </Button>
+              </div>
             </div>
           </div>
         </div>

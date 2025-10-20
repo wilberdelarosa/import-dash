@@ -658,18 +658,18 @@ export function useSupabaseData() {
 
     for (const inventario of inventariosLocal) {
       const { id, ...inventarioData } = inventario;
-      const { error } = await supabase.from('inventarios').insert({
-        nombre: inventarioData.nombre,
+      const { error } = await supabase.from('inventarios').insert([{
+        nombre: inventarioData.tipo, // Using tipo as nombre since nombre doesn't exist in original data
         tipo: inventarioData.tipo,
         categoria_equipo: inventarioData.categoriaEquipo,
         cantidad: Number(inventarioData.cantidad ?? 0),
-        movimientos: Array.isArray(inventarioData.movimientos) ? inventarioData.movimientos : [],
+        movimientos: (Array.isArray(inventarioData.movimientos) ? inventarioData.movimientos : []) as any,
         activo: inventarioData.activo ?? true,
         codigo_identificacion: inventarioData.codigoIdentificacion ?? '',
         empresa_suplidora: inventarioData.empresaSuplidora ?? '',
         marcas_compatibles: inventarioData.marcasCompatibles ?? [],
         modelos_compatibles: inventarioData.modelosCompatibles ?? [],
-      });
+      }]);
       if (error) throw error;
       inventariosMigrados++;
     }
@@ -705,7 +705,7 @@ export function useSupabaseData() {
         usuarioResponsable: empleadoNombre,
       };
 
-      const payload: Record<string, any> = {
+      const payload = {
         tipo_evento: 'mantenimiento_realizado',
         modulo: 'mantenimientos',
         ficha_equipo: mantenimiento.ficha,
@@ -719,17 +719,15 @@ export function useSupabaseData() {
           filtrosUtilizados: Array.isArray(mantenimiento.filtrosUtilizados)
             ? mantenimiento.filtrosUtilizados
             : [],
-        },
+        } as any,
         nivel_importancia: 'info',
-        metadata,
+        metadata: metadata as any,
       };
 
       const fechaIso = toISOStringIfValid(mantenimiento.fechaMantenimiento);
-      if (fechaIso) {
-        payload.created_at = fechaIso;
-      }
+      const insertPayload = fechaIso ? { ...payload, created_at: fechaIso } : payload;
 
-      const { error } = await supabase.from('historial_eventos').insert(payload);
+      const { error } = await supabase.from('historial_eventos').insert([insertPayload]);
       if (error) throw error;
 
       mantenimientosRealizadosMigrados++;
@@ -737,7 +735,7 @@ export function useSupabaseData() {
 
     for (const actualizacion of actualizacionesLocal) {
       const nombreEquipo = equiposMap.get(actualizacion.ficha) ?? null;
-      const responsable = actualizacion.usuarioResponsable || actualizacion.responsable || 'Sistema';
+      const responsable = actualizacion.usuarioResponsable || 'Sistema';
 
       const metadata = {
         ...actualizacion,
@@ -745,7 +743,7 @@ export function useSupabaseData() {
         usuarioResponsable: responsable,
       };
 
-      const payload: Record<string, any> = {
+      const payload = {
         tipo_evento: 'lectura_actualizada',
         modulo: 'mantenimientos',
         ficha_equipo: actualizacion.ficha,
@@ -757,17 +755,15 @@ export function useSupabaseData() {
         datos_despues: {
           horasKm: actualizacion.horasKm,
           incremento: actualizacion.incremento,
-        },
+        } as any,
         nivel_importancia: Number(actualizacion.incremento ?? 0) < 0 ? 'warning' : 'info',
-        metadata,
+        metadata: metadata as any,
       };
 
       const fechaIso = toISOStringIfValid(actualizacion.fecha);
-      if (fechaIso) {
-        payload.created_at = fechaIso;
-      }
+      const insertPayload = fechaIso ? { ...payload, created_at: fechaIso } : payload;
 
-      const { error } = await supabase.from('historial_eventos').insert(payload);
+      const { error } = await supabase.from('historial_eventos').insert([insertPayload]);
       if (error) throw error;
 
       actualizacionesMigradas++;
