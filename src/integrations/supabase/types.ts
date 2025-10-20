@@ -14,69 +14,6 @@ export type Database = {
   }
   public: {
     Tables: {
-      configuraciones: {
-        Row: {
-          clave: string
-          created_at: string | null
-          updated_at: string | null
-          valor: Json
-        }
-        Insert: {
-          clave: string
-          created_at?: string | null
-          updated_at?: string | null
-          valor: Json
-        }
-        Update: {
-          clave?: string
-          created_at?: string | null
-          updated_at?: string | null
-          valor?: Json
-        }
-        Relationships: []
-      }
-      empleados: {
-        Row: {
-          activo: boolean
-          apellido: string
-          cargo: string
-          categoria: string
-          created_at: string | null
-          email: string | null
-          fecha_nacimiento: string | null
-          id: number
-          nombre: string
-          telefono: string | null
-          updated_at: string | null
-        }
-        Insert: {
-          activo?: boolean
-          apellido: string
-          cargo: string
-          categoria: string
-          created_at?: string | null
-          email?: string | null
-          fecha_nacimiento?: string | null
-          id?: number
-          nombre: string
-          telefono?: string | null
-          updated_at?: string | null
-        }
-        Update: {
-          activo?: boolean
-          apellido?: string
-          cargo?: string
-          categoria?: string
-          created_at?: string | null
-          email?: string | null
-          fecha_nacimiento?: string | null
-          id?: number
-          nombre?: string
-          telefono?: string | null
-          updated_at?: string | null
-        }
-        Relationships: []
-      }
       equipos: {
         Row: {
           activo: boolean

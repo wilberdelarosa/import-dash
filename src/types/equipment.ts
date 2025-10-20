@@ -70,8 +70,6 @@ export interface Empleado {
   categoria: string;
   fechaNacimiento: string;
   activo: boolean;
-  email?: string | null;
-  telefono?: string | null;
 }
 
 export interface MantenimientoProgramado {

@@ -1,21 +1,12 @@
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from '@/hooks/use-toast';
 import { Notificacion } from '@/types/historial';
-import { defaultNotificationSettings, fetchNotificationSettings } from '@/lib/notification-settings';
-import { sendEmailNotification } from '@/integrations/notifications/email';
-import { sendWhatsappNotification } from '@/integrations/notifications/whatsapp';
 
 export function useNotificaciones() {
   const [notificaciones, setNotificaciones] = useState<Notificacion[]>([]);
   const [loading, setLoading] = useState(true);
   const [noLeidas, setNoLeidas] = useState(0);
-  const [preferences, setPreferences] = useState(defaultNotificationSettings);
-  const prefsRef = useRef(defaultNotificationSettings);
-
-  useEffect(() => {
-    prefsRef.current = preferences;
-  }, [preferences]);
 
   const loadNotificaciones = async () => {
     try {
@@ -59,13 +50,6 @@ export function useNotificaciones() {
       }
 
       await loadNotificaciones();
-
-      try {
-        const prefs = await fetchNotificationSettings();
-        setPreferences(prefs);
-      } catch (error) {
-        console.error('Error loading notification preferences:', error);
-      }
     };
 
     inicializar();
@@ -80,7 +64,7 @@ export function useNotificaciones() {
       }, (payload) => {
         console.log('Notificación actualizada:', payload);
         loadNotificaciones();
-
+        
         // Mostrar toast solo para nuevas notificaciones
         if (payload.eventType === 'INSERT') {
           const nuevaNotif = payload.new as any;
@@ -89,33 +73,6 @@ export function useNotificaciones() {
             description: nuevaNotif.mensaje,
             variant: nuevaNotif.nivel === 'critical' ? 'destructive' : 'default',
           });
-
-          if ('Notification' in window && Notification.permission === 'granted') {
-            try {
-              new Notification(nuevaNotif.titulo, {
-                body: nuevaNotif.mensaje,
-                icon: '/favicon.ico',
-              });
-            } catch (error) {
-              console.error('Error showing browser notification:', error);
-            }
-          }
-
-          if (prefsRef.current.notificarEmail && prefsRef.current.correoSoporte) {
-            sendEmailNotification({
-              to: prefsRef.current.correoSoporte,
-              subject: nuevaNotif.titulo,
-              body: nuevaNotif.mensaje,
-              metadata: nuevaNotif.metadata ?? {},
-            });
-          }
-
-          if (prefsRef.current.notificarWhatsapp) {
-            sendWhatsappNotification({
-              message: `${nuevaNotif.titulo}: ${nuevaNotif.mensaje}`,
-              metadata: nuevaNotif.metadata ?? {},
-            });
-          }
         }
       })
       .subscribe();

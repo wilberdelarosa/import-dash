@@ -1,6 +1,6 @@
 import { ReactNode } from 'react';
 import { Button } from '@/components/ui/button';
-import { RefreshCw, FileDown, FileUp, Trash2, FileDiff } from 'lucide-react';
+import { RefreshCw, FileDown, FileUp, Trash2 } from 'lucide-react';
 import { useSupabaseDataContext } from '@/context/SupabaseDataContext';
 import { useLocalStorage } from '@/hooks/useLocalStorage';
 import { useToast } from '@/hooks/use-toast';
@@ -14,19 +14,9 @@ interface LayoutProps {
 }
 
 export function Layout({ children, title }: LayoutProps) {
-  const { migrateFromLocalStorage, importJsonData, data: supabaseData, clearDatabase, syncJsonData } = useSupabaseDataContext();
+  const { migrateFromLocalStorage, importJsonData, data: supabaseData, clearDatabase } = useSupabaseDataContext();
   const { importData } = useLocalStorage();
   const { toast } = useToast();
-
-  type SyncResult = Awaited<ReturnType<typeof syncJsonData>>;
-
-  const formatSyncMessage = (summary: SyncResult) => [
-    `Equipos ➜ +${summary.equipos.added.length} / ✎${summary.equipos.updated.length}`,
-    `Inventarios ➜ +${summary.inventarios.added.length} / ✎${summary.inventarios.updated.length}`,
-    `Mant. programados ➜ +${summary.mantenimientosProgramados.added.length} / ✎${summary.mantenimientosProgramados.updated.length}`,
-    `Empleados ➜ +${summary.empleados.added.length} / ✎${summary.empleados.updated.length}`,
-    `Historial ➜ ${summary.historial.mantenimientosRealizados + summary.historial.lecturasRegistradas} nuevos (${summary.historial.omitidos} omitidos)`
-  ].join('\n');
 
   const handleMigrate = async () => {
     await migrateFromLocalStorage();
@@ -80,52 +70,6 @@ export function Layout({ children, title }: LayoutProps) {
     input.click();
   };
 
-  const handleSmartSync = () => {
-    const input = document.createElement('input');
-    input.type = 'file';
-    input.accept = '.json';
-    input.onchange = async (e) => {
-      const file = (e.target as HTMLInputElement).files?.[0];
-      if (file) {
-        try {
-          const imported = await importData(file);
-          const summary = await syncJsonData(imported, { silent: true });
-          const totalCambios =
-            summary.equipos.added.length +
-            summary.equipos.updated.length +
-            summary.inventarios.added.length +
-            summary.inventarios.updated.length +
-            summary.mantenimientosProgramados.added.length +
-            summary.mantenimientosProgramados.updated.length +
-            summary.empleados.added.length +
-            summary.empleados.updated.length +
-            summary.historial.mantenimientosRealizados +
-            summary.historial.lecturasRegistradas;
-
-          if (totalCambios === 0) {
-            toast({
-              title: 'Sin cambios detectados',
-              description: 'El archivo coincide con los datos actuales.',
-            });
-          } else {
-            toast({
-              title: 'Sincronización aplicada',
-              description: formatSyncMessage(summary),
-            });
-          }
-        } catch (error) {
-          console.error('Error synchronizing data:', error);
-          toast({
-            title: 'Error',
-            description: error instanceof Error ? error.message : 'Error desconocido',
-            variant: 'destructive',
-          });
-        }
-      }
-    };
-    input.click();
-  };
-
   return (
     <div className="min-h-screen bg-background text-foreground">
       <header className="border-b border-border/60 bg-card/80 shadow-sm backdrop-blur supports-[backdrop-filter]:bg-card/60 dark:border-border/40 dark:bg-card/70">
@@ -152,15 +96,6 @@ export function Layout({ children, title }: LayoutProps) {
               >
                 <FileUp className="w-4 h-4 mr-2" />
                 Importar JSON
-              </Button>
-              <Button
-                variant="outline"
-                onClick={handleSmartSync}
-                size="sm"
-                className="w-full sm:w-auto justify-center"
-              >
-                <FileDiff className="w-4 h-4 mr-2" />
-                Sincronizar cambios
               </Button>
               <Button
                 variant="outline"
