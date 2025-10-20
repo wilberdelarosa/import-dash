@@ -1525,7 +1525,7 @@ export default function Mantenimiento() {
           </div>
         </CardHeader>
         <CardContent>
-          <div className="rounded-md border bg-white p-2 sm:p-4">
+          <div className="rounded-md border bg-card p-2 sm:p-4 shadow-sm">
             <div
               className={cn('overflow-x-auto', tableScale > 1 ? 'pb-4' : undefined)}
               style={{ touchAction: 'pan-y pinch-zoom' }}
@@ -1540,7 +1540,7 @@ export default function Mantenimiento() {
               >
                 <Table className="min-w-[1000px]">
                   <TableHeader>
-                <TableRow>
+                <TableRow className="bg-muted/40 text-muted-foreground dark:bg-muted/20">
                   <TableHead>Ficha</TableHead>
                   <TableHead>Equipo</TableHead>
                   <TableHead>Categoría</TableHead>

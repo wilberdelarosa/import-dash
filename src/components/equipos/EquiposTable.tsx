@@ -159,7 +159,7 @@ export function EquiposTable({ equipos, onEdit, onDelete, onVerDetalle }: Equipo
         </div>
       </div>
 
-      <div className="rounded-md border bg-white p-2 sm:p-4">
+      <div className="rounded-md border bg-card p-2 sm:p-4 shadow-sm">
         <div
           className={cn(
             'overflow-x-auto',
@@ -177,7 +177,7 @@ export function EquiposTable({ equipos, onEdit, onDelete, onVerDetalle }: Equipo
           >
             <Table className="min-w-[900px]">
               <TableHeader>
-                <TableRow>
+                <TableRow className="bg-muted/40 text-muted-foreground dark:bg-muted/20">
                   <TableHead>Ficha</TableHead>
                   <TableHead>Nombre</TableHead>
                   <TableHead>Marca</TableHead>
