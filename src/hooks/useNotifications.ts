@@ -15,6 +15,24 @@ export function useNotifications() {
     }
   }, []);
 
+  useEffect(() => {
+    if (!('Notification' in window)) {
+      return;
+    }
+
+    const syncPermission = () => {
+      setPermission(Notification.permission as NotificationPermission);
+    };
+
+    window.addEventListener('focus', syncPermission);
+    document.addEventListener('visibilitychange', syncPermission);
+
+    return () => {
+      window.removeEventListener('focus', syncPermission);
+      document.removeEventListener('visibilitychange', syncPermission);
+    };
+  }, []);
+
   const requestPermission = async () => {
     if (!supported) {
       toast({

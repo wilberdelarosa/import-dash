@@ -32,6 +32,30 @@ type ImportBundle = {
   empleados?: Empleado[];
 };
 
+type EquipoPayload = Omit<Equipo, 'id'>;
+type InventarioPayload = Omit<Inventario, 'id'>;
+
+type EquipoChange = { ficha: string; cambios: string[] };
+type InventarioChange = { codigo: string; cambios: string[] };
+type MantenimientoChange = { ficha: string; tipo: string; cambios: string[] };
+
+export interface SyncSummary {
+  equipos: {
+    inserted: string[];
+    updated: EquipoChange[];
+  };
+  inventarios: {
+    inserted: string[];
+    updated: InventarioChange[];
+  };
+  mantenimientosProgramados: {
+    inserted: string[];
+    updated: MantenimientoChange[];
+  };
+  warnings: string[];
+  totalChanges: number;
+}
+
 interface ActualizacionHorasPayload {
   mantenimientoId: number;
   horasKm: number;
@@ -49,6 +73,147 @@ interface RegistrarMantenimientoPayload {
   usuarioResponsable?: string;
 }
 
+const formatValue = (value: unknown) => {
+  if (value === null || value === undefined || value === '') {
+    return '—';
+  }
+  if (typeof value === 'number' && Number.isNaN(value)) {
+    return '—';
+  }
+  return Array.isArray(value) ? JSON.stringify(value) : String(value);
+};
+
+const describeChange = (label: string, before: unknown, after: unknown) => {
+  if (before === after) {
+    return null;
+  }
+  return `${label}: ${formatValue(before)} → ${formatValue(after)}`;
+};
+
+const mapEquipoToRow = (equipo: EquipoPayload) => ({
+  ficha: equipo.ficha,
+  nombre: equipo.nombre,
+  marca: equipo.marca,
+  modelo: equipo.modelo,
+  numero_serie: equipo.numeroSerie,
+  placa: equipo.placa,
+  categoria: equipo.categoria,
+  activo: equipo.activo,
+  motivo_inactividad: equipo.motivoInactividad ?? null,
+});
+
+const mapInventarioToRow = (inventario: InventarioPayload) => ({
+  nombre: inventario.nombre,
+  tipo: inventario.tipo,
+  categoria_equipo: inventario.categoriaEquipo,
+  cantidad: Number(inventario.cantidad ?? 0),
+  movimientos: (Array.isArray(inventario.movimientos) ? inventario.movimientos : []) as any,
+  activo: inventario.activo,
+  codigo_identificacion: inventario.codigoIdentificacion,
+  empresa_suplidora: inventario.empresaSuplidora,
+  marcas_compatibles: inventario.marcasCompatibles ?? [],
+  modelos_compatibles: inventario.modelosCompatibles ?? [],
+});
+
+const mantenimientoKey = (ficha: string, tipo: string) => `${ficha}__${tipo}`.toLowerCase();
+
+const diffEquipo = (current: Equipo, incoming: EquipoPayload) => {
+  const cambios: string[] = [];
+  const maybe = (label: string, before: unknown, after: unknown) => {
+    const change = describeChange(label, before, after);
+    if (change) cambios.push(change);
+  };
+
+  maybe('Ficha', current.ficha, incoming.ficha);
+  maybe('Nombre', current.nombre, incoming.nombre);
+  maybe('Marca', current.marca, incoming.marca);
+  maybe('Modelo', current.modelo, incoming.modelo);
+  maybe('Número de serie', current.numeroSerie, incoming.numeroSerie);
+  maybe('Placa', current.placa, incoming.placa);
+  maybe('Categoría', current.categoria, incoming.categoria);
+  maybe('Estado', current.activo ? 'Activo' : 'Inactivo', incoming.activo ? 'Activo' : 'Inactivo');
+  maybe('Motivo inactividad', current.motivoInactividad, incoming.motivoInactividad ?? null);
+
+  return cambios;
+};
+
+const diffInventario = (current: Inventario, incoming: InventarioPayload) => {
+  const cambios: string[] = [];
+  const maybe = (label: string, before: unknown, after: unknown) => {
+    const change = describeChange(label, before, after);
+    if (change) cambios.push(change);
+  };
+
+  maybe('Código', current.codigoIdentificacion, incoming.codigoIdentificacion);
+  maybe('Nombre', current.nombre, incoming.nombre);
+  maybe('Tipo', current.tipo, incoming.tipo);
+  maybe('Categoría', current.categoriaEquipo, incoming.categoriaEquipo);
+  maybe('Cantidad', current.cantidad, incoming.cantidad);
+  maybe('Estado', current.activo ? 'Activo' : 'Inactivo', incoming.activo ? 'Activo' : 'Inactivo');
+  maybe('Empresa suplidora', current.empresaSuplidora, incoming.empresaSuplidora);
+  maybe('Marcas compatibles', current.marcasCompatibles, incoming.marcasCompatibles);
+  maybe('Modelos compatibles', current.modelosCompatibles, incoming.modelosCompatibles);
+
+  return cambios;
+};
+
+const diffMantenimiento = (current: MantenimientoProgramado, incoming: MantenimientoPayload) => {
+  const cambios: string[] = [];
+  const maybe = (label: string, before: unknown, after: unknown) => {
+    const change = describeChange(label, before, after);
+    if (change) cambios.push(change);
+  };
+
+  maybe('Ficha', current.ficha, incoming.ficha);
+  maybe('Nombre del equipo', current.nombreEquipo, incoming.nombreEquipo);
+  maybe('Tipo de mantenimiento', current.tipoMantenimiento, incoming.tipoMantenimiento);
+  maybe('Horas/km actuales', current.horasKmActuales, incoming.horasKmActuales);
+  maybe('Frecuencia', current.frecuencia, incoming.frecuencia);
+  maybe('Fecha última actualización', current.fechaUltimaActualizacion, incoming.fechaUltimaActualizacion);
+  maybe('Fecha último mantenimiento', current.fechaUltimoMantenimiento, incoming.fechaUltimoMantenimiento ?? null);
+  maybe('Horas último mantenimiento', current.horasKmUltimoMantenimiento, incoming.horasKmUltimoMantenimiento);
+  maybe('Activo', current.activo ? 'Activo' : 'Inactivo', incoming.activo ? 'Activo' : 'Inactivo');
+
+  return cambios;
+};
+
+const toEquipoPayload = (equipo: Equipo): EquipoPayload => ({
+  ficha: equipo.ficha,
+  nombre: equipo.nombre,
+  marca: equipo.marca,
+  modelo: equipo.modelo,
+  numeroSerie: equipo.numeroSerie,
+  placa: equipo.placa,
+  categoria: equipo.categoria,
+  activo: equipo.activo,
+  motivoInactividad: equipo.motivoInactividad ?? null,
+});
+
+const toInventarioPayload = (inventario: Inventario): InventarioPayload => ({
+  nombre: inventario.nombre,
+  tipo: inventario.tipo,
+  categoriaEquipo: inventario.categoriaEquipo,
+  cantidad: inventario.cantidad,
+  movimientos: inventario.movimientos,
+  activo: inventario.activo,
+  codigoIdentificacion: inventario.codigoIdentificacion,
+  empresaSuplidora: inventario.empresaSuplidora,
+  marcasCompatibles: inventario.marcasCompatibles,
+  modelosCompatibles: inventario.modelosCompatibles,
+});
+
+const toMantenimientoPayload = (mantenimiento: MantenimientoProgramado): MantenimientoPayload => ({
+  ficha: mantenimiento.ficha,
+  nombreEquipo: mantenimiento.nombreEquipo,
+  tipoMantenimiento: mantenimiento.tipoMantenimiento,
+  horasKmActuales: mantenimiento.horasKmActuales,
+  fechaUltimaActualizacion: mantenimiento.fechaUltimaActualizacion,
+  frecuencia: mantenimiento.frecuencia,
+  fechaUltimoMantenimiento: mantenimiento.fechaUltimoMantenimiento,
+  horasKmUltimoMantenimiento: mantenimiento.horasKmUltimoMantenimiento,
+  activo: mantenimiento.activo,
+});
+
 export function useSupabaseData() {
   const [data, setData] = useState<DatabaseData>({
     equipos: [],
@@ -60,6 +225,55 @@ export function useSupabaseData() {
   });
   const [loading, setLoading] = useState(true);
   const [isMigrating, setIsMigrating] = useState(false);
+
+  const recordHistorialEvent = async ({
+    tipo,
+    modulo,
+    descripcion,
+    ficha,
+    nombre,
+    datosAntes,
+    datosDespues,
+    metadata,
+    nivel = 'info',
+    usuario = 'Interfaz',
+    createdAt,
+  }: {
+    tipo: string;
+    modulo: 'equipos' | 'inventarios' | 'mantenimientos' | 'sistema';
+    descripcion: string;
+    ficha?: string | null;
+    nombre?: string | null;
+    datosAntes?: any;
+    datosDespues?: any;
+    metadata?: any;
+    nivel?: 'info' | 'warning' | 'critical';
+    usuario?: string;
+    createdAt?: string;
+  }) => {
+    try {
+      const payload = {
+        tipo_evento: tipo,
+        modulo,
+        descripcion,
+        ficha_equipo: ficha ?? null,
+        nombre_equipo: nombre ?? null,
+        usuario_responsable: usuario,
+        nivel_importancia: nivel,
+        datos_antes: datosAntes ?? null,
+        datos_despues: datosDespues ?? null,
+        metadata: metadata ?? null,
+      } as const;
+
+      if (createdAt) {
+        await supabase.from('historial_eventos').insert({ ...payload, created_at: createdAt });
+      } else {
+        await supabase.from('historial_eventos').insert(payload);
+      }
+    } catch (error) {
+      console.error('Error guardando evento en historial:', error);
+    }
+  };
 
   const loadData = async (showToast = false) => {
     try {
@@ -340,14 +554,170 @@ export function useSupabaseData() {
     };
   };
 
+  const createEquipo = async (equipo: EquipoPayload) => {
+    try {
+      const payload = mapEquipoToRow(equipo);
+      const { data: inserted, error } = await supabase
+        .from('equipos')
+        .insert(payload)
+        .select()
+        .single();
+
+      if (error) throw error;
+
+      await recordHistorialEvent({
+        tipo: 'equipo_creado',
+        modulo: 'equipos',
+        descripcion: `Se registró el equipo ${equipo.nombre}`,
+        ficha: equipo.ficha,
+        nombre: equipo.nombre,
+        datosDespues: { id: inserted?.id, ...equipo },
+        metadata: {
+          origen: 'interfaz',
+          accion: 'crear',
+        },
+      });
+
+      toast({
+        title: '✅ Equipo creado',
+        description: `Se registró el equipo ${equipo.nombre}.`,
+      });
+
+      await loadData(true);
+    } catch (error) {
+      console.error('Error creating equipo:', error);
+      toast({
+        title: '❌ Error',
+        description: 'No se pudo crear el equipo',
+        variant: 'destructive',
+      });
+      throw error;
+    }
+  };
+
+  const updateEquipo = async (id: number, equipo: EquipoPayload) => {
+    try {
+      const existing = data.equipos.find((item) => item.id === id);
+      if (!existing) {
+        toast({
+          title: '❌ Error',
+          description: 'No se encontró el equipo seleccionado',
+          variant: 'destructive',
+        });
+        throw new Error('Equipo no encontrado');
+      }
+
+      const cambios = diffEquipo(existing, equipo);
+      if (cambios.length === 0) {
+        toast({
+          title: 'Sin cambios detectados',
+          description: 'No se aplicaron modificaciones al equipo.',
+        });
+        return;
+      }
+
+      const payload = mapEquipoToRow(equipo);
+      const { error } = await supabase
+        .from('equipos')
+        .update(payload)
+        .eq('id', id);
+
+      if (error) throw error;
+
+      await recordHistorialEvent({
+        tipo: 'equipo_actualizado',
+        modulo: 'equipos',
+        descripcion: `Se actualizaron datos del equipo ${equipo.nombre}`,
+        ficha: equipo.ficha,
+        nombre: equipo.nombre,
+        datosAntes: existing,
+        datosDespues: { id, ...equipo },
+        metadata: { cambios },
+      });
+
+      toast({
+        title: '✅ Equipo actualizado',
+        description: `Se guardaron los cambios para ${equipo.nombre}.`,
+      });
+
+      await loadData(true);
+    } catch (error) {
+      console.error('Error updating equipo:', error);
+      toast({
+        title: '❌ Error',
+        description: 'No se pudo actualizar el equipo',
+        variant: 'destructive',
+      });
+      throw error;
+    }
+  };
+
+  const deleteEquipo = async (id: number) => {
+    try {
+      const existing = data.equipos.find((item) => item.id === id);
+      if (!existing) {
+        toast({
+          title: '❌ Error',
+          description: 'No se encontró el equipo a eliminar',
+          variant: 'destructive',
+        });
+        throw new Error('Equipo no encontrado');
+      }
+
+      const { error } = await supabase
+        .from('equipos')
+        .delete()
+        .eq('id', id);
+
+      if (error) throw error;
+
+      await recordHistorialEvent({
+        tipo: 'equipo_eliminado',
+        modulo: 'equipos',
+        descripcion: `Se eliminó el equipo ${existing.nombre}`,
+        ficha: existing.ficha,
+        nombre: existing.nombre,
+        datosAntes: existing,
+        metadata: { accion: 'eliminar' },
+      });
+
+      toast({
+        title: '✅ Equipo eliminado',
+        description: 'El equipo fue eliminado correctamente.',
+      });
+
+      await loadData(true);
+    } catch (error) {
+      console.error('Error deleting equipo:', error);
+      toast({
+        title: '❌ Error',
+        description: 'No se pudo eliminar el equipo',
+        variant: 'destructive',
+      });
+      throw error;
+    }
+  };
+
   const createMantenimiento = async (mantenimiento: MantenimientoPayload) => {
     try {
       const payload = mapToDatabasePayload(mantenimiento);
-      const { error } = await supabase
+      const { data: inserted, error } = await supabase
         .from('mantenimientos_programados')
-        .insert(payload);
+        .insert(payload)
+        .select()
+        .single();
 
       if (error) throw error;
+
+      await recordHistorialEvent({
+        tipo: 'mantenimiento_creado',
+        modulo: 'mantenimientos',
+        descripcion: `Se creó el mantenimiento para ${mantenimiento.nombreEquipo}`,
+        ficha: mantenimiento.ficha,
+        nombre: mantenimiento.nombreEquipo,
+        datosDespues: { id: inserted?.id, ...payload },
+        metadata: { origen: 'interfaz', accion: 'crear' },
+      });
 
       toast({
         title: "✅ Mantenimiento creado",
@@ -368,6 +738,25 @@ export function useSupabaseData() {
 
   const updateMantenimiento = async (id: number, mantenimiento: MantenimientoPayload) => {
     try {
+      const existing = data.mantenimientosProgramados.find((item) => item.id === id);
+      if (!existing) {
+        toast({
+          title: '❌ Error',
+          description: 'No se encontró el mantenimiento seleccionado',
+          variant: 'destructive',
+        });
+        throw new Error('Mantenimiento no encontrado');
+      }
+
+      const cambios = diffMantenimiento(existing, mantenimiento);
+      if (cambios.length === 0) {
+        toast({
+          title: 'Sin cambios detectados',
+          description: 'No se aplicaron modificaciones al mantenimiento programado.',
+        });
+        return;
+      }
+
       const payload = mapToDatabasePayload(mantenimiento);
       const { error } = await supabase
         .from('mantenimientos_programados')
@@ -375,6 +764,17 @@ export function useSupabaseData() {
         .eq('id', id);
 
       if (error) throw error;
+
+      await recordHistorialEvent({
+        tipo: 'mantenimiento_actualizado',
+        modulo: 'mantenimientos',
+        descripcion: `Se actualizó el mantenimiento de ${mantenimiento.nombreEquipo}`,
+        ficha: mantenimiento.ficha,
+        nombre: mantenimiento.nombreEquipo,
+        datosAntes: existing,
+        datosDespues: { id, ...payload },
+        metadata: { cambios },
+      });
 
       toast({
         title: "✅ Mantenimiento actualizado",
@@ -395,12 +795,32 @@ export function useSupabaseData() {
 
   const deleteMantenimiento = async (id: number) => {
     try {
+      const existing = data.mantenimientosProgramados.find((item) => item.id === id);
+      if (!existing) {
+        toast({
+          title: '❌ Error',
+          description: 'No se encontró el mantenimiento a eliminar',
+          variant: 'destructive',
+        });
+        throw new Error('Mantenimiento no encontrado');
+      }
+
       const { error } = await supabase
         .from('mantenimientos_programados')
         .delete()
         .eq('id', id);
 
       if (error) throw error;
+
+      await recordHistorialEvent({
+        tipo: 'mantenimiento_eliminado',
+        modulo: 'mantenimientos',
+        descripcion: `Se eliminó el mantenimiento de ${existing.nombreEquipo}`,
+        ficha: existing.ficha,
+        nombre: existing.nombreEquipo,
+        datosAntes: existing,
+        metadata: { accion: 'eliminar' },
+      });
 
       toast({
         title: "✅ Mantenimiento eliminado",
@@ -593,6 +1013,237 @@ export function useSupabaseData() {
       });
       throw error;
     }
+  };
+
+  const syncImportBundle = async (bundle: ImportBundle): Promise<SyncSummary> => {
+    const summary: SyncSummary = {
+      equipos: { inserted: [], updated: [] },
+      inventarios: { inserted: [], updated: [] },
+      mantenimientosProgramados: { inserted: [], updated: [] },
+      warnings: [],
+      totalChanges: 0,
+    };
+
+    const equiposIncoming = Array.isArray(bundle.equipos) ? bundle.equipos : [];
+    const inventariosIncoming = Array.isArray(bundle.inventarios) ? bundle.inventarios : [];
+    const mantenimientosIncoming = Array.isArray(bundle.mantenimientosProgramados)
+      ? bundle.mantenimientosProgramados
+      : [];
+
+    const equiposMap = new Map(data.equipos.map((equipo) => [equipo.ficha, equipo]));
+    const inventariosMap = new Map(
+      data.inventarios.map((inventario) => [inventario.codigoIdentificacion, inventario]),
+    );
+    const mantenimientosMap = new Map(
+      data.mantenimientosProgramados.map((mantenimiento) => [
+        mantenimientoKey(mantenimiento.ficha, mantenimiento.tipoMantenimiento),
+        mantenimiento,
+      ]),
+    );
+
+    for (const incomingEquipo of equiposIncoming) {
+      if (!incomingEquipo.ficha) {
+        summary.warnings.push(
+          `Se ignoró un equipo sin ficha (${incomingEquipo.nombre ?? 'Sin nombre'})`,
+        );
+        continue;
+      }
+
+      const payloadEquipo = toEquipoPayload(incomingEquipo);
+      const existing = equiposMap.get(incomingEquipo.ficha);
+
+      if (!existing) {
+        const { data: inserted, error } = await supabase
+          .from('equipos')
+          .insert(mapEquipoToRow(payloadEquipo))
+          .select()
+          .single();
+
+        if (error) throw error;
+
+        summary.equipos.inserted.push(incomingEquipo.ficha);
+        summary.totalChanges += 1;
+
+        await recordHistorialEvent({
+          tipo: 'equipo_creado',
+          modulo: 'equipos',
+          descripcion: `Equipo importado: ${payloadEquipo.nombre}`,
+          ficha: payloadEquipo.ficha,
+          nombre: payloadEquipo.nombre,
+          datosDespues: { id: inserted?.id, ...payloadEquipo },
+          metadata: { origen: 'importacion_json', accion: 'insertar' },
+        });
+      } else {
+        const cambios = diffEquipo(existing, payloadEquipo);
+        if (cambios.length === 0) {
+          continue;
+        }
+
+        const { error } = await supabase
+          .from('equipos')
+          .update(mapEquipoToRow(payloadEquipo))
+          .eq('id', existing.id);
+
+        if (error) throw error;
+
+        summary.equipos.updated.push({ ficha: incomingEquipo.ficha, cambios });
+        summary.totalChanges += 1;
+
+        await recordHistorialEvent({
+          tipo: 'equipo_actualizado',
+          modulo: 'equipos',
+          descripcion: `Equipo sincronizado: ${payloadEquipo.nombre}`,
+          ficha: payloadEquipo.ficha,
+          nombre: payloadEquipo.nombre,
+          datosAntes: existing,
+          datosDespues: { id: existing.id, ...payloadEquipo },
+          metadata: { origen: 'importacion_json', cambios },
+        });
+      }
+    }
+
+    for (const incomingInventario of inventariosIncoming) {
+      if (!incomingInventario.codigoIdentificacion) {
+        summary.warnings.push(
+          `Se ignoró un inventario sin código (${incomingInventario.nombre ?? 'Sin nombre'})`,
+        );
+        continue;
+      }
+
+      const payloadInventario = toInventarioPayload(incomingInventario);
+      const existing = inventariosMap.get(incomingInventario.codigoIdentificacion);
+
+      if (!existing) {
+        const { error } = await supabase
+          .from('inventarios')
+          .insert(mapInventarioToRow(payloadInventario));
+
+        if (error) throw error;
+
+        summary.inventarios.inserted.push(incomingInventario.codigoIdentificacion);
+        summary.totalChanges += 1;
+
+        await recordHistorialEvent({
+          tipo: 'inventario_creado',
+          modulo: 'inventarios',
+          descripcion: `Inventario importado: ${payloadInventario.nombre}`,
+          ficha: null,
+          nombre: payloadInventario.nombre,
+          datosDespues: payloadInventario,
+          metadata: { origen: 'importacion_json', accion: 'insertar' },
+        });
+      } else {
+        const cambios = diffInventario(existing, payloadInventario);
+        if (cambios.length === 0) {
+          continue;
+        }
+
+        const { error } = await supabase
+          .from('inventarios')
+          .update(mapInventarioToRow(payloadInventario))
+          .eq('id', existing.id);
+
+        if (error) throw error;
+
+        summary.inventarios.updated.push({
+          codigo: incomingInventario.codigoIdentificacion,
+          cambios,
+        });
+        summary.totalChanges += 1;
+
+        await recordHistorialEvent({
+          tipo: 'inventario_actualizado',
+          modulo: 'inventarios',
+          descripcion: `Inventario sincronizado: ${payloadInventario.nombre}`,
+          nombre: payloadInventario.nombre,
+          datosAntes: existing,
+          datosDespues: { id: existing.id, ...payloadInventario },
+          metadata: { origen: 'importacion_json', cambios },
+        });
+      }
+    }
+
+    for (const incomingMantenimiento of mantenimientosIncoming) {
+      if (!incomingMantenimiento.ficha) {
+        summary.warnings.push(
+          `Se ignoró un mantenimiento sin ficha (${incomingMantenimiento.nombreEquipo ?? 'Sin nombre'})`,
+        );
+        continue;
+      }
+
+      const key = mantenimientoKey(
+        incomingMantenimiento.ficha,
+        incomingMantenimiento.tipoMantenimiento,
+      );
+      const payloadMantenimiento = toMantenimientoPayload(incomingMantenimiento);
+      const existing = mantenimientosMap.get(key);
+
+      if (!existing) {
+        const { error } = await supabase
+          .from('mantenimientos_programados')
+          .insert(mapToDatabasePayload(payloadMantenimiento));
+
+        if (error) throw error;
+
+        summary.mantenimientosProgramados.inserted.push(
+          `${incomingMantenimiento.ficha} · ${incomingMantenimiento.tipoMantenimiento}`,
+        );
+        summary.totalChanges += 1;
+
+        await recordHistorialEvent({
+          tipo: 'mantenimiento_creado',
+          modulo: 'mantenimientos',
+          descripcion: `Mantenimiento importado: ${payloadMantenimiento.nombreEquipo}`,
+          ficha: payloadMantenimiento.ficha,
+          nombre: payloadMantenimiento.nombreEquipo,
+          datosDespues: payloadMantenimiento,
+          metadata: { origen: 'importacion_json', accion: 'insertar' },
+        });
+      } else {
+        const cambios = diffMantenimiento(existing, payloadMantenimiento);
+        if (cambios.length === 0) {
+          continue;
+        }
+
+        const { error } = await supabase
+          .from('mantenimientos_programados')
+          .update(mapToDatabasePayload(payloadMantenimiento))
+          .eq('id', existing.id);
+
+        if (error) throw error;
+
+        summary.mantenimientosProgramados.updated.push({
+          ficha: incomingMantenimiento.ficha,
+          tipo: incomingMantenimiento.tipoMantenimiento,
+          cambios,
+        });
+        summary.totalChanges += 1;
+
+        await recordHistorialEvent({
+          tipo: 'mantenimiento_actualizado',
+          modulo: 'mantenimientos',
+          descripcion: `Mantenimiento sincronizado: ${payloadMantenimiento.nombreEquipo}`,
+          ficha: payloadMantenimiento.ficha,
+          nombre: payloadMantenimiento.nombreEquipo,
+          datosAntes: existing,
+          datosDespues: { id: existing.id, ...payloadMantenimiento },
+          metadata: { origen: 'importacion_json', cambios },
+        });
+      }
+    }
+
+    await recordHistorialEvent({
+      tipo: 'importacion_sincronizada',
+      modulo: 'sistema',
+      descripcion:
+        summary.totalChanges > 0
+          ? `Sincronización de importación con ${summary.totalChanges} cambios aplicados.`
+          : 'Sincronización de importación sin cambios aplicados.',
+      metadata: summary,
+      nivel: summary.totalChanges > 0 ? 'info' : 'warning',
+    });
+
+    return summary;
   };
 
   const migrateBundleToSupabase = async (bundle: ImportBundle) => {
@@ -835,6 +1486,28 @@ export function useSupabaseData() {
     }
   };
 
+  const syncJsonData = async (bundle: ImportBundle) => {
+    try {
+      setIsMigrating(true);
+
+      const summary = await syncImportBundle(bundle);
+
+      await loadData();
+
+      return summary;
+    } catch (error) {
+      console.error('Error synchronizing import:', error);
+      toast({
+        title: '❌ Error en sincronización',
+        description: 'No se pudieron sincronizar los datos importados.',
+        variant: 'destructive',
+      });
+      throw error;
+    } finally {
+      setIsMigrating(false);
+    }
+  };
+
   return {
     data,
     loading,
@@ -842,7 +1515,11 @@ export function useSupabaseData() {
     loadData,
     migrateFromLocalStorage,
     importJsonData,
+    syncJsonData,
     clearDatabase,
+    createEquipo,
+    updateEquipo,
+    deleteEquipo,
     createMantenimiento,
     updateMantenimiento,
     deleteMantenimiento,

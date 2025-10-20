@@ -1,12 +1,51 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef, useCallback } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from '@/hooks/use-toast';
 import { Notificacion } from '@/types/historial';
+import { useSystemConfig } from '@/context/SystemConfigContext';
+import { useNotifications } from '@/hooks/useNotifications';
 
 export function useNotificaciones() {
   const [notificaciones, setNotificaciones] = useState<Notificacion[]>([]);
   const [loading, setLoading] = useState(true);
   const [noLeidas, setNoLeidas] = useState(0);
+  const { config } = useSystemConfig();
+  const configRef = useRef(config);
+  const { sendNotification, permission } = useNotifications();
+
+  useEffect(() => {
+    configRef.current = config;
+  }, [config]);
+
+  const registrarEnvioExterno = useCallback(
+    async (canal: 'email' | 'whatsapp', destino: string | null | undefined, notif: Notificacion) => {
+      if (!destino) {
+        return;
+      }
+
+      try {
+        const { error } = await supabase
+          .from('notificaciones_salientes')
+          .upsert(
+            {
+              notificacion_id: notif.id,
+              canal,
+              destino,
+              mensaje: notif.mensaje,
+              metadata: notif.metadata ?? {},
+            },
+            { onConflict: 'notificacion_id,canal' },
+          );
+
+        if (error && (error as any).code !== '23505') {
+          throw error;
+        }
+      } catch (error) {
+        console.error('Error registrando envío externo de notificación:', error);
+      }
+    },
+    [],
+  );
 
   const loadNotificaciones = async () => {
     try {
@@ -57,14 +96,14 @@ export function useNotificaciones() {
     // Realtime updates
     const channel = supabase
       .channel('notificaciones-changes')
-      .on('postgres_changes', { 
-        event: '*', 
-        schema: 'public', 
-        table: 'notificaciones' 
+      .on('postgres_changes', {
+        event: '*',
+        schema: 'public',
+        table: 'notificaciones'
       }, (payload) => {
         console.log('Notificación actualizada:', payload);
         loadNotificaciones();
-        
+
         // Mostrar toast solo para nuevas notificaciones
         if (payload.eventType === 'INSERT') {
           const nuevaNotif = payload.new as any;
@@ -73,6 +112,36 @@ export function useNotificaciones() {
             description: nuevaNotif.mensaje,
             variant: nuevaNotif.nivel === 'critical' ? 'destructive' : 'default',
           });
+
+          const notificacionFormateada: Notificacion = {
+            id: Number(nuevaNotif.id),
+            tipo: nuevaNotif.tipo,
+            titulo: nuevaNotif.titulo,
+            mensaje: nuevaNotif.mensaje,
+            fichaEquipo: nuevaNotif.ficha_equipo,
+            nombreEquipo: nuevaNotif.nombre_equipo,
+            nivel: nuevaNotif.nivel,
+            leida: nuevaNotif.leida,
+            accionUrl: nuevaNotif.accion_url,
+            metadata: nuevaNotif.metadata,
+            createdAt: nuevaNotif.created_at,
+          };
+
+          const currentConfig = configRef.current;
+          if (currentConfig.notificarDispositivo && permission === 'granted') {
+            sendNotification(nuevaNotif.titulo, {
+              body: nuevaNotif.mensaje,
+              data: nuevaNotif,
+            });
+          }
+
+          if (currentConfig.notificarEmail) {
+            registrarEnvioExterno('email', currentConfig.correoNotificaciones, notificacionFormateada);
+          }
+
+          if (currentConfig.notificarWhatsapp) {
+            registrarEnvioExterno('whatsapp', currentConfig.telefonoWhatsapp, notificacionFormateada);
+          }
         }
       })
       .subscribe();
@@ -80,7 +149,7 @@ export function useNotificaciones() {
     return () => {
       supabase.removeChannel(channel);
     };
-  }, []);
+  }, [registrarEnvioExterno, permission, sendNotification]);
 
   const marcarComoLeida = async (id: number) => {
     try {

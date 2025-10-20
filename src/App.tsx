@@ -13,6 +13,7 @@ import Reportes from "./pages/Reportes";
 import Configuraciones from "./pages/Configuraciones";
 import NotFound from "./pages/NotFound";
 import { SupabaseDataProvider } from "@/context/SupabaseDataContext";
+import { SystemConfigProvider } from "@/context/SystemConfigContext";
 
 const queryClient = new QueryClient();
 
@@ -21,22 +22,24 @@ const App = () => (
     <TooltipProvider>
       <Toaster />
       <Sonner />
-      <SupabaseDataProvider>
-        <BrowserRouter>
-          <Routes>
-            <Route path="/" element={<Dashboard />} />
-            <Route path="/equipos" element={<Equipos />} />
-            <Route path="/control-mantenimiento" element={<ControlMantenimiento />} />
-            <Route path="/inventario" element={<Inventario />} />
-            <Route path="/mantenimiento" element={<Mantenimiento />} />
-            <Route path="/historial" element={<Historial />} />
-            <Route path="/reportes" element={<Reportes />} />
-            <Route path="/configuraciones" element={<Configuraciones />} />
-            {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
-            <Route path="*" element={<NotFound />} />
-          </Routes>
-        </BrowserRouter>
-      </SupabaseDataProvider>
+      <SystemConfigProvider>
+        <SupabaseDataProvider>
+          <BrowserRouter>
+            <Routes>
+              <Route path="/" element={<Dashboard />} />
+              <Route path="/equipos" element={<Equipos />} />
+              <Route path="/control-mantenimiento" element={<ControlMantenimiento />} />
+              <Route path="/inventario" element={<Inventario />} />
+              <Route path="/mantenimiento" element={<Mantenimiento />} />
+              <Route path="/historial" element={<Historial />} />
+              <Route path="/reportes" element={<Reportes />} />
+              <Route path="/configuraciones" element={<Configuraciones />} />
+              {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
+              <Route path="*" element={<NotFound />} />
+            </Routes>
+          </BrowserRouter>
+        </SupabaseDataProvider>
+      </SystemConfigProvider>
     </TooltipProvider>
   </QueryClientProvider>
 );

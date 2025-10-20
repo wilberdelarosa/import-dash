@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { Layout } from '@/components/Layout';
 import { Navigation } from '@/components/Navigation';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -8,60 +8,118 @@ import { Slider } from '@/components/ui/slider';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { useToast } from '@/hooks/use-toast';
 import { Separator } from '@/components/ui/separator';
 import { Settings2, Bell, MoonStar } from 'lucide-react';
-
-const CONFIG_KEY = 'equipos-dashboard-settings';
-
-const defaultConfig = {
-  alertaCritica: 15,
-  alertaPreventiva: 50,
-  permitirImportaciones: true,
-  notificarEmail: true,
-  notificarWhatsapp: false,
-  modoOscuroAutomatico: true,
-  correoSoporte: '',
-};
-
-type Config = typeof defaultConfig;
+import { useSystemConfig } from '@/context/SystemConfigContext';
+import { DEFAULT_SYSTEM_CONFIG } from '@/types/config';
+import { useNotifications } from '@/hooks/useNotifications';
+import { useToast } from '@/hooks/use-toast';
 
 export default function Configuraciones() {
+  const { config, loading, saving, updateConfig } = useSystemConfig();
+  const [draft, setDraft] = useState(config);
+  const draftRef = useRef(draft);
+  const timeoutRef = useRef<number>();
+  const { permission, supported, requestPermission } = useNotifications();
   const { toast } = useToast();
-  const [config, setConfig] = useState<Config>(() => {
-    if (typeof window === 'undefined') {
-      return defaultConfig;
-    }
-    try {
-      const stored = window.localStorage.getItem(CONFIG_KEY);
-      if (stored) {
-        const parsed = JSON.parse(stored);
-        return { ...defaultConfig, ...parsed } as Config;
-      }
-    } catch (error) {
-      console.error('Error parsing configuration', error);
-    }
-    return defaultConfig;
-  });
 
   useEffect(() => {
-    if (typeof window !== 'undefined') {
-      window.localStorage.setItem(CONFIG_KEY, JSON.stringify(config));
-    }
+    setDraft(config);
+    draftRef.current = config;
   }, [config]);
 
+  useEffect(() => () => {
+    if (timeoutRef.current) {
+      window.clearTimeout(timeoutRef.current);
+    }
+  }, []);
+
+  const scheduleUpdate = (partial: Partial<typeof draft>) => {
+    const next = { ...draftRef.current, ...partial };
+    draftRef.current = next;
+    setDraft(next);
+
+    if (timeoutRef.current) {
+      window.clearTimeout(timeoutRef.current);
+    }
+
+    timeoutRef.current = window.setTimeout(() => {
+      updateConfig(next);
+    }, 400);
+  };
+
   const umbrales = useMemo(() => ({
-    critica: config.alertaCritica,
-    preventiva: config.alertaPreventiva,
-  }), [config.alertaCritica, config.alertaPreventiva]);
+    critica: draft.alertaCritica,
+    preventiva: draft.alertaPreventiva,
+  }), [draft.alertaCritica, draft.alertaPreventiva]);
 
   const handleReset = () => {
-    setConfig(defaultConfig);
-    toast({
-      title: 'Configuraciones restauradas',
-      description: 'Se aplicaron los valores predeterminados del sistema.',
-    });
+    updateConfig(DEFAULT_SYSTEM_CONFIG);
   };
+
+  const deviceStatusMessage = useMemo(() => {
+    if (!supported) {
+      return 'Tu navegador no soporta notificaciones push.';
+    }
+
+    if (permission === 'granted') {
+      return 'Permiso concedido. Recibirás alertas directamente en este dispositivo.';
+    }
+
+    if (permission === 'denied') {
+      return 'El navegador está bloqueando las notificaciones. Actívalas en la configuración del sitio para recibir alertas.';
+    }
+
+    return 'Solicitaremos permiso del navegador cuando actives esta opción.';
+  }, [permission, supported]);
+
+  const handleDeviceToggle = async (value: boolean) => {
+    if (!value) {
+      scheduleUpdate({ notificarDispositivo: false });
+      return;
+    }
+
+    if (!supported) {
+      toast({
+        title: 'No disponible',
+        description: 'Este navegador no soporta notificaciones push.',
+        variant: 'destructive',
+      });
+      scheduleUpdate({ notificarDispositivo: false });
+      return;
+    }
+
+    if (permission === 'denied') {
+      toast({
+        title: 'Permiso bloqueado',
+        description: 'Habilita las notificaciones del navegador para recibir alertas en este equipo.',
+        variant: 'destructive',
+      });
+      scheduleUpdate({ notificarDispositivo: false });
+      return;
+    }
+
+    if (permission === 'default') {
+      const granted = await requestPermission();
+      if (!granted) {
+        scheduleUpdate({ notificarDispositivo: false });
+        return;
+      }
+    }
+
+    scheduleUpdate({ notificarDispositivo: true });
+  };
+
+  if (loading) {
+    return (
+      <Layout title="Preferencias y automatizaciones">
+        <Navigation />
+        <div className="flex items-center justify-center h-64">
+          <div className="text-sm text-muted-foreground">Cargando preferencias...</div>
+        </div>
+      </Layout>
+    );
+  }
 
   return (
     <Layout title="Preferencias y automatizaciones">
@@ -80,28 +138,28 @@ export default function Configuraciones() {
               <Label className="text-sm font-medium">Alerta crítica (horas/km restantes)</Label>
               <Slider
                 className="mt-4"
-                value={[config.alertaCritica]}
+                value={[draft.alertaCritica]}
                 min={5}
                 max={100}
                 step={5}
-                onValueChange={([value]) => setConfig((prev) => ({ ...prev, alertaCritica: value }))}
+                onValueChange={([value]) => scheduleUpdate({ alertaCritica: value })}
               />
               <p className="mt-2 text-sm text-muted-foreground">
-                Se resaltarán en rojo los equipos con {config.alertaCritica} o menos horas/km restantes.
+                Se resaltarán en rojo los equipos con {draft.alertaCritica} o menos horas/km restantes.
               </p>
             </div>
             <div>
               <Label className="text-sm font-medium">Alerta preventiva (horas/km restantes)</Label>
               <Slider
                 className="mt-4"
-                value={[config.alertaPreventiva]}
+                value={[draft.alertaPreventiva]}
                 min={10}
                 max={200}
                 step={10}
-                onValueChange={([value]) => setConfig((prev) => ({ ...prev, alertaPreventiva: value }))}
+                onValueChange={([value]) => scheduleUpdate({ alertaPreventiva: value })}
               />
               <p className="mt-2 text-sm text-muted-foreground">
-                Los mantenimientos se marcarán en amarillo cuando resten {config.alertaPreventiva} horas/km.
+                Los mantenimientos se marcarán en amarillo cuando resten {draft.alertaPreventiva} horas/km.
               </p>
             </div>
             <div className="flex items-center gap-3 rounded-md border p-3">
@@ -128,8 +186,8 @@ export default function Configuraciones() {
                 <p className="text-sm text-muted-foreground">Notifica al responsable asignado del equipo.</p>
               </div>
               <Switch
-                checked={config.notificarEmail}
-                onCheckedChange={(value) => setConfig((prev) => ({ ...prev, notificarEmail: value }))}
+                checked={draft.notificarEmail}
+                onCheckedChange={(value) => scheduleUpdate({ notificarEmail: value })}
               />
             </div>
             <div className="flex items-center justify-between">
@@ -138,22 +196,61 @@ export default function Configuraciones() {
                 <p className="text-sm text-muted-foreground">Ideal para avisos rápidos al supervisor.</p>
               </div>
               <Switch
-                checked={config.notificarWhatsapp}
-                onCheckedChange={(value) => setConfig((prev) => ({ ...prev, notificarWhatsapp: value }))}
+                checked={draft.notificarWhatsapp}
+                onCheckedChange={(value) => scheduleUpdate({ notificarWhatsapp: value })}
               />
+            </div>
+            <div className="flex items-start justify-between gap-4">
+              <div>
+                <Label className="text-sm font-semibold">Notificaciones en este dispositivo</Label>
+                <p className="text-sm text-muted-foreground">Activa alertas nativas en el navegador o escritorio.</p>
+                <p
+                  className={`mt-2 text-xs ${
+                    !supported || permission === 'denied' ? 'text-destructive' : 'text-muted-foreground'
+                  }`}
+                >
+                  {deviceStatusMessage}
+                </p>
+              </div>
+              <Switch checked={draft.notificarDispositivo} onCheckedChange={(value) => void handleDeviceToggle(value)} />
             </div>
             <Separator />
             <div>
               <Label className="text-sm font-semibold">Correo de soporte</Label>
               <Input
                 placeholder="soporte@empresa.com"
-                value={config.correoSoporte}
-                onChange={(event) => setConfig((prev) => ({ ...prev, correoSoporte: event.target.value }))}
+                value={draft.correoSoporte}
+                onChange={(event) => scheduleUpdate({ correoSoporte: event.target.value })}
               />
               <p className="mt-2 text-xs text-muted-foreground">
                 Se usará como remitente en las notificaciones automáticas.
               </p>
             </div>
+            <div>
+              <Label className="text-sm font-semibold">Correo para notificaciones</Label>
+              <Input
+                placeholder="alertas@empresa.com"
+                value={draft.correoNotificaciones}
+                onChange={(event) => scheduleUpdate({ correoNotificaciones: event.target.value })}
+              />
+              <p className="mt-2 text-xs text-muted-foreground">
+                Si está presente y el canal está habilitado, se enviarán correos con alertas importantes.
+              </p>
+            </div>
+            <div>
+              <Label className="text-sm font-semibold">Teléfono WhatsApp</Label>
+              <Input
+                placeholder="+1 809 000 0000"
+                value={draft.telefonoWhatsapp}
+                onChange={(event) => scheduleUpdate({ telefonoWhatsapp: event.target.value })}
+              />
+              <p className="mt-2 text-xs text-muted-foreground">
+                Incluye el código de país para recibir avisos en tu móvil.
+              </p>
+            </div>
+            {saving && (
+              <p className="text-xs text-muted-foreground">Guardando cambios...</p>
+            )}
           </CardContent>
         </Card>
       </div>
@@ -174,8 +271,8 @@ export default function Configuraciones() {
               </p>
             </div>
             <Switch
-              checked={config.modoOscuroAutomatico}
-              onCheckedChange={(value) => setConfig((prev) => ({ ...prev, modoOscuroAutomatico: value }))}
+              checked={draft.modoOscuroAutomatico}
+              onCheckedChange={(value) => scheduleUpdate({ modoOscuroAutomatico: value })}
             />
           </div>
           <div className="flex items-center justify-between">
@@ -186,8 +283,8 @@ export default function Configuraciones() {
               </p>
             </div>
             <Switch
-              checked={config.permitirImportaciones}
-              onCheckedChange={(value) => setConfig((prev) => ({ ...prev, permitirImportaciones: value }))}
+              checked={draft.permitirImportaciones}
+              onCheckedChange={(value) => scheduleUpdate({ permitirImportaciones: value })}
             />
           </div>
           <div className="flex justify-end">
