@@ -69,29 +69,13 @@ export function SystemConfigProvider({ children }: { children: React.ReactNode }
         throw error;
       }
 
-      if (!data) {
-        const { data: inserted, error: insertError } = await supabase
-          .from('configuraciones_sistema')
-          .insert(mapConfigToRow(DEFAULT_SYSTEM_CONFIG))
-          .select()
-          .maybeSingle();
-
-        if (insertError) {
-          throw insertError;
-        }
-
-        if (inserted) {
-          const mapped = mapRowToConfig(inserted);
-          configRef.current = mapped;
-          setConfig(mapped);
-        } else {
-          configRef.current = DEFAULT_SYSTEM_CONFIG;
-          setConfig(DEFAULT_SYSTEM_CONFIG);
-        }
-      } else {
+      if (data) {
         const mapped = mapRowToConfig(data);
         configRef.current = mapped;
         setConfig(mapped);
+      } else {
+        configRef.current = DEFAULT_SYSTEM_CONFIG;
+        setConfig(DEFAULT_SYSTEM_CONFIG);
       }
     } catch (error) {
       console.error('Error loading system configuration', error);

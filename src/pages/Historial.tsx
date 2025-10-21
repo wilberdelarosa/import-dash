@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react';
+import { ReactNode, useMemo, useState } from 'react';
 import { Layout } from '@/components/Layout';
 import { Navigation } from '@/components/Navigation';
 import { useHistorial } from '@/hooks/useHistorial';
@@ -77,6 +77,123 @@ export default function Historial() {
   const [mostrarFiltros, setMostrarFiltros] = useState(false);
   const [vistaActiva, setVistaActiva] = useState<'timeline' | 'tabla' | 'estadisticas'>('timeline');
   const [mostrarDetallesTecnicos, setMostrarDetallesTecnicos] = useState(false);
+
+  const normalizeNumber = (value: unknown): number | null => {
+    if (typeof value === 'number') return Number.isFinite(value) ? value : null;
+    if (typeof value === 'string' && value.trim().length > 0) {
+      const parsed = Number(value);
+      return Number.isFinite(parsed) ? parsed : null;
+    }
+    return null;
+  };
+
+  const buildDetallesEvento = (evento: HistorialEvento): { label: string; value: ReactNode }[] => {
+    const detalles: { label: string; value: ReactNode }[] = [];
+    const metadata = (evento.metadata ?? {}) as Record<string, any>;
+    const datosAntes = (evento.datosAntes ?? {}) as Record<string, any>;
+    const datosDespues = (evento.datosDespues ?? {}) as Record<string, any>;
+
+    if (evento.fichaEquipo) {
+      detalles.push({ label: 'Ficha', value: evento.fichaEquipo });
+    }
+
+    switch (evento.tipoEvento) {
+      case 'lectura_actualizada': {
+        const lectura = normalizeNumber(datosDespues.horasKm ?? metadata.horasKm);
+        const lecturaAnterior = normalizeNumber(datosAntes.horasKm ?? metadata.horasPrevias);
+        const incremento = normalizeNumber(datosDespues.incremento ?? metadata.incremento);
+        const restante = normalizeNumber(datosDespues.restante ?? metadata.restante);
+        const observaciones = metadata.observaciones ?? datosDespues.observaciones;
+
+        if (lectura !== null) {
+          detalles.push({ label: 'Lectura registrada', value: `${lectura} h/km` });
+        }
+        if (lecturaAnterior !== null) {
+          detalles.push({ label: 'Lectura anterior', value: `${lecturaAnterior} h/km` });
+        }
+        if (incremento !== null) {
+          detalles.push({ label: 'Incremento', value: `${incremento} h/km` });
+        }
+        if (restante !== null) {
+          detalles.push({ label: 'Horas/km restantes', value: `${restante} h/km` });
+        }
+        if (observaciones) {
+          detalles.push({ label: 'Observaciones', value: <span className="text-sm text-muted-foreground">{observaciones}</span> });
+        }
+        break;
+      }
+      case 'mantenimiento_realizado': {
+        const lectura = normalizeNumber(datosDespues.horasKmAlMomento ?? metadata.horasKmAlMomento);
+        const lecturaAnterior = normalizeNumber(metadata.horasPrevias ?? datosAntes.horasKmUltimoMantenimiento);
+        const incremento = normalizeNumber(datosDespues.incrementoDesdeUltimo ?? metadata.incrementoDesdeUltimo);
+        const filtros = Array.isArray(metadata.filtrosUtilizados)
+          ? metadata.filtrosUtilizados
+          : Array.isArray(datosDespues.filtrosUtilizados)
+          ? datosDespues.filtrosUtilizados
+          : [];
+        const observaciones = metadata.observaciones ?? datosDespues.observaciones;
+
+        if (lectura !== null) {
+          detalles.push({ label: 'Horas/km al momento', value: `${lectura} h/km` });
+        }
+        if (lecturaAnterior !== null) {
+          detalles.push({ label: 'Lectura previa', value: `${lecturaAnterior} h/km` });
+        }
+        if (incremento !== null) {
+          detalles.push({ label: 'Incremento desde último', value: `${incremento} h/km` });
+        }
+        if (filtros.length > 0) {
+          const listado = filtros
+            .map((filtro: any) => {
+              if (!filtro) return null;
+              const nombre = filtro.nombre ?? filtro.descripcion ?? 'Filtro';
+              const cantidad = filtro.cantidad ?? 1;
+              return `${nombre} (${cantidad})`;
+            })
+            .filter(Boolean)
+            .join(', ');
+          if (listado) {
+            detalles.push({ label: 'Filtros utilizados', value: listado });
+          }
+        }
+        if (observaciones) {
+          detalles.push({ label: 'Observaciones', value: <span className="text-sm text-muted-foreground">{observaciones}</span> });
+        }
+        break;
+      }
+      default: {
+        if (evento.descripcion) {
+          detalles.push({ label: 'Descripción', value: evento.descripcion });
+        }
+        break;
+      }
+    }
+
+    if (metadata.fechaMantenimiento || metadata.fecha) {
+      const fechaRef = metadata.fechaMantenimiento ?? metadata.fecha;
+      if (typeof fechaRef === 'string') {
+        detalles.push({ label: 'Fecha registrada', value: new Date(fechaRef).toLocaleString('es-ES') });
+      }
+    }
+
+    return detalles;
+  };
+
+  const renderDetallesEvento = (evento: HistorialEvento) => {
+    const detalles = buildDetallesEvento(evento);
+    if (detalles.length === 0) return null;
+
+    return (
+      <div className="grid gap-3 md:grid-cols-2 lg:grid-cols-3">
+        {detalles.map((detalle, index) => (
+          <div key={`${detalle.label}-${index}`} className="rounded-md border border-dashed border-border/60 bg-muted/30 p-3">
+            <p className="text-xs uppercase tracking-wide text-muted-foreground">{detalle.label}</p>
+            <p className="text-sm font-medium mt-1 break-words">{detalle.value}</p>
+          </div>
+        ))}
+      </div>
+    );
+  };
 
   const getIconoNivel = (nivel: string) => {
     switch (nivel) {
@@ -624,7 +741,8 @@ export default function Historial() {
                           <div className="space-y-4 pl-6">
                             {eventosDia.map((evento) => {
                               const visual = getEventoVisual(evento.tipoEvento);
-                              
+                              const detallesEvento = renderDetallesEvento(evento);
+
                               return (
                                 <Collapsible key={evento.id}>
                                   <div className="flex items-start gap-3 group relative">
@@ -691,6 +809,12 @@ export default function Historial() {
                                             })}
                                           </div>
                                         </div>
+
+                                        {detallesEvento && (
+                                          <div className="pt-3">
+                                            {detallesEvento}
+                                          </div>
+                                        )}
 
                                         {mostrarDetallesTecnicos && (evento.datosAntes || evento.datosDespues) && (
                                           <div className="space-y-2 pt-2">
