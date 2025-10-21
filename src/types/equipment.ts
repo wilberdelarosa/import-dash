@@ -41,6 +41,9 @@ export interface ActualizacionHorasKm {
   horasKm: number;
   incremento: number;
   usuarioResponsable: string;
+  horasPrevias?: number;
+  restante?: number;
+  observaciones?: string;
 }
 
 export interface FiltroUtilizado {
@@ -60,6 +63,7 @@ export interface MantenimientoRealizado {
   incrementoDesdeUltimo: number;
   filtrosUtilizados: FiltroUtilizado[];
   usuarioResponsable: string;
+  horasPrevias?: number;
 }
 
 export interface Empleado {

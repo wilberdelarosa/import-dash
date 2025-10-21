@@ -2,14 +2,11 @@ import { useState, useEffect, useCallback, useRef } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from '@/hooks/use-toast';
 import { HistorialEvento, FiltrosHistorial } from '@/types/historial';
-import { useSupabaseDataContext } from '@/context/SupabaseDataContext';
 
 const END_OF_DAY_HOURS = 23;
 const END_OF_DAY_MINUTES = 59;
 const END_OF_DAY_SECONDS = 59;
 const END_OF_DAY_MS = 999;
-
-const ACTUALIZACION_ID_OFFSET = 1_000_000;
 
 const toSafeDate = (value?: string | null): Date | null => {
   if (!value) return null;
@@ -18,7 +15,6 @@ const toSafeDate = (value?: string | null): Date | null => {
 };
 
 export function useHistorial() {
-  const { data: supabaseData } = useSupabaseDataContext();
   const [eventos, setEventos] = useState<HistorialEvento[]>([]);
   const [loading, setLoading] = useState(true);
   const [filtros, setFiltros] = useState<FiltrosHistorial>({
@@ -30,159 +26,6 @@ export function useHistorial() {
     fechaDesde: null,
     fechaHasta: null,
   });
-
-  const buildFallbackEventos = useCallback((): HistorialEvento[] => {
-    const mantenimientos = Array.isArray(supabaseData.mantenimientosRealizados)
-      ? supabaseData.mantenimientosRealizados
-      : [];
-
-    const actualizaciones = Array.isArray(supabaseData.actualizacionesHorasKm)
-      ? supabaseData.actualizacionesHorasKm
-      : [];
-
-    const equiposPorFicha = new Map<string, string>();
-    const fichasRegistradas = Array.isArray(supabaseData.mantenimientosProgramados)
-      ? supabaseData.mantenimientosProgramados
-      : [];
-
-    fichasRegistradas.forEach((mantenimiento) => {
-      if (mantenimiento?.ficha) {
-        equiposPorFicha.set(mantenimiento.ficha, mantenimiento.nombreEquipo ?? '');
-      }
-    });
-
-    const equiposCatalogo = Array.isArray(supabaseData.equipos)
-      ? supabaseData.equipos
-      : [];
-
-    equiposCatalogo.forEach((equipo) => {
-      if (equipo?.ficha && equipo?.nombre) {
-        equiposPorFicha.set(equipo.ficha, equipo.nombre);
-      }
-    });
-
-    const empleadosMap = new Map<number, string>();
-    const empleados = Array.isArray(supabaseData.empleados)
-      ? supabaseData.empleados
-      : [];
-
-    empleados.forEach((empleado) => {
-      if (typeof empleado?.id === 'number') {
-        const nombre = `${empleado.nombre ?? ''} ${empleado.apellido ?? ''}`.trim();
-        if (nombre) {
-          empleadosMap.set(empleado.id, nombre);
-        }
-      }
-    });
-
-    const mantenimientoEventos = mantenimientos
-      .map((mantenimiento, index) => {
-        const baseId = Number(mantenimiento.id ?? index + 1);
-        const id = Number.isFinite(baseId) ? baseId : index + 1;
-        const createdAt = toSafeDate(mantenimiento.fechaMantenimiento);
-        if (!createdAt) {
-          console.warn('Fecha inválida en mantenimiento realizado, se omite del historial', mantenimiento);
-          return null;
-        }
-
-        const descripcionBase = mantenimiento.observaciones?.trim();
-        const nombreEquipo = mantenimiento.nombreEquipo
-          ?? equiposPorFicha.get(mantenimiento.ficha)
-          ?? null;
-        const descripcion = descripcionBase && descripcionBase.length > 0
-          ? descripcionBase
-          : nombreEquipo
-            ? `Mantenimiento realizado al equipo ${nombreEquipo}`
-            : `Mantenimiento realizado a la ficha ${mantenimiento.ficha}`;
-
-        const responsable = (() => {
-          if (typeof mantenimiento.idEmpleado === 'number' && empleadosMap.has(mantenimiento.idEmpleado)) {
-            return empleadosMap.get(mantenimiento.idEmpleado)!;
-          }
-          if (mantenimiento.usuarioResponsable && mantenimiento.usuarioResponsable.trim().length > 0) {
-            return mantenimiento.usuarioResponsable.trim();
-          }
-          return 'No especificado';
-        })();
-
-        return {
-          id,
-          tipoEvento: 'mantenimiento_realizado',
-          modulo: 'mantenimientos',
-          fichaEquipo: mantenimiento.ficha,
-          nombreEquipo,
-          usuarioResponsable: responsable,
-          descripcion,
-          datosAntes: null,
-          datosDespues: {
-            horasKmAlMomento: mantenimiento.horasKmAlMomento,
-            incrementoDesdeUltimo: mantenimiento.incrementoDesdeUltimo,
-            filtrosUtilizados: Array.isArray(mantenimiento.filtrosUtilizados)
-              ? mantenimiento.filtrosUtilizados
-              : [],
-          },
-          nivelImportancia: 'info',
-          metadata: {
-            ...mantenimiento,
-            nombreEquipo,
-            usuarioResponsable: responsable,
-          },
-          createdAt: createdAt.toISOString(),
-        } satisfies HistorialEvento;
-      })
-      .filter((evento): evento is HistorialEvento => Boolean(evento));
-
-    const actualizacionEventos = actualizaciones
-      .map((actualizacion, index) => {
-        const baseId = Number(actualizacion.id ?? index + 1);
-        const id = (Number.isFinite(baseId) ? baseId : index + 1) + ACTUALIZACION_ID_OFFSET;
-        const createdAt = toSafeDate(actualizacion.fecha);
-        if (!createdAt) {
-          console.warn('Fecha inválida en actualización de horas/km, se omite del historial', actualizacion);
-          return null;
-        }
-
-        const incremento = Number(actualizacion.incremento ?? 0);
-        const nombreEquipo = actualizacion.nombreEquipo
-          ?? equiposPorFicha.get(actualizacion.ficha)
-          ?? null;
-        const descripcion = nombreEquipo
-          ? `Lectura actualizada para ${nombreEquipo}: ${actualizacion.horasKm}`
-          : `Lectura actualizada a ${actualizacion.horasKm}`;
-
-        const responsable = actualizacion.usuarioResponsable && actualizacion.usuarioResponsable.trim().length > 0
-          ? actualizacion.usuarioResponsable.trim()
-          : 'No especificado';
-
-        return {
-          id,
-          tipoEvento: 'lectura_actualizada',
-          modulo: 'mantenimientos',
-          fichaEquipo: actualizacion.ficha,
-          nombreEquipo,
-          usuarioResponsable: responsable,
-          descripcion,
-          datosAntes: null,
-          datosDespues: {
-            horasKm: actualizacion.horasKm,
-            incremento,
-          },
-          nivelImportancia: incremento < 0 ? 'warning' : 'info',
-          metadata: {
-            ...actualizacion,
-            nombreEquipo,
-            usuarioResponsable: responsable,
-          },
-          createdAt: createdAt.toISOString(),
-        } satisfies HistorialEvento;
-      })
-      .filter((evento): evento is HistorialEvento => Boolean(evento));
-
-    const combined = [...mantenimientoEventos, ...actualizacionEventos];
-    return combined.sort(
-      (a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
-    );
-  }, [supabaseData]);
 
   const applyFilters = useCallback(
     (items: HistorialEvento[]) => {
@@ -253,8 +96,6 @@ export function useHistorial() {
   );
 
   const loadEventos = useCallback(async () => {
-    const eventosFallback = applyFilters(buildFallbackEventos());
-
     try {
       setLoading(true);
 
@@ -309,12 +150,7 @@ export function useHistorial() {
       }));
 
       const eventosFiltrados = applyFilters(eventosFormateados);
-
-      if (eventosFiltrados.length > 0 || eventosFallback.length === 0) {
-        setEventos(eventosFiltrados);
-      } else {
-        setEventos(eventosFallback);
-      }
+      setEventos(eventosFiltrados);
     } catch (error) {
       console.error('Error loading eventos:', error);
       toast({
@@ -322,11 +158,11 @@ export function useHistorial() {
         description: "No se pudieron cargar los eventos del historial",
         variant: "destructive"
       });
-      setEventos(eventosFallback);
+      setEventos([]);
     } finally {
       setLoading(false);
     }
-  }, [applyFilters, buildFallbackEventos, filtros]);
+  }, [applyFilters, filtros]);
 
   const loadEventosRef = useRef<() => Promise<void>>();
 

@@ -334,6 +334,19 @@ export function useSupabaseData() {
             0
           );
 
+          const horasPrevias = Number(
+            metadata.horasPrevias ??
+            datosDespues.horasPrevias ??
+            metadata.horasKmAnterior ??
+            0
+          );
+
+          const restante = Number(
+            metadata.restante ??
+            datosDespues.restante ??
+            0
+          );
+
           return {
             id: Number(evento.id),
             ficha: evento.ficha_equipo ?? metadata.ficha ?? '',
@@ -342,6 +355,9 @@ export function useSupabaseData() {
             horasKm: horas,
             incremento,
             usuarioResponsable: evento.usuario_responsable ?? metadata.usuarioResponsable ?? 'Sistema',
+            horasPrevias,
+            restante,
+            observaciones: metadata.observaciones ?? datosDespues.observaciones ?? null,
           };
         });
 
@@ -369,7 +385,7 @@ export function useSupabaseData() {
               0
             ),
             idEmpleado: metadata.idEmpleado ?? metadata.empleadoId ?? null,
-            observaciones: metadata.observaciones ?? evento.descripcion ?? '',
+            observaciones: metadata.observaciones ?? datosDespues.observaciones ?? evento.descripcion ?? '',
             incrementoDesdeUltimo: Number(
               metadata.incrementoDesdeUltimo ??
               metadata.incremento ??
@@ -379,6 +395,7 @@ export function useSupabaseData() {
             ),
             filtrosUtilizados: filtros,
             usuarioResponsable: evento.usuario_responsable ?? metadata.usuarioResponsable ?? 'Sistema',
+            horasPrevias: Number(metadata.horasPrevias ?? metadata.horasKmAnterior ?? 0),
           };
         });
 
@@ -857,8 +874,9 @@ export function useSupabaseData() {
       throw new Error('Mantenimiento no encontrado');
     }
 
+    const horasPrevias = Number(mantenimiento.horasKmActuales ?? 0);
     const horasActuales = Number(horasKm);
-    const incremento = horasActuales - Number(mantenimiento.horasKmActuales ?? 0);
+    const incremento = horasActuales - horasPrevias;
     const fechaIso = fecha ? new Date(fecha).toISOString() : new Date().toISOString();
     const restanteCalculado = Math.max(mantenimiento.proximoMantenimiento - horasActuales, 0);
 
@@ -884,28 +902,35 @@ export function useSupabaseData() {
         ficha: mantenimiento.ficha,
         nombreEquipo: mantenimiento.nombreEquipo,
         horasKm: horasActuales,
+        horasPrevias,
         incremento,
         fecha: fechaIso,
         usuarioResponsable,
         observaciones,
+        restante: restanteCalculado,
       };
 
-      const { error: historialError } = await supabase.from('historial_eventos').insert({
-        tipo_evento: 'lectura_actualizada',
+      await recordHistorialEvent({
+        tipo: 'lectura_actualizada',
         modulo: 'mantenimientos',
-        ficha_equipo: mantenimiento.ficha,
-        nombre_equipo: mantenimiento.nombreEquipo,
-        usuario_responsable: usuarioResponsable,
         descripcion,
-        datos_despues: {
+        ficha: mantenimiento.ficha,
+        nombre: mantenimiento.nombreEquipo,
+        datosAntes: {
+          horasKm: horasPrevias,
+          fechaUltimaActualizacion: mantenimiento.fechaUltimaActualizacion,
+        },
+        datosDespues: {
           horasKm: horasActuales,
           incremento,
+          restante: restanteCalculado,
+          fecha: fechaIso,
+          observaciones,
         },
         metadata,
-        created_at: fechaIso,
+        usuario: usuarioResponsable,
+        createdAt: fechaIso,
       });
-
-      if (historialError) throw historialError;
 
       toast({
         title: "✅ Horas actualizadas",
@@ -945,7 +970,8 @@ export function useSupabaseData() {
 
     const fechaIso = fecha ? new Date(fecha).toISOString() : new Date().toISOString();
     const lectura = Number(horasKm);
-    const incremento = lectura - Number(mantenimiento.horasKmUltimoMantenimiento ?? 0);
+    const horasPrevias = Number(mantenimiento.horasKmUltimoMantenimiento ?? 0);
+    const incremento = lectura - horasPrevias;
     const proximo = lectura + Number(mantenimiento.frecuencia ?? 0);
     const restante = Math.max(proximo - lectura, 0);
 
@@ -974,29 +1000,35 @@ export function useSupabaseData() {
         nombreEquipo: mantenimiento.nombreEquipo,
         fechaMantenimiento: fechaIso,
         horasKmAlMomento: lectura,
+        horasPrevias,
         incrementoDesdeUltimo: incremento,
         filtrosUtilizados,
         usuarioResponsable,
         observaciones,
+        proximoMantenimientoCalculado: proximo,
       };
 
-      const { error: historialError } = await supabase.from('historial_eventos').insert({
-        tipo_evento: 'mantenimiento_realizado',
+      await recordHistorialEvent({
+        tipo: 'mantenimiento_realizado',
         modulo: 'mantenimientos',
-        ficha_equipo: mantenimiento.ficha,
-        nombre_equipo: mantenimiento.nombreEquipo,
-        usuario_responsable: usuarioResponsable,
         descripcion,
-        datos_despues: {
+        ficha: mantenimiento.ficha,
+        nombre: mantenimiento.nombreEquipo,
+        datosAntes: {
+          horasKmUltimoMantenimiento: mantenimiento.horasKmUltimoMantenimiento,
+          fechaUltimoMantenimiento: mantenimiento.fechaUltimoMantenimiento,
+        },
+        datosDespues: {
           horasKmAlMomento: lectura,
           incrementoDesdeUltimo: incremento,
           filtrosUtilizados,
+          observaciones,
+          fechaMantenimiento: fechaIso,
         },
         metadata,
-        created_at: fechaIso,
+        usuario: usuarioResponsable,
+        createdAt: fechaIso,
       });
-
-      if (historialError) throw historialError;
 
       toast({
         title: "✅ Mantenimiento registrado",
