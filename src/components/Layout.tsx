@@ -171,21 +171,21 @@ export function Layout({ children, title }: LayoutProps) {
   return (
     <div className="min-h-screen bg-background text-foreground">
       <header className="border-b border-border/60 bg-card/80 shadow-sm backdrop-blur supports-[backdrop-filter]:bg-card/60 dark:border-border/40 dark:bg-card/70">
-
-        <div className="container mx-auto px-4 py-4">
-          <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
-            <div className="space-y-1 flex items-center gap-4">
+        <div className="mx-auto w-full max-w-[1600px] px-4 py-4 sm:px-6 lg:px-8">
+          <div className="flex flex-col gap-4 xl:flex-row xl:items-center xl:justify-between">
+            <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:gap-4">
               <div>
                 <h1 className="text-2xl font-bold text-primary">ALITO GROUP SRL</h1>
                 <p className="text-muted-foreground">{title}</p>
               </div>
               <Badge variant="outline" className="text-xs">v1.0.0</Badge>
             </div>
-            <div className="flex items-center gap-2">
-              <NotificationButton />
-              <ThemeToggle />
-              <div className="h-6 w-px bg-border mx-2" />
-              <div className="flex flex-col gap-2 sm:flex-row sm:flex-wrap sm:gap-3 lg:justify-end">
+            <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-end">
+              <div className="flex items-center gap-2 justify-end">
+                <NotificationButton />
+                <ThemeToggle />
+              </div>
+              <div className="grid grid-cols-2 gap-2 sm:grid-cols-3 md:flex md:flex-wrap md:justify-end md:gap-3">
               <Button
                 variant="outline"
                 onClick={handleImport}
@@ -240,7 +240,7 @@ export function Layout({ children, title }: LayoutProps) {
           </div>
         </div>
       </header>
-      <main className="container mx-auto px-4 py-6">
+      <main className="mx-auto w-full max-w-[1600px] px-4 py-6 sm:px-6 lg:px-8">
         {children}
       </main>
     </div>

@@ -51,7 +51,7 @@ export function Navigation() {
   return (
     <nav className="border-b border-border/60 bg-card/80 backdrop-blur supports-[backdrop-filter]:bg-card/60 dark:border-border/40 dark:bg-card/70 mb-6">
       <Sheet>
-        <div className="container mx-auto px-4 py-3">
+        <div className="mx-auto w-full max-w-[1600px] px-4 py-3 sm:px-6 lg:px-8">
           <div className="flex items-center justify-between sm:hidden">
             <span className="text-sm font-semibold text-primary">Navegación</span>
             <div className="flex gap-2">
@@ -65,7 +65,7 @@ export function Navigation() {
             </div>
           </div>
           <div className="hidden sm:flex sm:flex-wrap sm:items-center sm:justify-between sm:gap-4">
-            <div className="flex gap-4">
+            <div className="flex flex-wrap items-center gap-2 lg:gap-4">
               {navLinks}
             </div>
             <NotificacionesCentro />

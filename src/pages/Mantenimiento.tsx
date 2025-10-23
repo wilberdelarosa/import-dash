@@ -1367,7 +1367,8 @@ export default function Mantenimiento() {
         </DialogContent>
       </Dialog>
 
-      <Card className="mb-6 border-destructive/40">
+      <div className="space-y-6 lg:space-y-8">
+      <Card className="border-destructive/40">
         <CardHeader>
           <CardTitle className="flex items-center gap-2 text-destructive">
             <Trash2 className="w-5 h-5" />
@@ -1397,7 +1398,7 @@ export default function Mantenimiento() {
       </Card>
 
 
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-6">
+      <section className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
         <Card>
           <CardHeader className="pb-2">
             <CardDescription>Total Programados</CardDescription>
@@ -1422,9 +1423,9 @@ export default function Mantenimiento() {
             <CardTitle className="text-3xl text-emerald-500">{normales}</CardTitle>
           </CardHeader>
         </Card>
-      </div>
+      </section>
 
-      <Card>
+      <Card className="flex flex-col overflow-hidden">
         <CardHeader className="space-y-4">
           <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
             <div>
@@ -1524,127 +1525,136 @@ export default function Mantenimiento() {
             </div>
           </div>
         </CardHeader>
-        <CardContent>
-          <div className="rounded-md border bg-white p-2 sm:p-4">
-            <div
-              className={cn('overflow-x-auto', tableScale > 1 ? 'pb-4' : undefined)}
-              style={{ touchAction: 'pan-y pinch-zoom' }}
-            >
+        <CardContent className="flex-1 px-0 pb-6 sm:px-6">
+          <div className="-mx-4 overflow-x-auto sm:mx-0">
+            <div className="min-w-full rounded-md border bg-card">
               <div
-                className="origin-top-left"
-                style={{
-                  transform: `scale(${tableScale})`,
-                  transformOrigin: 'top left',
-                  width: `${100 / tableScale}%`,
-                }}
+                className={cn('overflow-x-auto', tableScale > 1 ? 'pb-4' : undefined)}
+                style={{ touchAction: 'pan-y pinch-zoom' }}
               >
-                <Table className="min-w-[1000px]">
-                  <TableHeader>
-                <TableRow>
-                  <TableHead>Ficha</TableHead>
-                  <TableHead>Equipo</TableHead>
-                  <TableHead>Categoría</TableHead>
-                  <TableHead>Tipo</TableHead>
-                  <TableHead>Actual</TableHead>
-                  <TableHead>Frecuencia</TableHead>
-                  <TableHead>Últ. Mant.</TableHead>
-                  <TableHead>Próximo</TableHead>
-                  <TableHead>Restante</TableHead>
-                  <TableHead>Fecha Últ.</TableHead>
-                  <TableHead>Estado</TableHead>
-                  <TableHead className="text-right">Acciones</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {mantenimientosFiltrados.map((mant) => {
-                  const estado = obtenerEstadoMantenimiento(mant.horasKmRestante);
-                  const unidad = mant.tipoMantenimiento === 'Horas' ? 'hrs' : 'km';
-                  const equipo = equiposPorFicha[mant.ficha];
-                  
-                  return (
-                    <TableRow key={mant.id}>
-                      <TableCell className="font-medium">{mant.ficha}</TableCell>
-                      <TableCell>{mant.nombreEquipo}</TableCell>
-                      <TableCell>{equipo?.categoria || 'N/A'}</TableCell>
-                      <TableCell>{mant.tipoMantenimiento}</TableCell>
-                      <TableCell>{mant.horasKmActuales.toLocaleString()} {unidad}</TableCell>
-                      <TableCell>{mant.frecuencia.toLocaleString()} {unidad}</TableCell>
-                      <TableCell className="font-medium text-blue-600">
-                        {mant.horasKmUltimoMantenimiento.toLocaleString()} {unidad}
-                      </TableCell>
-                      <TableCell>{mant.proximoMantenimiento.toLocaleString()} {unidad}</TableCell>
-                      <TableCell>
-                        <div className="flex items-center">
-                          {mant.horasKmRestante <= 0 && (
-                            <AlertCircle className="w-4 h-4 text-red-500 mr-2" />
-                          )}
-                          {mant.horasKmRestante > 0 && mant.horasKmRestante <= 100 && (
-                            <Clock className="w-4 h-4 text-amber-500 mr-2" />
-                          )}
-                          <span className={
-                            mant.horasKmRestante <= 0 ? 'text-red-600 font-medium' :
-                            mant.horasKmRestante <= 100 ? 'text-amber-600 font-medium' : 'text-emerald-600 font-medium'
-                          }>
-                            {mant.horasKmRestante <= 0 ? 
-                              `${Math.abs(mant.horasKmRestante).toFixed(0)} ${unidad} vencido` :
-                              `${mant.horasKmRestante.toFixed(0)} ${unidad}`
-                            }
-                          </span>
-                        </div>
-                      </TableCell>
-                      <TableCell>{formatearFecha(mant.fechaUltimoMantenimiento)}</TableCell>
-                      <TableCell>
-                        <Badge
-                          variant={estado.variant}
-                          className={
-                            estado.label === 'Vencido' ? 'bg-red-100 text-red-700 border-red-200' :
-                            estado.label === 'Próximo' ? 'bg-amber-100 text-amber-700 border-amber-200' :
-                            'bg-emerald-100 text-emerald-700 border-emerald-200'
-                          }
-                        >
-                          {estado.label}
-                        </Badge>
-                      </TableCell>
-                      <TableCell className="text-right">
-                        <div className="flex justify-end gap-1.5">
-                          <Button
-                            type="button"
-                            variant="ghost"
-                            size="icon"
-                            onClick={() => handleOpenEditForm(mant)}
-                            aria-label="Editar mantenimiento"
-                          >
-                            <Pencil className="h-4 w-4" />
-                          </Button>
-                          <Button
-                            type="button"
-                            variant="ghost"
-                            size="icon"
-                            className="text-destructive hover:text-destructive"
-                            onClick={() => setDeleteTarget(mant)}
-                            disabled={isDeleting && deleteTarget?.id === mant.id}
-                            aria-label="Eliminar mantenimiento"
-                          >
-                            <Trash2 className="h-4 w-4" />
-                          </Button>
-                        </div>
-                      </TableCell>
-                    </TableRow>
-                  );
-                })}
-              </TableBody>
-            </Table>
+                <div
+                  className="origin-top-left"
+                  style={{
+                    transform: `scale(${tableScale})`,
+                    transformOrigin: 'top left',
+                    width: `${100 / tableScale}%`,
+                  }}
+                >
+                  <Table className="w-full min-w-[1000px]">
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead>Ficha</TableHead>
+                        <TableHead>Equipo</TableHead>
+                        <TableHead>Categoría</TableHead>
+                        <TableHead>Tipo</TableHead>
+                        <TableHead>Actual</TableHead>
+                        <TableHead>Frecuencia</TableHead>
+                        <TableHead>Últ. Mant.</TableHead>
+                        <TableHead>Próximo</TableHead>
+                        <TableHead>Restante</TableHead>
+                        <TableHead>Fecha Últ.</TableHead>
+                        <TableHead>Estado</TableHead>
+                        <TableHead className="text-right">Acciones</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {mantenimientosFiltrados.map((mant) => {
+                        const estado = obtenerEstadoMantenimiento(mant.horasKmRestante);
+                        const unidad = mant.tipoMantenimiento === 'Horas' ? 'hrs' : 'km';
+                        const equipo = equiposPorFicha[mant.ficha];
+
+                        return (
+                          <TableRow key={mant.id}>
+                            <TableCell className="font-medium">{mant.ficha}</TableCell>
+                            <TableCell>{mant.nombreEquipo}</TableCell>
+                            <TableCell>{equipo?.categoria || 'N/A'}</TableCell>
+                            <TableCell>{mant.tipoMantenimiento}</TableCell>
+                            <TableCell>{mant.horasKmActuales.toLocaleString()} {unidad}</TableCell>
+                            <TableCell>{mant.frecuencia.toLocaleString()} {unidad}</TableCell>
+                            <TableCell className="font-medium text-blue-600">
+                              {mant.horasKmUltimoMantenimiento.toLocaleString()} {unidad}
+                            </TableCell>
+                            <TableCell>{mant.proximoMantenimiento.toLocaleString()} {unidad}</TableCell>
+                            <TableCell>
+                              <div className="flex items-center">
+                                {mant.horasKmRestante <= 0 && (
+                                  <AlertCircle className="mr-2 h-4 w-4 text-red-500" />
+                                )}
+                                {mant.horasKmRestante > 0 && mant.horasKmRestante <= 100 && (
+                                  <Clock className="mr-2 h-4 w-4 text-amber-500" />
+                                )}
+                                <span
+                                  className={
+                                    mant.horasKmRestante <= 0
+                                      ? 'font-medium text-red-600'
+                                      : mant.horasKmRestante <= 100
+                                      ? 'font-medium text-amber-600'
+                                      : 'font-medium text-emerald-600'
+                                  }
+                                >
+                                  {mant.horasKmRestante <= 0
+                                    ? `${Math.abs(mant.horasKmRestante).toFixed(0)} ${unidad} vencido`
+                                    : `${mant.horasKmRestante.toFixed(0)} ${unidad}`}
+                                </span>
+                              </div>
+                            </TableCell>
+                            <TableCell>{formatearFecha(mant.fechaUltimoMantenimiento)}</TableCell>
+                            <TableCell>
+                              <Badge
+                                variant={estado.variant}
+                                className={
+                                  estado.label === 'Vencido'
+                                    ? 'bg-red-100 text-red-700 border-red-200'
+                                    : estado.label === 'Próximo'
+                                    ? 'bg-amber-100 text-amber-700 border-amber-200'
+                                    : 'bg-emerald-100 text-emerald-700 border-emerald-200'
+                                }
+                              >
+                                {estado.label}
+                              </Badge>
+                            </TableCell>
+                            <TableCell className="text-right">
+                              <div className="flex justify-end gap-1.5">
+                                <Button
+                                  type="button"
+                                  variant="ghost"
+                                  size="icon"
+                                  onClick={() => handleOpenEditForm(mant)}
+                                  aria-label="Editar mantenimiento"
+                                >
+                                  <Pencil className="h-4 w-4" />
+                                </Button>
+                                <Button
+                                  type="button"
+                                  variant="ghost"
+                                  size="icon"
+                                  className="text-destructive hover:text-destructive"
+                                  onClick={() => setDeleteTarget(mant)}
+                                  disabled={isDeleting && deleteTarget?.id === mant.id}
+                                  aria-label="Eliminar mantenimiento"
+                                >
+                                  <Trash2 className="h-4 w-4" />
+                                </Button>
+                              </div>
+                            </TableCell>
+                          </TableRow>
+                        );
+                      })}
+                    </TableBody>
+                  </Table>
+                </div>
+              </div>
+            </div>
           </div>
-        </div>
-      </div>
 
           {mantenimientosFiltrados.length === 0 && (
-            <div className="text-center py-8 text-muted-foreground">
+            <div className="py-8 text-center text-muted-foreground">
               No se encontraron mantenimientos que coincidan con los filtros seleccionados.
             </div>
           )}
         </CardContent>
       </Card>
+      </div>
     </Layout>
   );
 }

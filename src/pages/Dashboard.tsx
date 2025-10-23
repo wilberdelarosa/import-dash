@@ -59,8 +59,9 @@ export default function Dashboard() {
     <Layout title="Resumen ejecutivo">
       <Navigation />
 
+      <div className="space-y-6 lg:space-y-8">
       {proximoMantenimiento && proximoMantenimiento.horasKmRestante <= 25 && (
-        <Alert variant="warning" className="mb-6">
+        <Alert variant="warning" className="border-warning/50">
           <AlertTriangle className="h-4 w-4" />
           <AlertTitle>Próximo mantenimiento crítico</AlertTitle>
           <AlertDescription>
@@ -70,7 +71,7 @@ export default function Dashboard() {
         </Alert>
       )}
 
-      <div className="grid gap-6 md:grid-cols-2 xl:grid-cols-4">
+      <section className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
         <Card>
           <CardHeader className="pb-2">
             <CardDescription>Equipos activos</CardDescription>
@@ -119,17 +120,18 @@ export default function Dashboard() {
             <p className="text-sm text-muted-foreground">Personal disponible en la base</p>
           </CardContent>
         </Card>
-      </div>
+      </section>
 
-      <div className="mt-8 grid gap-6 xl:grid-cols-2">
-        <Card>
+      <section className="grid gap-6 xl:grid-cols-2">
+        <Card className="flex flex-col">
           <CardHeader>
             <CardTitle>Próximas actualizaciones</CardTitle>
             <CardDescription>Planifica las inspecciones prioritarias</CardDescription>
           </CardHeader>
-          <CardContent>
-            <div className="rounded-md border">
-              <Table>
+          <CardContent className="flex-1">
+            <div className="-mx-4 overflow-x-auto sm:mx-0">
+              <div className="min-w-full rounded-md border">
+              <Table className="w-full min-w-[720px]">
                 <TableHeader>
                   <TableRow>
                     <TableHead>Equipo</TableHead>
@@ -157,16 +159,17 @@ export default function Dashboard() {
                     ))}
                 </TableBody>
               </Table>
+              </div>
             </div>
           </CardContent>
         </Card>
 
-        <Card>
+        <Card className="flex flex-col">
           <CardHeader>
             <CardTitle>Actividad reciente</CardTitle>
             <CardDescription>Últimas lecturas y mantenimientos registrados</CardDescription>
           </CardHeader>
-          <CardContent>
+          <CardContent className="flex-1">
             <div className="space-y-6">
               <div>
                 <h3 className="text-sm font-semibold text-muted-foreground mb-3 flex items-center gap-2">
@@ -217,6 +220,7 @@ export default function Dashboard() {
             </div>
           </CardContent>
         </Card>
+      </section>
       </div>
     </Layout>
   );
