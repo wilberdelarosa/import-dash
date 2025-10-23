@@ -59,11 +59,11 @@ import {
   EyeOff,
   ChevronDown,
   Archive,
-  Zap
 } from 'lucide-react';
 import { format } from 'date-fns';
 import { es } from 'date-fns/locale';
 import { cn } from '@/lib/utils';
+import { HistorialEvento, TipoEventoBase } from '@/types/historial';
 
 export default function Historial() {
   const {
@@ -221,7 +221,9 @@ export default function Historial() {
     }
   };
 
-  const getBadgeVariant = (tipo: string): "default" | "secondary" | "destructive" | "outline" => {
+  const getBadgeVariant = (
+    tipo: TipoEventoBase,
+  ): "default" | "secondary" | "destructive" | "outline" => {
     switch (tipo) {
       case 'crear':
         return 'default';
@@ -240,11 +242,11 @@ export default function Historial() {
     }
   };
 
-  const getEventoVisual = (tipo: string) => {
+  const getEventoVisual = (tipo: TipoEventoBase) => {
     switch (tipo) {
       case 'crear':
         return {
-          label: 'Crear',
+          label: 'Creación',
           icon: <PlusCircle className="h-4 w-4" />,
           iconBgClass: 'bg-emerald-50 text-emerald-600',
           dotClass: 'bg-emerald-500 ring-emerald-200',
@@ -252,7 +254,7 @@ export default function Historial() {
         };
       case 'actualizar':
         return {
-          label: 'Actualizar',
+          label: 'Actualización',
           icon: <RefreshCw className="h-4 w-4" />,
           iconBgClass: 'bg-sky-50 text-sky-600',
           dotClass: 'bg-sky-500 ring-sky-200',
@@ -260,7 +262,7 @@ export default function Historial() {
         };
       case 'eliminar':
         return {
-          label: 'Eliminar',
+          label: 'Eliminación',
           icon: <Trash2 className="h-4 w-4" />,
           iconBgClass: 'bg-rose-50 text-rose-600',
           dotClass: 'bg-rose-500 ring-rose-200',
@@ -268,7 +270,7 @@ export default function Historial() {
         };
       case 'mantenimiento_realizado':
         return {
-          label: 'Mantenimiento',
+          label: 'Mantenimiento realizado',
           icon: <Wrench className="h-4 w-4" />,
           iconBgClass: 'bg-amber-50 text-amber-600',
           dotClass: 'bg-amber-500 ring-amber-200',
@@ -276,7 +278,7 @@ export default function Historial() {
         };
       case 'lectura_actualizada':
         return {
-          label: 'Lectura',
+          label: 'Lectura actualizada',
           icon: <TrendingUp className="h-4 w-4" />,
           iconBgClass: 'bg-indigo-50 text-indigo-600',
           dotClass: 'bg-indigo-500 ring-indigo-200',
@@ -284,27 +286,20 @@ export default function Historial() {
         };
       case 'stock_movido':
         return {
-          label: 'Stock',
+          label: 'Movimiento de stock',
           icon: <Package className="h-4 w-4" />,
           iconBgClass: 'bg-purple-50 text-purple-600',
           dotClass: 'bg-purple-500 ring-purple-200',
           cardClass: 'border-purple-200/60 hover:border-purple-300/80',
         };
       case 'sistema':
+      default:
         return {
           label: 'Sistema',
           icon: <Settings className="h-4 w-4" />,
           iconBgClass: 'bg-slate-50 text-slate-600',
           dotClass: 'bg-slate-500 ring-slate-200',
           cardClass: 'border-slate-200/60 hover:border-slate-300/80',
-        };
-      default:
-        return {
-          label: tipo,
-          icon: <Info className="h-4 w-4" />,
-          iconBgClass: 'bg-primary/10 text-primary',
-          dotClass: 'bg-primary ring-primary/30',
-          cardClass: 'border-border hover:border-primary/60',
         };
     }
   };
@@ -352,9 +347,13 @@ export default function Historial() {
     }, {} as Record<string, number>);
 
     const porTipo = eventos.reduce((acc, evento) => {
-      acc[evento.tipoEvento] = (acc[evento.tipoEvento] || 0) + 1;
+      const key = evento.categoriaEvento;
+      const actual = acc[key] ?? { etiqueta: evento.etiquetaCategoria, cantidad: 0 };
+      actual.cantidad += 1;
+      actual.etiqueta = evento.etiquetaCategoria;
+      acc[key] = actual;
       return acc;
-    }, {} as Record<string, number>);
+    }, {} as Partial<Record<TipoEventoBase, { etiqueta: string; cantidad: number }>>);
 
     const porEquipo = eventos
       .filter(e => e.fichaEquipo)
@@ -390,7 +389,7 @@ export default function Historial() {
     console.log('Exportar a PDF');
   };
 
-  const tiposEvento = ['crear', 'actualizar', 'eliminar', 'mantenimiento_realizado', 'lectura_actualizada', 'stock_movido', 'sistema'];
+  const tiposEvento: TipoEventoBase[] = ['crear', 'actualizar', 'eliminar', 'mantenimiento_realizado', 'lectura_actualizada', 'stock_movido', 'sistema'];
   const modulos = ['equipos', 'inventarios', 'mantenimientos', 'sistema'];
   const niveles = ['info', 'warning', 'critical'];
 
@@ -593,8 +592,11 @@ export default function Historial() {
                     <label className="text-sm font-medium mb-2 block">Tipo de Evento</label>
                     <Select
                       value={filtros.tipoEvento[0] || "todos"}
-                      onValueChange={(value) => 
-                        setFiltros({ ...filtros, tipoEvento: value === "todos" ? [] : [value] })
+                      onValueChange={(value) =>
+                        setFiltros({
+                          ...filtros,
+                          tipoEvento: value === "todos" ? [] : [value as TipoEventoBase],
+                        })
                       }
                     >
                       <SelectTrigger>
@@ -740,7 +742,7 @@ export default function Historial() {
 
                           <div className="space-y-4 pl-6">
                             {eventosDia.map((evento) => {
-                              const visual = getEventoVisual(evento.tipoEvento);
+                              const visual = getEventoVisual(evento.categoriaEvento);
                               const detallesEvento = renderDetallesEvento(evento);
 
                               return (
@@ -762,10 +764,20 @@ export default function Historial() {
                                         <div className="flex items-start justify-between gap-2">
                                           <div className="flex-1 space-y-2">
                                             <div className="flex items-center gap-2 flex-wrap">
-                                              <Badge variant={getBadgeVariant(evento.tipoEvento)} className="gap-1">
-                                                <Zap className="h-3 w-3" />
-                                                {visual.label}
+                                              <Badge variant={getBadgeVariant(evento.categoriaEvento)} className="gap-1">
+                                                <span className="flex items-center gap-1">
+                                                  <span className={cn('flex h-5 w-5 items-center justify-center rounded-full', visual.iconBgClass)}>
+                                                    {visual.icon}
+                                                  </span>
+                                                  {visual.label}
+                                                </span>
                                               </Badge>
+                                              {evento.etiquetaSubtipo && evento.etiquetaSubtipo !== visual.label && (
+                                                <Badge variant="outline" className="gap-1">
+                                                  <Info className="h-3 w-3" />
+                                                  {evento.etiquetaSubtipo}
+                                                </Badge>
+                                              )}
                                               <Badge variant="outline" className="gap-1">
                                                 {getIconoModulo(evento.modulo)}
                                                 <span className="capitalize">{evento.modulo}</span>
@@ -882,18 +894,33 @@ export default function Historial() {
                       </tr>
                     </thead>
                     <tbody>
-                      {eventos.map((evento, idx) => (
-                        <tr key={evento.id} className={cn(
-                          "border-b transition-colors hover:bg-muted/50",
-                          idx % 2 === 0 ? 'bg-background' : 'bg-muted/20'
-                        )}>
+                      {eventos.map((evento, idx) => {
+                        const visual = getEventoVisual(evento.categoriaEvento);
+
+                        return (
+                          <tr key={evento.id} className={cn(
+                            "border-b transition-colors hover:bg-muted/50",
+                            idx % 2 === 0 ? 'bg-background' : 'bg-muted/20'
+                          )}>
                           <td className="px-4 py-3 text-xs whitespace-nowrap">
                             {new Date(evento.createdAt).toLocaleString('es-ES')}
                           </td>
                           <td className="px-4 py-3">
-                            <Badge variant={getBadgeVariant(evento.tipoEvento)} className="text-xs">
-                              {getEventoVisual(evento.tipoEvento).label}
-                            </Badge>
+                            <div className="flex flex-col gap-1">
+                              <Badge variant={getBadgeVariant(evento.categoriaEvento)} className="text-xs">
+                                <span className="flex items-center gap-1">
+                                  <span className={cn('flex h-5 w-5 items-center justify-center rounded-full', visual.iconBgClass)}>
+                                    {visual.icon}
+                                  </span>
+                                  {visual.label}
+                                </span>
+                              </Badge>
+                              {evento.etiquetaSubtipo && evento.etiquetaSubtipo !== visual.label && (
+                                <span className="text-[11px] text-muted-foreground">
+                                  {evento.etiquetaSubtipo}
+                                </span>
+                              )}
+                            </div>
                           </td>
                           <td className="px-4 py-3">
                             <div className="flex items-center gap-1">
@@ -917,8 +944,9 @@ export default function Historial() {
                               {getIconoNivel(evento.nivelImportancia)}
                             </div>
                           </td>
-                        </tr>
-                      ))}
+                          </tr>
+                        );
+                      })}
                     </tbody>
                   </table>
                 </div>
@@ -963,15 +991,22 @@ export default function Historial() {
               </CardHeader>
               <CardContent>
                 <div className="space-y-3">
-                  {Object.entries(estadisticasAvanzadas.porTipo).map(([tipo, cantidad]) => (
-                    <div key={tipo} className="space-y-1">
-                      <div className="flex items-center justify-between text-sm">
-                        <span className="capitalize font-medium">{getEventoVisual(tipo as any).label}</span>
-                        <span className="font-bold">{cantidad}</span>
+                  {Object.entries(estadisticasAvanzadas.porTipo).map(([tipo, data]) => {
+                    if (!data) return null;
+
+                    const visual = getEventoVisual(tipo as TipoEventoBase);
+                    const porcentaje = eventos.length > 0 ? (data.cantidad / eventos.length) * 100 : 0;
+
+                    return (
+                      <div key={tipo} className="space-y-1">
+                        <div className="flex items-center justify-between text-sm">
+                          <span className="font-medium">{data.etiqueta ?? visual.label}</span>
+                          <span className="font-bold">{data.cantidad}</span>
+                        </div>
+                        <Progress value={porcentaje} className="h-2" />
                       </div>
-                      <Progress value={(cantidad / eventos.length) * 100} className="h-2" />
-                    </div>
-                  ))}
+                    );
+                  })}
                 </div>
               </CardContent>
             </Card>
