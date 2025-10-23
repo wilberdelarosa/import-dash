@@ -505,41 +505,36 @@ export function useSupabaseData() {
   const clearDatabase = async () => {
     try {
       setLoading(true);
-
+      
       toast({
         title: "Limpiando base de datos...",
         description: "Por favor espera mientras se eliminan los datos",
       });
 
-      const tablesInOrder: Array<{ table: 'notificaciones_salientes' | 'notificaciones' | 'historial_eventos' | 'mantenimientos_programados' | 'inventarios' | 'equipos'; column?: string }>
-        = [
-          { table: 'notificaciones_salientes' },
-          { table: 'notificaciones' },
-          { table: 'historial_eventos' },
-          { table: 'mantenimientos_programados' },
-          { table: 'inventarios' },
-          { table: 'equipos' },
-        ];
+      await supabase
+        .from('mantenimientos_programados')
+        .delete()
+        .neq('id', 0);
 
-      for (const { table, column = 'id' } of tablesInOrder) {
-        const { error } = await supabase
-          .from(table)
-          .delete()
-          .neq(column, -1);
+      await supabase
+        .from('inventarios')
+        .delete()
+        .neq('id', 0);
 
-        if (error) {
-          throw new Error(`No se pudo limpiar la tabla ${table}: ${error.message}`);
-        }
-      }
+      await supabase
+        .from('equipos')
+        .delete()
+        .neq('id', 0);
 
-      setData({
-        equipos: [],
-        inventarios: [],
-        mantenimientosProgramados: [],
-        mantenimientosRealizados: [],
-        actualizacionesHorasKm: [],
-        empleados: [],
-      });
+      await supabase
+        .from('historial_eventos')
+        .delete()
+        .neq('id', 0);
+
+      await supabase
+        .from('notificaciones')
+        .delete()
+        .neq('id', 0);
 
       toast({
         title: "✅ Éxito",
