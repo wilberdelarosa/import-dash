@@ -11,18 +11,7 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import {
-  Loader2,
-  Wrench,
-  CalendarCheck,
-  Gauge,
-  ClipboardList,
-  CalendarRange,
-  CheckCircle2,
-  AlertTriangle,
-  Activity,
-  CalendarDays,
-} from 'lucide-react';
+import { Loader2, Wrench, CalendarCheck, Gauge, ClipboardList, CalendarRange } from 'lucide-react';
 import type { ActualizacionHorasKm, MantenimientoProgramado, MantenimientoRealizado } from '@/types/equipment';
 import { useToast } from '@/hooks/use-toast';
 
@@ -69,32 +58,6 @@ export default function ControlMantenimiento() {
   const [reporteDesde, setReporteDesde] = useState('');
   const [reporteHasta, setReporteHasta] = useState('');
   const [resumenActualizaciones, setResumenActualizaciones] = useState<ResumenActualizaciones | null>(null);
-
-  const totalEquiposEvaluados = resumenActualizaciones
-    ? resumenActualizaciones.actualizados.length + resumenActualizaciones.pendientes.length
-    : 0;
-
-  const coberturaLecturas = resumenActualizaciones && totalEquiposEvaluados > 0
-    ? Math.round((resumenActualizaciones.actualizados.length / totalEquiposEvaluados) * 100)
-    : 0;
-
-  const pendientesPorcentaje = resumenActualizaciones && totalEquiposEvaluados > 0
-    ? Math.round((resumenActualizaciones.pendientes.length / totalEquiposEvaluados) * 100)
-    : 0;
-
-  const periodoResumen = resumenActualizaciones
-    ? `${new Date(resumenActualizaciones.desde).toLocaleDateString()} - ${new Date(resumenActualizaciones.hasta).toLocaleDateString()}`
-    : '';
-
-  const diasPeriodo = resumenActualizaciones
-    ? Math.max(
-        1,
-        Math.ceil(
-          (new Date(resumenActualizaciones.hasta).getTime() - new Date(resumenActualizaciones.desde).getTime()) /
-            (1000 * 60 * 60 * 24),
-        ),
-      )
-    : 0;
 
   useEffect(() => {
     if (!loading && data.mantenimientosProgramados.length > 0 && selectedId === null) {
@@ -523,62 +486,16 @@ export default function ControlMantenimiento() {
 
               {resumenActualizaciones ? (
                 <div className="space-y-6">
-                  <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
-                    <div className="rounded-xl border bg-card/70 p-4 shadow-sm">
-                      <div className="flex items-start justify-between gap-3">
-                        <div>
-                          <p className="text-sm text-muted-foreground">Equipos actualizados</p>
-                          <p className="text-2xl font-semibold">
-                            {resumenActualizaciones.actualizados.length}
-                          </p>
-                          <p className="text-xs text-muted-foreground">
-                            de {totalEquiposEvaluados} evaluados
-                          </p>
-                        </div>
-                        <CheckCircle2 className="h-8 w-8 text-emerald-500" />
-                      </div>
-                    </div>
-
-                    <div className="rounded-xl border bg-card/70 p-4 shadow-sm">
-                      <div className="flex items-start justify-between gap-3">
-                        <div>
-                          <p className="text-sm text-muted-foreground">Equipos pendientes</p>
-                          <p className="text-2xl font-semibold text-destructive">
-                            {resumenActualizaciones.pendientes.length}
-                          </p>
-                          <p className="text-xs text-muted-foreground">
-                            {pendientesPorcentaje}% del total
-                          </p>
-                        </div>
-                        <AlertTriangle className="h-8 w-8 text-destructive" />
-                      </div>
-                    </div>
-
-                    <div className="rounded-xl border bg-card/70 p-4 shadow-sm">
-                      <div className="flex items-start justify-between gap-3">
-                        <div>
-                          <p className="text-sm text-muted-foreground">Cobertura del reporte</p>
-                          <p className="text-2xl font-semibold">{coberturaLecturas}%</p>
-                          <p className="text-xs text-muted-foreground">
-                            {resumenActualizaciones.actualizados.length} equipos con lectura válida
-                          </p>
-                        </div>
-                        <Activity className="h-8 w-8 text-primary" />
-                      </div>
-                    </div>
-
-                    <div className="rounded-xl border bg-card/70 p-4 shadow-sm">
-                      <div className="flex items-start justify-between gap-3">
-                        <div>
-                          <p className="text-sm text-muted-foreground">Período del reporte</p>
-                          <p className="text-sm font-medium leading-tight">{periodoResumen}</p>
-                          <p className="text-xs text-muted-foreground">
-                            Aproximadamente {diasPeriodo} {diasPeriodo === 1 ? 'día' : 'días'}
-                          </p>
-                        </div>
-                        <CalendarDays className="h-8 w-8 text-blue-500" />
-                      </div>
-                    </div>
+                  <div className="flex flex-wrap gap-3">
+                    <Badge variant="secondary">
+                      Actualizados: {resumenActualizaciones.actualizados.length}
+                    </Badge>
+                    <Badge variant={resumenActualizaciones.pendientes.length > 0 ? 'destructive' : 'outline'}>
+                      Pendientes: {resumenActualizaciones.pendientes.length}
+                    </Badge>
+                    <Badge variant="outline">
+                      Período: {new Date(resumenActualizaciones.desde).toLocaleDateString()} - {new Date(resumenActualizaciones.hasta).toLocaleDateString()}
+                    </Badge>
                   </div>
 
                   <div className="grid gap-6 lg:grid-cols-2">
