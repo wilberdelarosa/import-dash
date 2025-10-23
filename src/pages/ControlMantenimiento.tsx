@@ -177,37 +177,59 @@ export default function ControlMantenimiento() {
       return;
     }
 
+    const inicioAjustado = new Date(inicio);
+    inicioAjustado.setHours(0, 0, 0, 0);
+
     const finAjustado = new Date(fin);
     finAjustado.setHours(23, 59, 59, 999);
 
     const eventosEnRango = data.actualizacionesHorasKm.filter((evento) => {
       const fechaEvento = new Date(evento.fecha);
       if (Number.isNaN(fechaEvento.getTime())) return false;
-      return fechaEvento >= inicio && fechaEvento <= finAjustado;
+      return fechaEvento >= inicioAjustado && fechaEvento <= finAjustado;
     });
 
-    const eventosPorFicha = new Map<string, ActualizacionHorasKm>();
+    const eventosPorFicha = new Map<string, ActualizacionHorasKm[]>();
     eventosEnRango.forEach((evento) => {
-      const actual = eventosPorFicha.get(evento.ficha);
-      if (!actual || new Date(evento.fecha).getTime() > new Date(actual.fecha).getTime()) {
-        eventosPorFicha.set(evento.ficha, evento);
-      }
+      const listaEventos = eventosPorFicha.get(evento.ficha) ?? [];
+      listaEventos.push(evento);
+      eventosPorFicha.set(evento.ficha, listaEventos);
     });
 
-    const fichasActualizadas = new Set(eventosPorFicha.keys());
+    const actualizados: ResumenActualizaciones['actualizados'] = [];
+    const pendientes: ResumenActualizaciones['pendientes'] = [];
 
-    const actualizados = data.mantenimientosProgramados
-      .filter((mantenimiento) => fichasActualizadas.has(mantenimiento.ficha))
-      .map((mantenimiento) => ({
+    data.mantenimientosProgramados.forEach((mantenimiento) => {
+      const fechaUltima = new Date(mantenimiento.fechaUltimaActualizacion);
+      if (Number.isNaN(fechaUltima.getTime())) {
+        pendientes.push(mantenimiento);
+        return;
+      }
+
+      const fechaUltimaAjustada = new Date(fechaUltima);
+      fechaUltimaAjustada.setHours(0, 0, 0, 0);
+
+      if (fechaUltimaAjustada < inicioAjustado || fechaUltimaAjustada > finAjustado) {
+        pendientes.push(mantenimiento);
+        return;
+      }
+
+      const eventosFicha = eventosPorFicha.get(mantenimiento.ficha) ?? [];
+      const eventoRelacionado =
+        eventosFicha.find((evento) => {
+          const fechaEvento = new Date(evento.fecha);
+          if (Number.isNaN(fechaEvento.getTime())) return false;
+          return fechaEvento.toDateString() === fechaUltima.toDateString();
+        }) ?? null;
+
+      actualizados.push({
         mantenimiento,
-        evento: eventosPorFicha.get(mantenimiento.ficha) ?? null,
-      }));
-
-    const pendientes = data.mantenimientosProgramados
-      .filter((mantenimiento) => !fichasActualizadas.has(mantenimiento.ficha));
+        evento: eventoRelacionado,
+      });
+    });
 
     setResumenActualizaciones({
-      desde: inicio.toISOString(),
+      desde: inicioAjustado.toISOString(),
       hasta: finAjustado.toISOString(),
       actualizados,
       pendientes,
@@ -224,10 +246,11 @@ export default function ControlMantenimiento() {
     <Layout title="Control integral de mantenimiento">
       <Navigation />
 
-      <div className="grid gap-6 lg:grid-cols-[2fr,3fr]">
-        <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
+      <div className="space-y-6 lg:space-y-8">
+        <div className="grid gap-6 lg:grid-cols-[2fr,3fr]">
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
               <Wrench className="h-5 w-5 text-primary" /> Selecciona un mantenimiento
             </CardTitle>
             <CardDescription>Conecta con la programación oficial para trabajar sobre datos en vivo.</CardDescription>
@@ -283,8 +306,8 @@ export default function ControlMantenimiento() {
                 </AlertDescription>
               </Alert>
             )}
-          </CardContent>
-        </Card>
+            </CardContent>
+          </Card>
 
         <div className="space-y-6">
           <Card>
@@ -422,7 +445,7 @@ export default function ControlMantenimiento() {
             </CardContent>
           </Card>
 
-          <Card>
+          <Card className="overflow-hidden">
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
                 <CalendarRange className="h-5 w-5 text-primary" /> Resumen por rango de actualización
@@ -431,7 +454,7 @@ export default function ControlMantenimiento() {
                 Selecciona un periodo para identificar qué equipos registraron lecturas y cuáles siguen pendientes.
               </CardDescription>
             </CardHeader>
-            <CardContent className="space-y-6">
+            <CardContent className="space-y-6 px-0 pb-6 sm:px-6">
               <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
                 <div className="grid gap-2">
                   <Label htmlFor="reporteDesde">Desde</Label>
@@ -481,11 +504,12 @@ export default function ControlMantenimiento() {
                       {resumenActualizaciones.actualizados.length === 0 ? (
                         <p className="text-sm text-muted-foreground">No hay registros en el rango seleccionado.</p>
                       ) : (
-                        <div className="rounded-md border">
-                          <Table>
-                            <TableHeader>
-                              <TableRow>
-                                <TableHead>Equipo</TableHead>
+                        <div className="-mx-4 overflow-x-auto sm:mx-0">
+                          <div className="min-w-full rounded-md border">
+                            <Table className="w-full min-w-[560px]">
+                              <TableHeader>
+                                <TableRow>
+                                  <TableHead>Equipo</TableHead>
                                 <TableHead>Ficha</TableHead>
                                 <TableHead>Última lectura</TableHead>
                                 <TableHead>Responsable</TableHead>
@@ -505,7 +529,8 @@ export default function ControlMantenimiento() {
                                 </TableRow>
                               ))}
                             </TableBody>
-                          </Table>
+                            </Table>
+                          </div>
                         </div>
                       )}
                     </div>
@@ -515,11 +540,12 @@ export default function ControlMantenimiento() {
                       {resumenActualizaciones.pendientes.length === 0 ? (
                         <p className="text-sm text-muted-foreground">Todos los equipos tienen lectura en el rango.</p>
                       ) : (
-                        <div className="rounded-md border">
-                          <Table>
-                            <TableHeader>
-                              <TableRow>
-                                <TableHead>Equipo</TableHead>
+                        <div className="-mx-4 overflow-x-auto sm:mx-0">
+                          <div className="min-w-full rounded-md border">
+                            <Table className="w-full min-w-[520px]">
+                              <TableHeader>
+                                <TableRow>
+                                  <TableHead>Equipo</TableHead>
                                 <TableHead>Ficha</TableHead>
                                 <TableHead>Última actualización</TableHead>
                                 <TableHead>Horas/km actuales</TableHead>
@@ -535,7 +561,8 @@ export default function ControlMantenimiento() {
                                 </TableRow>
                               ))}
                             </TableBody>
-                          </Table>
+                            </Table>
+                          </div>
                         </div>
                       )}
                     </div>
@@ -551,44 +578,47 @@ export default function ControlMantenimiento() {
         </div>
       </div>
 
-      <Card className="mt-8">
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <ClipboardList className="h-5 w-5 text-primary" /> Próximas intervenciones
-          </CardTitle>
-          <CardDescription>Calendario dinámico con los siguientes equipos a intervenir.</CardDescription>
-        </CardHeader>
-        <CardContent>
-          <div className="rounded-md border">
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>Equipo</TableHead>
-                  <TableHead>Ficha</TableHead>
-                  <TableHead>Tipo</TableHead>
-                  <TableHead className="text-right">Horas/km restantes</TableHead>
-                  <TableHead>Próximo objetivo</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {proximos.map((mantenimiento) => (
-                  <TableRow key={mantenimiento.id}>
-                    <TableCell className="font-medium">{mantenimiento.nombreEquipo}</TableCell>
-                    <TableCell>{mantenimiento.ficha}</TableCell>
-                    <TableCell>{mantenimiento.tipoMantenimiento}</TableCell>
-                    <TableCell className="text-right">
-                      <Badge variant={mantenimiento.horasKmRestante <= 15 ? 'destructive' : 'secondary'}>
-                        {mantenimiento.horasKmRestante}
-                      </Badge>
-                    </TableCell>
-                    <TableCell>{mantenimiento.proximoMantenimiento}</TableCell>
-                  </TableRow>
-                ))}
-              </TableBody>
-            </Table>
-          </div>
-        </CardContent>
-      </Card>
+        <Card className="flex flex-col overflow-hidden">
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <ClipboardList className="h-5 w-5 text-primary" /> Próximas intervenciones
+            </CardTitle>
+            <CardDescription>Calendario dinámico con los siguientes equipos a intervenir.</CardDescription>
+          </CardHeader>
+          <CardContent className="flex-1 px-0 pb-6 sm:px-6">
+            <div className="-mx-4 overflow-x-auto sm:mx-0">
+              <div className="min-w-full rounded-md border">
+                <Table className="w-full min-w-[640px]">
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>Equipo</TableHead>
+                      <TableHead>Ficha</TableHead>
+                      <TableHead>Tipo</TableHead>
+                      <TableHead className="text-right">Horas/km restantes</TableHead>
+                      <TableHead>Próximo objetivo</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {proximos.map((mantenimiento) => (
+                      <TableRow key={mantenimiento.id}>
+                        <TableCell className="font-medium">{mantenimiento.nombreEquipo}</TableCell>
+                        <TableCell>{mantenimiento.ficha}</TableCell>
+                        <TableCell>{mantenimiento.tipoMantenimiento}</TableCell>
+                        <TableCell className="text-right">
+                          <Badge variant={mantenimiento.horasKmRestante <= 15 ? 'destructive' : 'secondary'}>
+                            {mantenimiento.horasKmRestante}
+                          </Badge>
+                        </TableCell>
+                        <TableCell>{mantenimiento.proximoMantenimiento}</TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+      </div>
     </Layout>
   );
 }

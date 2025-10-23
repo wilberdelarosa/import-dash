@@ -44,147 +44,164 @@ export default function Inventario() {
   return (
     <Layout title="Inventario de Repuestos">
       <Navigation />
-      
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-6">
-        <Card>
-          <CardHeader className="pb-2">
-            <CardDescription>Total Items</CardDescription>
-            <CardTitle className="text-3xl">{totalItems}</CardTitle>
-          </CardHeader>
-        </Card>
-        <Card>
-          <CardHeader className="pb-2">
-            <CardDescription>Stock Bajo (≤5)</CardDescription>
-            <CardTitle className="text-3xl text-warning">{stockBajo}</CardTitle>
-          </CardHeader>
-        </Card>
-        <Card>
-          <CardHeader className="pb-2">
-            <CardDescription>Sin Stock</CardDescription>
-            <CardTitle className="text-3xl text-destructive">{sinStock}</CardTitle>
-          </CardHeader>
-        </Card>
-        <Card>
-          <CardHeader className="pb-2">
-            <CardDescription>Valor Total</CardDescription>
-            <CardTitle className="text-3xl">N/A</CardTitle>
-          </CardHeader>
-        </Card>
-      </div>
 
-      <Card>
-        <CardHeader>
-          <div className="flex justify-between items-center">
+      <div className="space-y-6 lg:space-y-8">
+        <section className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+          <Card>
+            <CardHeader className="pb-2">
+              <CardDescription>Total Items</CardDescription>
+              <CardTitle className="text-3xl">{totalItems}</CardTitle>
+            </CardHeader>
+          </Card>
+          <Card>
+            <CardHeader className="pb-2">
+              <CardDescription>Stock Bajo (≤5)</CardDescription>
+              <CardTitle className="text-3xl text-warning">{stockBajo}</CardTitle>
+            </CardHeader>
+          </Card>
+          <Card>
+            <CardHeader className="pb-2">
+              <CardDescription>Sin Stock</CardDescription>
+              <CardTitle className="text-3xl text-destructive">{sinStock}</CardTitle>
+            </CardHeader>
+          </Card>
+          <Card>
+            <CardHeader className="pb-2">
+              <CardDescription>Valor Total</CardDescription>
+              <CardTitle className="text-3xl">N/A</CardTitle>
+            </CardHeader>
+          </Card>
+        </section>
+
+        <Card className="overflow-hidden">
+          <CardHeader className="space-y-4">
             <div>
-              <CardTitle className="flex items-center">
-                <Package className="w-5 h-5 mr-2" />
-                Inventario de Repuestos
+              <CardTitle className="flex flex-col gap-2 text-lg sm:flex-row sm:items-center">
+                <span className="flex items-center">
+                  <Package className="mr-2 h-5 w-5" />
+                  Inventario de Repuestos
+                </span>
               </CardTitle>
               <CardDescription>
                 Gestión de repuestos y suministros para equipos
               </CardDescription>
             </div>
-          </div>
-          
-          <div className="flex flex-col sm:flex-row gap-4 mt-4">
-            <div className="flex-1 relative">
-              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground w-4 h-4" />
-              <Input
-                placeholder="Buscar repuestos..."
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-                className="pl-10"
-              />
+
+            <div className="flex flex-col gap-4 sm:flex-row sm:items-center">
+              <div className="relative flex-1">
+                <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+                <Input
+                  placeholder="Buscar repuestos..."
+                  value={searchTerm}
+                  onChange={(e) => setSearchTerm(e.target.value)}
+                  className="pl-10"
+                />
+              </div>
+              <Select value={filterTipo} onValueChange={setFilterTipo}>
+                <SelectTrigger className="w-full sm:w-[220px]">
+                  <Filter className="mr-2 h-4 w-4" />
+                  <SelectValue placeholder="Tipo" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">Todos los tipos</SelectItem>
+                  {tipos.map((tipo) => (
+                    <SelectItem key={tipo} value={tipo}>
+                      {tipo}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
             </div>
-            <Select value={filterTipo} onValueChange={setFilterTipo}>
-              <SelectTrigger className="w-full sm:w-[200px]">
-                <Filter className="w-4 h-4 mr-2" />
-                <SelectValue placeholder="Tipo" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">Todos los tipos</SelectItem>
-                {tipos.map(tipo => (
-                  <SelectItem key={tipo} value={tipo}>{tipo}</SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
-        </CardHeader>
-        <CardContent>
-          <div className="rounded-md border">
-            <Table className="min-w-[900px]">
-              <TableHeader>
-                <TableRow>
-                  <TableHead>Código</TableHead>
-                  <TableHead>Nombre</TableHead>
-                  <TableHead>Tipo</TableHead>
-                  <TableHead>Categoría Equipo</TableHead>
-                  <TableHead>Cantidad</TableHead>
-                  <TableHead>Marcas Compatible</TableHead>
-                  <TableHead>Estado</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {inventariosFiltrados.map((item) => (
-                  <TableRow key={item.id}>
-                    <TableCell className="font-medium">{item.codigoIdentificacion}</TableCell>
-                    <TableCell>{item.nombre}</TableCell>
-                    <TableCell>{item.tipo}</TableCell>
-                    <TableCell>{item.categoriaEquipo}</TableCell>
-                    <TableCell>
-                      <div className="flex items-center">
-                        {item.cantidad === 0 && (
-                          <AlertTriangle className="w-4 h-4 text-destructive mr-2" />
-                        )}
-                        {item.cantidad <= 5 && item.cantidad > 0 && (
-                          <AlertTriangle className="w-4 h-4 text-warning mr-2" />
-                        )}
-                        <span className={
-                          item.cantidad === 0 ? 'text-destructive font-medium' :
-                          item.cantidad <= 5 ? 'text-warning font-medium' : ''
-                        }>
-                          {item.cantidad}
-                        </span>
-                      </div>
-                    </TableCell>
-                    <TableCell>
-                      <div className="flex flex-wrap gap-1">
-                        {item.marcasCompatibles.slice(0, 2).map((marca, index) => (
-                          <Badge key={index} variant="outline" className="text-xs">
-                            {marca}
+          </CardHeader>
+          <CardContent className="px-0 pb-6 sm:px-6">
+            <div className="-mx-4 overflow-x-auto sm:mx-0">
+              <div className="min-w-full rounded-md border">
+                <Table className="w-full min-w-[900px]">
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>Código</TableHead>
+                      <TableHead>Nombre</TableHead>
+                      <TableHead>Tipo</TableHead>
+                      <TableHead>Categoría Equipo</TableHead>
+                      <TableHead>Cantidad</TableHead>
+                      <TableHead>Marcas Compatible</TableHead>
+                      <TableHead>Estado</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {inventariosFiltrados.map((item) => (
+                      <TableRow key={item.id}>
+                        <TableCell className="font-medium">{item.codigoIdentificacion}</TableCell>
+                        <TableCell>{item.nombre}</TableCell>
+                        <TableCell>{item.tipo}</TableCell>
+                        <TableCell>{item.categoriaEquipo}</TableCell>
+                        <TableCell>
+                          <div className="flex items-center">
+                            {item.cantidad === 0 && (
+                              <AlertTriangle className="mr-2 h-4 w-4 text-destructive" />
+                            )}
+                            {item.cantidad <= 5 && item.cantidad > 0 && (
+                              <AlertTriangle className="mr-2 h-4 w-4 text-warning" />
+                            )}
+                            <span
+                              className={
+                                item.cantidad === 0
+                                  ? 'font-medium text-destructive'
+                                  : item.cantidad <= 5
+                                  ? 'font-medium text-warning'
+                                  : undefined
+                              }
+                            >
+                              {item.cantidad}
+                            </span>
+                          </div>
+                        </TableCell>
+                        <TableCell>
+                          <div className="flex flex-wrap gap-1">
+                            {item.marcasCompatibles.slice(0, 2).map((marca, index) => (
+                              <Badge key={index} variant="outline" className="text-xs">
+                                {marca}
+                              </Badge>
+                            ))}
+                            {item.marcasCompatibles.length > 2 && (
+                              <Badge variant="outline" className="text-xs">
+                                +{item.marcasCompatibles.length - 2}
+                              </Badge>
+                            )}
+                          </div>
+                        </TableCell>
+                        <TableCell>
+                          <Badge
+                            variant={
+                              item.cantidad === 0
+                                ? 'destructive'
+                                : item.cantidad <= 5
+                                ? 'secondary'
+                                : 'default'
+                            }
+                          >
+                            {item.cantidad === 0
+                              ? 'Sin Stock'
+                              : item.cantidad <= 5
+                              ? 'Stock Bajo'
+                              : 'Disponible'}
                           </Badge>
-                        ))}
-                        {item.marcasCompatibles.length > 2 && (
-                          <Badge variant="outline" className="text-xs">
-                            +{item.marcasCompatibles.length - 2}
-                          </Badge>
-                        )}
-                      </div>
-                    </TableCell>
-                    <TableCell>
-                      <Badge 
-                        variant={
-                          item.cantidad === 0 ? "destructive" :
-                          item.cantidad <= 5 ? "secondary" : "default"
-                        }
-                      >
-                        {item.cantidad === 0 ? 'Sin Stock' :
-                         item.cantidad <= 5 ? 'Stock Bajo' : 'Disponible'}
-                      </Badge>
-                    </TableCell>
-                  </TableRow>
-                ))}
-              </TableBody>
-            </Table>
-          </div>
-          
-          {inventariosFiltrados.length === 0 && (
-            <div className="text-center py-8 text-muted-foreground">
-              No se encontraron items que coincidan con los filtros seleccionados.
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              </div>
             </div>
-          )}
-        </CardContent>
-      </Card>
+
+            {inventariosFiltrados.length === 0 && (
+              <div className="py-8 text-center text-muted-foreground">
+                No se encontraron items que coincidan con los filtros seleccionados.
+              </div>
+            )}
+          </CardContent>
+        </Card>
+      </div>
     </Layout>
   );
 }
