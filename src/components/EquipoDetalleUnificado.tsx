@@ -440,7 +440,7 @@ export function EquipoDetalleUnificado({ ficha, open, onOpenChange }: Props) {
                       </div>
                       <div className="flex-1">
                         <div className="flex items-center gap-2 mb-2">
-                          <Badge>{evento.tipoEvento}</Badge>
+                          <Badge>{evento.etiquetaSubtipo ?? evento.etiquetaCategoria}</Badge>
                           <Badge variant="outline">{evento.modulo}</Badge>
                         </div>
                         <p className="font-medium mb-1">{evento.descripcion}</p>

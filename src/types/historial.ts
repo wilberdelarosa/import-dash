@@ -1,22 +1,31 @@
+export type TipoEventoBase =
+  | 'crear'
+  | 'actualizar'
+  | 'eliminar'
+  | 'mantenimiento_realizado'
+  | 'stock_movido'
+  | 'lectura_actualizada'
+  | 'sistema';
+
+export type TipoEventoDetallado =
+  | TipoEventoBase
+  | 'equipo_creado'
+  | 'equipo_actualizado'
+  | 'equipo_eliminado'
+  | 'inventario_creado'
+  | 'inventario_actualizado'
+  | 'inventario_eliminado'
+  | 'mantenimiento_creado'
+  | 'mantenimiento_actualizado'
+  | 'mantenimiento_eliminado'
+  | 'importacion_sincronizada';
+
 export interface HistorialEvento {
   id: number;
-  tipoEvento:
-    | 'crear'
-    | 'actualizar'
-    | 'eliminar'
-    | 'mantenimiento_realizado'
-    | 'stock_movido'
-    | 'lectura_actualizada'
-    | 'sistema'
-    | 'equipo_creado'
-    | 'equipo_actualizado'
-    | 'equipo_eliminado'
-    | 'inventario_creado'
-    | 'inventario_actualizado'
-    | 'mantenimiento_creado'
-    | 'mantenimiento_actualizado'
-    | 'mantenimiento_eliminado'
-    | 'importacion_sincronizada';
+  tipoEvento: TipoEventoDetallado;
+  categoriaEvento: TipoEventoBase;
+  etiquetaCategoria: string;
+  etiquetaSubtipo: string | null;
   modulo: 'equipos' | 'inventarios' | 'mantenimientos' | 'sistema';
   fichaEquipo: string | null;
   nombreEquipo: string | null;
@@ -45,7 +54,7 @@ export interface Notificacion {
 
 export interface FiltrosHistorial {
   busqueda: string;
-  tipoEvento: string[];
+  tipoEvento: TipoEventoBase[];
   modulo: string[];
   nivelImportancia: string[];
   fichaEquipo: string | null;

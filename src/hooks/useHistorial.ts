@@ -1,12 +1,82 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from '@/hooks/use-toast';
-import { HistorialEvento, FiltrosHistorial } from '@/types/historial';
+import {
+  HistorialEvento,
+  FiltrosHistorial,
+  TipoEventoBase,
+  TipoEventoDetallado,
+} from '@/types/historial';
 
 const END_OF_DAY_HOURS = 23;
 const END_OF_DAY_MINUTES = 59;
 const END_OF_DAY_SECONDS = 59;
 const END_OF_DAY_MS = 999;
+
+const TIPO_EVENTO_LABELS: Record<TipoEventoBase, string> = {
+  crear: 'Creación',
+  actualizar: 'Actualización',
+  eliminar: 'Eliminación',
+  mantenimiento_realizado: 'Mantenimiento realizado',
+  stock_movido: 'Movimiento de stock',
+  lectura_actualizada: 'Lectura actualizada',
+  sistema: 'Sistema',
+};
+
+const DETALLE_TIPO_EVENTO: Partial<
+  Record<TipoEventoDetallado, { categoria: TipoEventoBase; etiqueta: string }>
+> = {
+  equipo_creado: { categoria: 'crear', etiqueta: 'Equipo creado' },
+  equipo_actualizado: { categoria: 'actualizar', etiqueta: 'Equipo actualizado' },
+  equipo_eliminado: { categoria: 'eliminar', etiqueta: 'Equipo eliminado' },
+  inventario_creado: { categoria: 'crear', etiqueta: 'Inventario creado' },
+  inventario_actualizado: { categoria: 'actualizar', etiqueta: 'Inventario actualizado' },
+  inventario_eliminado: { categoria: 'eliminar', etiqueta: 'Inventario eliminado' },
+  mantenimiento_creado: { categoria: 'crear', etiqueta: 'Mantenimiento creado' },
+  mantenimiento_actualizado: { categoria: 'actualizar', etiqueta: 'Mantenimiento actualizado' },
+  mantenimiento_eliminado: { categoria: 'eliminar', etiqueta: 'Mantenimiento eliminado' },
+  importacion_sincronizada: {
+    categoria: 'sistema',
+    etiqueta: 'Importación sincronizada',
+  },
+};
+
+const capitalizeWords = (value: string) =>
+  value
+    .split(/[_\s]+/)
+    .filter(Boolean)
+    .map((word) => word.charAt(0).toUpperCase() + word.slice(1))
+    .join(' ');
+
+const isTipoEventoBase = (tipo: string): tipo is TipoEventoBase =>
+  Object.prototype.hasOwnProperty.call(TIPO_EVENTO_LABELS, tipo);
+
+const normalizarTipoEvento = (
+  tipo: string,
+): { categoria: TipoEventoBase; etiquetaCategoria: string; etiquetaSubtipo: string | null } => {
+  if (isTipoEventoBase(tipo)) {
+    return {
+      categoria: tipo,
+      etiquetaCategoria: TIPO_EVENTO_LABELS[tipo],
+      etiquetaSubtipo: null,
+    };
+  }
+
+  const detalle = DETALLE_TIPO_EVENTO[tipo as TipoEventoDetallado];
+  if (detalle) {
+    return {
+      categoria: detalle.categoria,
+      etiquetaCategoria: TIPO_EVENTO_LABELS[detalle.categoria],
+      etiquetaSubtipo: detalle.etiqueta,
+    };
+  }
+
+  return {
+    categoria: 'sistema',
+    etiquetaCategoria: TIPO_EVENTO_LABELS.sistema,
+    etiquetaSubtipo: capitalizeWords(tipo),
+  };
+};
 
 const toSafeDate = (value?: string | null): Date | null => {
   if (!value) return null;
@@ -42,7 +112,7 @@ export function useHistorial() {
       }
 
       return items.filter((evento) => {
-        if (filtros.tipoEvento.length > 0 && !filtros.tipoEvento.includes(evento.tipoEvento)) {
+        if (filtros.tipoEvento.length > 0 && !filtros.tipoEvento.includes(evento.categoriaEvento)) {
           return false;
         }
 
@@ -85,6 +155,9 @@ export function useHistorial() {
           evento.fichaEquipo,
           evento.nombreEquipo,
           evento.usuarioResponsable,
+          evento.etiquetaCategoria,
+          evento.etiquetaSubtipo,
+          evento.tipoEvento,
         ]
           .filter(Boolean)
           .some((valor) => valor?.toLowerCase().includes(buscar));
@@ -134,20 +207,28 @@ export function useHistorial() {
 
       if (error) throw error;
 
-      const eventosFormateados = (data || []).map(e => ({
-        id: Number(e.id),
-        tipoEvento: e.tipo_evento as HistorialEvento['tipoEvento'],
-        modulo: e.modulo as HistorialEvento['modulo'],
-        fichaEquipo: e.ficha_equipo,
-        nombreEquipo: e.nombre_equipo,
-        usuarioResponsable: e.usuario_responsable,
-        descripcion: e.descripcion,
-        datosAntes: e.datos_antes,
-        datosDespues: e.datos_despues,
-        nivelImportancia: e.nivel_importancia as HistorialEvento['nivelImportancia'],
-        metadata: e.metadata,
-        createdAt: e.created_at,
-      }));
+      const eventosFormateados = (data || []).map((e) => {
+        const tipoOriginal = (e.tipo_evento ?? 'sistema') as HistorialEvento['tipoEvento'];
+        const { categoria, etiquetaCategoria, etiquetaSubtipo } = normalizarTipoEvento(e.tipo_evento ?? 'sistema');
+
+        return {
+          id: Number(e.id),
+          tipoEvento: tipoOriginal,
+          categoriaEvento: categoria,
+          etiquetaCategoria,
+          etiquetaSubtipo,
+          modulo: e.modulo as HistorialEvento['modulo'],
+          fichaEquipo: e.ficha_equipo,
+          nombreEquipo: e.nombre_equipo,
+          usuarioResponsable: e.usuario_responsable,
+          descripcion: e.descripcion,
+          datosAntes: e.datos_antes,
+          datosDespues: e.datos_despues,
+          nivelImportancia: e.nivel_importancia as HistorialEvento['nivelImportancia'],
+          metadata: e.metadata,
+          createdAt: e.created_at,
+        } satisfies HistorialEvento;
+      });
 
       const eventosFiltrados = applyFilters(eventosFormateados);
       setEventos(eventosFiltrados);
