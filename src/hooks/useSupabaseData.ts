@@ -214,15 +214,17 @@ const toMantenimientoPayload = (mantenimiento: MantenimientoProgramado): Manteni
   activo: mantenimiento.activo,
 });
 
+const createEmptyDatabaseState = (): DatabaseData => ({
+  equipos: [],
+  inventarios: [],
+  mantenimientosProgramados: [],
+  mantenimientosRealizados: [],
+  actualizacionesHorasKm: [],
+  empleados: [],
+});
+
 export function useSupabaseData() {
-  const [data, setData] = useState<DatabaseData>({
-    equipos: [],
-    inventarios: [],
-    mantenimientosProgramados: [],
-    mantenimientosRealizados: [],
-    actualizacionesHorasKm: [],
-    empleados: [],
-  });
+  const [data, setData] = useState<DatabaseData>(() => createEmptyDatabaseState());
   const [loading, setLoading] = useState(true);
   const [isMigrating, setIsMigrating] = useState(false);
 
@@ -511,30 +513,32 @@ export function useSupabaseData() {
         description: "Por favor espera mientras se eliminan los datos",
       });
 
-      await supabase
-        .from('mantenimientos_programados')
-        .delete()
-        .neq('id', 0);
+      const tablesToClear: Array<
+        'historial_eventos'
+        | 'notificaciones_salientes'
+        | 'notificaciones'
+        | 'mantenimientos_programados'
+        | 'inventarios'
+        | 'equipos'
+      > = [
+        'historial_eventos',
+        'notificaciones_salientes',
+        'notificaciones',
+        'mantenimientos_programados',
+        'inventarios',
+        'equipos',
+      ];
 
-      await supabase
-        .from('inventarios')
-        .delete()
-        .neq('id', 0);
+      for (const table of tablesToClear) {
+        const { error } = await supabase
+          .from(table)
+          .delete()
+          .neq('id', 0);
 
-      await supabase
-        .from('equipos')
-        .delete()
-        .neq('id', 0);
+        if (error) throw error;
+      }
 
-      await supabase
-        .from('historial_eventos')
-        .delete()
-        .neq('id', 0);
-
-      await supabase
-        .from('notificaciones')
-        .delete()
-        .neq('id', 0);
+      setData(createEmptyDatabaseState());
 
       toast({
         title: "✅ Éxito",
