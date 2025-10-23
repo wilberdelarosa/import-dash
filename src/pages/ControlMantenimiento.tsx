@@ -177,37 +177,59 @@ export default function ControlMantenimiento() {
       return;
     }
 
+    const inicioAjustado = new Date(inicio);
+    inicioAjustado.setHours(0, 0, 0, 0);
+
     const finAjustado = new Date(fin);
     finAjustado.setHours(23, 59, 59, 999);
 
     const eventosEnRango = data.actualizacionesHorasKm.filter((evento) => {
       const fechaEvento = new Date(evento.fecha);
       if (Number.isNaN(fechaEvento.getTime())) return false;
-      return fechaEvento >= inicio && fechaEvento <= finAjustado;
+      return fechaEvento >= inicioAjustado && fechaEvento <= finAjustado;
     });
 
-    const eventosPorFicha = new Map<string, ActualizacionHorasKm>();
+    const eventosPorFicha = new Map<string, ActualizacionHorasKm[]>();
     eventosEnRango.forEach((evento) => {
-      const actual = eventosPorFicha.get(evento.ficha);
-      if (!actual || new Date(evento.fecha).getTime() > new Date(actual.fecha).getTime()) {
-        eventosPorFicha.set(evento.ficha, evento);
-      }
+      const listaEventos = eventosPorFicha.get(evento.ficha) ?? [];
+      listaEventos.push(evento);
+      eventosPorFicha.set(evento.ficha, listaEventos);
     });
 
-    const fichasActualizadas = new Set(eventosPorFicha.keys());
+    const actualizados: ResumenActualizaciones['actualizados'] = [];
+    const pendientes: ResumenActualizaciones['pendientes'] = [];
 
-    const actualizados = data.mantenimientosProgramados
-      .filter((mantenimiento) => fichasActualizadas.has(mantenimiento.ficha))
-      .map((mantenimiento) => ({
+    data.mantenimientosProgramados.forEach((mantenimiento) => {
+      const fechaUltima = new Date(mantenimiento.fechaUltimaActualizacion);
+      if (Number.isNaN(fechaUltima.getTime())) {
+        pendientes.push(mantenimiento);
+        return;
+      }
+
+      const fechaUltimaAjustada = new Date(fechaUltima);
+      fechaUltimaAjustada.setHours(0, 0, 0, 0);
+
+      if (fechaUltimaAjustada < inicioAjustado || fechaUltimaAjustada > finAjustado) {
+        pendientes.push(mantenimiento);
+        return;
+      }
+
+      const eventosFicha = eventosPorFicha.get(mantenimiento.ficha) ?? [];
+      const eventoRelacionado =
+        eventosFicha.find((evento) => {
+          const fechaEvento = new Date(evento.fecha);
+          if (Number.isNaN(fechaEvento.getTime())) return false;
+          return fechaEvento.toDateString() === fechaUltima.toDateString();
+        }) ?? null;
+
+      actualizados.push({
         mantenimiento,
-        evento: eventosPorFicha.get(mantenimiento.ficha) ?? null,
-      }));
-
-    const pendientes = data.mantenimientosProgramados
-      .filter((mantenimiento) => !fichasActualizadas.has(mantenimiento.ficha));
+        evento: eventoRelacionado,
+      });
+    });
 
     setResumenActualizaciones({
-      desde: inicio.toISOString(),
+      desde: inicioAjustado.toISOString(),
       hasta: finAjustado.toISOString(),
       actualizados,
       pendientes,
