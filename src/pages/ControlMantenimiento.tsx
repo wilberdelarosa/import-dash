@@ -59,6 +59,20 @@ export default function ControlMantenimiento() {
   const [reporteHasta, setReporteHasta] = useState('');
   const [resumenActualizaciones, setResumenActualizaciones] = useState<ResumenActualizaciones | null>(null);
 
+  const periodoResumen = useMemo(() => {
+    if (!resumenActualizaciones) {
+      return null;
+    }
+
+    const inicioPeriodo = new Date(resumenActualizaciones.desde);
+    const finPeriodo = new Date(resumenActualizaciones.hasta);
+
+    return {
+      inicio: Number.isNaN(inicioPeriodo.getTime()) ? '—' : inicioPeriodo.toLocaleDateString(),
+      fin: Number.isNaN(finPeriodo.getTime()) ? '—' : finPeriodo.toLocaleDateString(),
+    };
+  }, [resumenActualizaciones]);
+
   useEffect(() => {
     if (!loading && data.mantenimientosProgramados.length > 0 && selectedId === null) {
       setSelectedId(data.mantenimientosProgramados[0].id);
@@ -486,16 +500,45 @@ export default function ControlMantenimiento() {
 
               {resumenActualizaciones ? (
                 <div className="space-y-6">
-                  <div className="flex flex-wrap gap-3">
-                    <Badge variant="secondary">
-                      Actualizados: {resumenActualizaciones.actualizados.length}
-                    </Badge>
-                    <Badge variant={resumenActualizaciones.pendientes.length > 0 ? 'destructive' : 'outline'}>
-                      Pendientes: {resumenActualizaciones.pendientes.length}
-                    </Badge>
-                    <Badge variant="outline">
-                      Período: {new Date(resumenActualizaciones.desde).toLocaleDateString()} - {new Date(resumenActualizaciones.hasta).toLocaleDateString()}
-                    </Badge>
+                  <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+                    <div className="rounded-lg border bg-muted/40 p-4">
+                      <p className="text-sm font-medium text-muted-foreground">Equipos actualizados</p>
+                      <div className="mt-2 flex items-baseline gap-2">
+                        <span className="text-3xl font-semibold text-foreground">
+                          {resumenActualizaciones.actualizados.length}
+                        </span>
+                        <Badge variant="secondary">En orden</Badge>
+                      </div>
+                      <p className="mt-2 text-xs text-muted-foreground">
+                        Lecturas registradas dentro del periodo seleccionado.
+                      </p>
+                    </div>
+
+                    <div className="rounded-lg border bg-muted/40 p-4">
+                      <p className="text-sm font-medium text-muted-foreground">Equipos pendientes</p>
+                      <div className="mt-2 flex items-baseline gap-2">
+                        <span className="text-3xl font-semibold text-foreground">
+                          {resumenActualizaciones.pendientes.length}
+                        </span>
+                        <Badge variant={resumenActualizaciones.pendientes.length > 0 ? 'destructive' : 'secondary'}>
+                          {resumenActualizaciones.pendientes.length > 0 ? 'Atención' : 'Al día'}
+                        </Badge>
+                      </div>
+                      <p className="mt-2 text-xs text-muted-foreground">
+                        Equipos sin registro durante el intervalo indicado.
+                      </p>
+                    </div>
+
+                    <div className="rounded-lg border bg-muted/40 p-4">
+                      <p className="text-sm font-medium text-muted-foreground">Período analizado</p>
+                      <div className="mt-2 flex flex-col gap-1 text-sm font-medium text-foreground">
+                        <span>Desde: {periodoResumen?.inicio ?? '—'}</span>
+                        <span>Hasta: {periodoResumen?.fin ?? '—'}</span>
+                      </div>
+                      <p className="mt-2 text-xs text-muted-foreground">
+                        Ajusta las fechas para comparar otros rangos de control.
+                      </p>
+                    </div>
                   </div>
 
                   <div className="grid gap-6 lg:grid-cols-2">
