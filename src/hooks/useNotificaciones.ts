@@ -13,6 +13,10 @@ export function useNotificaciones() {
   const configRef = useRef(config);
   const { sendNotification, permission } = useNotifications();
 
+  const construirMensajeConFicha = useCallback((mensaje: string, ficha: string | null) => {
+    return ficha ? `Ficha ${ficha}: ${mensaje}` : mensaje;
+  }, []);
+
   useEffect(() => {
     configRef.current = config;
   }, [config]);
@@ -61,7 +65,7 @@ export function useNotificaciones() {
         id: Number(n.id),
         tipo: n.tipo as any,
         titulo: n.titulo,
-        mensaje: n.mensaje,
+        mensaje: construirMensajeConFicha(n.mensaje, n.ficha_equipo),
         fichaEquipo: n.ficha_equipo,
         nombreEquipo: n.nombre_equipo,
         nivel: n.nivel as any,
@@ -107,9 +111,13 @@ export function useNotificaciones() {
         // Mostrar toast solo para nuevas notificaciones
         if (payload.eventType === 'INSERT') {
           const nuevaNotif = payload.new as any;
+          const mensajeConFicha = construirMensajeConFicha(
+            nuevaNotif.mensaje,
+            nuevaNotif.ficha_equipo,
+          );
           toast({
             title: nuevaNotif.titulo,
-            description: nuevaNotif.mensaje,
+            description: mensajeConFicha,
             variant: nuevaNotif.nivel === 'critical' ? 'destructive' : 'default',
           });
 
@@ -117,7 +125,7 @@ export function useNotificaciones() {
             id: Number(nuevaNotif.id),
             tipo: nuevaNotif.tipo,
             titulo: nuevaNotif.titulo,
-            mensaje: nuevaNotif.mensaje,
+            mensaje: mensajeConFicha,
             fichaEquipo: nuevaNotif.ficha_equipo,
             nombreEquipo: nuevaNotif.nombre_equipo,
             nivel: nuevaNotif.nivel,
@@ -130,7 +138,7 @@ export function useNotificaciones() {
           const currentConfig = configRef.current;
           if (currentConfig.notificarDispositivo && permission === 'granted') {
             sendNotification(nuevaNotif.titulo, {
-              body: nuevaNotif.mensaje,
+              body: mensajeConFicha,
               data: nuevaNotif,
             });
           }
@@ -149,7 +157,7 @@ export function useNotificaciones() {
     return () => {
       supabase.removeChannel(channel);
     };
-  }, [registrarEnvioExterno, permission, sendNotification]);
+  }, [registrarEnvioExterno, permission, sendNotification, construirMensajeConFicha]);
 
   const marcarComoLeida = async (id: number) => {
     try {
