@@ -12,8 +12,17 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { Separator } from '@/components/ui/separator';
-import { CircleStop, Loader2, MessageSquare, RefreshCw, SendHorizontal } from 'lucide-react';
+import {
+  CircleStop,
+  Loader2,
+  MessageSquare,
+  RefreshCw,
+  SendHorizontal,
+  Sparkles,
+  UserRound,
+} from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import type { DatabaseData } from '@/types/equipment';
 import type { SystemConfig } from '@/types/config';
 
@@ -217,7 +226,7 @@ export default function AsistenteIA() {
     <Layout title="Asistente inteligente con IA">
       <Navigation />
       <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_320px]">
-        <Card className="flex flex-col h-[70vh] min-h-[520px]">
+        <Card className="flex flex-col h-[70vh] min-h-[520px] border-border/50 bg-gradient-to-br from-background via-background/95 to-muted/30 shadow-xl backdrop-blur">
           <CardHeader className="border-b border-border/60 bg-card/60">
             <CardTitle className="flex items-center gap-2 text-lg">
               <MessageSquare className="h-5 w-5 text-primary" />
@@ -228,48 +237,101 @@ export default function AsistenteIA() {
             </CardDescription>
           </CardHeader>
           <CardContent className="flex-1 overflow-hidden p-0">
-            <ScrollArea className="h-full px-6 py-4">
-              <div className="flex flex-col gap-4">
-                {messages.map((message) => (
-                  <div
-                    key={message.id}
-                    className={cn('flex w-full', message.role === 'user' ? 'justify-end' : 'justify-start')}
-                  >
+            <ScrollArea className="h-full px-6 py-6">
+              <div className="flex flex-col gap-6">
+                {messages.map((message) => {
+                  const isAssistant = message.role === 'assistant';
+                  const isUser = message.role === 'user';
+                  const timestamp = new Date(message.createdAt).toLocaleTimeString('es-ES', {
+                    hour: '2-digit',
+                    minute: '2-digit',
+                  });
+
+                  return (
                     <div
+                      key={message.id}
                       className={cn(
-                        'max-w-[85%] rounded-lg px-4 py-3 text-sm shadow-sm transition-colors',
-                        message.role === 'user'
-                          ? 'bg-primary text-primary-foreground'
-                          : 'bg-muted text-foreground',
+                        'group relative flex w-full items-start gap-3',
+                        isUser ? 'flex-row-reverse' : 'flex-row',
                       )}
                     >
-                      <div className="whitespace-pre-wrap leading-relaxed">{message.content}</div>
-                      <div
+                      <Avatar
                         className={cn(
-                          'mt-2 flex items-center justify-between text-xs',
-                          message.role === 'user'
-                            ? 'text-primary-foreground/80'
-                            : 'text-muted-foreground',
+                          'h-10 w-10 border border-border/40 shadow-lg transition-transform duration-300 group-hover:scale-105',
+                          isAssistant
+                            ? 'bg-gradient-to-br from-primary/80 via-primary to-primary-foreground/10 text-primary-foreground'
+                            : 'bg-gradient-to-br from-muted/60 via-muted to-muted-foreground/20 text-muted-foreground',
                         )}
                       >
-                        <span>
-                          {new Date(message.createdAt).toLocaleTimeString('es-ES', {
-                            hour: '2-digit',
-                            minute: '2-digit',
-                          })}
-                        </span>
-                        {message.role === 'assistant' && message.model && (
-                          <span className="ml-2 uppercase tracking-wide">{message.model}</span>
+                        <AvatarFallback className="bg-transparent text-xs font-semibold uppercase tracking-wide">
+                          {isAssistant ? (
+                            <Sparkles className="h-5 w-5" />
+                          ) : (
+                            <UserRound className="h-5 w-5" />
+                          )}
+                        </AvatarFallback>
+                      </Avatar>
+                      <div
+                        className={cn(
+                          'relative max-w-[80%] rounded-2xl border border-border/50 px-5 py-4 text-sm shadow-[0_18px_45px_-25px_rgba(15,23,42,0.45)] backdrop-blur transition-all duration-300',
+                          isAssistant
+                            ? 'bg-gradient-to-br from-primary/10 via-background/90 to-background/60 text-foreground'
+                            : 'bg-gradient-to-br from-primary to-primary-foreground/90 text-primary-foreground',
+                        )}
+                      >
+                        <div className="flex items-center justify-between gap-3 pb-2 text-xs uppercase tracking-wide">
+                          <span
+                            className={cn(
+                              'font-semibold',
+                              isAssistant ? 'text-primary' : 'text-primary-foreground/80',
+                            )}
+                          >
+                            {isAssistant ? 'Alito Bot' : 'Tú'}
+                          </span>
+                          <span
+                            className={cn(
+                              'text-[0.7rem] font-medium',
+                              isAssistant ? 'text-muted-foreground' : 'text-primary-foreground/70',
+                            )}
+                          >
+                            {timestamp}
+                          </span>
+                        </div>
+                        <div
+                          className={cn(
+                            'whitespace-pre-wrap leading-relaxed',
+                            isAssistant ? 'text-foreground' : 'text-primary-foreground',
+                          )}
+                        >
+                          {message.content}
+                        </div>
+                        {isAssistant && message.model && (
+                          <div className="mt-3 flex items-center gap-2 text-[0.65rem] uppercase tracking-widest text-muted-foreground">
+                            <Sparkles className="h-3 w-3" />
+                            Modelo activo: {message.model}
+                          </div>
                         )}
                       </div>
+                      <div
+                        className={cn(
+                          'pointer-events-none absolute inset-0 -z-10 translate-y-4 rounded-[2.5rem] opacity-0 blur-3xl transition-all duration-500 group-hover:opacity-80',
+                          isAssistant
+                            ? 'bg-primary/20 group-hover:translate-y-6'
+                            : 'bg-primary/40 group-hover:translate-y-6',
+                        )}
+                      />
                     </div>
-                  </div>
-                ))}
+                  );
+                })}
                 {isLoading && (
-                  <div className="flex justify-start">
-                    <div className="flex items-center gap-2 rounded-lg bg-muted px-4 py-3 text-sm text-muted-foreground shadow-sm">
-                      <Loader2 className="h-4 w-4 animate-spin" />
-                      <span>ALITO BOT está redactando la respuesta…</span>
+                  <div className="flex items-center gap-3">
+                    <Avatar className="h-10 w-10 bg-gradient-to-br from-primary/80 to-primary text-primary-foreground">
+                      <AvatarFallback className="bg-transparent">
+                        <Loader2 className="h-5 w-5 animate-spin" />
+                      </AvatarFallback>
+                    </Avatar>
+                    <div className="rounded-2xl border border-primary/20 bg-gradient-to-br from-primary/5 via-background/80 to-background px-5 py-3 text-sm text-muted-foreground shadow-[0_18px_45px_-25px_rgba(59,130,246,0.55)]">
+                      ALITO BOT está redactando la respuesta…
                     </div>
                   </div>
                 )}
@@ -302,7 +364,7 @@ export default function AsistenteIA() {
                     handleSubmit();
                   }
                 }}
-                className="min-h-[120px]"
+                className="min-h-[120px] resize-none rounded-2xl border border-primary/20 bg-gradient-to-br from-background/90 via-background/70 to-primary/5 px-4 py-4 text-base shadow-[inset_0_1px_0_rgba(255,255,255,0.08)] transition focus-visible:border-primary/40 focus-visible:ring-2 focus-visible:ring-primary/30"
               />
               <div className="flex flex-col-reverse gap-2 sm:flex-row sm:items-center sm:justify-between">
                 <div className="flex items-center gap-2 text-xs text-muted-foreground">
@@ -326,7 +388,7 @@ export default function AsistenteIA() {
                     variant="outline"
                     onClick={reset}
                     disabled={isLoading}
-                    className="gap-2"
+                    className="gap-2 rounded-full border-border/60 bg-background/70 px-6 shadow-sm backdrop-blur transition hover:border-primary/40 hover:shadow-lg"
                   >
                     <RefreshCw className="h-4 w-4" />
                     Reiniciar charla
@@ -334,13 +396,18 @@ export default function AsistenteIA() {
                   <Button
                     type="submit"
                     disabled={isLoading || !input.trim()}
-                    className="gap-2"
+                    className="gap-2 rounded-full px-6 text-sm shadow-lg transition-all hover:shadow-xl"
                   >
                     {isLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : <SendHorizontal className="h-4 w-4" />}
                     {isLoading ? 'Enviando…' : 'Enviar'}
                   </Button>
                   {isLoading && (
-                    <Button type="button" variant="ghost" onClick={stop} className="gap-2">
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      onClick={stop}
+                      className="gap-2 rounded-full px-6 text-sm hover:bg-primary/10"
+                    >
                       <CircleStop className="h-4 w-4" />
                       Cancelar
                     </Button>
