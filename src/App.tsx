@@ -12,6 +12,7 @@ import Historial from "./pages/Historial";
 import Reportes from "./pages/Reportes";
 import Configuraciones from "./pages/Configuraciones";
 import NotFound from "./pages/NotFound";
+import AsistenteIA from "./pages/AsistenteIA";
 import { SupabaseDataProvider } from "@/context/SupabaseDataContext";
 import { SystemConfigProvider } from "@/context/SystemConfigContext";
 
@@ -34,6 +35,7 @@ const App = () => (
               <Route path="/historial" element={<Historial />} />
               <Route path="/reportes" element={<Reportes />} />
               <Route path="/configuraciones" element={<Configuraciones />} />
+              <Route path="/asistente" element={<AsistenteIA />} />
               {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
               <Route path="*" element={<NotFound />} />
             </Routes>
