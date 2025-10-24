@@ -55,6 +55,7 @@ export function SystemConfigProvider({ children }: { children: React.ReactNode }
   const [saving, setSaving] = useState(false);
   const initializedRef = useRef(false);
   const configRef = useRef<SystemConfig>(DEFAULT_SYSTEM_CONFIG);
+  const configErrorNoticeShownRef = useRef(false);
 
   const fetchConfig = useCallback(async () => {
     setLoading(true);
@@ -79,11 +80,15 @@ export function SystemConfigProvider({ children }: { children: React.ReactNode }
       }
     } catch (error) {
       console.error('Error loading system configuration', error);
-      toast({
-        title: 'Error al cargar configuración',
-        description: 'No se pudieron obtener las preferencias del sistema.',
-        variant: 'destructive',
-      });
+      if (!configErrorNoticeShownRef.current) {
+        toast({
+          title: 'No se pudo cargar la configuración del sistema',
+          description:
+            'Verifica las variables VITE_SUPABASE_URL y VITE_SUPABASE_PUBLISHABLE_KEY. Se aplicarán los valores predeterminados hasta restablecer la conexión.',
+          variant: 'destructive',
+        });
+        configErrorNoticeShownRef.current = true;
+      }
       configRef.current = DEFAULT_SYSTEM_CONFIG;
       setConfig(DEFAULT_SYSTEM_CONFIG);
     } finally {
