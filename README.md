@@ -60,6 +60,19 @@ This project is built with:
 - shadcn-ui
 - Tailwind CSS
 
+## Configuring the AI assistant
+
+The `Asistente IA` section of the app allows you to consult a Groq-powered chatbot with información contextualizada de tus datos operativos. To enable it locally, add the following environment variables to a `.env` file in the project root before running `npm run dev`:
+
+```sh
+VITE_GROQ_API_KEY=tu_clave_de_groq
+
+# Opcional: orden personalizado de modelos (se probarán en cascada)
+# VITE_GROQ_MODEL_PRIORITY=llama-3.3-70b-versatile,llama-3.1-70b-versatile,llama-3.1-8b-instant
+```
+
+El asistente seleccionará automáticamente el mejor modelo disponible. Si Groq reporta que se alcanzó el límite de tokens o la cuota del modelo actual, el sistema reintentará la consulta con el siguiente modelo definido en la lista de prioridad.
+
 ## How can I deploy this project?
 
 Simply open [Lovable](https://lovable.dev/projects/bcb43772-3262-402c-8ebd-138d3ef36a6d) and click on Share -> Publish.

@@ -1,7 +1,18 @@
 import { Link, useLocation } from 'react-router-dom';
 import { useMemo } from 'react';
 import { cn } from '@/lib/utils';
-import { Truck, Package, Calendar, BarChart3, Menu, History, LayoutDashboard, Settings, Wrench } from 'lucide-react';
+import {
+  Truck,
+  Package,
+  Calendar,
+  BarChart3,
+  Menu,
+  History,
+  LayoutDashboard,
+  Settings,
+  Wrench,
+  MessageSquareText,
+} from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { NotificacionesCentro } from '@/components/NotificacionesCentro';
 import {
@@ -23,6 +34,7 @@ const navItems = [
   { path: '/historial', label: 'Historial', icon: History },
   { path: '/reportes', label: 'Reportes', icon: BarChart3 },
   { path: '/configuraciones', label: 'Configuraciones', icon: Settings },
+  { path: '/asistente', label: 'Asistente IA', icon: MessageSquareText },
 ];
 
 export function Navigation() {
