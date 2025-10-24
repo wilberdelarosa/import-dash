@@ -20,6 +20,8 @@ import {
   SendHorizontal,
   Sparkles,
   UserRound,
+  AlertTriangle,
+
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
@@ -193,7 +195,7 @@ const buildInitialAssistantMessage = (contextSections: ContextSection[]): string
 };
 
 export default function AsistenteIA() {
-  const { data, loading } = useSupabaseDataContext();
+  const { data, loading, usingDemoData } = useSupabaseDataContext();
   const { config } = useSystemConfig();
   const [input, setInput] = useState('');
 
@@ -225,6 +227,22 @@ export default function AsistenteIA() {
   return (
     <Layout title="Asistente inteligente con IA">
       <Navigation />
+      {usingDemoData && (
+        <Alert
+          variant="warning"
+          className="mb-6 border-warning/50 bg-warning/10 text-warning-foreground"
+        >
+          <AlertTriangle className="h-4 w-4" />
+          <AlertTitle>Modo demostración con datos locales</AlertTitle>
+          <AlertDescription>
+            No se pudieron obtener datos reales desde Supabase. Revisa las variables{' '}
+            <code className="rounded bg-muted px-1 py-0.5 text-xs">VITE_SUPABASE_URL</code> y{' '}
+            <code className="rounded bg-muted px-1 py-0.5 text-xs">VITE_SUPABASE_PUBLISHABLE_KEY</code>{' '}
+            para conectar tu proyecto. Mientras tanto, se muestran datos de ejemplo para que puedas
+            explorar la interfaz sin interrupciones.
+          </AlertDescription>
+        </Alert>
+      )}
       <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_320px]">
         <Card className="flex flex-col h-[70vh] min-h-[520px] border-border/50 bg-gradient-to-br from-background via-background/95 to-muted/30 shadow-xl backdrop-blur">
           <CardHeader className="border-b border-border/60 bg-card/60">

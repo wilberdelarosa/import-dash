@@ -94,6 +94,20 @@ export async function createGroqChatCompletion({
     );
   }
 
+  const trimmedApiKey = apiKey.trim();
+
+  if (!trimmedApiKey) {
+    throw new Error(
+      'La clave VITE_GROQ_API_KEY está vacía. Define una clave válida obtenida desde console.groq.com antes de continuar.',
+    );
+  }
+
+  if (/example|demo/i.test(trimmedApiKey)) {
+    throw new Error(
+      'La clave VITE_GROQ_API_KEY configurada es de demostración. Sustitúyela por una clave real de Groq para habilitar las respuestas de la IA.',
+    );
+  }
+
   const models = getGroqModelPriority();
   const errors: string[] = [];
 
@@ -103,7 +117,7 @@ export async function createGroqChatCompletion({
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          Authorization: `Bearer ${apiKey}`,
+          Authorization: `Bearer ${trimmedApiKey}`,
         },
         body: JSON.stringify({
           model,
@@ -128,6 +142,17 @@ export async function createGroqChatCompletion({
           }
         } catch {
           // Ignorar parseos fallidos y usar el mensaje por defecto
+        }
+
+        if (
+          response.status === 401 ||
+          response.status === 403 ||
+          errorMessage.toLowerCase().includes('invalid api key') ||
+          errorMessage.toLowerCase().includes('unauthorized')
+        ) {
+          throw new Error(
+            'Groq rechazó la clave API configurada. Verifica que VITE_GROQ_API_KEY contenga una clave válida generada en console.groq.com y reinicia la aplicación.',
+          );
         }
 
         errors.push(`${model}: ${errorMessage}`);

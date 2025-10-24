@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from '@/hooks/use-toast';
 import {
@@ -10,6 +10,7 @@ import {
   ActualizacionHorasKm,
   Empleado,
 } from '@/types/equipment';
+import { DEMO_DATABASE_DATA } from '@/data/demoDatabase';
 
 type MantenimientoPayload = {
   ficha: string;
@@ -225,6 +226,22 @@ export function useSupabaseData() {
   });
   const [loading, setLoading] = useState(true);
   const [isMigrating, setIsMigrating] = useState(false);
+  const [usingDemoData, setUsingDemoData] = useState(false);
+  const demoToastShownRef = useRef(false);
+  const demoWriteNoticeShownRef = useRef(false);
+
+  const showDemoWriteNotice = () => {
+    if (demoWriteNoticeShownRef.current) {
+      return;
+    }
+
+    toast({
+      title: 'Modo demostración activo',
+      description:
+        'Configura VITE_SUPABASE_URL y VITE_SUPABASE_PUBLISHABLE_KEY con credenciales válidas para habilitar los cambios en la base de datos.',
+    });
+    demoWriteNoticeShownRef.current = true;
+  };
 
   const recordHistorialEvent = async ({
     tipo,
@@ -252,6 +269,10 @@ export function useSupabaseData() {
     createdAt?: string;
   }) => {
     try {
+      if (usingDemoData) {
+        return;
+      }
+
       const payload = {
         tipo_evento: tipo,
         modulo,
@@ -277,6 +298,12 @@ export function useSupabaseData() {
 
   const loadData = async (showToast = false) => {
     try {
+      if (usingDemoData && !showToast) {
+        setData(DEMO_DATABASE_DATA);
+        setLoading(false);
+        return;
+      }
+
       if (showToast) setLoading(true);
 
       // Cargar equipos
@@ -452,19 +479,32 @@ export function useSupabaseData() {
       }
     } catch (error) {
       console.error('Error loading data:', error);
-      toast({
-        title: "Error",
-        description: "No se pudieron cargar los datos",
-        variant: "destructive"
-      });
+      setData(DEMO_DATABASE_DATA);
+      setUsingDemoData(true);
+
+      if (!demoToastShownRef.current) {
+        toast({
+          title: 'No se pudo conectar a Supabase',
+          description:
+            'Revisa las variables VITE_SUPABASE_URL y VITE_SUPABASE_PUBLISHABLE_KEY. Se cargaron datos de demostración para continuar.',
+          variant: 'destructive',
+        });
+        demoToastShownRef.current = true;
+      }
     } finally {
       setLoading(false);
     }
   };
 
   useEffect(() => {
+    if (usingDemoData) {
+      setData(DEMO_DATABASE_DATA);
+      setLoading(false);
+      return;
+    }
+
     loadData();
-    
+
     // Configurar Supabase Realtime para actualizaciones en tiempo real
     const equiposChannel = supabase
       .channel('equipos-changes')
@@ -500,12 +540,17 @@ export function useSupabaseData() {
       supabase.removeChannel(mantenimientosChannel);
       supabase.removeChannel(historialChannel);
     };
-  }, []);
+  }, [usingDemoData]);
 
   const clearDatabase = async () => {
     try {
+      if (usingDemoData) {
+        showDemoWriteNotice();
+        return;
+      }
+
       setLoading(true);
-      
+
       toast({
         title: "Limpiando base de datos...",
         description: "Por favor espera mientras se eliminan los datos",
@@ -572,6 +617,11 @@ export function useSupabaseData() {
   };
 
   const createEquipo = async (equipo: EquipoPayload) => {
+    if (usingDemoData) {
+      showDemoWriteNotice();
+      return;
+    }
+
     try {
       const payload = mapEquipoToRow(equipo);
       const { data: inserted, error } = await supabase
@@ -613,6 +663,11 @@ export function useSupabaseData() {
   };
 
   const updateEquipo = async (id: number, equipo: EquipoPayload) => {
+    if (usingDemoData) {
+      showDemoWriteNotice();
+      return;
+    }
+
     try {
       const existing = data.equipos.find((item) => item.id === id);
       if (!existing) {
@@ -670,6 +725,11 @@ export function useSupabaseData() {
   };
 
   const deleteEquipo = async (id: number) => {
+    if (usingDemoData) {
+      showDemoWriteNotice();
+      return;
+    }
+
     try {
       const existing = data.equipos.find((item) => item.id === id);
       if (!existing) {
@@ -716,6 +776,11 @@ export function useSupabaseData() {
   };
 
   const createMantenimiento = async (mantenimiento: MantenimientoPayload) => {
+    if (usingDemoData) {
+      showDemoWriteNotice();
+      return;
+    }
+
     try {
       const payload = mapToDatabasePayload(mantenimiento);
       const { data: inserted, error } = await supabase
@@ -754,6 +819,11 @@ export function useSupabaseData() {
   };
 
   const updateMantenimiento = async (id: number, mantenimiento: MantenimientoPayload) => {
+    if (usingDemoData) {
+      showDemoWriteNotice();
+      return;
+    }
+
     try {
       const existing = data.mantenimientosProgramados.find((item) => item.id === id);
       if (!existing) {
@@ -811,6 +881,11 @@ export function useSupabaseData() {
   };
 
   const deleteMantenimiento = async (id: number) => {
+    if (usingDemoData) {
+      showDemoWriteNotice();
+      return;
+    }
+
     try {
       const existing = data.mantenimientosProgramados.find((item) => item.id === id);
       if (!existing) {
@@ -863,6 +938,11 @@ export function useSupabaseData() {
     usuarioResponsable = 'Equipo de mantenimiento',
     observaciones,
   }: ActualizacionHorasPayload) => {
+    if (usingDemoData) {
+      showDemoWriteNotice();
+      return;
+    }
+
     const mantenimiento = data.mantenimientosProgramados.find((m) => m.id === mantenimientoId);
 
     if (!mantenimiento) {
@@ -957,6 +1037,11 @@ export function useSupabaseData() {
     filtrosUtilizados = [],
     usuarioResponsable = 'Equipo de mantenimiento',
   }: RegistrarMantenimientoPayload) => {
+    if (usingDemoData) {
+      showDemoWriteNotice();
+      return;
+    }
+
     const mantenimiento = data.mantenimientosProgramados.find((m) => m.id === mantenimientoId);
 
     if (!mantenimiento) {
@@ -1462,6 +1547,11 @@ export function useSupabaseData() {
   };
 
   const migrateFromLocalStorage = async () => {
+    if (usingDemoData) {
+      showDemoWriteNotice();
+      return;
+    }
+
     try {
       setIsMigrating(true);
       const stored = localStorage.getItem('equipment-management-data');
@@ -1495,6 +1585,11 @@ export function useSupabaseData() {
   };
 
   const importJsonData = async (bundle: ImportBundle) => {
+    if (usingDemoData) {
+      showDemoWriteNotice();
+      return;
+    }
+
     try {
       setIsMigrating(true);
 
@@ -1519,6 +1614,11 @@ export function useSupabaseData() {
   };
 
   const syncJsonData = async (bundle: ImportBundle) => {
+    if (usingDemoData) {
+      showDemoWriteNotice();
+      return;
+    }
+
     try {
       setIsMigrating(true);
 
@@ -1544,6 +1644,7 @@ export function useSupabaseData() {
     data,
     loading,
     isMigrating,
+    usingDemoData,
     loadData,
     migrateFromLocalStorage,
     importJsonData,
