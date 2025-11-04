@@ -1141,17 +1141,18 @@ export function useSupabaseData() {
       totalChanges: 0,
     };
 
-    // Limpiar base de datos antes de importar para evitar duplicados
+    // Limpiar base de datos completamente antes de importar
     toast({
-      title: "Limpiando datos existentes...",
-      description: "Preparando la base de datos para la importación",
+      title: "Limpiando base de datos...",
+      description: "Eliminando todos los datos existentes incluyendo historial",
     });
 
+    // Eliminar todos los datos existentes
+    await supabase.from('notificaciones').delete().neq('id', 0);
     await supabase.from('mantenimientos_programados').delete().neq('id', 0);
     await supabase.from('inventarios').delete().neq('id', 0);
     await supabase.from('equipos').delete().neq('id', 0);
     await supabase.from('historial_eventos').delete().neq('id', 0);
-    await supabase.from('notificaciones').delete().neq('id', 0);
 
     // Recargar datos vacíos
     await loadData();
@@ -1195,16 +1196,6 @@ export function useSupabaseData() {
 
         summary.equipos.inserted.push(incomingEquipo.ficha);
         summary.totalChanges += 1;
-
-        await recordHistorialEvent({
-          tipo: 'equipo_creado',
-          modulo: 'equipos',
-          descripcion: `Equipo importado: ${payloadEquipo.nombre}`,
-          ficha: payloadEquipo.ficha,
-          nombre: payloadEquipo.nombre,
-          datosDespues: { id: inserted?.id, ...payloadEquipo },
-          metadata: { origen: 'importacion_json', accion: 'insertar' },
-        });
       } else {
         const cambios = diffEquipo(existing, payloadEquipo);
         if (cambios.length === 0) {
@@ -1220,17 +1211,6 @@ export function useSupabaseData() {
 
         summary.equipos.updated.push({ ficha: incomingEquipo.ficha, cambios });
         summary.totalChanges += 1;
-
-        await recordHistorialEvent({
-          tipo: 'equipo_actualizado',
-          modulo: 'equipos',
-          descripcion: `Equipo sincronizado: ${payloadEquipo.nombre}`,
-          ficha: payloadEquipo.ficha,
-          nombre: payloadEquipo.nombre,
-          datosAntes: existing,
-          datosDespues: { id: existing.id, ...payloadEquipo },
-          metadata: { origen: 'importacion_json', cambios },
-        });
       }
     }
 
@@ -1254,16 +1234,6 @@ export function useSupabaseData() {
 
         summary.inventarios.inserted.push(incomingInventario.codigoIdentificacion);
         summary.totalChanges += 1;
-
-        await recordHistorialEvent({
-          tipo: 'inventario_creado',
-          modulo: 'inventarios',
-          descripcion: `Inventario importado: ${payloadInventario.nombre}`,
-          ficha: null,
-          nombre: payloadInventario.nombre,
-          datosDespues: payloadInventario,
-          metadata: { origen: 'importacion_json', accion: 'insertar' },
-        });
       } else {
         const cambios = diffInventario(existing, payloadInventario);
         if (cambios.length === 0) {
@@ -1282,16 +1252,6 @@ export function useSupabaseData() {
           cambios,
         });
         summary.totalChanges += 1;
-
-        await recordHistorialEvent({
-          tipo: 'inventario_actualizado',
-          modulo: 'inventarios',
-          descripcion: `Inventario sincronizado: ${payloadInventario.nombre}`,
-          nombre: payloadInventario.nombre,
-          datosAntes: existing,
-          datosDespues: { id: existing.id, ...payloadInventario },
-          metadata: { origen: 'importacion_json', cambios },
-        });
       }
     }
 
@@ -1321,16 +1281,6 @@ export function useSupabaseData() {
           `${incomingMantenimiento.ficha} · ${incomingMantenimiento.tipoMantenimiento}`,
         );
         summary.totalChanges += 1;
-
-        await recordHistorialEvent({
-          tipo: 'mantenimiento_creado',
-          modulo: 'mantenimientos',
-          descripcion: `Mantenimiento importado: ${payloadMantenimiento.nombreEquipo}`,
-          ficha: payloadMantenimiento.ficha,
-          nombre: payloadMantenimiento.nombreEquipo,
-          datosDespues: payloadMantenimiento,
-          metadata: { origen: 'importacion_json', accion: 'insertar' },
-        });
       } else {
         const cambios = diffMantenimiento(existing, payloadMantenimiento);
         if (cambios.length === 0) {
@@ -1350,28 +1300,28 @@ export function useSupabaseData() {
           cambios,
         });
         summary.totalChanges += 1;
-
-        await recordHistorialEvent({
-          tipo: 'mantenimiento_actualizado',
-          modulo: 'mantenimientos',
-          descripcion: `Mantenimiento sincronizado: ${payloadMantenimiento.nombreEquipo}`,
-          ficha: payloadMantenimiento.ficha,
-          nombre: payloadMantenimiento.nombreEquipo,
-          datosAntes: existing,
-          datosDespues: { id: existing.id, ...payloadMantenimiento },
-          metadata: { origen: 'importacion_json', cambios },
-        });
       }
     }
 
+    // Crear un solo evento resumen de la importación
+    const totalEquipos = summary.equipos.inserted.length + summary.equipos.updated.length;
+    const totalInventarios = summary.inventarios.inserted.length + summary.inventarios.updated.length;
+    const totalMantenimientos = summary.mantenimientosProgramados.inserted.length + summary.mantenimientosProgramados.updated.length;
+    
+    const descripcionDetallada = `Importación masiva completada: ${totalEquipos} equipos, ${totalInventarios} inventarios, ${totalMantenimientos} mantenimientos programados`;
+    
     await recordHistorialEvent({
       tipo: 'importacion_sincronizada',
       modulo: 'sistema',
-      descripcion:
-        summary.totalChanges > 0
-          ? `Sincronización de importación con ${summary.totalChanges} cambios aplicados.`
-          : 'Sincronización de importación sin cambios aplicados.',
-      metadata: summary,
+      descripcion: descripcionDetallada,
+      metadata: {
+        ...summary,
+        resumen: {
+          equipos: totalEquipos,
+          inventarios: totalInventarios,
+          mantenimientos: totalMantenimientos
+        }
+      },
       nivel: summary.totalChanges > 0 ? 'info' : 'warning',
     });
 
