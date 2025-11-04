@@ -1141,6 +1141,21 @@ export function useSupabaseData() {
       totalChanges: 0,
     };
 
+    // Limpiar base de datos antes de importar para evitar duplicados
+    toast({
+      title: "Limpiando datos existentes...",
+      description: "Preparando la base de datos para la importación",
+    });
+
+    await supabase.from('mantenimientos_programados').delete().neq('id', 0);
+    await supabase.from('inventarios').delete().neq('id', 0);
+    await supabase.from('equipos').delete().neq('id', 0);
+    await supabase.from('historial_eventos').delete().neq('id', 0);
+    await supabase.from('notificaciones').delete().neq('id', 0);
+
+    // Recargar datos vacíos
+    await loadData();
+
     const equiposIncoming = Array.isArray(bundle.equipos) ? bundle.equipos : [];
     const inventariosIncoming = Array.isArray(bundle.inventarios) ? bundle.inventarios : [];
     const mantenimientosIncoming = Array.isArray(bundle.mantenimientosProgramados)

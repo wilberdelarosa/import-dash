@@ -84,7 +84,7 @@ export function SystemConfigProvider({ children }: { children: React.ReactNode }
         toast({
           title: 'No se pudo cargar la configuración del sistema',
           description:
-            'Verifica las variables VITE_SUPABASE_URL y VITE_SUPABASE_PUBLISHABLE_KEY. Se aplicarán los valores predeterminados hasta restablecer la conexión.',
+            'Verifica las variables. Se aplicarán los valores predeterminados hasta restablecer la conexión.',
           variant: 'destructive',
         });
         configErrorNoticeShownRef.current = true;
