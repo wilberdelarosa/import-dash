@@ -14,54 +14,6 @@ export type Database = {
   }
   public: {
     Tables: {
-      configuraciones_sistema: {
-        Row: {
-          alerta_critica: number
-          alerta_preventiva: number
-          correo_notificaciones: string | null
-          correo_soporte: string | null
-          created_at: string
-          id: number
-          modo_oscuro_automatico: boolean
-          notificar_dispositivo: boolean
-          notificar_email: boolean
-          notificar_whatsapp: boolean
-          permitir_importaciones: boolean
-          telefono_whatsapp: string | null
-          updated_at: string
-        }
-        Insert: {
-          alerta_critica?: number
-          alerta_preventiva?: number
-          correo_notificaciones?: string | null
-          correo_soporte?: string | null
-          created_at?: string
-          id?: number
-          modo_oscuro_automatico?: boolean
-          notificar_dispositivo?: boolean
-          notificar_email?: boolean
-          notificar_whatsapp?: boolean
-          permitir_importaciones?: boolean
-          telefono_whatsapp?: string | null
-          updated_at?: string
-        }
-        Update: {
-          alerta_critica?: number
-          alerta_preventiva?: number
-          correo_notificaciones?: string | null
-          correo_soporte?: string | null
-          created_at?: string
-          id?: number
-          modo_oscuro_automatico?: boolean
-          notificar_dispositivo?: boolean
-          notificar_email?: boolean
-          notificar_whatsapp?: boolean
-          permitir_importaciones?: boolean
-          telefono_whatsapp?: string | null
-          updated_at?: string
-        }
-        Relationships: []
-      }
       equipos: {
         Row: {
           activo: boolean
@@ -284,72 +236,44 @@ export type Database = {
         }
         Relationships: []
       }
-      notificaciones_salientes: {
+      user_roles: {
         Row: {
-          canal: string
           created_at: string
-          destino: string
-          enviado_en: string | null
-          estado: string
-          id: number
-          intentos: number
-          metadata: Json | null
-          mensaje: string
-          notificacion_id: number
-          ultimo_error: string | null
+          id: string
+          role: Database["public"]["Enums"]["app_role"]
+          user_id: string
         }
         Insert: {
-          canal: string
           created_at?: string
-          destino: string
-          enviado_en?: string | null
-          estado?: string
-          id?: number
-          intentos?: number
-          metadata?: Json | null
-          mensaje: string
-          notificacion_id: number
-          ultimo_error?: string | null
+          id?: string
+          role?: Database["public"]["Enums"]["app_role"]
+          user_id: string
         }
         Update: {
-          canal?: string
           created_at?: string
-          destino?: string
-          enviado_en?: string | null
-          estado?: string
-          id?: number
-          intentos?: number
-          metadata?: Json | null
-          mensaje?: string
-          notificacion_id?: number
-          ultimo_error?: string | null
+          id?: string
+          role?: Database["public"]["Enums"]["app_role"]
+          user_id?: string
         }
-        Relationships: [
-          {
-            foreignKeyName: "notificaciones_salientes_notificacion_id_fkey"
-            columns: ["notificacion_id"]
-            isOneToOne: false
-            referencedRelation: "notificaciones"
-            referencedColumns: ["id"]
-          }
-        ]
+        Relationships: []
       }
     }
     Views: {
       [_ in never]: never
     }
     Functions: {
-      generar_notificaciones_mantenimientos: {
-        Args: Record<PropertyKey, never>
-        Returns: undefined
-      }
-      generar_notificaciones_stock_bajo: {
-        Args: Record<PropertyKey, never>
-        Returns: undefined
+      generar_notificaciones_mantenimientos: { Args: never; Returns: undefined }
+      generar_notificaciones_stock_bajo: { Args: never; Returns: undefined }
+      has_role: {
+        Args: {
+          _role: Database["public"]["Enums"]["app_role"]
+          _user_id: string
+        }
+        Returns: boolean
       }
     }
     Enums: {
-      [_ in never]: never
+      app_role: "admin" | "user"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -476,6 +400,8 @@ export type CompositeTypes<
 
 export const Constants = {
   public: {
-    Enums: {},
+    Enums: {
+      app_role: ["admin", "user"],
+    },
   },
 } as const

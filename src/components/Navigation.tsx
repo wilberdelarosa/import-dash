@@ -15,6 +15,7 @@ import {
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { NotificacionesCentro } from '@/components/NotificacionesCentro';
+import { LogoutButton } from '@/components/LogoutButton';
 import {
   Sheet,
   SheetContent,
@@ -80,7 +81,10 @@ export function Navigation() {
             <div className="flex flex-wrap items-center gap-2 lg:gap-4">
               {navLinks}
             </div>
-            <NotificacionesCentro />
+            <div className="flex items-center gap-2">
+              <NotificacionesCentro />
+              <LogoutButton />
+            </div>
           </div>
         </div>
         <SheetContent side="left" className="sm:hidden w-[280px] bg-background text-foreground">
@@ -104,6 +108,9 @@ export function Navigation() {
                 </Link>
               </SheetClose>
             ))}
+            <div className="mt-4 pt-4 border-t border-border">
+              <LogoutButton />
+            </div>
           </div>
         </SheetContent>
       </Sheet>

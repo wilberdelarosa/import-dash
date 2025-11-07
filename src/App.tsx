@@ -15,6 +15,9 @@ import NotFound from "./pages/NotFound";
 import AsistenteIA from "./pages/AsistenteIA";
 import { SupabaseDataProvider } from "@/context/SupabaseDataContext";
 import { SystemConfigProvider } from "@/context/SystemConfigContext";
+import { AuthProvider } from "@/context/AuthContext";
+import { ProtectedRoute } from "@/components/ProtectedRoute";
+import Auth from "./pages/Auth";
 
 const queryClient = new QueryClient();
 
@@ -23,25 +26,28 @@ const App = () => (
     <TooltipProvider>
       <Toaster />
       <Sonner />
-      <SystemConfigProvider>
-        <SupabaseDataProvider>
-          <BrowserRouter>
-            <Routes>
-              <Route path="/" element={<Dashboard />} />
-              <Route path="/equipos" element={<Equipos />} />
-              <Route path="/control-mantenimiento" element={<ControlMantenimiento />} />
-              <Route path="/inventario" element={<Inventario />} />
-              <Route path="/mantenimiento" element={<Mantenimiento />} />
-              <Route path="/historial" element={<Historial />} />
-              <Route path="/reportes" element={<Reportes />} />
-              <Route path="/configuraciones" element={<Configuraciones />} />
-              <Route path="/asistente" element={<AsistenteIA />} />
-              {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
-              <Route path="*" element={<NotFound />} />
-            </Routes>
-          </BrowserRouter>
-        </SupabaseDataProvider>
-      </SystemConfigProvider>
+      <AuthProvider>
+        <SystemConfigProvider>
+          <SupabaseDataProvider>
+            <BrowserRouter>
+              <Routes>
+                <Route path="/auth" element={<Auth />} />
+                <Route path="/" element={<ProtectedRoute><Dashboard /></ProtectedRoute>} />
+                <Route path="/equipos" element={<ProtectedRoute><Equipos /></ProtectedRoute>} />
+                <Route path="/control-mantenimiento" element={<ProtectedRoute><ControlMantenimiento /></ProtectedRoute>} />
+                <Route path="/inventario" element={<ProtectedRoute><Inventario /></ProtectedRoute>} />
+                <Route path="/mantenimiento" element={<ProtectedRoute><Mantenimiento /></ProtectedRoute>} />
+                <Route path="/historial" element={<ProtectedRoute><Historial /></ProtectedRoute>} />
+                <Route path="/reportes" element={<ProtectedRoute><Reportes /></ProtectedRoute>} />
+                <Route path="/configuraciones" element={<ProtectedRoute><Configuraciones /></ProtectedRoute>} />
+                <Route path="/asistente" element={<ProtectedRoute><AsistenteIA /></ProtectedRoute>} />
+                {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
+                <Route path="*" element={<NotFound />} />
+              </Routes>
+            </BrowserRouter>
+          </SupabaseDataProvider>
+        </SystemConfigProvider>
+      </AuthProvider>
     </TooltipProvider>
   </QueryClientProvider>
 );

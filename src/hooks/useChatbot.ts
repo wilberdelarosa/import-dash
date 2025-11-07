@@ -3,7 +3,7 @@ import {
   createGroqChatCompletion,
   GroqChatMessage,
   GroqChatCompletion,
-} from '@/integrations/groq/client';
+} from '@/integrations/groq/edge-client';
 import { ChatMessage, ChatUsage } from '@/types/chat';
 
 const createId = () => {
