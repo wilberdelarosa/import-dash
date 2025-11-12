@@ -24,6 +24,7 @@ import {
 import { format, formatDistanceToNow } from 'date-fns';
 import { es } from 'date-fns/locale';
 import { CaterpillarDataCard } from './CaterpillarDataCard';
+import { formatRemainingLabel, getRemainingVariant } from '@/lib/maintenanceUtils';
 
 interface Props {
   ficha: string | null;
@@ -139,6 +140,7 @@ export function EquipoDetalleUnificado({ ficha, open, onOpenChange }: Props) {
               modelo={equipo.modelo}
               numeroSerie={equipo.numeroSerie}
               marca={equipo.marca}
+              mantenimientos={mantenimientos}
             />
             
             <Card>
@@ -246,18 +248,8 @@ export function EquipoDetalleUnificado({ ficha, open, onOpenChange }: Props) {
                   <CardHeader>
                     <div className="flex items-center justify-between">
                       <CardTitle className="text-lg">{mant.tipoMantenimiento}</CardTitle>
-                      <Badge
-                        variant={
-                          mant.horasKmRestante < 0
-                            ? "destructive"
-                            : mant.horasKmRestante <= 50
-                            ? "secondary"
-                            : "default"
-                        }
-                      >
-                        {mant.horasKmRestante < 0
-                          ? `Vencido por ${Math.abs(mant.horasKmRestante)}`
-                          : `${mant.horasKmRestante} restantes`}
+                      <Badge variant={getRemainingVariant(mant.horasKmRestante)}>
+                        {formatRemainingLabel(mant.horasKmRestante)}
                       </Badge>
                     </div>
                   </CardHeader>

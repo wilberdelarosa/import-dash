@@ -68,6 +68,7 @@ import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { useToast } from '@/hooks/use-toast';
+import { formatRemainingLabel, getRemainingVariant } from '@/lib/maintenanceUtils';
 
 const numericField = z
   .string()
@@ -406,9 +407,7 @@ export default function Mantenimiento() {
         `${mant.frecuencia.toLocaleString()} ${unidad}`,
         `${mant.horasKmUltimoMantenimiento.toLocaleString()} ${unidad}`,
         `${mant.proximoMantenimiento.toLocaleString()} ${unidad}`,
-        mant.horasKmRestante <= 0 ? 
-          `${Math.abs(mant.horasKmRestante).toFixed(0)} ${unidad} vencido` :
-          `${mant.horasKmRestante.toFixed(0)} ${unidad}`,
+        formatRemainingLabel(mant.horasKmRestante, unidad),
         formatearFecha(mant.fechaUltimoMantenimiento),
         estado.label
       ];
@@ -537,9 +536,7 @@ export default function Mantenimiento() {
           `${mant.frecuencia.toLocaleString()} ${unidad}`,
           `${mant.horasKmUltimoMantenimiento.toLocaleString()} ${unidad}`,
           `${mant.proximoMantenimiento.toLocaleString()} ${unidad}`,
-          mant.horasKmRestante <= 0 ? 
-            `${Math.abs(mant.horasKmRestante).toFixed(0)} ${unidad} vencido` :
-            `${mant.horasKmRestante.toFixed(0)} ${unidad}`,
+          formatRemainingLabel(mant.horasKmRestante, unidad),
           formatearFecha(mant.fechaUltimoMantenimiento),
           estado.label
         ];
@@ -1592,9 +1589,7 @@ export default function Mantenimiento() {
                                       : 'font-medium text-emerald-600'
                                   }
                                 >
-                                  {mant.horasKmRestante <= 0
-                                    ? `${Math.abs(mant.horasKmRestante).toFixed(0)} ${unidad} vencido`
-                                    : `${mant.horasKmRestante.toFixed(0)} ${unidad}`}
+                                  {formatRemainingLabel(mant.horasKmRestante, unidad)}
                                 </span>
                               </div>
                             </TableCell>

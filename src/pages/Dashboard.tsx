@@ -12,6 +12,7 @@ import { Activity, AlertTriangle, CalendarClock, Clock, Users, ExternalLink } fr
 import { Skeleton } from '@/components/ui/skeleton';
 import { EquipoDetalleUnificado } from '@/components/EquipoDetalleUnificado';
 import { useNavigate } from 'react-router-dom';
+import { formatRemainingLabel, getRemainingVariant } from '@/lib/maintenanceUtils';
 
 const formatDate = (value: string | null | undefined) => {
   if (!value) return 'Sin registro';
@@ -209,16 +210,8 @@ export default function Dashboard() {
                         <TableCell className="font-medium">{mantenimiento.nombreEquipo}</TableCell>
                         <TableCell>{mantenimiento.tipoMantenimiento}</TableCell>
                         <TableCell className="text-right">
-                          <Badge variant={
-                            mantenimiento.horasKmRestante < 0 
-                              ? 'destructive' 
-                              : mantenimiento.horasKmRestante <= 15 
-                              ? 'destructive' 
-                              : 'secondary'
-                          }>
-                            {mantenimiento.horasKmRestante < 0 
-                              ? `Vencido (${Math.abs(mantenimiento.horasKmRestante)}h)` 
-                              : `${mantenimiento.horasKmRestante}h`}
+                          <Badge variant={getRemainingVariant(mantenimiento.horasKmRestante)}>
+                            {formatRemainingLabel(mantenimiento.horasKmRestante)}
                           </Badge>
                         </TableCell>
                         <TableCell>{formatDate(mantenimiento.fechaUltimaActualizacion)}</TableCell>
