@@ -35,16 +35,33 @@ export function EquipoDialog({ equipo, onSave, trigger }: EquipoDialogProps) {
     marca: equipo?.marca || '',
     modelo: equipo?.modelo || '',
     numeroSerie: equipo?.numeroSerie || '',
+    chasis: equipo?.chasis || '',
     placa: equipo?.placa || '',
     categoria: equipo?.categoria || '',
     activo: equipo?.activo ?? true,
-    motivoInactividad: equipo?.motivoInactividad || ''
+    motivoInactividad: equipo?.motivoInactividad || '',
+    capacitacionMinima: equipo?.capacitacionMinima || '',
   });
 
   const handleSave = () => {
-    const equipoData = equipo 
-      ? { ...formData, id: equipo.id }
-      : formData;
+    const payload = {
+      ...formData,
+      chasis: formData.chasis.trim(),
+      motivoInactividad: formData.activo
+        ? null
+        : formData.motivoInactividad.trim() || null,
+      capacitacionMinima: formData.capacitacionMinima.trim()
+        ? formData.capacitacionMinima.trim()
+        : null,
+    };
+
+    if (formData.activo) {
+      payload.motivoInactividad = null;
+    }
+
+    const equipoData = equipo
+      ? { ...payload, id: equipo.id }
+      : payload;
     onSave(equipoData);
     setOpen(false);
   };
@@ -110,6 +127,15 @@ export function EquipoDialog({ equipo, onSave, trigger }: EquipoDialogProps) {
             />
           </div>
           <div>
+            <Label htmlFor="chasis">Chasis</Label>
+            <Input
+              id="chasis"
+              value={formData.chasis}
+              onChange={(e) => setFormData({ ...formData, chasis: e.target.value })}
+              placeholder="Serie de chasis"
+            />
+          </div>
+          <div>
             <Label htmlFor="placa">Placa</Label>
             <Input
               id="placa"
@@ -150,6 +176,15 @@ export function EquipoDialog({ equipo, onSave, trigger }: EquipoDialogProps) {
               />
             </div>
           )}
+          <div className="md:col-span-2">
+            <Label htmlFor="capacitacionMinima">Capacitación mínima requerida</Label>
+            <Textarea
+              id="capacitacionMinima"
+              value={formData.capacitacionMinima}
+              onChange={(e) => setFormData({ ...formData, capacitacionMinima: e.target.value })}
+              placeholder="Ej: Técnico senior certificado en línea amarilla"
+            />
+          </div>
         </div>
         <div className="flex flex-col-reverse gap-2 sm:flex-row sm:justify-end sm:space-x-2">
           <Button variant="outline" onClick={() => setOpen(false)} className="w-full sm:w-auto">Cancelar</Button>
