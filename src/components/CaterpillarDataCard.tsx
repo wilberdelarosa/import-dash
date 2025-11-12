@@ -3,15 +3,18 @@ import { Badge } from '@/components/ui/badge';
 import { Separator } from '@/components/ui/separator';
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion';
 import { useCaterpillarData } from '@/hooks/useCaterpillarData';
-import { Loader2, Wrench, Package, Droplets, Thermometer, Fuel } from 'lucide-react';
+import { Loader2, Wrench, Package, Droplets, Thermometer, Fuel, ClipboardList, AlertTriangle } from 'lucide-react';
+import { MantenimientoProgramado } from '@/types/equipment';
+import { formatRemainingLabel, getRemainingVariant } from '@/lib/maintenanceUtils';
 
 interface Props {
   modelo: string;
   numeroSerie: string;
   marca: string;
+  mantenimientos?: MantenimientoProgramado[];
 }
 
-export function CaterpillarDataCard({ modelo, numeroSerie, marca }: Props) {
+export function CaterpillarDataCard({ modelo, numeroSerie, marca, mantenimientos }: Props) {
   const { data, loading } = useCaterpillarData(modelo, numeroSerie);
 
   // Solo mostrar si la marca es Caterpillar
@@ -51,7 +54,22 @@ export function CaterpillarDataCard({ modelo, numeroSerie, marca }: Props) {
     );
   }
 
-  const { modelo: catModelo, intervalos, piezasPorIntervalo } = data;
+  const { modelo: catModelo, intervalos, piezasPorIntervalo, tareasPorIntervalo, mantenimientosEspeciales } = data;
+
+  const findMantenimientoCoincidente = (codigoIntervalo: string, horasIntervalo: number) => {
+    if (!mantenimientos?.length) return null;
+
+    const porFrecuencia = mantenimientos.find((mantenimiento) => {
+      if (!mantenimiento.frecuencia) return false;
+      return Math.abs(mantenimiento.frecuencia - horasIntervalo) <= Math.max(25, horasIntervalo * 0.1);
+    });
+
+    if (porFrecuencia) return porFrecuencia;
+
+    return mantenimientos.find((mantenimiento) =>
+      mantenimiento.tipoMantenimiento?.toLowerCase().includes(codigoIntervalo.toLowerCase()),
+    );
+  };
 
   return (
     <Card className="border-amber-200/70 bg-gradient-to-br from-amber-50/50 to-background">
@@ -118,6 +136,9 @@ export function CaterpillarDataCard({ modelo, numeroSerie, marca }: Props) {
           <Accordion type="single" collapsible className="space-y-2">
             {intervalos.map((intervalo) => {
               const piezas = piezasPorIntervalo[intervalo.codigo] || [];
+              const tareas = tareasPorIntervalo[intervalo.codigo] || [];
+              const mantenimientoAsociado = findMantenimientoCoincidente(intervalo.codigo, intervalo.horas_intervalo);
+              const restante = mantenimientoAsociado?.horasKmRestante ?? null;
               return (
                 <AccordionItem
                   key={intervalo.id}
@@ -132,13 +153,36 @@ export function CaterpillarDataCard({ modelo, numeroSerie, marca }: Props) {
                         </Badge>
                         <span className="font-medium">{intervalo.nombre}</span>
                       </div>
-                      <Badge variant="secondary">{intervalo.horas_intervalo}h</Badge>
+                      <div className="flex items-center gap-2">
+                        {mantenimientoAsociado && (
+                          <Badge variant={getRemainingVariant(restante)}>
+                            {formatRemainingLabel(restante)}
+                          </Badge>
+                        )}
+                        <Badge variant="secondary">{intervalo.horas_intervalo}h</Badge>
+                      </div>
                     </div>
                   </AccordionTrigger>
                   <AccordionContent className="pt-3">
                     <div className="space-y-3">
                       <p className="text-sm text-muted-foreground">{intervalo.descripcion}</p>
-                      
+
+                      {tareas.length > 0 && (
+                        <div className="rounded-md border border-amber-200/40 bg-amber-50/50 p-3">
+                          <p className="mb-2 flex items-center gap-2 text-xs font-semibold text-amber-800">
+                            <ClipboardList className="h-3.5 w-3.5" /> Tareas recomendadas
+                          </p>
+                          <ul className="space-y-2 text-xs">
+                            {tareas.map((tarea) => (
+                              <li key={tarea} className="flex items-start gap-2">
+                                <span className="mt-1 h-1.5 w-1.5 rounded-full bg-amber-500" />
+                                <span className="text-amber-900">{tarea}</span>
+                              </li>
+                            ))}
+                          </ul>
+                        </div>
+                      )}
+
                       {piezas.length > 0 && (
                         <div className="rounded-md border border-amber-200/40 bg-amber-50/50 p-3">
                           <p className="mb-2 text-xs font-semibold text-amber-800">
@@ -180,6 +224,49 @@ export function CaterpillarDataCard({ modelo, numeroSerie, marca }: Props) {
             })}
           </Accordion>
         </div>
+
+        {mantenimientosEspeciales.length > 0 && (
+          <div className="space-y-3 rounded-lg border border-amber-200/60 bg-white/70 p-4">
+            <h3 className="flex items-center gap-2 text-sm font-semibold text-amber-900">
+              <AlertTriangle className="h-4 w-4" /> Intervenciones especializadas
+            </h3>
+            <ul className="space-y-2 text-xs text-amber-900">
+              {mantenimientosEspeciales.map((especial) => (
+                <li key={especial.id} className="rounded-md border border-amber-200/50 bg-amber-50/40 p-3">
+                  <div className="flex flex-wrap items-center justify-between gap-2">
+                    <Badge variant="outline" className="bg-amber-100 text-amber-700">
+                      {especial.intervaloCodigo}
+                    </Badge>
+                    {especial.responsableSugerido && (
+                      <Badge variant="secondary">{especial.responsableSugerido}</Badge>
+                    )}
+                  </div>
+                  <p className="mt-2 leading-relaxed text-amber-900">{especial.descripcion}</p>
+                  {especial.referencia && (
+                    <p className="mt-2 text-[11px] text-muted-foreground">
+                      Referencia: {especial.referencia}
+                    </p>
+                  )}
+                  {especial.adjuntos?.length ? (
+                    <div className="mt-2 flex flex-wrap gap-2">
+                      {especial.adjuntos.map((adjunto) => (
+                        <a
+                          key={adjunto.label}
+                          href={adjunto.url}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="text-xs font-medium text-amber-800 underline"
+                        >
+                          {adjunto.label}
+                        </a>
+                      ))}
+                    </div>
+                  ) : null}
+                </li>
+              ))}
+            </ul>
+          </div>
+        )}
 
         <div className="rounded-lg border border-amber-300/50 bg-amber-100/40 p-3 text-xs text-amber-800">
           <strong>💡 Nota:</strong> Estos son intervalos recomendados por Caterpillar. Consulta el manual

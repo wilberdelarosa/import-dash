@@ -12,6 +12,7 @@ import { Badge } from '@/components/ui/badge';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Loader2, Wrench, CalendarCheck, Gauge, ClipboardList, CalendarRange } from 'lucide-react';
+import { formatRemainingLabel, getRemainingVariant } from '@/lib/maintenanceUtils';
 import type { ActualizacionHorasKm, MantenimientoProgramado, MantenimientoRealizado } from '@/types/equipment';
 import { useToast } from '@/hooks/use-toast';
 
@@ -53,6 +54,8 @@ export default function ControlMantenimiento() {
   const [registroResponsable, setRegistroResponsable] = useState('');
   const [registroObservaciones, setRegistroObservaciones] = useState('');
   const [registroFiltros, setRegistroFiltros] = useState('');
+  const [unidadLectura, setUnidadLectura] = useState<'horas' | 'km'>('horas');
+  const [unidadRegistro, setUnidadRegistro] = useState<'horas' | 'km'>('horas');
   const [updating, setUpdating] = useState(false);
   const [registering, setRegistering] = useState(false);
   const [reporteDesde, setReporteDesde] = useState('');
@@ -76,6 +79,9 @@ export default function ControlMantenimiento() {
       setRegistroHoras(selected.horasKmActuales.toString());
       setFechaLectura(new Date().toISOString().slice(0, 10));
       setRegistroFecha(new Date().toISOString().slice(0, 10));
+      const unidadInferida = selected.tipoMantenimiento.toLowerCase().includes('km') ? 'km' : 'horas';
+      setUnidadLectura(unidadInferida as 'horas' | 'km');
+      setUnidadRegistro(unidadInferida as 'horas' | 'km');
     }
   }, [selectedId, selected]);
 
@@ -102,6 +108,8 @@ export default function ControlMantenimiento() {
     .sort((a, b) => a.horasKmRestante - b.horasKmRestante)
     .slice(0, 8);
 
+  const unidadMantenimiento = selected?.tipoMantenimiento?.toLowerCase().includes('km') ? 'km' : 'horas';
+
   const handleActualizarHoras = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
     if (!selected) return;
@@ -113,6 +121,7 @@ export default function ControlMantenimiento() {
         fecha: fechaLectura,
         usuarioResponsable: responsableLectura || undefined,
         observaciones: notasLectura || undefined,
+        unidad: unidadLectura,
       });
       setNotasLectura('');
     } finally {
@@ -138,6 +147,7 @@ export default function ControlMantenimiento() {
         observaciones: registroObservaciones || undefined,
         filtrosUtilizados: filtros as MantenimientoRealizado['filtrosUtilizados'],
         usuarioResponsable: registroResponsable || undefined,
+        unidad: unidadRegistro,
       });
       setRegistroObservaciones('');
       setRegistroFiltros('');
@@ -285,8 +295,8 @@ export default function ControlMantenimiento() {
               </div>
               <div className="flex items-center justify-between">
                 <span className="text-muted-foreground">Horas/km restantes</span>
-                <Badge variant={selected.horasKmRestante <= 15 ? 'destructive' : 'outline'}>
-                  {selected.horasKmRestante}
+                <Badge variant={getRemainingVariant(selected?.horasKmRestante)}>
+                  {formatRemainingLabel(selected?.horasKmRestante, unidadMantenimiento)}
                 </Badge>
               </div>
               <div className="flex flex-col gap-1">
@@ -298,7 +308,7 @@ export default function ControlMantenimiento() {
                 <span className="font-medium">{formatDate(selected.fechaUltimoMantenimiento)}</span>
               </div>
             </div>
-            {selected.horasKmRestante <= 25 && (
+            {selected && selected.horasKmRestante <= 25 && (
               <Alert variant={selected.horasKmRestante <= 10 ? 'destructive' : 'warning'}>
                 <AlertTitle>Atención</AlertTitle>
                 <AlertDescription>
@@ -329,6 +339,18 @@ export default function ControlMantenimiento() {
                     value={horasLectura}
                     onChange={(event) => setHorasLectura(event.target.value)}
                   />
+                </div>
+                <div className="grid gap-2">
+                  <Label htmlFor="unidadLectura">Unidad de medición</Label>
+                  <Select value={unidadLectura} onValueChange={(value) => setUnidadLectura(value as 'horas' | 'km')}>
+                    <SelectTrigger id="unidadLectura" className="w-full">
+                      <SelectValue placeholder="Selecciona unidad" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="horas">Horas de uso</SelectItem>
+                      <SelectItem value="km">Kilómetros</SelectItem>
+                    </SelectContent>
+                  </Select>
                 </div>
                 <div className="grid gap-2 md:grid-cols-2">
                   <div className="grid gap-2">
@@ -382,7 +404,7 @@ export default function ControlMantenimiento() {
             </CardHeader>
             <CardContent>
               <form className="grid gap-4" onSubmit={handleRegistrarMantenimiento}>
-                <div className="grid gap-2 md:grid-cols-2">
+                <div className="grid gap-2 md:grid-cols-3">
                   <div className="grid gap-2">
                     <Label htmlFor="registroFecha">Fecha del mantenimiento</Label>
                     <Input
@@ -403,6 +425,21 @@ export default function ControlMantenimiento() {
                       value={registroHoras}
                       onChange={(event) => setRegistroHoras(event.target.value)}
                     />
+                  </div>
+                  <div className="grid gap-2">
+                    <Label htmlFor="registroUnidad">Unidad de medición</Label>
+                    <Select
+                      value={unidadRegistro}
+                      onValueChange={(value) => setUnidadRegistro(value as 'horas' | 'km')}
+                    >
+                      <SelectTrigger id="registroUnidad" className="w-full">
+                        <SelectValue placeholder="Selecciona unidad" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="horas">Horas de uso</SelectItem>
+                        <SelectItem value="km">Kilómetros</SelectItem>
+                      </SelectContent>
+                    </Select>
                   </div>
                 </div>
                 <div className="grid gap-2">

@@ -63,6 +63,7 @@ interface ActualizacionHorasPayload {
   fecha?: string;
   usuarioResponsable?: string;
   observaciones?: string;
+  unidad?: 'horas' | 'km';
 }
 
 interface RegistrarMantenimientoPayload {
@@ -72,6 +73,7 @@ interface RegistrarMantenimientoPayload {
   observaciones?: string;
   filtrosUtilizados?: MantenimientoRealizado['filtrosUtilizados'];
   usuarioResponsable?: string;
+  unidad?: 'horas' | 'km';
 }
 
 const formatValue = (value: unknown) => {
@@ -937,6 +939,7 @@ export function useSupabaseData() {
     fecha,
     usuarioResponsable = 'Equipo de mantenimiento',
     observaciones,
+    unidad,
   }: ActualizacionHorasPayload) => {
     if (usingDemoData) {
       showDemoWriteNotice();
@@ -956,6 +959,7 @@ export function useSupabaseData() {
 
     const horasPrevias = Number(mantenimiento.horasKmActuales ?? 0);
     const horasActuales = Number(horasKm);
+    const unidadLectura = unidad ?? (mantenimiento.tipoMantenimiento.toLowerCase().includes('km') ? 'km' : 'horas');
     const incremento = horasActuales - horasPrevias;
     const fechaIso = fecha ? new Date(fecha).toISOString() : new Date().toISOString();
     const restanteCalculado = Math.max(mantenimiento.proximoMantenimiento - horasActuales, 0);
@@ -972,10 +976,9 @@ export function useSupabaseData() {
 
       if (updateError) throw updateError;
 
-      const unidad = mantenimiento.tipoMantenimiento.toLowerCase().includes('km') ? 'km' : 'horas';
       const descripcion = observaciones
         ? observaciones
-        : `Lectura actualizada a ${horasActuales} ${unidad}`;
+        : `Lectura actualizada a ${horasActuales} ${unidadLectura}`;
 
       const metadata = {
         id: mantenimientoId,
@@ -988,6 +991,7 @@ export function useSupabaseData() {
         usuarioResponsable,
         observaciones,
         restante: restanteCalculado,
+        unidad: unidadLectura,
       };
 
       await recordHistorialEvent({
@@ -1006,6 +1010,7 @@ export function useSupabaseData() {
           restante: restanteCalculado,
           fecha: fechaIso,
           observaciones,
+          unidad: unidadLectura,
         },
         metadata,
         usuario: usuarioResponsable,
@@ -1036,6 +1041,7 @@ export function useSupabaseData() {
     observaciones,
     filtrosUtilizados = [],
     usuarioResponsable = 'Equipo de mantenimiento',
+    unidad,
   }: RegistrarMantenimientoPayload) => {
     if (usingDemoData) {
       showDemoWriteNotice();
@@ -1055,6 +1061,7 @@ export function useSupabaseData() {
 
     const fechaIso = fecha ? new Date(fecha).toISOString() : new Date().toISOString();
     const lectura = Number(horasKm);
+    const unidadMantenimiento = unidad ?? (mantenimiento.tipoMantenimiento.toLowerCase().includes('km') ? 'km' : 'horas');
     const horasPrevias = Number(mantenimiento.horasKmUltimoMantenimiento ?? 0);
     const incremento = lectura - horasPrevias;
     const proximo = lectura + Number(mantenimiento.frecuencia ?? 0);
@@ -1077,7 +1084,7 @@ export function useSupabaseData() {
 
       const descripcion = observaciones
         ? observaciones
-        : `Mantenimiento ${mantenimiento.tipoMantenimiento} realizado para ${mantenimiento.nombreEquipo}`;
+        : `Mantenimiento ${mantenimiento.tipoMantenimiento} realizado para ${mantenimiento.nombreEquipo} (${lectura} ${unidadMantenimiento})`;
 
       const metadata = {
         id: mantenimientoId,
@@ -1091,6 +1098,7 @@ export function useSupabaseData() {
         usuarioResponsable,
         observaciones,
         proximoMantenimientoCalculado: proximo,
+        unidad: unidadMantenimiento,
       };
 
       await recordHistorialEvent({
@@ -1109,6 +1117,7 @@ export function useSupabaseData() {
           filtrosUtilizados,
           observaciones,
           fechaMantenimiento: fechaIso,
+          unidad: unidadMantenimiento,
         },
         metadata,
         usuario: usuarioResponsable,
