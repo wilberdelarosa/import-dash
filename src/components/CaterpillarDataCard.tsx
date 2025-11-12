@@ -1,4 +1,3 @@
-import { useMemo } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Separator } from '@/components/ui/separator';
@@ -84,103 +83,6 @@ export function CaterpillarDataCard({ modelo, numeroSerie, marca, mantenimientos
         </CardDescription>
       </CardHeader>
       <CardContent className="space-y-6">
-        <div className="rounded-lg border border-amber-200/60 bg-amber-50/60 p-4">
-          <div className="flex items-start gap-3">
-            <MousePointerClick className="h-5 w-5 shrink-0 text-amber-700" />
-            <div className="space-y-2 text-sm text-amber-900">
-              <p className="font-semibold">¿Cómo usar esta ficha?</p>
-              <ul className="space-y-1 text-xs leading-relaxed">
-                <li>
-                  1. Consulta el bloque «Próximo servicio programado» para identificar el PM correspondiente y las horas/km restantes.
-                </li>
-                <li>
-                  2. Expande cualquier intervalo de la lista inferior para ver las tareas detalladas y los códigos de piezas del kit.
-                </li>
-                <li>
-                  3. Registra el mantenimiento en la pestaña «Mantenimientos» usando la misma clave PM para mantener la trazabilidad.
-                </li>
-              </ul>
-            </div>
-          </div>
-        </div>
-
-        {proximoServicio && (
-          <div className="rounded-lg border border-amber-300/70 bg-white/80 p-4 shadow-sm">
-            <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-              <div>
-                <p className="text-xs uppercase tracking-wide text-amber-700">Próximo servicio programado</p>
-                <div className="mt-1 flex flex-wrap items-center gap-2">
-                  <Badge variant="outline" className="bg-amber-100 text-amber-800">
-                    {proximoServicio.intervalo.codigo}
-                  </Badge>
-                  <Badge variant="secondary">{proximoServicio.intervalo.horas_intervalo}h</Badge>
-                  {proximoServicio.mantenimientoAsociado && (
-                    <Badge variant={getRemainingVariant(proximoServicio.restante)}>
-                      {formatRemainingLabel(proximoServicio.restante, proximoServicio.unidad)}
-                    </Badge>
-                  )}
-                </div>
-                <p className="mt-2 text-sm text-muted-foreground">
-                  {proximoServicio.intervalo.descripcion}
-                </p>
-              </div>
-              {proximoServicio.mantenimientoAsociado && (
-                <div className="rounded-md border border-amber-200/80 bg-amber-50/60 p-3 text-xs text-amber-800">
-                  <p className="font-semibold">Referencia en tu plan:</p>
-                  <p className="mt-1 font-medium">{proximoServicio.mantenimientoAsociado.tipoMantenimiento}</p>
-                  <p className="text-muted-foreground">
-                    Última actualización: {proximoServicio.mantenimientoAsociado.fechaUltimaActualizacion}
-                  </p>
-                </div>
-              )}
-            </div>
-
-            {proximoServicio.tareas.length > 0 && (
-              <div className="mt-4 rounded-md border border-amber-200/60 bg-amber-50/50 p-3">
-                <p className="mb-2 flex items-center gap-2 text-xs font-semibold text-amber-800">
-                  <ClipboardList className="h-3.5 w-3.5" /> Tareas destacadas
-                </p>
-                <ul className="space-y-2 text-xs">
-                  {proximoServicio.tareas.map((tarea) => (
-                    <li key={tarea} className="flex items-start gap-2">
-                      <span className="mt-1 h-1.5 w-1.5 rounded-full bg-amber-500" />
-                      <span className="text-amber-900">{tarea}</span>
-                    </li>
-                  ))}
-                </ul>
-              </div>
-            )}
-
-            <div className="mt-4 rounded-md border border-amber-200/60 bg-amber-50/40 p-3">
-              <p className="mb-2 flex items-center gap-2 text-xs font-semibold text-amber-800">
-                <Package className="h-3.5 w-3.5" /> Kit sugerido
-              </p>
-              {proximoServicio.piezas.length > 0 ? (
-                <div className="space-y-2 text-xs">
-                  {proximoServicio.piezas.map((pieza) => (
-                    <div key={pieza.id} className="flex items-start justify-between gap-2">
-                      <div className="flex-1">
-                        <p className="font-semibold text-amber-900">{pieza.pieza.numero_parte}</p>
-                        <p className="text-muted-foreground">{pieza.pieza.descripcion}</p>
-                        <Badge variant="outline" className="mt-1 text-[10px]">
-                          {pieza.pieza.tipo}
-                        </Badge>
-                      </div>
-                      <Badge variant="secondary" className="shrink-0">
-                        x{pieza.cantidad}
-                      </Badge>
-                    </div>
-                  ))}
-                </div>
-              ) : (
-                <p className="text-xs italic text-muted-foreground">
-                  No hay códigos de pieza cargados para este intervalo. Consulta el manual o tu dealer Caterpillar.
-                </p>
-              )}
-            </div>
-          </div>
-        )}
-
         {/* Especificaciones del Modelo */}
         <div className="rounded-lg border border-amber-200/60 bg-white/70 p-4">
           <h3 className="mb-3 text-sm font-semibold text-amber-900">Especificaciones Técnicas</h3>
@@ -305,24 +207,21 @@ export function CaterpillarDataCard({ modelo, numeroSerie, marca, mantenimientos
                                   x{pieza.cantidad}
                                 </Badge>
                               </div>
-                              <Badge variant="secondary" className="shrink-0">
-                                x{pieza.cantidad}
-                              </Badge>
-                            </div>
-                          ))}
+                            ))}
+                          </div>
                         </div>
-                      </div>
-                    )}
+                      )}
 
-                    {piezas.length === 0 && (
-                      <p className="text-xs italic text-muted-foreground">
-                        No hay códigos de pieza configurados para este intervalo.
-                      </p>
-                    )}
-                  </div>
-                </AccordionContent>
-              </AccordionItem>
-            ))}
+                      {piezas.length === 0 && (
+                        <p className="text-xs italic text-muted-foreground">
+                          No hay códigos de pieza configurados para este intervalo.
+                        </p>
+                      )}
+                    </div>
+                  </AccordionContent>
+                </AccordionItem>
+              );
+            })}
           </Accordion>
         </div>
 
