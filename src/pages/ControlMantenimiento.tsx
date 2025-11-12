@@ -1,4 +1,4 @@
-import { FormEvent, useEffect, useMemo, useState } from 'react';
+import { FormEvent, useCallback, useEffect, useMemo, useState } from 'react';
 import { Layout } from '@/components/Layout';
 import { Navigation } from '@/components/Navigation';
 import { useSupabaseDataContext } from '@/context/SupabaseDataContext';
@@ -12,7 +12,7 @@ import { Badge } from '@/components/ui/badge';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Checkbox } from '@/components/ui/checkbox';
-import { Loader2, Wrench, CalendarCheck, Gauge, ClipboardList, CalendarRange, Route, MapPinned, GraduationCap } from 'lucide-react';
+import { Loader2, Wrench, CalendarCheck, Gauge, ClipboardList, CalendarRange, Route, MapPinned, GraduationCap, X } from 'lucide-react';
 import { formatRemainingLabel, getRemainingVariant } from '@/lib/maintenanceUtils';
 import type { ActualizacionHorasKm, MantenimientoProgramado, MantenimientoRealizado } from '@/types/equipment';
 import { useToast } from '@/hooks/use-toast';
@@ -91,6 +91,7 @@ export default function ControlMantenimiento() {
   const [reporteDesde, setReporteDesde] = useState('');
   const [reporteHasta, setReporteHasta] = useState('');
   const [resumenActualizaciones, setResumenActualizaciones] = useState<ResumenActualizaciones | null>(null);
+  const [isResumenPanelOpen, setIsResumenPanelOpen] = useState(false);
   const caterpillarEquipos = useMemo(
     () =>
       data.equipos
@@ -301,6 +302,127 @@ export default function ControlMantenimiento() {
     setRutaMarcada((prev) => prev.filter((ficha) => !planRutaFiltrada.some((item) => item.ficha === ficha)));
   };
 
+  const obtenerRangoAjustado = useCallback((desde: string, hasta: string) => {
+    const inicio = new Date(desde);
+    const fin = new Date(hasta);
+
+    if (Number.isNaN(inicio.getTime()) || Number.isNaN(fin.getTime()) || inicio > fin) {
+      return null;
+    }
+
+    const inicioAjustado = new Date(inicio);
+    inicioAjustado.setHours(0, 0, 0, 0);
+
+    const finAjustado = new Date(fin);
+    finAjustado.setHours(23, 59, 59, 999);
+
+    return { inicio: inicioAjustado, fin: finAjustado };
+  }, []);
+
+  const calcularResumen = useCallback(
+    (inicio: Date, fin: Date): ResumenActualizaciones => {
+      const eventosEnRango = data.actualizacionesHorasKm.filter((evento) => {
+        const fechaEvento = new Date(evento.fecha);
+        if (Number.isNaN(fechaEvento.getTime())) return false;
+        return fechaEvento >= inicio && fechaEvento <= fin;
+      });
+
+      const eventosPorFicha = new Map<string, ActualizacionHorasKm[]>();
+      eventosEnRango.forEach((evento) => {
+        const listaEventos = eventosPorFicha.get(evento.ficha) ?? [];
+        listaEventos.push(evento);
+        eventosPorFicha.set(evento.ficha, listaEventos);
+      });
+
+      const actualizados: ResumenActualizaciones['actualizados'] = [];
+      const pendientes: ResumenActualizaciones['pendientes'] = [];
+
+      data.mantenimientosProgramados.forEach((mantenimiento) => {
+        const fechaUltima = new Date(mantenimiento.fechaUltimaActualizacion);
+        if (Number.isNaN(fechaUltima.getTime())) {
+          pendientes.push(mantenimiento);
+          return;
+        }
+
+        const fechaUltimaAjustada = new Date(fechaUltima);
+        fechaUltimaAjustada.setHours(0, 0, 0, 0);
+
+        if (fechaUltimaAjustada < inicio || fechaUltimaAjustada > fin) {
+          pendientes.push(mantenimiento);
+          return;
+        }
+
+        const eventosFicha = eventosPorFicha.get(mantenimiento.ficha) ?? [];
+        const eventoRelacionado =
+          eventosFicha.find((evento) => {
+            const fechaEvento = new Date(evento.fecha);
+            if (Number.isNaN(fechaEvento.getTime())) return false;
+            return fechaEvento.toDateString() === fechaUltima.toDateString();
+          }) ?? null;
+
+        actualizados.push({
+          mantenimiento,
+          evento: eventoRelacionado,
+        });
+      });
+
+      return {
+        desde: inicio.toISOString(),
+        hasta: fin.toISOString(),
+        actualizados,
+        pendientes,
+      };
+    },
+    [data.actualizacionesHorasKm, data.mantenimientosProgramados],
+  );
+
+  useEffect(() => {
+    if (!isResumenPanelOpen || !resumenActualizaciones || !reporteDesde || !reporteHasta) {
+      return;
+    }
+
+    const rango = obtenerRangoAjustado(reporteDesde, reporteHasta);
+    if (!rango) {
+      return;
+    }
+
+    const resumenActualizado = calcularResumen(rango.inicio, rango.fin);
+
+    setResumenActualizaciones((prev) => {
+      if (!prev) {
+        return resumenActualizado;
+      }
+
+      if (JSON.stringify(prev) === JSON.stringify(resumenActualizado)) {
+        return prev;
+      }
+
+      return resumenActualizado;
+    });
+  }, [
+    calcularResumen,
+    isResumenPanelOpen,
+    obtenerRangoAjustado,
+    reporteDesde,
+    reporteHasta,
+    resumenActualizaciones,
+  ]);
+
+  useEffect(() => {
+    if (!isResumenPanelOpen) {
+      return;
+    }
+
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') {
+        setIsResumenPanelOpen(false);
+      }
+    };
+
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [isResumenPanelOpen]);
+
   if (loading || !selected) {
     return (
       <Layout title="Control integral de mantenimiento">
@@ -379,6 +501,7 @@ export default function ControlMantenimiento() {
         description: 'Debes indicar fecha inicial y final para generar el resumen.',
         variant: 'destructive',
       });
+      setIsResumenPanelOpen(true);
       return;
     }
 
@@ -391,6 +514,7 @@ export default function ControlMantenimiento() {
         description: 'Verifica los valores seleccionados e intenta nuevamente.',
         variant: 'destructive',
       });
+      setIsResumenPanelOpen(true);
       return;
     }
 
@@ -400,66 +524,19 @@ export default function ControlMantenimiento() {
         description: 'La fecha inicial no puede ser mayor que la final.',
         variant: 'destructive',
       });
+      setIsResumenPanelOpen(true);
       return;
     }
 
-    const inicioAjustado = new Date(inicio);
-    inicioAjustado.setHours(0, 0, 0, 0);
+    const rango = obtenerRangoAjustado(reporteDesde, reporteHasta);
+    if (!rango) {
+      setIsResumenPanelOpen(true);
+      return;
+    }
 
-    const finAjustado = new Date(fin);
-    finAjustado.setHours(23, 59, 59, 999);
-
-    const eventosEnRango = data.actualizacionesHorasKm.filter((evento) => {
-      const fechaEvento = new Date(evento.fecha);
-      if (Number.isNaN(fechaEvento.getTime())) return false;
-      return fechaEvento >= inicioAjustado && fechaEvento <= finAjustado;
-    });
-
-    const eventosPorFicha = new Map<string, ActualizacionHorasKm[]>();
-    eventosEnRango.forEach((evento) => {
-      const listaEventos = eventosPorFicha.get(evento.ficha) ?? [];
-      listaEventos.push(evento);
-      eventosPorFicha.set(evento.ficha, listaEventos);
-    });
-
-    const actualizados: ResumenActualizaciones['actualizados'] = [];
-    const pendientes: ResumenActualizaciones['pendientes'] = [];
-
-    data.mantenimientosProgramados.forEach((mantenimiento) => {
-      const fechaUltima = new Date(mantenimiento.fechaUltimaActualizacion);
-      if (Number.isNaN(fechaUltima.getTime())) {
-        pendientes.push(mantenimiento);
-        return;
-      }
-
-      const fechaUltimaAjustada = new Date(fechaUltima);
-      fechaUltimaAjustada.setHours(0, 0, 0, 0);
-
-      if (fechaUltimaAjustada < inicioAjustado || fechaUltimaAjustada > finAjustado) {
-        pendientes.push(mantenimiento);
-        return;
-      }
-
-      const eventosFicha = eventosPorFicha.get(mantenimiento.ficha) ?? [];
-      const eventoRelacionado =
-        eventosFicha.find((evento) => {
-          const fechaEvento = new Date(evento.fecha);
-          if (Number.isNaN(fechaEvento.getTime())) return false;
-          return fechaEvento.toDateString() === fechaUltima.toDateString();
-        }) ?? null;
-
-      actualizados.push({
-        mantenimiento,
-        evento: eventoRelacionado,
-      });
-    });
-
-    setResumenActualizaciones({
-      desde: inicioAjustado.toISOString(),
-      hasta: finAjustado.toISOString(),
-      actualizados,
-      pendientes,
-    });
+    const resumen = calcularResumen(rango.inicio, rango.fin);
+    setResumenActualizaciones(resumen);
+    setIsResumenPanelOpen(true);
   };
 
   const handleLimpiarReporte = () => {
@@ -468,13 +545,14 @@ export default function ControlMantenimiento() {
     setResumenActualizaciones(null);
   };
 
+
   return (
     <Layout title="Control integral de mantenimiento">
       <Navigation />
 
-      <div className="space-y-6 lg:space-y-8">
-        <div className="grid gap-6 xl:grid-cols-[1.35fr,1fr]">
-          <div className="space-y-6">
+      <div className="space-y-6 2xl:space-y-8">
+        <div className="grid gap-6 xl:grid-cols-[minmax(0,1.6fr),minmax(0,1fr)] 2xl:grid-cols-[minmax(0,1.8fr),minmax(0,1fr)] 2xl:gap-8">
+          <div className="grid gap-6">
             <Card>
               <CardHeader>
                 <CardTitle className="flex items-center gap-2">
@@ -498,7 +576,7 @@ export default function ControlMantenimiento() {
                     </SelectContent>
                   </Select>
                 </div>
-                <div className="grid gap-3 rounded-md border p-4 text-sm">
+                <div className="grid gap-3 rounded-md border p-4 text-sm sm:grid-cols-2">
                   <div className="flex items-center justify-between">
                     <span className="text-muted-foreground">Lectura actual</span>
                     <Badge variant="secondary">{selected.horasKmActuales} h/km</Badge>
@@ -513,11 +591,11 @@ export default function ControlMantenimiento() {
                       {formatRemainingLabel(selected?.horasKmRestante, unidadMantenimiento)}
                     </Badge>
                   </div>
-                  <div className="flex flex-col gap-1">
+                  <div className="flex flex-col gap-1 sm:col-span-2">
                     <span className="text-muted-foreground">Última actualización</span>
                     <span className="font-medium">{formatDate(selected.fechaUltimaActualizacion)}</span>
                   </div>
-                  <div className="flex flex-col gap-1">
+                  <div className="flex flex-col gap-1 sm:col-span-2">
                     <span className="text-muted-foreground">Último mantenimiento</span>
                     <span className="font-medium">{formatDate(selected.fechaUltimoMantenimiento)}</span>
                   </div>
@@ -801,7 +879,7 @@ export default function ControlMantenimiento() {
             </Card>
           </div>
 
-          <div className="space-y-6">
+          <div className="grid gap-6">
             <Card>
               <CardHeader>
                 <CardTitle className="flex items-center gap-2">
@@ -961,16 +1039,60 @@ export default function ControlMantenimiento() {
               </CardContent>
             </Card>
 
-            <Card className="overflow-hidden">
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                  <CalendarRange className="h-5 w-5 text-primary" /> Resumen por rango de actualización
-                </CardTitle>
-                <CardDescription>
-                  Selecciona un periodo para identificar qué equipos registraron lecturas y cuáles siguen pendientes.
-                </CardDescription>
+            <Alert className="border-dashed">
+              <CalendarRange className="h-4 w-4" />
+              <AlertTitle>Resumen por rango de actualización</AlertTitle>
+              <AlertDescription>
+                Usa el botón flotante con el icono de calendario para abrir la ventana de pendientes sin salir de esta pantalla.
+              </AlertDescription>
+            </Alert>
+          </div>
+        </div>
+      </div>
+
+      <Button
+        type="button"
+        size="lg"
+        onClick={() => setIsResumenPanelOpen((prev) => !prev)}
+        className="fixed bottom-6 right-6 z-40 flex h-14 w-14 items-center justify-center rounded-full shadow-xl transition hover:translate-y-[-2px] hover:shadow-2xl sm:h-auto sm:w-auto sm:min-w-[15rem] sm:justify-between sm:gap-3 sm:rounded-full sm:px-6"
+        aria-haspopup="dialog"
+        aria-expanded={isResumenPanelOpen}
+        aria-controls="resumen-rango-panel"
+      >
+        <CalendarRange className="h-6 w-6" />
+        <span className="sr-only sm:not-sr-only">Resumen de pendientes</span>
+      </Button>
+
+      {isResumenPanelOpen && (
+        <div className="pointer-events-none fixed inset-0 z-40 flex flex-col items-end justify-end p-4 sm:p-6">
+          <div
+            id="resumen-rango-panel"
+            role="dialog"
+            aria-modal="false"
+            aria-labelledby="resumen-rango-titulo"
+            className="pointer-events-auto w-full max-w-5xl"
+          >
+            <Card className="flex max-h-[calc(100vh-6rem)] flex-col border border-primary/30 shadow-2xl">
+              <CardHeader className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
+                <div className="space-y-1">
+                  <CardTitle id="resumen-rango-titulo" className="flex items-center gap-2">
+                    <CalendarRange className="h-5 w-5 text-primary" /> Resumen por rango de actualización
+                  </CardTitle>
+                  <CardDescription>
+                    Selecciona un periodo para identificar qué equipos registraron lecturas y cuáles siguen pendientes.
+                  </CardDescription>
+                </div>
+                <div className="flex items-center gap-2">
+                  <Button variant="outline" onClick={handleGenerarReporte}>
+                    Actualizar datos
+                  </Button>
+                  <Button variant="ghost" size="icon" onClick={() => setIsResumenPanelOpen(false)}>
+                    <X className="h-4 w-4" />
+                    <span className="sr-only">Cerrar resumen</span>
+                  </Button>
+                </div>
               </CardHeader>
-              <CardContent className="space-y-6 px-0 pb-6 sm:px-6">
+              <CardContent className="flex-1 space-y-6 overflow-y-auto">
                 <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
                   <div className="grid gap-2">
                     <Label htmlFor="reporteDesde">Desde</Label>
@@ -990,7 +1112,7 @@ export default function ControlMantenimiento() {
                       onChange={(event) => setReporteHasta(event.target.value)}
                     />
                   </div>
-                  <div className="flex items-end gap-2">
+                  <div className="flex items-end gap-2 md:col-span-2 lg:col-span-1">
                     <Button type="button" onClick={handleGenerarReporte} className="flex-1">
                       Generar reporte
                     </Button>
@@ -1016,7 +1138,7 @@ export default function ControlMantenimiento() {
 
                     <div className="grid gap-6 lg:grid-cols-2">
                       <div className="space-y-3">
-                        <h4 className="font-semibold text-sm">Equipos con lectura registrada</h4>
+                        <h4 className="text-sm font-semibold">Equipos con lectura registrada</h4>
                         {resumenActualizaciones.actualizados.length === 0 ? (
                           <p className="text-sm text-muted-foreground">No hay registros en el rango seleccionado.</p>
                         ) : (
@@ -1052,7 +1174,7 @@ export default function ControlMantenimiento() {
                       </div>
 
                       <div className="space-y-3">
-                        <h4 className="font-semibold text-sm">Equipos pendientes</h4>
+                        <h4 className="text-sm font-semibold">Equipos pendientes</h4>
                         {resumenActualizaciones.pendientes.length === 0 ? (
                           <p className="text-sm text-muted-foreground">Todos los equipos tienen lectura en el rango.</p>
                         ) : (
@@ -1093,7 +1215,7 @@ export default function ControlMantenimiento() {
             </Card>
           </div>
         </div>
-      </div>
+      )}
     </Layout>
   );
 }
