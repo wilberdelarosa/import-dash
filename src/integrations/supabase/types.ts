@@ -14,6 +14,54 @@ export type Database = {
   }
   public: {
     Tables: {
+      configuraciones_sistema: {
+        Row: {
+          alerta_critica: number
+          alerta_preventiva: number
+          correo_notificaciones: string | null
+          correo_soporte: string | null
+          created_at: string | null
+          id: number
+          modo_oscuro_automatico: boolean
+          notificar_dispositivo: boolean
+          notificar_email: boolean
+          notificar_whatsapp: boolean
+          permitir_importaciones: boolean
+          telefono_whatsapp: string | null
+          updated_at: string | null
+        }
+        Insert: {
+          alerta_critica?: number
+          alerta_preventiva?: number
+          correo_notificaciones?: string | null
+          correo_soporte?: string | null
+          created_at?: string | null
+          id?: number
+          modo_oscuro_automatico?: boolean
+          notificar_dispositivo?: boolean
+          notificar_email?: boolean
+          notificar_whatsapp?: boolean
+          permitir_importaciones?: boolean
+          telefono_whatsapp?: string | null
+          updated_at?: string | null
+        }
+        Update: {
+          alerta_critica?: number
+          alerta_preventiva?: number
+          correo_notificaciones?: string | null
+          correo_soporte?: string | null
+          created_at?: string | null
+          id?: number
+          modo_oscuro_automatico?: boolean
+          notificar_dispositivo?: boolean
+          notificar_email?: boolean
+          notificar_whatsapp?: boolean
+          permitir_importaciones?: boolean
+          telefono_whatsapp?: string | null
+          updated_at?: string | null
+        }
+        Relationships: []
+      }
       equipos: {
         Row: {
           activo: boolean
@@ -235,6 +283,44 @@ export type Database = {
           titulo?: string
         }
         Relationships: []
+      }
+      notificaciones_salientes: {
+        Row: {
+          canal: string
+          contenido: string
+          created_at: string | null
+          destinatario: string
+          enviado_en: string
+          id: number
+          notificacion_id: number | null
+        }
+        Insert: {
+          canal: string
+          contenido: string
+          created_at?: string | null
+          destinatario: string
+          enviado_en?: string
+          id?: number
+          notificacion_id?: number | null
+        }
+        Update: {
+          canal?: string
+          contenido?: string
+          created_at?: string | null
+          destinatario?: string
+          enviado_en?: string
+          id?: number
+          notificacion_id?: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "notificaciones_salientes_notificacion_id_fkey"
+            columns: ["notificacion_id"]
+            isOneToOne: false
+            referencedRelation: "notificaciones"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       user_roles: {
         Row: {
