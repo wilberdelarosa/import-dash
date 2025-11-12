@@ -12,20 +12,16 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Separator } from '@/components/ui/separator';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
-import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion';
 import {
   Download,
   Filter,
-  FolderOpen,
   LayoutTemplate,
   ListChecks,
   Palette,
   Search,
   Sparkles,
-  CheckSquare,
-  Undo2,
 } from 'lucide-react';
-import { formatRemainingLabel, resolveIntervaloCodigo } from '@/lib/maintenanceUtils';
+import { formatRemainingLabel } from '@/lib/maintenanceUtils';
 import { getStaticCaterpillarData } from '@/data/caterpillarMaintenance';
 import type { Equipo, MantenimientoProgramado } from '@/types/equipment';
 
@@ -72,6 +68,20 @@ const COLOR_THEMES: Record<string, { name: string; header: string; badge: string
     badge: 'border-slate-300 bg-slate-800 text-slate-100 dark:border-slate-600',
     rowHover: 'hover:bg-slate-800/60 dark:hover:bg-slate-700/50',
   },
+};
+
+const resolveIntervaloCodigo = (mantenimiento: MantenimientoProgramado | undefined | null) => {
+  if (!mantenimiento) return '';
+  const match = mantenimiento.tipoMantenimiento?.match(/(PM\d)/i);
+  if (match?.[1]) {
+    return match[1].toUpperCase();
+  }
+  if (!mantenimiento.frecuencia) return '';
+  if (mantenimiento.frecuencia <= 250) return 'PM1';
+  if (mantenimiento.frecuencia <= 500) return 'PM2';
+  if (mantenimiento.frecuencia <= 1000) return 'PM3';
+  if (mantenimiento.frecuencia <= 2000) return 'PM4';
+  return '';
 };
 
 const buildColumnOptions = (): ColumnOption[] => [
@@ -161,27 +171,8 @@ export default function ListasPersonalizadas() {
   const [selectedColumns, setSelectedColumns] = useState<string[]>(DEFAULT_COLUMNS);
   const [selectedCategorias, setSelectedCategorias] = useState<string[]>([]);
   const [selectedMarcas, setSelectedMarcas] = useState<string[]>([]);
-  const [selectedFichas, setSelectedFichas] = useState<string[]>([]);
   const [searchTerm, setSearchTerm] = useState('');
   const [colorScheme, setColorScheme] = useState<'emerald' | 'amber' | 'sky' | 'slate'>('emerald');
-
-  const equiposPorCategoria = useMemo(() => {
-    const agrupados = new Map<string, Equipo[]>();
-
-    data.equipos.forEach((equipo) => {
-      const categoria = equipo.categoria || 'Sin categoría';
-      const lista = agrupados.get(categoria) ?? [];
-      lista.push(equipo);
-      agrupados.set(categoria, lista);
-    });
-
-    return Array.from(agrupados.entries())
-      .map(([categoria, equipos]) => ({
-        categoria,
-        equipos: equipos.sort((a, b) => a.ficha.localeCompare(b.ficha)),
-      }))
-      .sort((a, b) => a.categoria.localeCompare(b.categoria));
-  }, [data.equipos]);
 
   const categoriasDisponibles = useMemo(
     () => Array.from(new Set(data.equipos.map((equipo) => equipo.categoria))).sort(),
@@ -257,9 +248,6 @@ export default function ListasPersonalizadas() {
 
   const filteredEquipos = useMemo(() => {
     return enrichedEquipos.filter((equipo) => {
-      if (selectedFichas.length > 0 && !selectedFichas.includes(equipo.ficha)) {
-        return false;
-      }
       if (selectedCategorias.length > 0 && !selectedCategorias.includes(equipo.categoria)) {
         return false;
       }
@@ -287,7 +275,7 @@ export default function ListasPersonalizadas() {
       }
       return true;
     });
-  }, [enrichedEquipos, selectedCategorias, selectedMarcas, selectedFichas, searchTerm]);
+  }, [enrichedEquipos, selectedCategorias, selectedMarcas, searchTerm]);
 
   const handleToggleColumn = (key: string) => {
     setSelectedColumns((prev) => {
@@ -313,49 +301,6 @@ export default function ListasPersonalizadas() {
         return prev.filter((item) => item !== marca);
       }
       return [...prev, marca];
-    });
-  };
-
-  const handleToggleFicha = (ficha: string) => {
-    setSelectedFichas((prev) => {
-      if (prev.includes(ficha)) {
-        return prev.filter((item) => item !== ficha);
-      }
-      return [...prev, ficha];
-    });
-  };
-
-  const handleSelectAllColumns = () => {
-    setSelectedColumns(columnOptions.map((option) => option.key));
-  };
-
-  const handleClearColumns = () => {
-    setSelectedColumns([]);
-  };
-
-  const handleClearCategorias = () => {
-    setSelectedCategorias([]);
-  };
-
-  const handleClearMarcas = () => {
-    setSelectedMarcas([]);
-  };
-
-  const handleClearFichas = () => {
-    setSelectedFichas([]);
-  };
-
-  const handleSelectFichasByCategoria = (categoria: string, checked: boolean) => {
-    const categoriaData = equiposPorCategoria.find((item) => item.categoria === categoria);
-    if (!categoriaData) return;
-
-    const fichasCategoria = categoriaData.equipos.map((equipo) => equipo.ficha);
-    setSelectedFichas((prev) => {
-      if (checked) {
-        const merged = new Set([...prev, ...fichasCategoria]);
-        return Array.from(merged);
-      }
-      return prev.filter((ficha) => !fichasCategoria.includes(ficha));
     });
   };
 
@@ -464,20 +409,9 @@ export default function ListasPersonalizadas() {
               </div>
 
               <div className="space-y-3">
-                <div className="flex items-center justify-between">
-                  <Label className="flex items-center gap-2 text-sm font-semibold">
-                    <Filter className="h-4 w-4" /> Categorías
-                  </Label>
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    className="gap-1 text-xs"
-                    onClick={handleClearCategorias}
-                    disabled={selectedCategorias.length === 0}
-                  >
-                    <Undo2 className="h-3.5 w-3.5" /> Limpiar
-                  </Button>
-                </div>
+                <Label className="flex items-center gap-2 text-sm font-semibold">
+                  <Filter className="h-4 w-4" /> Categorías
+                </Label>
                 <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
                   {categoriasDisponibles.map((categoria) => (
                     <label key={categoria} className="flex items-center gap-2 rounded-md border border-border/60 p-2 text-sm">
@@ -492,20 +426,9 @@ export default function ListasPersonalizadas() {
               </div>
 
               <div className="space-y-3">
-                <div className="flex items-center justify-between">
-                  <Label className="flex items-center gap-2 text-sm font-semibold">
-                    <ListChecks className="h-4 w-4" /> Marcas
-                  </Label>
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    className="gap-1 text-xs"
-                    onClick={handleClearMarcas}
-                    disabled={selectedMarcas.length === 0}
-                  >
-                    <Undo2 className="h-3.5 w-3.5" /> Limpiar
-                  </Button>
-                </div>
+                <Label className="flex items-center gap-2 text-sm font-semibold">
+                  <ListChecks className="h-4 w-4" /> Marcas
+                </Label>
                 <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
                   {marcasDisponibles.map((marca) => (
                     <label key={marca} className="flex items-center gap-2 rounded-md border border-border/60 p-2 text-sm">
@@ -517,94 +440,6 @@ export default function ListasPersonalizadas() {
                     </label>
                   ))}
                 </div>
-              </div>
-
-              <div className="space-y-3">
-                <div className="flex items-center justify-between">
-                  <Label className="flex items-center gap-2 text-sm font-semibold">
-                    <FolderOpen className="h-4 w-4" /> Fichas por categoría
-                  </Label>
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    className="gap-1 text-xs"
-                    onClick={handleClearFichas}
-                    disabled={selectedFichas.length === 0}
-                  >
-                    <Undo2 className="h-3.5 w-3.5" /> Limpiar
-                  </Button>
-                </div>
-                <Accordion type="multiple" className="space-y-2">
-                  {equiposPorCategoria.map(({ categoria, equipos }) => {
-                    const seleccionados = equipos.filter((item) => selectedFichas.includes(item.ficha)).length;
-                    const todosSeleccionados = seleccionados === equipos.length && equipos.length > 0;
-                    const haySeleccionados = seleccionados > 0;
-                    return (
-                      <AccordionItem
-                        key={categoria}
-                        value={categoria}
-                        className="overflow-hidden rounded-md border border-border/60 bg-muted/30"
-                      >
-                        <AccordionTrigger className="px-3 text-left text-sm font-medium">
-                          <div className="flex w-full items-center justify-between">
-                            <span>{categoria}</span>
-                            <Badge variant="outline" className="text-xs">
-                              {equipos.length} ficha{equipos.length === 1 ? '' : 's'}
-                            </Badge>
-                          </div>
-                        </AccordionTrigger>
-                        <AccordionContent className="space-y-3 bg-background/90 px-3 pb-3 pt-2 text-xs">
-                          <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
-                            <span className="text-muted-foreground">
-                              Selecciona fichas puntuales para exportar reportes dirigidos.
-                            </span>
-                            <div className="flex items-center gap-2">
-                              <Button
-                                type="button"
-                                size="sm"
-                                variant="outline"
-                                className="gap-1 text-xs"
-                                onClick={() => handleSelectFichasByCategoria(categoria, true)}
-                                disabled={todosSeleccionados}
-                              >
-                                <CheckSquare className="h-3.5 w-3.5" /> Todo
-                              </Button>
-                              <Button
-                                type="button"
-                                size="sm"
-                                variant="ghost"
-                                className="gap-1 text-xs"
-                                onClick={() => handleSelectFichasByCategoria(categoria, false)}
-                                disabled={!haySeleccionados}
-                              >
-                                <Undo2 className="h-3.5 w-3.5" /> Quitar
-                              </Button>
-                            </div>
-                          </div>
-                          <div className="grid max-h-52 grid-cols-1 gap-2 overflow-y-auto rounded-md border border-dashed border-border/60 p-2 sm:grid-cols-2">
-                            {equipos.map((item) => (
-                              <label
-                                key={item.ficha}
-                                className="flex items-start gap-2 rounded-md bg-muted/40 p-2"
-                              >
-                                <Checkbox
-                                  checked={selectedFichas.includes(item.ficha)}
-                                  onCheckedChange={() => handleToggleFicha(item.ficha)}
-                                />
-                                <div className="space-y-1">
-                                  <span className="text-sm font-medium leading-tight">{item.ficha}</span>
-                                  <p className="text-[11px] text-muted-foreground leading-snug">
-                                    {item.nombre} • {item.modelo}
-                                  </p>
-                                </div>
-                              </label>
-                            ))}
-                          </div>
-                        </AccordionContent>
-                      </AccordionItem>
-                    );
-                  })}
-                </Accordion>
               </div>
 
               <Separator />
@@ -630,33 +465,9 @@ export default function ListasPersonalizadas() {
               <Separator />
 
               <div className="space-y-3">
-                <div className="flex items-center justify-between">
-                  <Label className="flex items-center gap-2 text-sm font-semibold">
-                    <Sparkles className="h-4 w-4" /> Columnas mostradas
-                  </Label>
-                  <div className="flex items-center gap-2">
-                    <Button
-                      type="button"
-                      size="sm"
-                      variant="outline"
-                      className="gap-1 text-xs"
-                      onClick={handleSelectAllColumns}
-                      disabled={selectedColumns.length === columnOptions.length}
-                    >
-                      <CheckSquare className="h-3.5 w-3.5" /> Todo
-                    </Button>
-                    <Button
-                      type="button"
-                      size="sm"
-                      variant="ghost"
-                      className="gap-1 text-xs"
-                      onClick={handleClearColumns}
-                      disabled={selectedColumns.length === 0}
-                    >
-                      <Undo2 className="h-3.5 w-3.5" /> Limpiar
-                    </Button>
-                  </div>
-                </div>
+                <Label className="flex items-center gap-2 text-sm font-semibold">
+                  <Sparkles className="h-4 w-4" /> Columnas mostradas
+                </Label>
                 <div className="grid max-h-[280px] grid-cols-1 gap-2 overflow-y-auto border border-border/60 p-2 sm:grid-cols-2">
                   {columnOptions.map((option) => (
                     <label key={option.key} className="flex items-start gap-2 rounded-md bg-muted/40 p-2 text-xs">
