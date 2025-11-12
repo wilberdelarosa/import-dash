@@ -4,20 +4,9 @@ import { Badge } from '@/components/ui/badge';
 import { Separator } from '@/components/ui/separator';
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion';
 import { useCaterpillarData } from '@/hooks/useCaterpillarData';
-import {
-  Loader2,
-  Wrench,
-  Package,
-  Droplets,
-  Thermometer,
-  Fuel,
-  ClipboardList,
-  AlertTriangle,
-  MousePointerClick,
-} from 'lucide-react';
+import { Loader2, Wrench, Package, Droplets, Thermometer, Fuel, ClipboardList, AlertTriangle } from 'lucide-react';
 import { MantenimientoProgramado } from '@/types/equipment';
 import { formatRemainingLabel, getRemainingVariant } from '@/lib/maintenanceUtils';
-import { CatIntervalo, ModeloIntervaloPieza } from '@/types/caterpillar';
 
 interface Props {
   modelo: string;
@@ -68,97 +57,20 @@ export function CaterpillarDataCard({ modelo, numeroSerie, marca, mantenimientos
 
   const { modelo: catModelo, intervalos, piezasPorIntervalo, tareasPorIntervalo, mantenimientosEspeciales } = data;
 
-  const resolveUnidad = (mantenimiento: MantenimientoProgramado | null) => {
-    if (!mantenimiento?.tipoMantenimiento) return 'horas';
-    const tipo = mantenimiento.tipoMantenimiento.toLowerCase();
-    if (tipo.includes('km') || tipo.includes('kil')) {
-      return 'km';
-    }
-    return 'horas';
-  };
+  const findMantenimientoCoincidente = (codigoIntervalo: string, horasIntervalo: number) => {
+    if (!mantenimientos?.length) return null;
 
-  interface IntervalSummary {
-    intervalo: CatIntervalo;
-    piezas: ModeloIntervaloPieza[];
-    tareas: string[];
-    mantenimientoAsociado: MantenimientoProgramado | null;
-    restante: number | null;
-    unidad: string;
-  }
-
-  const intervalSummaries: IntervalSummary[] = useMemo(() => {
-    return intervalos.map((intervalo) => {
-      const piezas = piezasPorIntervalo[intervalo.codigo] || [];
-      const tareas = tareasPorIntervalo[intervalo.codigo] || [];
-
-      let mantenimientoCoincidente: MantenimientoProgramado | null = null;
-      if (mantenimientos?.length) {
-        mantenimientoCoincidente =
-          mantenimientos.find((mantenimiento) => {
-            if (!mantenimiento.frecuencia) return false;
-            return Math.abs(mantenimiento.frecuencia - intervalo.horas_intervalo) <=
-              Math.max(25, intervalo.horas_intervalo * 0.1);
-          }) ??
-          mantenimientos.find((mantenimiento) =>
-            mantenimiento.tipoMantenimiento?.toLowerCase().includes(intervalo.codigo.toLowerCase()),
-          ) ??
-          null;
-      }
-
-      const restante = mantenimientoCoincidente?.horasKmRestante ?? null;
-      const unidad = resolveUnidad(mantenimientoCoincidente);
-
-      return {
-        intervalo,
-        piezas,
-        tareas,
-        mantenimientoAsociado: mantenimientoCoincidente,
-        restante,
-        unidad,
-      };
+    const porFrecuencia = mantenimientos.find((mantenimiento) => {
+      if (!mantenimiento.frecuencia) return false;
+      return Math.abs(mantenimiento.frecuencia - horasIntervalo) <= Math.max(25, horasIntervalo * 0.1);
     });
-  }, [intervalos, piezasPorIntervalo, tareasPorIntervalo, mantenimientos]);
 
-  const proximoServicio = useMemo(() => {
-    if (!intervalSummaries.length) return null;
+    if (porFrecuencia) return porFrecuencia;
 
-    let candidato: IntervalSummary | null = null;
-
-    for (const summary of intervalSummaries) {
-      if (!summary.mantenimientoAsociado) continue;
-
-      if (!candidato) {
-        candidato = summary;
-        continue;
-      }
-
-      const candidatoRestante = candidato.restante ?? Number.POSITIVE_INFINITY;
-      const actualRestante = summary.restante ?? Number.POSITIVE_INFINITY;
-
-      const candidatoVencido = candidatoRestante <= 0;
-      const actualVencido = actualRestante <= 0;
-
-      if (actualVencido && !candidatoVencido) {
-        candidato = summary;
-        continue;
-      }
-
-      if (actualVencido && candidatoVencido) {
-        if (actualRestante > candidatoRestante) {
-          candidato = summary;
-        }
-        continue;
-      }
-
-      if (!actualVencido && !candidatoVencido) {
-        if (actualRestante < candidatoRestante) {
-          candidato = summary;
-        }
-      }
-    }
-
-    return candidato ?? intervalSummaries[0] ?? null;
-  }, [intervalSummaries]);
+    return mantenimientos.find((mantenimiento) =>
+      mantenimiento.tipoMantenimiento?.toLowerCase().includes(codigoIntervalo.toLowerCase()),
+    );
+  };
 
   return (
     <Card className="border-amber-200/70 bg-gradient-to-br from-amber-50/50 to-background">
@@ -320,61 +232,77 @@ export function CaterpillarDataCard({ modelo, numeroSerie, marca, mantenimientos
             Intervalos de Mantenimiento Programado
           </h3>
           <Accordion type="single" collapsible className="space-y-2">
-            {intervalSummaries.map(({ intervalo, piezas, tareas, mantenimientoAsociado, restante, unidad }) => (
-              <AccordionItem
-                key={intervalo.id}
-                value={`interval-${intervalo.id}`}
-                className="rounded-lg border border-amber-200/60 bg-white/70 px-4"
-              >
-                <AccordionTrigger className="hover:no-underline">
-                  <div className="flex w-full items-center justify-between pr-2">
-                    <div className="flex items-center gap-3">
-                      <Badge variant="outline" className="bg-amber-100 text-amber-800">
-                        {intervalo.codigo}
-                      </Badge>
-                      <span className="font-medium">{intervalo.nombre}</span>
-                    </div>
-                    <div className="flex items-center gap-2">
-                      {mantenimientoAsociado && (
-                        <Badge variant={getRemainingVariant(restante)}>
-                          {formatRemainingLabel(restante, unidad)}
+            {intervalos.map((intervalo) => {
+              const piezas = piezasPorIntervalo[intervalo.codigo] || [];
+              const tareas = tareasPorIntervalo[intervalo.codigo] || [];
+              const mantenimientoAsociado = findMantenimientoCoincidente(intervalo.codigo, intervalo.horas_intervalo);
+              const restante = mantenimientoAsociado?.horasKmRestante ?? null;
+              return (
+                <AccordionItem
+                  key={intervalo.id}
+                  value={`interval-${intervalo.id}`}
+                  className="rounded-lg border border-amber-200/60 bg-white/70 px-4"
+                >
+                  <AccordionTrigger className="hover:no-underline">
+                    <div className="flex w-full items-center justify-between pr-2">
+                      <div className="flex items-center gap-3">
+                        <Badge variant="outline" className="bg-amber-100 text-amber-800">
+                          {intervalo.codigo}
                         </Badge>
-                      )}
-                      <Badge variant="secondary">{intervalo.horas_intervalo}h</Badge>
-                    </div>
-                  </div>
-                </AccordionTrigger>
-                <AccordionContent className="pt-3">
-                  <div className="space-y-3">
-                    <p className="text-sm text-muted-foreground">{intervalo.descripcion}</p>
-
-                    {tareas.length > 0 && (
-                      <div className="rounded-md border border-amber-200/40 bg-amber-50/50 p-3">
-                        <p className="mb-2 flex items-center gap-2 text-xs font-semibold text-amber-800">
-                          <ClipboardList className="h-3.5 w-3.5" /> Tareas recomendadas
-                        </p>
-                        <ul className="space-y-2 text-xs">
-                          {tareas.map((tarea) => (
-                            <li key={tarea} className="flex items-start gap-2">
-                              <span className="mt-1 h-1.5 w-1.5 rounded-full bg-amber-500" />
-                              <span className="text-amber-900">{tarea}</span>
-                            </li>
-                          ))}
-                        </ul>
+                        <span className="font-medium">{intervalo.nombre}</span>
                       </div>
-                    )}
+                      <div className="flex items-center gap-2">
+                        {mantenimientoAsociado && (
+                          <Badge variant={getRemainingVariant(restante)}>
+                            {formatRemainingLabel(restante)}
+                          </Badge>
+                        )}
+                        <Badge variant="secondary">{intervalo.horas_intervalo}h</Badge>
+                      </div>
+                    </div>
+                  </AccordionTrigger>
+                  <AccordionContent className="pt-3">
+                    <div className="space-y-3">
+                      <p className="text-sm text-muted-foreground">{intervalo.descripcion}</p>
 
-                    {piezas.length > 0 && (
-                      <div className="rounded-md border border-amber-200/40 bg-amber-50/50 p-3">
-                        <p className="mb-2 text-xs font-semibold text-amber-800">Kits y Piezas Requeridas:</p>
-                        <div className="space-y-2">
-                          {piezas.map((pieza) => (
-                            <div key={pieza.id} className="flex items-start justify-between gap-2 text-xs">
-                              <div className="flex-1">
-                                <p className="font-medium text-amber-900">{pieza.pieza.numero_parte}</p>
-                                <p className="text-muted-foreground">{pieza.pieza.descripcion}</p>
-                                <Badge variant="outline" className="mt-1 text-[10px]">
-                                  {pieza.pieza.tipo}
+                      {tareas.length > 0 && (
+                        <div className="rounded-md border border-amber-200/40 bg-amber-50/50 p-3">
+                          <p className="mb-2 flex items-center gap-2 text-xs font-semibold text-amber-800">
+                            <ClipboardList className="h-3.5 w-3.5" /> Tareas recomendadas
+                          </p>
+                          <ul className="space-y-2 text-xs">
+                            {tareas.map((tarea) => (
+                              <li key={tarea} className="flex items-start gap-2">
+                                <span className="mt-1 h-1.5 w-1.5 rounded-full bg-amber-500" />
+                                <span className="text-amber-900">{tarea}</span>
+                              </li>
+                            ))}
+                          </ul>
+                        </div>
+                      )}
+
+                      {piezas.length > 0 && (
+                        <div className="rounded-md border border-amber-200/40 bg-amber-50/50 p-3">
+                          <p className="mb-2 text-xs font-semibold text-amber-800">
+                            Kits y Piezas Requeridas:
+                          </p>
+                          <div className="space-y-2">
+                            {piezas.map((pieza) => (
+                              <div
+                                key={pieza.id}
+                                className="flex items-start justify-between gap-2 text-xs"
+                              >
+                                <div className="flex-1">
+                                  <p className="font-medium text-amber-900">
+                                    {pieza.pieza.numero_parte}
+                                  </p>
+                                  <p className="text-muted-foreground">{pieza.pieza.descripcion}</p>
+                                  <Badge variant="outline" className="mt-1 text-[10px]">
+                                    {pieza.pieza.tipo}
+                                  </Badge>
+                                </div>
+                                <Badge variant="secondary" className="shrink-0">
+                                  x{pieza.cantidad}
                                 </Badge>
                               </div>
                               <Badge variant="secondary" className="shrink-0">
