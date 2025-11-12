@@ -14,6 +14,151 @@ export type Database = {
   }
   public: {
     Tables: {
+      cat_codigos_pieza: {
+        Row: {
+          created_at: string | null
+          descripcion: string
+          id: number
+          numero_parte: string
+          tipo: string
+        }
+        Insert: {
+          created_at?: string | null
+          descripcion: string
+          id?: number
+          numero_parte: string
+          tipo: string
+        }
+        Update: {
+          created_at?: string | null
+          descripcion?: string
+          id?: number
+          numero_parte?: string
+          tipo?: string
+        }
+        Relationships: []
+      }
+      cat_intervalos_mantenimiento: {
+        Row: {
+          codigo: string
+          created_at: string | null
+          descripcion: string | null
+          horas_intervalo: number
+          id: number
+          nombre: string
+        }
+        Insert: {
+          codigo: string
+          created_at?: string | null
+          descripcion?: string | null
+          horas_intervalo: number
+          id?: number
+          nombre: string
+        }
+        Update: {
+          codigo?: string
+          created_at?: string | null
+          descripcion?: string | null
+          horas_intervalo?: number
+          id?: number
+          nombre?: string
+        }
+        Relationships: []
+      }
+      cat_modelo_intervalo_piezas: {
+        Row: {
+          cantidad: number | null
+          created_at: string | null
+          id: number
+          intervalo_id: number | null
+          modelo_id: number | null
+          notas: string | null
+          pieza_id: number | null
+        }
+        Insert: {
+          cantidad?: number | null
+          created_at?: string | null
+          id?: number
+          intervalo_id?: number | null
+          modelo_id?: number | null
+          notas?: string | null
+          pieza_id?: number | null
+        }
+        Update: {
+          cantidad?: number | null
+          created_at?: string | null
+          id?: number
+          intervalo_id?: number | null
+          modelo_id?: number | null
+          notas?: string | null
+          pieza_id?: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "cat_modelo_intervalo_piezas_intervalo_id_fkey"
+            columns: ["intervalo_id"]
+            isOneToOne: false
+            referencedRelation: "cat_intervalos_mantenimiento"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "cat_modelo_intervalo_piezas_modelo_id_fkey"
+            columns: ["modelo_id"]
+            isOneToOne: false
+            referencedRelation: "cat_modelos"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "cat_modelo_intervalo_piezas_pieza_id_fkey"
+            columns: ["pieza_id"]
+            isOneToOne: false
+            referencedRelation: "cat_codigos_pieza"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      cat_modelos: {
+        Row: {
+          capacidad_aceite_motor: number | null
+          capacidad_hidraulico: number | null
+          capacidad_refrigerante: number | null
+          categoria: string
+          created_at: string | null
+          id: number
+          modelo: string
+          motor: string | null
+          notas: string | null
+          serie_desde: string | null
+          serie_hasta: string | null
+        }
+        Insert: {
+          capacidad_aceite_motor?: number | null
+          capacidad_hidraulico?: number | null
+          capacidad_refrigerante?: number | null
+          categoria: string
+          created_at?: string | null
+          id?: number
+          modelo: string
+          motor?: string | null
+          notas?: string | null
+          serie_desde?: string | null
+          serie_hasta?: string | null
+        }
+        Update: {
+          capacidad_aceite_motor?: number | null
+          capacidad_hidraulico?: number | null
+          capacidad_refrigerante?: number | null
+          categoria?: string
+          created_at?: string | null
+          id?: number
+          modelo?: string
+          motor?: string | null
+          notas?: string | null
+          serie_desde?: string | null
+          serie_hasta?: string | null
+        }
+        Relationships: []
+      }
       configuraciones_sistema: {
         Row: {
           alerta_critica: number

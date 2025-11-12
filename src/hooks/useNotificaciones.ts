@@ -30,16 +30,12 @@ export function useNotificaciones() {
       try {
         const { error } = await supabase
           .from('notificaciones_salientes')
-          .upsert(
-            {
-              notificacion_id: notif.id,
-              canal,
-              destino,
-              mensaje: notif.mensaje,
-              metadata: notif.metadata ?? {},
-            },
-            { onConflict: 'notificacion_id,canal' },
-          );
+          .insert({
+            notificacion_id: notif.id,
+            canal,
+            destinatario: destino,
+            contenido: notif.mensaje,
+          });
 
         if (error && (error as any).code !== '23505') {
           throw error;

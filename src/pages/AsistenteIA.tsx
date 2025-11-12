@@ -25,6 +25,7 @@ import {
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
+import { MarkdownRenderer } from '@/components/MarkdownRenderer';
 import type { DatabaseData } from '@/types/equipment';
 import type { SystemConfig } from '@/types/config';
 
@@ -171,10 +172,29 @@ Instrucciones clave:
 - Si detectas riesgos (por ejemplo, equipos con horas/km por debajo del umbral crítico o repuestos con stock bajo) resáltalos y sugiere cómo mitigarlos.
 - Cuando el usuario pida ayuda fuera del ámbito de la flota o sin relación con los datos proporcionados, responde brevemente y redirígelo a la información disponible.
 
+IMPORTANTE - Formateo de respuestas con tablas:
+- Cuando el usuario solicite listas o información tabular (por ejemplo: "lista de equipos Caterpillar", "muestra todos los rodillos con más de 1000 horas"), genera las respuestas en formato de tabla Markdown
+- Usa la siguiente sintaxis para tablas:
+
+| Nombre | Ficha | Modelo | Horas Actuales |
+|--------|-------|--------|----------------|
+| Excavadora 320 | EX-001 | 320 | 1,250 |
+| Rodillo CB10 | RD-003 | CB10 | 890 |
+
+- Las tablas deben incluir las columnas relevantes solicitadas por el usuario
+- Ordena y filtra los datos según los criterios especificados por el usuario
+- Si el usuario pide filtros complejos (ej: "equipos que no son Caterpillar y ficha > AC-44"), aplica todos los filtros correctamente
+
+Ejemplos de consultas que deben generar tablas:
+- "lista de nombre, ficha, modelo de todos los equipos Caterpillar"
+- "muéstrame los equipos con mantenimiento vencido"
+- "dame una tabla de repuestos con stock bajo"
+- "equipos activos con más de 2000 horas"
+
 Contexto actualizado del negocio:
 ${contextSummary}
 
-Siempre que entregues listados, utiliza viñetas o enumeraciones claras. Refiérete a los equipos por su nombre comercial y ficha cuando sea posible.`;
+Siempre que entregues listados, utiliza tablas Markdown o viñetas claras. Refiérete a los equipos por su nombre comercial y ficha cuando sea posible.`;
 
 const buildInitialAssistantMessage = (contextSections: ContextSection[]): string => {
   const indicador = contextSections[0]?.items.slice(0, 2).join(' · ') ?? '';
@@ -199,7 +219,40 @@ export default function AsistenteIA() {
   const { config } = useSystemConfig();
   const [input, setInput] = useState('');
 
-  const context = useMemo(() => buildChatContext(loading ? null : data, config), [data, config, loading]);
+  const context = useMemo(() => {
+    // Crear contexto enriquecido con datos completos para búsquedas
+    const baseContext = buildChatContext(loading ? null : data, config);
+    
+    if (!data) return baseContext;
+
+    // Agregar todos los equipos con detalles completos al contexto
+    const equiposDetallados = data.equipos.map(e => 
+      `${e.nombre} (Ficha: ${e.ficha}, Marca: ${e.marca}, Modelo: ${e.modelo}, Serie: ${e.numeroSerie}, Categoría: ${e.categoria}, Estado: ${e.activo ? 'Activo' : 'Inactivo'})`
+    ).join(' | ');
+
+    const mantenimientosDetallados = data.mantenimientosProgramados.map(m =>
+      `${m.nombreEquipo} (Ficha: ${m.ficha}, Tipo: ${m.tipoMantenimiento}, Horas actuales: ${m.horasKmActuales}, Restante: ${m.horasKmRestante})`
+    ).join(' | ');
+
+    const inventariosDetallados = data.inventarios.map(i =>
+      `${i.nombre} (Código: ${i.codigoIdentificacion}, Stock: ${i.cantidad}, Categoría: ${i.categoriaEquipo})`
+    ).join(' | ');
+
+    return {
+      ...baseContext,
+      summary: `${baseContext.summary}
+
+DATOS COMPLETOS PARA BÚSQUEDAS:
+
+Equipos completos: ${equiposDetallados}
+
+Mantenimientos: ${mantenimientosDetallados}
+
+Inventarios: ${inventariosDetallados}
+
+Usa estos datos para responder consultas específicas y generar tablas filtradas según los criterios del usuario.`
+    };
+  }, [data, config, loading]);
   const modelPriority = useMemo(() => getGroqModelPriority(), []);
   const systemPrompt = useMemo(() => buildSystemPrompt(context.summary), [context.summary]);
   const initialAssistantMessage = useMemo(
@@ -321,7 +374,11 @@ export default function AsistenteIA() {
                             isAssistant ? 'text-foreground' : 'text-primary-foreground',
                           )}
                         >
-                          {message.content}
+                          {isAssistant ? (
+                            <MarkdownRenderer content={message.content} />
+                          ) : (
+                            message.content
+                          )}
                         </div>
                         {isAssistant && message.model && (
                           <div className="mt-3 flex items-center gap-2 text-[0.65rem] uppercase tracking-widest text-muted-foreground">

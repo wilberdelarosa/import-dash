@@ -1,3 +1,4 @@
+import { useState } from 'react';
 import { Layout } from '@/components/Layout';
 import { Navigation } from '@/components/Navigation';
 import { useSupabaseDataContext } from '@/context/SupabaseDataContext';
@@ -6,8 +7,11 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { Badge } from '@/components/ui/badge';
 import { Separator } from '@/components/ui/separator';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
-import { Activity, AlertTriangle, CalendarClock, Clock, Users } from 'lucide-react';
+import { Button } from '@/components/ui/button';
+import { Activity, AlertTriangle, CalendarClock, Clock, Users, ExternalLink } from 'lucide-react';
 import { Skeleton } from '@/components/ui/skeleton';
+import { EquipoDetalleUnificado } from '@/components/EquipoDetalleUnificado';
+import { useNavigate } from 'react-router-dom';
 
 const formatDate = (value: string | null | undefined) => {
   if (!value) return 'Sin registro';
@@ -20,6 +24,9 @@ const formatDate = (value: string | null | undefined) => {
 
 export default function Dashboard() {
   const { data, loading } = useSupabaseDataContext();
+  const navigate = useNavigate();
+  const [fichaSeleccionada, setFichaSeleccionada] = useState<string | null>(null);
+  const [dialogOpen, setDialogOpen] = useState(false);
 
   if (loading) {
     return (
@@ -45,6 +52,7 @@ export default function Dashboard() {
   const equiposActivos = data.equipos.filter((equipo) => equipo.activo).length;
   const equiposInactivos = data.equipos.length - equiposActivos;
   const mantenimientosPendientes = data.mantenimientosProgramados.filter((m) => m.horasKmRestante <= 50).length;
+  const mantenimientosVencidos = data.mantenimientosProgramados.filter((m) => m.horasKmRestante < 0).length;
   const proximoMantenimiento = [...data.mantenimientosProgramados]
     .filter((m) => m.activo)
     .sort((a, b) => a.horasKmRestante - b.horasKmRestante)[0];
@@ -55,24 +63,56 @@ export default function Dashboard() {
     .sort((a, b) => new Date(b.fechaMantenimiento).getTime() - new Date(a.fechaMantenimiento).getTime())
     .slice(0, 5);
 
+  const handleVerEquipo = (ficha: string) => {
+    setFichaSeleccionada(ficha);
+    setDialogOpen(true);
+  };
+
   return (
     <Layout title="Resumen ejecutivo">
       <Navigation />
 
       <div className="space-y-6 lg:space-y-8">
-      {proximoMantenimiento && proximoMantenimiento.horasKmRestante <= 25 && (
+      {mantenimientosVencidos > 0 && (
+        <Alert variant="destructive">
+          <AlertTriangle className="h-4 w-4" />
+          <AlertTitle>Mantenimientos vencidos</AlertTitle>
+          <AlertDescription className="flex items-center justify-between">
+            <span>
+              {mantenimientosVencidos} equipo{mantenimientosVencidos > 1 ? 's tienen' : ' tiene'} mantenimientos vencidos que requieren atención inmediata.
+            </span>
+            <Button variant="outline" size="sm" onClick={() => navigate('/mantenimiento')} className="ml-4">
+              Ver detalles <ExternalLink className="ml-2 h-3 w-3" />
+            </Button>
+          </AlertDescription>
+        </Alert>
+      )}
+      
+      {proximoMantenimiento && proximoMantenimiento.horasKmRestante > 0 && proximoMantenimiento.horasKmRestante <= 25 && (
         <Alert variant="warning" className="border-warning/50">
           <AlertTriangle className="h-4 w-4" />
           <AlertTitle>Próximo mantenimiento crítico</AlertTitle>
-          <AlertDescription>
-            {proximoMantenimiento.nombreEquipo} requiere intervención en {proximoMantenimiento.horasKmRestante}{' '}
-            horas/km restantes.
+          <AlertDescription className="flex items-center justify-between">
+            <span>
+              {proximoMantenimiento.nombreEquipo} requiere intervención en {proximoMantenimiento.horasKmRestante} horas/km restantes.
+            </span>
+            <Button 
+              variant="outline" 
+              size="sm" 
+              onClick={() => handleVerEquipo(proximoMantenimiento.ficha)}
+              className="ml-4"
+            >
+              Ver equipo <ExternalLink className="ml-2 h-3 w-3" />
+            </Button>
           </AlertDescription>
         </Alert>
       )}
 
       <section className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
-        <Card>
+        <Card 
+          className="cursor-pointer transition-all hover:shadow-lg hover:-translate-y-1"
+          onClick={() => navigate('/equipos')}
+        >
           <CardHeader className="pb-2">
             <CardDescription>Equipos activos</CardDescription>
             <CardTitle className="text-3xl flex items-center gap-2">
@@ -81,10 +121,16 @@ export default function Dashboard() {
             </CardTitle>
           </CardHeader>
           <CardContent>
-            <p className="text-sm text-muted-foreground">Operativos actualmente</p>
+            <p className="text-sm text-muted-foreground flex items-center gap-1">
+              Operativos actualmente
+              <ExternalLink className="h-3 w-3 opacity-50" />
+            </p>
           </CardContent>
         </Card>
-        <Card>
+        <Card 
+          className="cursor-pointer transition-all hover:shadow-lg hover:-translate-y-1"
+          onClick={() => navigate('/equipos')}
+        >
           <CardHeader className="pb-2">
             <CardDescription>Equipos fuera de servicio</CardDescription>
             <CardTitle className="text-3xl flex items-center gap-2">
@@ -93,10 +139,16 @@ export default function Dashboard() {
             </CardTitle>
           </CardHeader>
           <CardContent>
-            <p className="text-sm text-muted-foreground">Requieren revisión o baja temporal</p>
+            <p className="text-sm text-muted-foreground flex items-center gap-1">
+              Requieren revisión o baja temporal
+              <ExternalLink className="h-3 w-3 opacity-50" />
+            </p>
           </CardContent>
         </Card>
-        <Card>
+        <Card 
+          className="cursor-pointer transition-all hover:shadow-lg hover:-translate-y-1"
+          onClick={() => navigate('/mantenimiento')}
+        >
           <CardHeader className="pb-2">
             <CardDescription>Mantenimientos próximos</CardDescription>
             <CardTitle className="text-3xl flex items-center gap-2">
@@ -105,10 +157,13 @@ export default function Dashboard() {
             </CardTitle>
           </CardHeader>
           <CardContent>
-            <p className="text-sm text-muted-foreground">Con menos de 50 horas/km restantes</p>
+            <p className="text-sm text-muted-foreground flex items-center gap-1">
+              Con menos de 50 horas/km restantes
+              <ExternalLink className="h-3 w-3 opacity-50" />
+            </p>
           </CardContent>
         </Card>
-        <Card>
+        <Card className="transition-all hover:shadow-lg hover:-translate-y-1">
           <CardHeader className="pb-2">
             <CardDescription>Técnicos registrados</CardDescription>
             <CardTitle className="text-3xl flex items-center gap-2">
@@ -146,12 +201,24 @@ export default function Dashboard() {
                     .sort((a, b) => a.horasKmRestante - b.horasKmRestante)
                     .slice(0, 6)
                     .map((mantenimiento) => (
-                      <TableRow key={mantenimiento.id}>
+                      <TableRow 
+                        key={mantenimiento.id}
+                        className="cursor-pointer hover:bg-muted/50"
+                        onClick={() => handleVerEquipo(mantenimiento.ficha)}
+                      >
                         <TableCell className="font-medium">{mantenimiento.nombreEquipo}</TableCell>
                         <TableCell>{mantenimiento.tipoMantenimiento}</TableCell>
                         <TableCell className="text-right">
-                          <Badge variant={mantenimiento.horasKmRestante <= 15 ? 'destructive' : 'secondary'}>
-                            {mantenimiento.horasKmRestante}
+                          <Badge variant={
+                            mantenimiento.horasKmRestante < 0 
+                              ? 'destructive' 
+                              : mantenimiento.horasKmRestante <= 15 
+                              ? 'destructive' 
+                              : 'secondary'
+                          }>
+                            {mantenimiento.horasKmRestante < 0 
+                              ? `Vencido (${Math.abs(mantenimiento.horasKmRestante)}h)` 
+                              : `${mantenimiento.horasKmRestante}h`}
                           </Badge>
                         </TableCell>
                         <TableCell>{formatDate(mantenimiento.fechaUltimaActualizacion)}</TableCell>
@@ -222,6 +289,12 @@ export default function Dashboard() {
         </Card>
       </section>
       </div>
+
+      <EquipoDetalleUnificado
+        ficha={fichaSeleccionada}
+        open={dialogOpen}
+        onOpenChange={setDialogOpen}
+      />
     </Layout>
   );
 }

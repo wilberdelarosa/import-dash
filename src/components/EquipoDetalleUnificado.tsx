@@ -23,6 +23,7 @@ import {
 } from 'lucide-react';
 import { format, formatDistanceToNow } from 'date-fns';
 import { es } from 'date-fns/locale';
+import { CaterpillarDataCard } from './CaterpillarDataCard';
 
 interface Props {
   ficha: string | null;
@@ -133,6 +134,13 @@ export function EquipoDetalleUnificado({ ficha, open, onOpenChange }: Props) {
           </TabsList>
 
           <TabsContent value="general" className="space-y-4">
+            {/* Tarjeta de datos Caterpillar si aplica */}
+            <CaterpillarDataCard
+              modelo={equipo.modelo}
+              numeroSerie={equipo.numeroSerie}
+              marca={equipo.marca}
+            />
+            
             <Card>
               <CardHeader>
                 <CardTitle className="text-lg">Información del Equipo</CardTitle>
