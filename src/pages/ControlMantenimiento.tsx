@@ -1,4 +1,4 @@
-import { FormEvent, useCallback, useEffect, useMemo, useState } from 'react';
+import { FormEvent, useEffect, useMemo, useState } from 'react';
 import { Layout } from '@/components/Layout';
 import { Navigation } from '@/components/Navigation';
 import { useSupabaseDataContext } from '@/context/SupabaseDataContext';
@@ -310,127 +310,6 @@ export default function ControlMantenimiento() {
     setRutaMarcada((prev) => prev.filter((ficha) => !planRutaFiltrada.some((item) => item.ficha === ficha)));
   };
 
-  const obtenerRangoAjustado = useCallback((desde: string, hasta: string) => {
-    const inicio = new Date(desde);
-    const fin = new Date(hasta);
-
-    if (Number.isNaN(inicio.getTime()) || Number.isNaN(fin.getTime()) || inicio > fin) {
-      return null;
-    }
-
-    const inicioAjustado = new Date(inicio);
-    inicioAjustado.setHours(0, 0, 0, 0);
-
-    const finAjustado = new Date(fin);
-    finAjustado.setHours(23, 59, 59, 999);
-
-    return { inicio: inicioAjustado, fin: finAjustado };
-  }, []);
-
-  const calcularResumen = useCallback(
-    (inicio: Date, fin: Date): ResumenActualizaciones => {
-      const eventosEnRango = data.actualizacionesHorasKm.filter((evento) => {
-        const fechaEvento = new Date(evento.fecha);
-        if (Number.isNaN(fechaEvento.getTime())) return false;
-        return fechaEvento >= inicio && fechaEvento <= fin;
-      });
-
-      const eventosPorFicha = new Map<string, ActualizacionHorasKm[]>();
-      eventosEnRango.forEach((evento) => {
-        const listaEventos = eventosPorFicha.get(evento.ficha) ?? [];
-        listaEventos.push(evento);
-        eventosPorFicha.set(evento.ficha, listaEventos);
-      });
-
-      const actualizados: ResumenActualizaciones['actualizados'] = [];
-      const pendientes: ResumenActualizaciones['pendientes'] = [];
-
-      data.mantenimientosProgramados.forEach((mantenimiento) => {
-        const fechaUltima = new Date(mantenimiento.fechaUltimaActualizacion);
-        if (Number.isNaN(fechaUltima.getTime())) {
-          pendientes.push(mantenimiento);
-          return;
-        }
-
-        const fechaUltimaAjustada = new Date(fechaUltima);
-        fechaUltimaAjustada.setHours(0, 0, 0, 0);
-
-        if (fechaUltimaAjustada < inicio || fechaUltimaAjustada > fin) {
-          pendientes.push(mantenimiento);
-          return;
-        }
-
-        const eventosFicha = eventosPorFicha.get(mantenimiento.ficha) ?? [];
-        const eventoRelacionado =
-          eventosFicha.find((evento) => {
-            const fechaEvento = new Date(evento.fecha);
-            if (Number.isNaN(fechaEvento.getTime())) return false;
-            return fechaEvento.toDateString() === fechaUltima.toDateString();
-          }) ?? null;
-
-        actualizados.push({
-          mantenimiento,
-          evento: eventoRelacionado,
-        });
-      });
-
-      return {
-        desde: inicio.toISOString(),
-        hasta: fin.toISOString(),
-        actualizados,
-        pendientes,
-      };
-    },
-    [data.actualizacionesHorasKm, data.mantenimientosProgramados],
-  );
-
-  useEffect(() => {
-    if (!isResumenPanelOpen || !resumenActualizaciones || !reporteDesde || !reporteHasta) {
-      return;
-    }
-
-    const rango = obtenerRangoAjustado(reporteDesde, reporteHasta);
-    if (!rango) {
-      return;
-    }
-
-    const resumenActualizado = calcularResumen(rango.inicio, rango.fin);
-
-    setResumenActualizaciones((prev) => {
-      if (!prev) {
-        return resumenActualizado;
-      }
-
-      if (JSON.stringify(prev) === JSON.stringify(resumenActualizado)) {
-        return prev;
-      }
-
-      return resumenActualizado;
-    });
-  }, [
-    calcularResumen,
-    isResumenPanelOpen,
-    obtenerRangoAjustado,
-    reporteDesde,
-    reporteHasta,
-    resumenActualizaciones,
-  ]);
-
-  useEffect(() => {
-    if (!isResumenPanelOpen) {
-      return;
-    }
-
-    const handleKeyDown = (event: KeyboardEvent) => {
-      if (event.key === 'Escape') {
-        setIsResumenPanelOpen(false);
-      }
-    };
-
-    window.addEventListener('keydown', handleKeyDown);
-    return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [isResumenPanelOpen]);
-
   if (loading || !selected) {
     return (
       <Layout title="Control integral de mantenimiento">
@@ -509,7 +388,6 @@ export default function ControlMantenimiento() {
         description: 'Debes indicar fecha inicial y final para generar el resumen.',
         variant: 'destructive',
       });
-      setIsResumenPanelOpen(true);
       return;
     }
 
@@ -522,7 +400,6 @@ export default function ControlMantenimiento() {
         description: 'Verifica los valores seleccionados e intenta nuevamente.',
         variant: 'destructive',
       });
-      setIsResumenPanelOpen(true);
       return;
     }
 
@@ -532,19 +409,66 @@ export default function ControlMantenimiento() {
         description: 'La fecha inicial no puede ser mayor que la final.',
         variant: 'destructive',
       });
-      setIsResumenPanelOpen(true);
       return;
     }
 
-    const rango = obtenerRangoAjustado(reporteDesde, reporteHasta);
-    if (!rango) {
-      setIsResumenPanelOpen(true);
-      return;
-    }
+    const inicioAjustado = new Date(inicio);
+    inicioAjustado.setHours(0, 0, 0, 0);
 
-    const resumen = calcularResumen(rango.inicio, rango.fin);
-    setResumenActualizaciones(resumen);
-    setIsResumenPanelOpen(true);
+    const finAjustado = new Date(fin);
+    finAjustado.setHours(23, 59, 59, 999);
+
+    const eventosEnRango = data.actualizacionesHorasKm.filter((evento) => {
+      const fechaEvento = new Date(evento.fecha);
+      if (Number.isNaN(fechaEvento.getTime())) return false;
+      return fechaEvento >= inicioAjustado && fechaEvento <= finAjustado;
+    });
+
+    const eventosPorFicha = new Map<string, ActualizacionHorasKm[]>();
+    eventosEnRango.forEach((evento) => {
+      const listaEventos = eventosPorFicha.get(evento.ficha) ?? [];
+      listaEventos.push(evento);
+      eventosPorFicha.set(evento.ficha, listaEventos);
+    });
+
+    const actualizados: ResumenActualizaciones['actualizados'] = [];
+    const pendientes: ResumenActualizaciones['pendientes'] = [];
+
+    data.mantenimientosProgramados.forEach((mantenimiento) => {
+      const fechaUltima = new Date(mantenimiento.fechaUltimaActualizacion);
+      if (Number.isNaN(fechaUltima.getTime())) {
+        pendientes.push(mantenimiento);
+        return;
+      }
+
+      const fechaUltimaAjustada = new Date(fechaUltima);
+      fechaUltimaAjustada.setHours(0, 0, 0, 0);
+
+      if (fechaUltimaAjustada < inicioAjustado || fechaUltimaAjustada > finAjustado) {
+        pendientes.push(mantenimiento);
+        return;
+      }
+
+      const eventosFicha = eventosPorFicha.get(mantenimiento.ficha) ?? [];
+      const eventoRelacionado =
+        eventosFicha.find((evento) => {
+          const fechaEvento = new Date(evento.fecha);
+          if (Number.isNaN(fechaEvento.getTime())) return false;
+          return fechaEvento.toDateString() === fechaUltima.toDateString();
+        }) ?? null;
+
+      actualizados.push({
+        mantenimiento,
+        evento: eventoRelacionado,
+      });
+    });
+
+    setResumenActualizaciones({
+      desde: inicioAjustado.toISOString(),
+      hasta: finAjustado.toISOString(),
+      actualizados,
+      pendientes,
+    });
   };
 
   const handleLimpiarReporte = () => {
@@ -553,14 +477,13 @@ export default function ControlMantenimiento() {
     setResumenActualizaciones(null);
   };
 
-
   return (
     <Layout title="Control integral de mantenimiento">
       <Navigation />
 
-      <div className="space-y-6 2xl:space-y-8">
-        <div className="grid gap-6 xl:grid-cols-[minmax(0,1.6fr),minmax(0,1fr)] 2xl:grid-cols-[minmax(0,1.8fr),minmax(0,1fr)] 2xl:gap-8">
-          <div className="grid gap-6">
+      <div className="space-y-6 lg:space-y-8">
+        <div className="grid gap-6 xl:grid-cols-[1.35fr,1fr]">
+          <div className="space-y-6">
             <Card>
               <CardHeader>
                 <CardTitle className="flex items-center gap-2">
@@ -584,7 +507,7 @@ export default function ControlMantenimiento() {
                     </SelectContent>
                   </Select>
                 </div>
-                <div className="grid gap-3 rounded-md border p-4 text-sm sm:grid-cols-2">
+                <div className="grid gap-3 rounded-md border p-4 text-sm">
                   <div className="flex items-center justify-between">
                     <span className="text-muted-foreground">Lectura actual</span>
                     <Badge variant="secondary">{selected.horasKmActuales} h/km</Badge>
@@ -599,11 +522,11 @@ export default function ControlMantenimiento() {
                       {formatRemainingLabel(selected?.horasKmRestante, unidadMantenimiento)}
                     </Badge>
                   </div>
-                  <div className="flex flex-col gap-1 sm:col-span-2">
+                  <div className="flex flex-col gap-1">
                     <span className="text-muted-foreground">Última actualización</span>
                     <span className="font-medium">{formatDate(selected.fechaUltimaActualizacion)}</span>
                   </div>
-                  <div className="flex flex-col gap-1 sm:col-span-2">
+                  <div className="flex flex-col gap-1">
                     <span className="text-muted-foreground">Último mantenimiento</span>
                     <span className="font-medium">{formatDate(selected.fechaUltimoMantenimiento)}</span>
                   </div>
@@ -887,7 +810,7 @@ export default function ControlMantenimiento() {
             </Card>
           </div>
 
-          <div className="grid gap-6">
+          <div className="space-y-6">
             <Card>
               <CardHeader>
                 <CardTitle className="flex items-center gap-2">
@@ -1198,7 +1121,7 @@ export default function ControlMantenimiento() {
             </Dialog>
           </div>
         </div>
-      )}
+      </div>
     </Layout>
   );
 }
