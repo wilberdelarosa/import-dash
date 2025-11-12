@@ -13,6 +13,7 @@ import Reportes from "./pages/Reportes";
 import Configuraciones from "./pages/Configuraciones";
 import NotFound from "./pages/NotFound";
 import AsistenteIA from "./pages/AsistenteIA";
+import ListasPersonalizadas from "./pages/ListasPersonalizadas";
 import { SupabaseDataProvider } from "@/context/SupabaseDataContext";
 import { SystemConfigProvider } from "@/context/SystemConfigContext";
 import { AuthProvider } from "@/context/AuthContext";
@@ -41,6 +42,7 @@ const App = () => (
                 <Route path="/reportes" element={<ProtectedRoute><Reportes /></ProtectedRoute>} />
                 <Route path="/configuraciones" element={<ProtectedRoute><Configuraciones /></ProtectedRoute>} />
                 <Route path="/asistente" element={<ProtectedRoute><AsistenteIA /></ProtectedRoute>} />
+                <Route path="/listas-personalizadas" element={<ProtectedRoute><ListasPersonalizadas /></ProtectedRoute>} />
                 {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
                 <Route path="*" element={<NotFound />} />
               </Routes>

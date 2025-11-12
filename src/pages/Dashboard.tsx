@@ -8,11 +8,12 @@ import { Badge } from '@/components/ui/badge';
 import { Separator } from '@/components/ui/separator';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { Button } from '@/components/ui/button';
-import { Activity, AlertTriangle, CalendarClock, Clock, Users, ExternalLink } from 'lucide-react';
+import { Activity, AlertTriangle, CalendarClock, Clock, Users, ExternalLink, Sparkles, ListChecks } from 'lucide-react';
 import { Skeleton } from '@/components/ui/skeleton';
 import { EquipoDetalleUnificado } from '@/components/EquipoDetalleUnificado';
 import { useNavigate } from 'react-router-dom';
 import { formatRemainingLabel, getRemainingVariant } from '@/lib/maintenanceUtils';
+import { Link } from 'react-router-dom';
 
 const formatDate = (value: string | null | undefined) => {
   if (!value) return 'Sin registro';
@@ -74,6 +75,50 @@ export default function Dashboard() {
       <Navigation />
 
       <div className="space-y-6 lg:space-y-8">
+        <Card className="border-primary/30 bg-primary/5">
+          <CardHeader className="pb-3">
+            <CardTitle className="flex items-center gap-2 text-primary">
+              <Sparkles className="h-5 w-5" /> Novedades del módulo de mantenimiento inteligente
+            </CardTitle>
+            <CardDescription>
+              Accede rápidamente a los kits Caterpillar sugeridos, crea listas personalizadas y abre la ficha del equipo desde el tablero.
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-3 text-sm">
+            <div className="flex flex-col gap-2">
+              <div className="flex items-start gap-2">
+                <ListChecks className="mt-0.5 h-4 w-4 text-primary" />
+                <span>
+                  Consulta los kits recomendados y tareas clave desde la ficha del equipo en <strong>Equipos &gt; Ver detalle</strong>.
+                </span>
+              </div>
+              <div className="flex items-start gap-2">
+                <ListChecks className="mt-0.5 h-4 w-4 text-primary" />
+                <span>
+                  Utiliza el nuevo <strong>constructor de listas personalizadas</strong> para elegir columnas, filtros y exportar reportes en PDF/Excel.
+                </span>
+              </div>
+              <div className="flex items-start gap-2">
+                <ListChecks className="mt-0.5 h-4 w-4 text-primary" />
+                <span>
+                  Desde este dashboard, haz clic en los indicadores para abrir listas filtradas y revisar los equipos con alerta.
+                </span>
+              </div>
+            </div>
+            <div className="flex flex-wrap items-center gap-3 pt-2">
+              <Button variant="default" size="sm" asChild>
+                <Link to="/equipos">Abrir gestión de equipos</Link>
+              </Button>
+              <Button variant="outline" size="sm" asChild>
+                <Link to="/listas-personalizadas">Listas personalizadas</Link>
+              </Button>
+              <Button variant="ghost" size="sm" onClick={() => navigate('/asistente')} className="text-primary">
+                Asistente IA
+              </Button>
+            </div>
+          </CardContent>
+        </Card>
+
       {mantenimientosVencidos > 0 && (
         <Alert variant="destructive">
           <AlertTriangle className="h-4 w-4" />

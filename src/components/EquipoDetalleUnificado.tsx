@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { useSupabaseDataContext } from '@/context/SupabaseDataContext';
 import { useHistorial } from '@/hooks/useHistorial';
 import {
@@ -19,12 +19,15 @@ import {
   AlertCircle,
   TrendingUp,
   Activity,
-  Clock3
+  Clock3,
+  Sparkles,
+  ListChecks,
 } from 'lucide-react';
 import { format, formatDistanceToNow } from 'date-fns';
 import { es } from 'date-fns/locale';
 import { CaterpillarDataCard } from './CaterpillarDataCard';
 import { formatRemainingLabel, getRemainingVariant } from '@/lib/maintenanceUtils';
+import { useCaterpillarData } from '@/hooks/useCaterpillarData';
 
 interface Props {
   ficha: string | null;
@@ -41,6 +44,66 @@ export function EquipoDetalleUnificado({ ficha, open, onOpenChange }: Props) {
   const [historialEquipo, setHistorialEquipo] = useState<any[]>([]);
   const [mantenimientosRealizadosData, setMantenimientosRealizadosData] = useState<any[]>([]);
   const [actualizacionesHorasKmData, setActualizacionesHorasKmData] = useState<any[]>([]);
+
+  const esCaterpillar = useMemo(
+    () => equipo?.marca?.toLowerCase().includes('caterpillar') || equipo?.marca?.toLowerCase().includes('cat'),
+    [equipo],
+  );
+
+  const { data: caterpillarData } = useCaterpillarData(
+    esCaterpillar ? equipo?.modelo ?? '' : '',
+    esCaterpillar ? equipo?.numeroSerie ?? '' : '',
+  );
+
+  const proximoMantenimiento = useMemo(() => {
+    if (!mantenimientos.length) return null;
+    return [...mantenimientos].sort((a, b) => a.horasKmRestante - b.horasKmRestante)[0];
+  }, [mantenimientos]);
+
+  const intervaloCodigo = useMemo(() => {
+    if (!proximoMantenimiento) return null;
+    const match = proximoMantenimiento.tipoMantenimiento?.match(/(PM\d)/i);
+    if (match?.[1]) {
+      return match[1].toUpperCase();
+    }
+    const frecuencia = proximoMantenimiento.frecuencia ?? 0;
+    if (frecuencia <= 0) return null;
+    if (frecuencia <= 250) return 'PM1';
+    if (frecuencia <= 500) return 'PM2';
+    if (frecuencia <= 1000) return 'PM3';
+    if (frecuencia <= 2000) return 'PM4';
+    return null;
+  }, [proximoMantenimiento]);
+
+  const piezasSugeridas = useMemo(() => {
+    if (!intervaloCodigo || !caterpillarData?.piezasPorIntervalo) return [];
+    return caterpillarData.piezasPorIntervalo[intervaloCodigo] ?? [];
+  }, [intervaloCodigo, caterpillarData]);
+
+  const tareasSugeridas = useMemo(() => {
+    if (!intervaloCodigo || !caterpillarData?.tareasPorIntervalo) return [];
+    return caterpillarData.tareasPorIntervalo[intervaloCodigo] ?? [];
+  }, [intervaloCodigo, caterpillarData]);
+
+  const descripcionIntervalo = useMemo(() => {
+    if (!intervaloCodigo || !caterpillarData?.intervalos) return null;
+    const intervalo = caterpillarData.intervalos.find((item) => item.codigo === intervaloCodigo);
+    return intervalo?.descripcion ?? null;
+  }, [intervaloCodigo, caterpillarData]);
+
+  const ultimaActualizacionLabel = useMemo(() => {
+    if (!proximoMantenimiento?.fechaUltimaActualizacion) return 'Sin registro reciente';
+    const fecha = new Date(proximoMantenimiento.fechaUltimaActualizacion);
+    if (Number.isNaN(fecha.getTime())) return 'Sin registro reciente';
+    return formatDistanceToNow(fecha, { addSuffix: true, locale: es });
+  }, [proximoMantenimiento]);
+
+  const lecturaActualLabel = useMemo(() => {
+    if (proximoMantenimiento?.horasKmActuales === null || proximoMantenimiento?.horasKmActuales === undefined) {
+      return 'Sin lectura registrada';
+    }
+    return `${proximoMantenimiento.horasKmActuales} horas/km`;
+  }, [proximoMantenimiento]);
 
   useEffect(() => {
     if (ficha && open) {
@@ -135,6 +198,97 @@ export function EquipoDetalleUnificado({ ficha, open, onOpenChange }: Props) {
           </TabsList>
 
           <TabsContent value="general" className="space-y-4">
+            {proximoMantenimiento && (
+              <Card className="border border-primary/30 bg-primary/5">
+                <CardHeader className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
+                  <div className="space-y-1">
+                    <CardTitle className="text-lg flex items-center gap-2 text-primary">
+                      <Sparkles className="h-5 w-5" /> Próxima intervención programada
+                    </CardTitle>
+                    <p className="text-sm text-muted-foreground">
+                      Basado en las lecturas más recientes registradas para este equipo.
+                    </p>
+                  </div>
+                  <div className="flex flex-wrap items-center gap-2">
+                    {intervaloCodigo && (
+                      <Badge variant="outline" className="border-primary/40 bg-primary/10 text-primary">
+                        {intervaloCodigo}
+                      </Badge>
+                    )}
+                    <Badge variant={getRemainingVariant(proximoMantenimiento.horasKmRestante)}>
+                      {formatRemainingLabel(proximoMantenimiento.horasKmRestante)}
+                    </Badge>
+                  </div>
+                </CardHeader>
+                <CardContent className="grid gap-4 md:grid-cols-2">
+                  <div className="space-y-3">
+                    <div>
+                      <p className="text-xs uppercase tracking-wide text-primary/70">Servicio asignado</p>
+                      <p className="text-sm font-semibold text-primary">
+                        {proximoMantenimiento.tipoMantenimiento || 'Mantenimiento programado'}
+                      </p>
+                      {descripcionIntervalo && (
+                        <p className="mt-1 text-xs text-muted-foreground leading-relaxed">{descripcionIntervalo}</p>
+                      )}
+                    </div>
+                    <div className="rounded-md border border-primary/20 bg-white/70 p-3 text-xs text-muted-foreground dark:bg-background">
+                      <p className="font-semibold text-primary">Última lectura registrada</p>
+                      <p className="mt-1 text-sm text-foreground">{lecturaActualLabel}</p>
+                      <p className="text-[11px] text-muted-foreground">Actualizado {ultimaActualizacionLabel}</p>
+                    </div>
+                  </div>
+                  <div className="space-y-4">
+                    <div className="rounded-md border border-primary/20 bg-white/80 p-3 dark:bg-background">
+                      <p className="flex items-center gap-2 text-xs font-semibold uppercase tracking-wide text-primary/80">
+                        <Package className="h-4 w-4" /> Kit sugerido
+                      </p>
+                      {esCaterpillar ? (
+                        piezasSugeridas.length > 0 ? (
+                          <ul className="mt-2 space-y-2 text-xs text-foreground">
+                            {piezasSugeridas.map((pieza) => (
+                              <li key={pieza.id} className="flex items-start gap-2">
+                                <Badge variant="outline" className="border-primary/30 bg-primary/5 text-primary">
+                                  {pieza.pieza.numero_parte}
+                                </Badge>
+                                <span className="leading-snug">{pieza.pieza.descripcion}</span>
+                              </li>
+                            ))}
+                          </ul>
+                        ) : (
+                          <p className="mt-2 text-xs text-muted-foreground">
+                            No hay kits asociados a este intervalo en la base actual. Verifica el OMM para confirmar repuestos.
+                          </p>
+                        )
+                      ) : (
+                        <p className="mt-2 text-xs text-muted-foreground">
+                          Registra el equipo como Caterpillar para sugerir kits homologados por modelo y serie.
+                        </p>
+                      )}
+                    </div>
+                    <div className="rounded-md border border-primary/20 bg-white/80 p-3 dark:bg-background">
+                      <p className="flex items-center gap-2 text-xs font-semibold uppercase tracking-wide text-primary/80">
+                        <ListChecks className="h-4 w-4" /> Tareas clave
+                      </p>
+                      {tareasSugeridas.length > 0 ? (
+                        <ul className="mt-2 space-y-1 text-xs text-foreground">
+                          {tareasSugeridas.map((tarea) => (
+                            <li key={tarea} className="flex items-start gap-2">
+                              <span className="mt-1 h-1.5 w-1.5 rounded-full bg-primary" />
+                              <span className="leading-snug">{tarea}</span>
+                            </li>
+                          ))}
+                        </ul>
+                      ) : (
+                        <p className="mt-2 text-xs text-muted-foreground">
+                          Cuando se identifique el kit, mostraremos aquí las actividades recomendadas para el intervalo.
+                        </p>
+                      )}
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+            )}
+
             {/* Tarjeta de datos Caterpillar si aplica */}
             <CaterpillarDataCard
               modelo={equipo.modelo}
