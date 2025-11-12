@@ -26,7 +26,7 @@ import {
 import { format, formatDistanceToNow } from 'date-fns';
 import { es } from 'date-fns/locale';
 import { CaterpillarDataCard } from './CaterpillarDataCard';
-import { formatRemainingLabel, getRemainingVariant, resolveIntervaloCodigo } from '@/lib/maintenanceUtils';
+import { formatRemainingLabel, getRemainingVariant } from '@/lib/maintenanceUtils';
 import { useCaterpillarData } from '@/hooks/useCaterpillarData';
 
 interface Props {
@@ -60,7 +60,20 @@ export function EquipoDetalleUnificado({ ficha, open, onOpenChange }: Props) {
     return [...mantenimientos].sort((a, b) => a.horasKmRestante - b.horasKmRestante)[0];
   }, [mantenimientos]);
 
-  const intervaloCodigo = useMemo(() => resolveIntervaloCodigo(proximoMantenimiento), [proximoMantenimiento]);
+  const intervaloCodigo = useMemo(() => {
+    if (!proximoMantenimiento) return null;
+    const match = proximoMantenimiento.tipoMantenimiento?.match(/(PM\d)/i);
+    if (match?.[1]) {
+      return match[1].toUpperCase();
+    }
+    const frecuencia = proximoMantenimiento.frecuencia ?? 0;
+    if (frecuencia <= 0) return null;
+    if (frecuencia <= 250) return 'PM1';
+    if (frecuencia <= 500) return 'PM2';
+    if (frecuencia <= 1000) return 'PM3';
+    if (frecuencia <= 2000) return 'PM4';
+    return null;
+  }, [proximoMantenimiento]);
 
   const piezasSugeridas = useMemo(() => {
     if (!intervaloCodigo || !caterpillarData?.piezasPorIntervalo) return [];

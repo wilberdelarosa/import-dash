@@ -362,14 +362,13 @@ export function EquiposTable({ equipos, onEdit, onDelete, onVerDetalle }: Equipo
               width: `${100 / tableScale}%`,
             }}
           >
-            <Table className="min-w-[1000px]">
+            <Table className="min-w-[900px]">
               <TableHeader>
                 <TableRow>
                   <TableHead>Ficha</TableHead>
                   <TableHead>Nombre</TableHead>
                   <TableHead>Marca</TableHead>
                   <TableHead>Modelo</TableHead>
-                  <TableHead>Serie / Chasis</TableHead>
                   <TableHead>Categoría</TableHead>
                   <TableHead>Placa</TableHead>
                   <TableHead>Estado</TableHead>
@@ -383,7 +382,6 @@ export function EquiposTable({ equipos, onEdit, onDelete, onVerDetalle }: Equipo
                     <TableCell>{equipo.nombre}</TableCell>
                     <TableCell>{equipo.marca}</TableCell>
                     <TableCell>{equipo.modelo}</TableCell>
-                    <TableCell>{equipo.numeroSerie || 'Sin registro'}</TableCell>
                     <TableCell>{equipo.categoria}</TableCell>
                     <TableCell>{equipo.placa}</TableCell>
                     <TableCell>
