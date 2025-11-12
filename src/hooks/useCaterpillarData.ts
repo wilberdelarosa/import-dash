@@ -1,56 +1,20 @@
 import { useEffect, useState } from 'react';
 import { supabase } from '@/integrations/supabase/client';
-
-interface CatModelo {
-  id: number;
-  modelo: string;
-  categoria: string;
-  serie_desde: string | null;
-  serie_hasta: string | null;
-  motor: string;
-  capacidad_aceite_motor: number;
-  capacidad_hidraulico: number;
-  capacidad_refrigerante: number;
-  notas: string | null;
-}
-
-interface CatIntervalo {
-  id: number;
-  codigo: string;
-  nombre: string;
-  horas_intervalo: number;
-  descripcion: string;
-}
-
-interface CatPieza {
-  id: number;
-  numero_parte: string;
-  descripcion: string;
-  tipo: string;
-}
-
-interface ModeloIntervaloPieza {
-  id: number;
-  modelo_id: number;
-  intervalo_id: number;
-  pieza_id: number;
-  cantidad: number;
-  notas: string | null;
-  pieza: CatPieza;
-  intervalo: CatIntervalo;
-}
-
-export interface CaterpillarEquipmentData {
-  modelo: CatModelo | null;
-  intervalos: CatIntervalo[];
-  piezasPorIntervalo: Record<string, ModeloIntervaloPieza[]>;
-}
+import {
+  CaterpillarEquipmentData,
+  CatIntervalo,
+  CatModelo,
+  ModeloIntervaloPieza,
+} from '@/types/caterpillar';
+import { getStaticCaterpillarData } from '@/data/caterpillarMaintenance';
 
 export function useCaterpillarData(modelo: string, numeroSerie: string) {
   const [data, setData] = useState<CaterpillarEquipmentData>({
     modelo: null,
     intervalos: [],
     piezasPorIntervalo: {},
+    tareasPorIntervalo: {},
+    mantenimientosEspeciales: [],
   });
   const [loading, setLoading] = useState(true);
 
@@ -63,6 +27,8 @@ export function useCaterpillarData(modelo: string, numeroSerie: string) {
 
       try {
         setLoading(true);
+
+        const fallbackData = getStaticCaterpillarData(modelo);
 
         // Buscar el modelo Caterpillar
         const { data: modelosData, error: modelosError } = await supabase
@@ -91,6 +57,8 @@ export function useCaterpillarData(modelo: string, numeroSerie: string) {
           if (!modeloSeleccionado) {
             modeloSeleccionado = modelosData[0] as CatModelo;
           }
+        } else if (fallbackData?.modelo) {
+          modeloSeleccionado = fallbackData.modelo;
         }
 
         // Obtener todos los intervalos PM
@@ -101,9 +69,14 @@ export function useCaterpillarData(modelo: string, numeroSerie: string) {
 
         if (intervalosError) throw intervalosError;
 
+        let intervalos: CatIntervalo[] = (intervalosData || []) as CatIntervalo[];
+        if (!intervalos.length && fallbackData?.intervalos) {
+          intervalos = fallbackData.intervalos;
+        }
+
         // Si tenemos un modelo, buscar las piezas relacionadas
         const piezasPorIntervalo: Record<string, ModeloIntervaloPieza[]> = {};
-        
+
         if (modeloSeleccionado) {
           const { data: relacionesData, error: relacionesError } = await supabase
             .from('cat_modelo_intervalo_piezas')
@@ -130,13 +103,26 @@ export function useCaterpillarData(modelo: string, numeroSerie: string) {
           }
         }
 
+        const piezasFinales = Object.keys(piezasPorIntervalo).length
+          ? piezasPorIntervalo
+          : fallbackData?.piezasPorIntervalo ?? {};
+
+        const tareasPorIntervalo = fallbackData?.tareasPorIntervalo ?? {};
+        const mantenimientosEspeciales = fallbackData?.mantenimientosEspeciales ?? [];
+
         setData({
-          modelo: modeloSeleccionado,
-          intervalos: (intervalosData || []) as CatIntervalo[],
-          piezasPorIntervalo,
+          modelo: modeloSeleccionado ?? fallbackData?.modelo ?? null,
+          intervalos,
+          piezasPorIntervalo: piezasFinales,
+          tareasPorIntervalo,
+          mantenimientosEspeciales,
         });
       } catch (error) {
         console.error('Error fetching Caterpillar data:', error);
+        const fallback = getStaticCaterpillarData(modelo);
+        if (fallback) {
+          setData(fallback);
+        }
       } finally {
         setLoading(false);
       }
