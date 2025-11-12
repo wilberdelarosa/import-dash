@@ -12,6 +12,7 @@ import {
   Settings,
   Wrench,
   MessageSquareText,
+  ListChecks,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { NotificacionesCentro } from '@/components/NotificacionesCentro';
@@ -34,6 +35,7 @@ const navItems = [
   { path: '/mantenimiento', label: 'Mantenimiento', icon: Calendar },
   { path: '/historial', label: 'Historial', icon: History },
   { path: '/reportes', label: 'Reportes', icon: BarChart3 },
+  { path: '/listas-personalizadas', label: 'Listas personalizadas', icon: ListChecks },
   { path: '/configuraciones', label: 'Configuraciones', icon: Settings },
   { path: '/asistente', label: 'Asistente IA', icon: MessageSquareText },
 ];
