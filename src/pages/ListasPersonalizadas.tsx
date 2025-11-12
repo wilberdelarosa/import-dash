@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { Layout } from '@/components/Layout';
 import { Navigation } from '@/components/Navigation';
 import { useSupabaseDataContext } from '@/context/SupabaseDataContext';
@@ -20,8 +20,10 @@ import {
   Palette,
   Search,
   Sparkles,
+  Tag,
 } from 'lucide-react';
 import { formatRemainingLabel } from '@/lib/maintenanceUtils';
+import { cn } from '@/lib/utils';
 import { getStaticCaterpillarData } from '@/data/caterpillarMaintenance';
 import type { Equipo, MantenimientoProgramado } from '@/types/equipment';
 
@@ -116,6 +118,12 @@ const buildColumnOptions = (): ColumnOption[] => [
     accessor: (equipo) => equipo.numeroSerie,
   },
   {
+    key: 'chasis',
+    label: 'Chasis',
+    description: 'Serie de chasis o bastidor registrada.',
+    accessor: (equipo) => equipo.chasis,
+  },
+  {
     key: 'categoria',
     label: 'Categoría',
     description: 'Categoría operativa utilizada para agrupar el equipo.',
@@ -163,6 +171,12 @@ const buildColumnOptions = (): ColumnOption[] => [
     description: 'Actividades críticas incluidas en el kit.',
     accessor: (equipo) => equipo.tareasClave,
   },
+  {
+    key: 'capacitacionMinima',
+    label: 'Capacitación mínima',
+    description: 'Perfil mínimo sugerido para operar o intervenir el equipo.',
+    accessor: (equipo) => equipo.capacitacionMinima ?? 'No definida',
+  },
 ];
 
 export default function ListasPersonalizadas() {
@@ -173,6 +187,7 @@ export default function ListasPersonalizadas() {
   const [selectedMarcas, setSelectedMarcas] = useState<string[]>([]);
   const [searchTerm, setSearchTerm] = useState('');
   const [colorScheme, setColorScheme] = useState<'emerald' | 'amber' | 'sky' | 'slate'>('emerald');
+  const [selectedFichas, setSelectedFichas] = useState<string[]>([]);
 
   const categoriasDisponibles = useMemo(
     () => Array.from(new Set(data.equipos.map((equipo) => equipo.categoria))).sort(),
@@ -190,6 +205,17 @@ export default function ListasPersonalizadas() {
       return acc;
     }, {});
   }, [columnOptions]);
+
+  const equiposPorFicha = useMemo(() => {
+    return enrichedEquipos.reduce<Map<string, EnrichedEquipo>>((acc, equipo) => {
+      acc.set(equipo.ficha, equipo);
+      return acc;
+    }, new Map());
+  }, [enrichedEquipos]);
+
+  useEffect(() => {
+    setSelectedFichas((prev) => prev.filter((ficha) => equiposPorFicha.has(ficha)));
+  }, [equiposPorFicha]);
 
   const enrichedEquipos = useMemo<EnrichedEquipo[]>(() => {
     const cache = new Map<string, ReturnType<typeof getStaticCaterpillarData> | null>();
@@ -277,6 +303,52 @@ export default function ListasPersonalizadas() {
     });
   }, [enrichedEquipos, selectedCategorias, selectedMarcas, searchTerm]);
 
+  const filteredSelectedFichas = useMemo(() => {
+    const fichasSet = new Set(filteredEquipos.map((equipo) => equipo.ficha));
+    return selectedFichas.filter((ficha) => fichasSet.has(ficha));
+  }, [filteredEquipos, selectedFichas]);
+
+  const selectedCount = filteredSelectedFichas.length;
+
+  const selectedEquipos = useMemo(
+    () => filteredEquipos.filter((equipo) => selectedFichas.includes(equipo.ficha)),
+    [filteredEquipos, selectedFichas],
+  );
+
+  const selectionSummary = useMemo(() => {
+    const resumen = new Map<string, { count: number; categoria: string }>();
+    selectedFichas.forEach((ficha) => {
+      const equipo = equiposPorFicha.get(ficha);
+      if (!equipo) return;
+      const current = resumen.get(equipo.categoria) ?? { count: 0, categoria: equipo.categoria };
+      current.count += 1;
+      resumen.set(equipo.categoria, current);
+    });
+    return Array.from(resumen.values());
+  }, [selectedFichas, equiposPorFicha]);
+
+  const toggleFicha = (ficha: string) => {
+    setSelectedFichas((prev) =>
+      prev.includes(ficha) ? prev.filter((item) => item !== ficha) : [...prev, ficha],
+    );
+  };
+
+  const toggleAllFiltered = (checked: boolean) => {
+    if (checked) {
+      setSelectedFichas((prev) => {
+        const current = new Set(prev);
+        filteredEquipos.forEach((equipo) => current.add(equipo.ficha));
+        return Array.from(current);
+      });
+    } else {
+      setSelectedFichas((prev) => prev.filter((ficha) => !filteredSelectedFichas.includes(ficha)));
+    }
+  };
+
+  const clearSelection = () => {
+    setSelectedFichas((prev) => prev.filter((ficha) => !filteredSelectedFichas.includes(ficha)));
+  };
+
   const handleToggleColumn = (key: string) => {
     setSelectedColumns((prev) => {
       if (prev.includes(key)) {
@@ -305,9 +377,10 @@ export default function ListasPersonalizadas() {
   };
 
   const handleExportCsv = () => {
-    if (filteredEquipos.length === 0 || selectedColumns.length === 0) return;
+    const source = selectedEquipos.length > 0 ? selectedEquipos : filteredEquipos;
+    if (source.length === 0 || selectedColumns.length === 0) return;
     const header = selectedColumns.map((key) => columnMap[key]?.label ?? key);
-    const rows = filteredEquipos.map((equipo) =>
+    const rows = source.map((equipo) =>
       selectedColumns.map((key) => {
         const value = columnMap[key]?.accessor(equipo) ?? '';
         return `"${value.replace(/"/g, '""')}"`;
@@ -327,9 +400,10 @@ export default function ListasPersonalizadas() {
   };
 
   const handleExportPdf = () => {
-    if (filteredEquipos.length === 0 || selectedColumns.length === 0) return;
+    const source = selectedEquipos.length > 0 ? selectedEquipos : filteredEquipos;
+    if (source.length === 0 || selectedColumns.length === 0) return;
     const header = selectedColumns.map((key) => columnMap[key]?.label ?? key);
-    const rows = filteredEquipos.map((equipo) =>
+    const rows = source.map((equipo) =>
       selectedColumns
         .map((key) => `<td style="padding:8px;border:1px solid #ddd;font-size:12px;">${
           columnMap[key]?.accessor(equipo).replace(/\n/g, '<br/>') ?? ''
@@ -371,6 +445,13 @@ export default function ListasPersonalizadas() {
   };
 
   const theme = COLOR_THEMES[colorScheme];
+  const headerCheckboxState: boolean | 'indeterminate' = filteredEquipos.length === 0
+    ? false
+    : selectedCount === filteredEquipos.length
+      ? true
+      : selectedCount > 0
+        ? 'indeterminate'
+        : false;
 
   return (
     <Layout title="Listas personalizadas">
@@ -427,7 +508,7 @@ export default function ListasPersonalizadas() {
 
               <div className="space-y-3">
                 <Label className="flex items-center gap-2 text-sm font-semibold">
-                  <ListChecks className="h-4 w-4" /> Marcas
+                  <Tag className="h-4 w-4" /> Marcas
                 </Label>
                 <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
                   {marcasDisponibles.map((marca) => (
@@ -440,6 +521,56 @@ export default function ListasPersonalizadas() {
                     </label>
                   ))}
                 </div>
+              </div>
+
+              <div className="space-y-3">
+                <Label className="flex items-center gap-2 text-sm font-semibold">
+                  <ListChecks className="h-4 w-4" /> Selección manual de fichas
+                </Label>
+                <p className="text-xs text-muted-foreground">
+                  Marca fichas específicas para exportar listas enfocadas o preparar rutas por categoría.
+                </p>
+                <div className="flex flex-wrap items-center gap-2">
+                  <Button
+                    type="button"
+                    size="sm"
+                    variant="outline"
+                    onClick={() => toggleAllFiltered(true)}
+                    disabled={filteredEquipos.length === 0}
+                  >
+                    Seleccionar todo ({filteredEquipos.length})
+                  </Button>
+                  <Button
+                    type="button"
+                    size="sm"
+                    variant="ghost"
+                    onClick={clearSelection}
+                    disabled={selectedCount === 0}
+                  >
+                    Limpiar selección
+                  </Button>
+                  <Badge variant="secondary" className="text-xs">
+                    {selectedCount} en esta vista
+                  </Badge>
+                </div>
+                {selectionSummary.length > 0 ? (
+                  <div className="flex flex-wrap gap-2">
+                    {selectionSummary.map(({ categoria, count }) => (
+                      <Badge key={categoria} variant="outline" className="border-dashed text-xs">
+                        {categoria}: {count}
+                      </Badge>
+                    ))}
+                  </div>
+                ) : (
+                  <p className="text-[11px] text-muted-foreground">
+                    No hay fichas marcadas todavía. Usa la columna de selección en la tabla para comenzar.
+                  </p>
+                )}
+                <p className="text-[11px] text-muted-foreground">
+                  {selectedEquipos.length > 0
+                    ? 'Las exportaciones y reportes usarán solamente las fichas marcadas en esta vista.'
+                    : 'Si no seleccionas fichas, exportaremos todos los equipos filtrados.'}
+                </p>
               </div>
 
               <Separator />
@@ -514,6 +645,13 @@ export default function ListasPersonalizadas() {
                   <Table>
                     <TableHeader>
                       <TableRow className={theme.header}>
+                        <TableHead className="w-12">
+                          <Checkbox
+                            aria-label="Seleccionar todos los equipos visibles"
+                            checked={headerCheckboxState}
+                            onCheckedChange={(checked) => toggleAllFiltered(Boolean(checked))}
+                          />
+                        </TableHead>
                         {selectedColumns.map((key) => (
                           <TableHead key={key} className="text-xs font-semibold uppercase tracking-wide">
                             {columnMap[key]?.label ?? key}
@@ -522,8 +660,23 @@ export default function ListasPersonalizadas() {
                       </TableRow>
                     </TableHeader>
                     <TableBody>
-                      {filteredEquipos.map((equipo) => (
-                        <TableRow key={equipo.id} className={`${theme.rowHover} transition-colors`}>
+                      {filteredEquipos.map((equipo) => {
+                        const isSelected = selectedFichas.includes(equipo.ficha);
+                        return (
+                          <TableRow
+                            key={equipo.id}
+                            className={cn(
+                              `${theme.rowHover} transition-colors`,
+                              isSelected && 'ring-1 ring-primary/40 bg-primary/5 dark:bg-primary/10',
+                            )}
+                          >
+                            <TableCell className="align-top">
+                              <Checkbox
+                                checked={isSelected}
+                                onCheckedChange={() => toggleFicha(equipo.ficha)}
+                                aria-label={`Seleccionar ${equipo.ficha}`}
+                              />
+                            </TableCell>
                           {selectedColumns.map((key) => {
                             const rawValue = columnMap[key]?.accessor(equipo) ?? '';
                             const parts = rawValue.split('\n');
@@ -543,8 +696,9 @@ export default function ListasPersonalizadas() {
                               </TableCell>
                             );
                           })}
-                        </TableRow>
-                      ))}
+                          </TableRow>
+                        );
+                      })}
                     </TableBody>
                   </Table>
                 </div>
