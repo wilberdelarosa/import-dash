@@ -12,7 +12,15 @@ import { Badge } from '@/components/ui/badge';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Checkbox } from '@/components/ui/checkbox';
-import { Loader2, Wrench, CalendarCheck, Gauge, ClipboardList, CalendarRange, Route, MapPinned, GraduationCap, X } from 'lucide-react';
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from '@/components/ui/dialog';
+import { Loader2, Wrench, CalendarCheck, Gauge, ClipboardList, CalendarRange, Route, MapPinned, GraduationCap } from 'lucide-react';
 import { formatRemainingLabel, getRemainingVariant } from '@/lib/maintenanceUtils';
 import type { ActualizacionHorasKm, MantenimientoProgramado, MantenimientoRealizado } from '@/types/equipment';
 import { useToast } from '@/hooks/use-toast';
@@ -91,7 +99,7 @@ export default function ControlMantenimiento() {
   const [reporteDesde, setReporteDesde] = useState('');
   const [reporteHasta, setReporteHasta] = useState('');
   const [resumenActualizaciones, setResumenActualizaciones] = useState<ResumenActualizaciones | null>(null);
-  const [isResumenPanelOpen, setIsResumenPanelOpen] = useState(false);
+  const [isResumenDialogOpen, setIsResumenDialogOpen] = useState(false);
   const caterpillarEquipos = useMemo(
     () =>
       data.equipos
@@ -1039,180 +1047,155 @@ export default function ControlMantenimiento() {
               </CardContent>
             </Card>
 
-            <Alert className="border-dashed">
-              <CalendarRange className="h-4 w-4" />
-              <AlertTitle>Resumen por rango de actualización</AlertTitle>
-              <AlertDescription>
-                Usa el botón flotante con el icono de calendario para abrir la ventana de pendientes sin salir de esta pantalla.
-              </AlertDescription>
-            </Alert>
-          </div>
-        </div>
-      </div>
-
-      <Button
-        type="button"
-        size="lg"
-        onClick={() => setIsResumenPanelOpen((prev) => !prev)}
-        className="fixed bottom-6 right-6 z-40 flex h-14 w-14 items-center justify-center rounded-full shadow-xl transition hover:translate-y-[-2px] hover:shadow-2xl sm:h-auto sm:w-auto sm:min-w-[15rem] sm:justify-between sm:gap-3 sm:rounded-full sm:px-6"
-        aria-haspopup="dialog"
-        aria-expanded={isResumenPanelOpen}
-        aria-controls="resumen-rango-panel"
-      >
-        <CalendarRange className="h-6 w-6" />
-        <span className="sr-only sm:not-sr-only">Resumen de pendientes</span>
-      </Button>
-
-      {isResumenPanelOpen && (
-        <div className="pointer-events-none fixed inset-0 z-40 flex flex-col items-end justify-end p-4 sm:p-6">
-          <div
-            id="resumen-rango-panel"
-            role="dialog"
-            aria-modal="false"
-            aria-labelledby="resumen-rango-titulo"
-            className="pointer-events-auto w-full max-w-5xl"
-          >
-            <Card className="flex max-h-[calc(100vh-6rem)] flex-col border border-primary/30 shadow-2xl">
-              <CardHeader className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
-                <div className="space-y-1">
-                  <CardTitle id="resumen-rango-titulo" className="flex items-center gap-2">
+            <Dialog open={isResumenDialogOpen} onOpenChange={setIsResumenDialogOpen}>
+              <Card className="overflow-hidden">
+                <CardHeader className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+                  <div className="space-y-1">
+                    <CardTitle className="flex items-center gap-2">
+                      <CalendarRange className="h-5 w-5 text-primary" /> Resumen por rango de actualización
+                    </CardTitle>
+                    <CardDescription>
+                      Selecciona un periodo para identificar qué equipos registraron lecturas y cuáles siguen pendientes.
+                    </CardDescription>
+                  </div>
+                  <DialogTrigger asChild>
+                    <Button variant="outline" className="w-full gap-2 sm:w-auto">
+                      Abrir resumen
+                    </Button>
+                  </DialogTrigger>
+                </CardHeader>
+              </Card>
+              <DialogContent className="max-h-[90vh] max-w-5xl overflow-y-auto">
+                <DialogHeader>
+                  <DialogTitle className="flex items-center gap-2">
                     <CalendarRange className="h-5 w-5 text-primary" /> Resumen por rango de actualización
-                  </CardTitle>
-                  <CardDescription>
+                  </DialogTitle>
+                  <DialogDescription>
                     Selecciona un periodo para identificar qué equipos registraron lecturas y cuáles siguen pendientes.
-                  </CardDescription>
-                </div>
-                <div className="flex items-center gap-2">
-                  <Button variant="outline" onClick={handleGenerarReporte}>
-                    Actualizar datos
-                  </Button>
-                  <Button variant="ghost" size="icon" onClick={() => setIsResumenPanelOpen(false)}>
-                    <X className="h-4 w-4" />
-                    <span className="sr-only">Cerrar resumen</span>
-                  </Button>
-                </div>
-              </CardHeader>
-              <CardContent className="flex-1 space-y-6 overflow-y-auto">
-                <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
-                  <div className="grid gap-2">
-                    <Label htmlFor="reporteDesde">Desde</Label>
-                    <Input
-                      id="reporteDesde"
-                      type="date"
-                      value={reporteDesde}
-                      onChange={(event) => setReporteDesde(event.target.value)}
-                    />
-                  </div>
-                  <div className="grid gap-2">
-                    <Label htmlFor="reporteHasta">Hasta</Label>
-                    <Input
-                      id="reporteHasta"
-                      type="date"
-                      value={reporteHasta}
-                      onChange={(event) => setReporteHasta(event.target.value)}
-                    />
-                  </div>
-                  <div className="flex items-end gap-2 md:col-span-2 lg:col-span-1">
-                    <Button type="button" onClick={handleGenerarReporte} className="flex-1">
-                      Generar reporte
-                    </Button>
-                    <Button type="button" variant="ghost" onClick={handleLimpiarReporte}>
-                      Limpiar
-                    </Button>
-                  </div>
-                </div>
-
-                {resumenActualizaciones ? (
-                  <div className="space-y-6">
-                    <div className="flex flex-wrap gap-3">
-                      <Badge variant="secondary">
-                        Actualizados: {resumenActualizaciones.actualizados.length}
-                      </Badge>
-                      <Badge variant={resumenActualizaciones.pendientes.length > 0 ? 'destructive' : 'outline'}>
-                        Pendientes: {resumenActualizaciones.pendientes.length}
-                      </Badge>
-                      <Badge variant="outline">
-                        Período: {new Date(resumenActualizaciones.desde).toLocaleDateString()} - {new Date(resumenActualizaciones.hasta).toLocaleDateString()}
-                      </Badge>
+                  </DialogDescription>
+                </DialogHeader>
+                <div className="space-y-6">
+                  <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+                    <div className="grid gap-2">
+                      <Label htmlFor="reporteDesde">Desde</Label>
+                      <Input
+                        id="reporteDesde"
+                        type="date"
+                        value={reporteDesde}
+                        onChange={(event) => setReporteDesde(event.target.value)}
+                      />
                     </div>
-
-                    <div className="grid gap-6 lg:grid-cols-2">
-                      <div className="space-y-3">
-                        <h4 className="text-sm font-semibold">Equipos con lectura registrada</h4>
-                        {resumenActualizaciones.actualizados.length === 0 ? (
-                          <p className="text-sm text-muted-foreground">No hay registros en el rango seleccionado.</p>
-                        ) : (
-                          <div className="-mx-4 overflow-x-auto sm:mx-0">
-                            <div className="min-w-full rounded-md border">
-                              <Table className="w-full min-w-[560px]">
-                                <TableHeader>
-                                  <TableRow>
-                                    <TableHead>Equipo</TableHead>
-                                    <TableHead>Ficha</TableHead>
-                                    <TableHead>Última lectura</TableHead>
-                                    <TableHead>Responsable</TableHead>
-                                  </TableRow>
-                                </TableHeader>
-                                <TableBody>
-                                  {resumenActualizaciones.actualizados.map(({ mantenimiento, evento }) => (
-                                    <TableRow key={mantenimiento.id}>
-                                      <TableCell className="font-medium">{mantenimiento.nombreEquipo}</TableCell>
-                                      <TableCell>{mantenimiento.ficha}</TableCell>
-                                      <TableCell>
-                                        {evento
-                                          ? `${evento.horasKm} h/km • ${new Date(evento.fecha).toLocaleDateString()}`
-                                          : 'Sin detalle'}
-                                      </TableCell>
-                                      <TableCell>{evento?.usuarioResponsable ?? 'No registrado'}</TableCell>
-                                    </TableRow>
-                                  ))}
-                                </TableBody>
-                              </Table>
-                            </div>
-                          </div>
-                        )}
-                      </div>
-
-                      <div className="space-y-3">
-                        <h4 className="text-sm font-semibold">Equipos pendientes</h4>
-                        {resumenActualizaciones.pendientes.length === 0 ? (
-                          <p className="text-sm text-muted-foreground">Todos los equipos tienen lectura en el rango.</p>
-                        ) : (
-                          <div className="-mx-4 overflow-x-auto sm:mx-0">
-                            <div className="min-w-full rounded-md border">
-                              <Table className="w-full min-w-[520px]">
-                                <TableHeader>
-                                  <TableRow>
-                                    <TableHead>Equipo</TableHead>
-                                    <TableHead>Ficha</TableHead>
-                                    <TableHead>Última actualización</TableHead>
-                                    <TableHead>Horas/km actuales</TableHead>
-                                  </TableRow>
-                                </TableHeader>
-                                <TableBody>
-                                  {resumenActualizaciones.pendientes.map((mantenimiento) => (
-                                    <TableRow key={mantenimiento.id}>
-                                      <TableCell className="font-medium">{mantenimiento.nombreEquipo}</TableCell>
-                                      <TableCell>{mantenimiento.ficha}</TableCell>
-                                      <TableCell>{formatDate(mantenimiento.fechaUltimaActualizacion)}</TableCell>
-                                      <TableCell>{mantenimiento.horasKmActuales}</TableCell>
-                                    </TableRow>
-                                  ))}
-                                </TableBody>
-                              </Table>
-                            </div>
-                          </div>
-                        )}
-                      </div>
+                    <div className="grid gap-2">
+                      <Label htmlFor="reporteHasta">Hasta</Label>
+                      <Input
+                        id="reporteHasta"
+                        type="date"
+                        value={reporteHasta}
+                        onChange={(event) => setReporteHasta(event.target.value)}
+                      />
+                    </div>
+                    <div className="flex items-end gap-2">
+                      <Button type="button" onClick={handleGenerarReporte} className="flex-1">
+                        Generar reporte
+                      </Button>
+                      <Button type="button" variant="ghost" onClick={handleLimpiarReporte}>
+                        Limpiar
+                      </Button>
                     </div>
                   </div>
-                ) : (
-                  <p className="text-sm text-muted-foreground">
-                    Completa el rango y genera el reporte para revisar el estado de las lecturas.
-                  </p>
-                )}
-              </CardContent>
-            </Card>
+
+                  {resumenActualizaciones ? (
+                    <div className="space-y-6">
+                      <div className="flex flex-wrap gap-3">
+                        <Badge variant="secondary">
+                          Actualizados: {resumenActualizaciones.actualizados.length}
+                        </Badge>
+                        <Badge variant={resumenActualizaciones.pendientes.length > 0 ? 'destructive' : 'outline'}>
+                          Pendientes: {resumenActualizaciones.pendientes.length}
+                        </Badge>
+                        <Badge variant="outline">
+                          Período: {new Date(resumenActualizaciones.desde).toLocaleDateString()} - {new Date(resumenActualizaciones.hasta).toLocaleDateString()}
+                        </Badge>
+                      </div>
+
+                      <div className="grid gap-6 lg:grid-cols-2">
+                        <div className="space-y-3">
+                          <h4 className="text-sm font-semibold">Equipos con lectura registrada</h4>
+                          {resumenActualizaciones.actualizados.length === 0 ? (
+                            <p className="text-sm text-muted-foreground">No hay registros en el rango seleccionado.</p>
+                          ) : (
+                            <div className="-mx-4 overflow-x-auto sm:mx-0">
+                              <div className="min-w-full rounded-md border">
+                                <Table className="w-full min-w-[560px]">
+                                  <TableHeader>
+                                    <TableRow>
+                                      <TableHead>Equipo</TableHead>
+                                      <TableHead>Ficha</TableHead>
+                                      <TableHead>Última lectura</TableHead>
+                                      <TableHead>Responsable</TableHead>
+                                    </TableRow>
+                                  </TableHeader>
+                                  <TableBody>
+                                    {resumenActualizaciones.actualizados.map(({ mantenimiento, evento }) => (
+                                      <TableRow key={mantenimiento.id}>
+                                        <TableCell className="font-medium">{mantenimiento.nombreEquipo}</TableCell>
+                                        <TableCell>{mantenimiento.ficha}</TableCell>
+                                        <TableCell>
+                                          {evento
+                                            ? `${evento.horasKm} h/km • ${new Date(evento.fecha).toLocaleDateString()}`
+                                            : 'Sin detalle'}
+                                        </TableCell>
+                                        <TableCell>{evento?.usuarioResponsable ?? 'No registrado'}</TableCell>
+                                      </TableRow>
+                                    ))}
+                                  </TableBody>
+                                </Table>
+                              </div>
+                            </div>
+                          )}
+                        </div>
+
+                        <div className="space-y-3">
+                          <h4 className="text-sm font-semibold">Equipos pendientes</h4>
+                          {resumenActualizaciones.pendientes.length === 0 ? (
+                            <p className="text-sm text-muted-foreground">Todos los equipos tienen lectura en el rango.</p>
+                          ) : (
+                            <div className="-mx-4 overflow-x-auto sm:mx-0">
+                              <div className="min-w-full rounded-md border">
+                                <Table className="w-full min-w-[520px]">
+                                  <TableHeader>
+                                    <TableRow>
+                                      <TableHead>Equipo</TableHead>
+                                      <TableHead>Ficha</TableHead>
+                                      <TableHead>Última actualización</TableHead>
+                                      <TableHead>Horas/km actuales</TableHead>
+                                    </TableRow>
+                                  </TableHeader>
+                                  <TableBody>
+                                    {resumenActualizaciones.pendientes.map((mantenimiento) => (
+                                      <TableRow key={mantenimiento.id}>
+                                        <TableCell className="font-medium">{mantenimiento.nombreEquipo}</TableCell>
+                                        <TableCell>{mantenimiento.ficha}</TableCell>
+                                        <TableCell>{formatDate(mantenimiento.fechaUltimaActualizacion)}</TableCell>
+                                        <TableCell>{mantenimiento.horasKmActuales}</TableCell>
+                                      </TableRow>
+                                    ))}
+                                  </TableBody>
+                                </Table>
+                              </div>
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                    </div>
+                  ) : (
+                    <p className="text-sm text-muted-foreground">
+                      Completa el rango y genera el reporte para revisar el estado de las lecturas.
+                    </p>
+                  )}
+                </div>
+              </DialogContent>
+            </Dialog>
           </div>
         </div>
       )}
