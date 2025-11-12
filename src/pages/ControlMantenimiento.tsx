@@ -13,14 +13,17 @@ import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Checkbox } from '@/components/ui/checkbox';
 import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogHeader,
-  DialogTitle,
-  DialogTrigger,
-} from '@/components/ui/dialog';
-import { Loader2, Wrench, CalendarCheck, Gauge, ClipboardList, CalendarRange, Route, MapPinned, GraduationCap } from 'lucide-react';
+  Loader2,
+  Wrench,
+  CalendarCheck,
+  Gauge,
+  ClipboardList,
+  CalendarRange,
+  Route,
+  MapPinned,
+  GraduationCap,
+  X,
+} from 'lucide-react';
 import { formatRemainingLabel, getRemainingVariant } from '@/lib/maintenanceUtils';
 import type { ActualizacionHorasKm, MantenimientoProgramado, MantenimientoRealizado } from '@/types/equipment';
 import { useToast } from '@/hooks/use-toast';
@@ -98,8 +101,8 @@ export default function ControlMantenimiento() {
   const [registering, setRegistering] = useState(false);
   const [reporteDesde, setReporteDesde] = useState('');
   const [reporteHasta, setReporteHasta] = useState('');
-  const [resumenActualizaciones, setResumenActualizaciones] = useState<ResumenActualizaciones | null>(null);
-  const [isResumenDialogOpen, setIsResumenDialogOpen] = useState(false);
+  const [reporteRango, setReporteRango] = useState<{ desde: string; hasta: string } | null>(null);
+  const [isResumenOpen, setIsResumenOpen] = useState(false);
   const caterpillarEquipos = useMemo(
     () =>
       data.equipos
@@ -310,6 +313,69 @@ export default function ControlMantenimiento() {
     setRutaMarcada((prev) => prev.filter((ficha) => !planRutaFiltrada.some((item) => item.ficha === ficha)));
   };
 
+  const resumenActualizaciones = useMemo(() => {
+    if (!reporteRango) return null;
+
+    const inicio = new Date(reporteRango.desde);
+    const fin = new Date(reporteRango.hasta);
+
+    if (Number.isNaN(inicio.getTime()) || Number.isNaN(fin.getTime())) {
+      return null;
+    }
+
+    const eventosEnRango = data.actualizacionesHorasKm.filter((evento) => {
+      const fechaEvento = new Date(evento.fecha);
+      if (Number.isNaN(fechaEvento.getTime())) return false;
+      return fechaEvento >= inicio && fechaEvento <= fin;
+    });
+
+    const eventosPorFicha = new Map<string, ActualizacionHorasKm[]>();
+    eventosEnRango.forEach((evento) => {
+      const listaEventos = eventosPorFicha.get(evento.ficha) ?? [];
+      listaEventos.push(evento);
+      eventosPorFicha.set(evento.ficha, listaEventos);
+    });
+
+    const actualizados: ResumenActualizaciones['actualizados'] = [];
+    const pendientes: ResumenActualizaciones['pendientes'] = [];
+
+    data.mantenimientosProgramados.forEach((mantenimiento) => {
+      const fechaUltima = new Date(mantenimiento.fechaUltimaActualizacion);
+      if (Number.isNaN(fechaUltima.getTime())) {
+        pendientes.push(mantenimiento);
+        return;
+      }
+
+      const fechaUltimaAjustada = new Date(fechaUltima);
+      fechaUltimaAjustada.setHours(0, 0, 0, 0);
+
+      if (fechaUltimaAjustada < inicio || fechaUltimaAjustada > fin) {
+        pendientes.push(mantenimiento);
+        return;
+      }
+
+      const eventosFicha = eventosPorFicha.get(mantenimiento.ficha) ?? [];
+      const eventoRelacionado =
+        eventosFicha.find((evento) => {
+          const fechaEvento = new Date(evento.fecha);
+          if (Number.isNaN(fechaEvento.getTime())) return false;
+          return fechaEvento.toDateString() === fechaUltima.toDateString();
+        }) ?? null;
+
+      actualizados.push({
+        mantenimiento,
+        evento: eventoRelacionado,
+      });
+    });
+
+    return {
+      desde: reporteRango.desde,
+      hasta: reporteRango.hasta,
+      actualizados,
+      pendientes,
+    } satisfies ResumenActualizaciones;
+  }, [data.actualizacionesHorasKm, data.mantenimientosProgramados, reporteRango]);
+
   if (loading || !selected) {
     return (
       <Layout title="Control integral de mantenimiento">
@@ -418,138 +484,93 @@ export default function ControlMantenimiento() {
     const finAjustado = new Date(fin);
     finAjustado.setHours(23, 59, 59, 999);
 
-    const eventosEnRango = data.actualizacionesHorasKm.filter((evento) => {
-      const fechaEvento = new Date(evento.fecha);
-      if (Number.isNaN(fechaEvento.getTime())) return false;
-      return fechaEvento >= inicioAjustado && fechaEvento <= finAjustado;
-    });
-
-    const eventosPorFicha = new Map<string, ActualizacionHorasKm[]>();
-    eventosEnRango.forEach((evento) => {
-      const listaEventos = eventosPorFicha.get(evento.ficha) ?? [];
-      listaEventos.push(evento);
-      eventosPorFicha.set(evento.ficha, listaEventos);
-    });
-
-    const actualizados: ResumenActualizaciones['actualizados'] = [];
-    const pendientes: ResumenActualizaciones['pendientes'] = [];
-
-    data.mantenimientosProgramados.forEach((mantenimiento) => {
-      const fechaUltima = new Date(mantenimiento.fechaUltimaActualizacion);
-      if (Number.isNaN(fechaUltima.getTime())) {
-        pendientes.push(mantenimiento);
-        return;
-      }
-
-      const fechaUltimaAjustada = new Date(fechaUltima);
-      fechaUltimaAjustada.setHours(0, 0, 0, 0);
-
-      if (fechaUltimaAjustada < inicioAjustado || fechaUltimaAjustada > finAjustado) {
-        pendientes.push(mantenimiento);
-        return;
-      }
-
-      const eventosFicha = eventosPorFicha.get(mantenimiento.ficha) ?? [];
-      const eventoRelacionado =
-        eventosFicha.find((evento) => {
-          const fechaEvento = new Date(evento.fecha);
-          if (Number.isNaN(fechaEvento.getTime())) return false;
-          return fechaEvento.toDateString() === fechaUltima.toDateString();
-        }) ?? null;
-
-      actualizados.push({
-        mantenimiento,
-        evento: eventoRelacionado,
-      });
-    });
-
-    setResumenActualizaciones({
+    setReporteRango({
       desde: inicioAjustado.toISOString(),
       hasta: finAjustado.toISOString(),
-      actualizados,
-      pendientes,
     });
+    setIsResumenOpen(true);
   };
 
   const handleLimpiarReporte = () => {
     setReporteDesde('');
     setReporteHasta('');
-    setResumenActualizaciones(null);
+    setReporteRango(null);
   };
 
   return (
-    <Layout title="Control integral de mantenimiento">
-      <Navigation />
+    <>
+      <Layout title="Control integral de mantenimiento">
+        <Navigation />
 
-      <div className="space-y-6 lg:space-y-8">
-        <div className="grid gap-6 xl:grid-cols-[1.35fr,1fr]">
-          <div className="space-y-6">
-            <Card>
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                  <Wrench className="h-5 w-5 text-primary" /> Selecciona un mantenimiento
-                </CardTitle>
-                <CardDescription>Conecta con la programación oficial para trabajar sobre datos en vivo.</CardDescription>
-              </CardHeader>
-              <CardContent className="space-y-4">
-                <div className="space-y-2">
-                  <Label htmlFor="mantenimiento">Equipo y ficha</Label>
-                  <Select value={selectedId?.toString()} onValueChange={(value) => setSelectedId(Number(value))}>
-                    <SelectTrigger id="mantenimiento">
-                      <SelectValue placeholder="Selecciona un equipo" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {data.mantenimientosProgramados.map((mantenimiento) => (
-                        <SelectItem key={mantenimiento.id} value={mantenimiento.id.toString()}>
-                          {mantenimiento.nombreEquipo} • {mantenimiento.ficha}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-                <div className="grid gap-3 rounded-md border p-4 text-sm">
-                  <div className="flex items-center justify-between">
-                    <span className="text-muted-foreground">Lectura actual</span>
-                    <Badge variant="secondary">{selected.horasKmActuales} h/km</Badge>
+        <div className="space-y-6 lg:space-y-8">
+          <div className="grid gap-6 xl:grid-cols-[1.35fr,1fr]">
+            <div className="space-y-6">
+              <Card>
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2">
+                    <Wrench className="h-5 w-5 text-primary" /> Selecciona un mantenimiento
+                  </CardTitle>
+                  <CardDescription>Conecta con la programación oficial para trabajar sobre datos en vivo.</CardDescription>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                  <div className="space-y-2">
+                    <Label htmlFor="mantenimiento">Equipo y ficha</Label>
+                    <Select value={selectedId?.toString()} onValueChange={(value) => setSelectedId(Number(value))}>
+                      <SelectTrigger id="mantenimiento">
+                        <SelectValue placeholder="Selecciona un equipo" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {data.mantenimientosProgramados.map((mantenimiento) => (
+                          <SelectItem key={mantenimiento.id} value={mantenimiento.id.toString()}>
+                            {mantenimiento.nombreEquipo} • {mantenimiento.ficha}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
                   </div>
-                  <div className="flex items-center justify-between">
-                    <span className="text-muted-foreground">Próximo mantenimiento</span>
-                    <Badge>{selected.proximoMantenimiento} h/km</Badge>
+                  <div className="grid gap-3 rounded-md border p-4 text-sm">
+                    <div className="flex items-center justify-between">
+                      <span className="text-muted-foreground">Lectura actual</span>
+                      <Badge variant="secondary">{selected.horasKmActuales} h/km</Badge>
+                    </div>
+                    <div className="flex items-center justify-between">
+                      <span className="text-muted-foreground">Próximo mantenimiento</span>
+                      <Badge>{selected.proximoMantenimiento} h/km</Badge>
+                    </div>
+                    <div className="flex items-center justify-between">
+                      <span className="text-muted-foreground">Horas/km restantes</span>
+                      <Badge variant={getRemainingVariant(selected?.horasKmRestante)}>
+                        {formatRemainingLabel(selected?.horasKmRestante, unidadMantenimiento)}
+                      </Badge>
+                    </div>
+                    <div className="flex flex-col gap-1">
+                      <span className="text-muted-foreground">Última actualización</span>
+                      <span className="font-medium">{formatDate(selected.fechaUltimaActualizacion)}</span>
+                    </div>
+                    <div className="flex flex-col gap-1">
+                      <span className="text-muted-foreground">Último mantenimiento</span>
+                      <span className="font-medium">{formatDate(selected.fechaUltimoMantenimiento)}</span>
+                    </div>
                   </div>
-                  <div className="flex items-center justify-between">
-                    <span className="text-muted-foreground">Horas/km restantes</span>
-                    <Badge variant={getRemainingVariant(selected?.horasKmRestante)}>
-                      {formatRemainingLabel(selected?.horasKmRestante, unidadMantenimiento)}
-                    </Badge>
-                  </div>
-                  <div className="flex flex-col gap-1">
-                    <span className="text-muted-foreground">Última actualización</span>
-                    <span className="font-medium">{formatDate(selected.fechaUltimaActualizacion)}</span>
-                  </div>
-                  <div className="flex flex-col gap-1">
-                    <span className="text-muted-foreground">Último mantenimiento</span>
-                    <span className="font-medium">{formatDate(selected.fechaUltimoMantenimiento)}</span>
-                  </div>
-                </div>
-                {selected && selected.horasKmRestante <= 25 && (
-                  <Alert variant={selected.horasKmRestante <= 10 ? 'destructive' : 'warning'}>
-                    <AlertTitle>Atención</AlertTitle>
-                    <AlertDescription>
-                      El equipo está próximo a cumplir el ciclo. Actualiza la lectura o programa la intervención.
-                    </AlertDescription>
-                  </Alert>
-                )}
-              </CardContent>
-            </Card>
+                  {selected && selected.horasKmRestante <= 25 && (
+                    <Alert variant={selected.horasKmRestante <= 10 ? 'destructive' : 'warning'}>
+                      <AlertTitle>Atención</AlertTitle>
+                      <AlertDescription>
+                        El equipo está próximo a cumplir el ciclo. Actualiza la lectura o programa la intervención.
+                      </AlertDescription>
+                    </Alert>
+                  )}
+                </CardContent>
+              </Card>
 
-            <Card className="overflow-hidden">
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                  <Route className="h-5 w-5 text-primary" /> Planificador preventivo Caterpillar
-                </CardTitle>
-                <CardDescription>Arma rutas MP1-MP4 con kits homologados y responsables sugeridos.</CardDescription>
-              </CardHeader>
-              <CardContent className="space-y-6">
+              <Card className="overflow-hidden">
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2">
+                    <Route className="h-5 w-5 text-primary" /> Planificador preventivo Caterpillar
+                  </CardTitle>
+                  <CardDescription>Arma rutas MP1-MP4 con kits homologados y responsables sugeridos.</CardDescription>
+                </CardHeader>
+                <CardContent className="space-y-6">
                 {caterpillarEquipos.length === 0 ? (
                   <p className="text-sm text-muted-foreground">
                     Registra equipos Caterpillar para habilitar la planificación inteligente de rutas preventivas.
@@ -768,14 +789,14 @@ export default function ControlMantenimiento() {
               </CardContent>
             </Card>
 
-            <Card className="flex flex-col overflow-hidden">
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                  <ClipboardList className="h-5 w-5 text-primary" /> Próximas intervenciones
-                </CardTitle>
-                <CardDescription>Calendario dinámico con los siguientes equipos a intervenir.</CardDescription>
-              </CardHeader>
-              <CardContent className="flex-1 px-0 pb-6 sm:px-6">
+              <Card className="flex flex-col overflow-hidden">
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2">
+                    <ClipboardList className="h-5 w-5 text-primary" /> Próximas intervenciones
+                  </CardTitle>
+                  <CardDescription>Calendario dinámico con los siguientes equipos a intervenir.</CardDescription>
+                </CardHeader>
+                <CardContent className="flex-1 px-0 pb-6 sm:px-6">
                 <div className="-mx-4 overflow-x-auto sm:mx-0">
                   <div className="min-w-full rounded-md border">
                     <Table className="w-full min-w-[640px]">
@@ -970,158 +991,198 @@ export default function ControlMantenimiento() {
               </CardContent>
             </Card>
 
-            <Dialog open={isResumenDialogOpen} onOpenChange={setIsResumenDialogOpen}>
-              <Card className="overflow-hidden">
-                <CardHeader className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-                  <div className="space-y-1">
-                    <CardTitle className="flex items-center gap-2">
-                      <CalendarRange className="h-5 w-5 text-primary" /> Resumen por rango de actualización
-                    </CardTitle>
-                    <CardDescription>
-                      Selecciona un periodo para identificar qué equipos registraron lecturas y cuáles siguen pendientes.
-                    </CardDescription>
-                  </div>
-                  <DialogTrigger asChild>
-                    <Button variant="outline" className="w-full gap-2 sm:w-auto">
-                      Abrir resumen
-                    </Button>
-                  </DialogTrigger>
-                </CardHeader>
-              </Card>
-              <DialogContent className="max-h-[90vh] max-w-5xl overflow-y-auto">
-                <DialogHeader>
-                  <DialogTitle className="flex items-center gap-2">
+            <Card className="overflow-hidden">
+              <CardHeader className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+                <div className="space-y-1">
+                  <CardTitle className="flex items-center gap-2">
                     <CalendarRange className="h-5 w-5 text-primary" /> Resumen por rango de actualización
-                  </DialogTitle>
-                  <DialogDescription>
+                  </CardTitle>
+                  <CardDescription>
                     Selecciona un periodo para identificar qué equipos registraron lecturas y cuáles siguen pendientes.
-                  </DialogDescription>
-                </DialogHeader>
-                <div className="space-y-6">
-                  <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
-                    <div className="grid gap-2">
-                      <Label htmlFor="reporteDesde">Desde</Label>
-                      <Input
-                        id="reporteDesde"
-                        type="date"
-                        value={reporteDesde}
-                        onChange={(event) => setReporteDesde(event.target.value)}
-                      />
-                    </div>
-                    <div className="grid gap-2">
-                      <Label htmlFor="reporteHasta">Hasta</Label>
-                      <Input
-                        id="reporteHasta"
-                        type="date"
-                        value={reporteHasta}
-                        onChange={(event) => setReporteHasta(event.target.value)}
-                      />
-                    </div>
-                    <div className="flex items-end gap-2">
-                      <Button type="button" onClick={handleGenerarReporte} className="flex-1">
-                        Generar reporte
-                      </Button>
-                      <Button type="button" variant="ghost" onClick={handleLimpiarReporte}>
-                        Limpiar
-                      </Button>
-                    </div>
-                  </div>
-
+                  </CardDescription>
+                </div>
+                <div className="flex w-full flex-col gap-2 sm:w-auto sm:items-end">
                   {resumenActualizaciones ? (
-                    <div className="space-y-6">
-                      <div className="flex flex-wrap gap-3">
-                        <Badge variant="secondary">
-                          Actualizados: {resumenActualizaciones.actualizados.length}
-                        </Badge>
-                        <Badge variant={resumenActualizaciones.pendientes.length > 0 ? 'destructive' : 'outline'}>
-                          Pendientes: {resumenActualizaciones.pendientes.length}
-                        </Badge>
-                        <Badge variant="outline">
-                          Período: {new Date(resumenActualizaciones.desde).toLocaleDateString()} - {new Date(resumenActualizaciones.hasta).toLocaleDateString()}
-                        </Badge>
-                      </div>
-
-                      <div className="grid gap-6 lg:grid-cols-2">
-                        <div className="space-y-3">
-                          <h4 className="text-sm font-semibold">Equipos con lectura registrada</h4>
-                          {resumenActualizaciones.actualizados.length === 0 ? (
-                            <p className="text-sm text-muted-foreground">No hay registros en el rango seleccionado.</p>
-                          ) : (
-                            <div className="-mx-4 overflow-x-auto sm:mx-0">
-                              <div className="min-w-full rounded-md border">
-                                <Table className="w-full min-w-[560px]">
-                                  <TableHeader>
-                                    <TableRow>
-                                      <TableHead>Equipo</TableHead>
-                                      <TableHead>Ficha</TableHead>
-                                      <TableHead>Última lectura</TableHead>
-                                      <TableHead>Responsable</TableHead>
-                                    </TableRow>
-                                  </TableHeader>
-                                  <TableBody>
-                                    {resumenActualizaciones.actualizados.map(({ mantenimiento, evento }) => (
-                                      <TableRow key={mantenimiento.id}>
-                                        <TableCell className="font-medium">{mantenimiento.nombreEquipo}</TableCell>
-                                        <TableCell>{mantenimiento.ficha}</TableCell>
-                                        <TableCell>
-                                          {evento
-                                            ? `${evento.horasKm} h/km • ${new Date(evento.fecha).toLocaleDateString()}`
-                                            : 'Sin detalle'}
-                                        </TableCell>
-                                        <TableCell>{evento?.usuarioResponsable ?? 'No registrado'}</TableCell>
-                                      </TableRow>
-                                    ))}
-                                  </TableBody>
-                                </Table>
-                              </div>
-                            </div>
-                          )}
-                        </div>
-
-                        <div className="space-y-3">
-                          <h4 className="text-sm font-semibold">Equipos pendientes</h4>
-                          {resumenActualizaciones.pendientes.length === 0 ? (
-                            <p className="text-sm text-muted-foreground">Todos los equipos tienen lectura en el rango.</p>
-                          ) : (
-                            <div className="-mx-4 overflow-x-auto sm:mx-0">
-                              <div className="min-w-full rounded-md border">
-                                <Table className="w-full min-w-[520px]">
-                                  <TableHeader>
-                                    <TableRow>
-                                      <TableHead>Equipo</TableHead>
-                                      <TableHead>Ficha</TableHead>
-                                      <TableHead>Última actualización</TableHead>
-                                      <TableHead>Horas/km actuales</TableHead>
-                                    </TableRow>
-                                  </TableHeader>
-                                  <TableBody>
-                                    {resumenActualizaciones.pendientes.map((mantenimiento) => (
-                                      <TableRow key={mantenimiento.id}>
-                                        <TableCell className="font-medium">{mantenimiento.nombreEquipo}</TableCell>
-                                        <TableCell>{mantenimiento.ficha}</TableCell>
-                                        <TableCell>{formatDate(mantenimiento.fechaUltimaActualizacion)}</TableCell>
-                                        <TableCell>{mantenimiento.horasKmActuales}</TableCell>
-                                      </TableRow>
-                                    ))}
-                                  </TableBody>
-                                </Table>
-                              </div>
-                            </div>
-                          )}
-                        </div>
-                      </div>
+                    <div className="flex flex-wrap items-center gap-2 text-xs text-muted-foreground sm:justify-end">
+                      <Badge variant="secondary">
+                        Actualizados: {resumenActualizaciones.actualizados.length}
+                      </Badge>
+                      <Badge variant={resumenActualizaciones.pendientes.length > 0 ? 'destructive' : 'outline'}>
+                        Pendientes: {resumenActualizaciones.pendientes.length}
+                      </Badge>
+                      <Badge variant="outline">
+                        {new Date(resumenActualizaciones.desde).toLocaleDateString()} -
+                        {' '}
+                        {new Date(resumenActualizaciones.hasta).toLocaleDateString()}
+                      </Badge>
                     </div>
                   ) : (
-                    <p className="text-sm text-muted-foreground">
-                      Completa el rango y genera el reporte para revisar el estado de las lecturas.
+                    <p className="text-xs text-muted-foreground">
+                      Genera un resumen para ver el estado de lecturas del periodo.
                     </p>
                   )}
+                  <Button variant="outline" className="gap-2" onClick={() => setIsResumenOpen(true)}>
+                    <CalendarRange className="h-4 w-4" /> Abrir resumen flotante
+                  </Button>
                 </div>
-              </DialogContent>
-            </Dialog>
+              </CardHeader>
+            </Card>
           </div>
         </div>
       </div>
-    </Layout>
+      </Layout>
+      <div className="pointer-events-none fixed bottom-6 right-6 z-40 flex flex-col items-end gap-3">
+        {isResumenOpen && (
+          <div
+            role="dialog"
+            aria-modal="false"
+            className="pointer-events-auto w-full max-w-5xl overflow-hidden rounded-2xl border border-primary/20 bg-background/95 shadow-2xl backdrop-blur supports-[backdrop-filter]:backdrop-blur"
+          >
+          <div className="flex items-start justify-between gap-4 border-b px-6 py-4">
+            <div>
+              <h3 className="flex items-center gap-2 text-base font-semibold">
+                <CalendarRange className="h-5 w-5 text-primary" /> Resumen por rango de actualización
+              </h3>
+              <p className="mt-1 text-sm text-muted-foreground">
+                Mantén abierta la ventana para actualizar lecturas o registrar mantenimientos en paralelo.
+              </p>
+            </div>
+            <Button variant="ghost" size="icon" onClick={() => setIsResumenOpen(false)}>
+              <X className="h-4 w-4" />
+              <span className="sr-only">Cerrar resumen</span>
+            </Button>
+          </div>
+          <div className="max-h-[70vh] space-y-6 overflow-y-auto px-6 py-6">
+            <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+              <div className="grid gap-2">
+                <Label htmlFor="reporteDesde">Desde</Label>
+                <Input
+                  id="reporteDesde"
+                  type="date"
+                  value={reporteDesde}
+                  onChange={(event) => setReporteDesde(event.target.value)}
+                />
+              </div>
+              <div className="grid gap-2">
+                <Label htmlFor="reporteHasta">Hasta</Label>
+                <Input
+                  id="reporteHasta"
+                  type="date"
+                  value={reporteHasta}
+                  onChange={(event) => setReporteHasta(event.target.value)}
+                />
+              </div>
+              <div className="flex items-end gap-2 md:col-span-2 lg:col-span-1">
+                <Button type="button" onClick={handleGenerarReporte} className="flex-1">
+                  Generar reporte
+                </Button>
+                <Button type="button" variant="ghost" onClick={handleLimpiarReporte}>
+                  Limpiar
+                </Button>
+              </div>
+            </div>
+
+            {resumenActualizaciones ? (
+              <div className="space-y-6">
+                <div className="flex flex-wrap gap-3">
+                  <Badge variant="secondary">
+                    Actualizados: {resumenActualizaciones.actualizados.length}
+                  </Badge>
+                  <Badge variant={resumenActualizaciones.pendientes.length > 0 ? 'destructive' : 'outline'}>
+                    Pendientes: {resumenActualizaciones.pendientes.length}
+                  </Badge>
+                  <Badge variant="outline">
+                    Período: {new Date(resumenActualizaciones.desde).toLocaleDateString()} - {new Date(resumenActualizaciones.hasta).toLocaleDateString()}
+                  </Badge>
+                </div>
+
+                <div className="grid gap-6 lg:grid-cols-2">
+                  <div className="space-y-3">
+                    <h4 className="text-sm font-semibold">Equipos con lectura registrada</h4>
+                    {resumenActualizaciones.actualizados.length === 0 ? (
+                      <p className="text-sm text-muted-foreground">No hay registros en el rango seleccionado.</p>
+                    ) : (
+                      <div className="-mx-4 overflow-x-auto sm:mx-0">
+                        <div className="min-w-full rounded-md border">
+                          <Table className="w-full min-w-[560px]">
+                            <TableHeader>
+                              <TableRow>
+                                <TableHead>Equipo</TableHead>
+                                <TableHead>Ficha</TableHead>
+                                <TableHead>Última lectura</TableHead>
+                                <TableHead>Responsable</TableHead>
+                              </TableRow>
+                            </TableHeader>
+                            <TableBody>
+                              {resumenActualizaciones.actualizados.map(({ mantenimiento, evento }) => (
+                                <TableRow key={mantenimiento.id}>
+                                  <TableCell className="font-medium">{mantenimiento.nombreEquipo}</TableCell>
+                                  <TableCell>{mantenimiento.ficha}</TableCell>
+                                  <TableCell>
+                                    {evento
+                                      ? `${evento.horasKm} h/km • ${new Date(evento.fecha).toLocaleDateString()}`
+                                      : 'Sin detalle'}
+                                  </TableCell>
+                                  <TableCell>{evento?.usuarioResponsable ?? 'No registrado'}</TableCell>
+                                </TableRow>
+                              ))}
+                            </TableBody>
+                          </Table>
+                        </div>
+                      </div>
+                    )}
+                  </div>
+
+                  <div className="space-y-3">
+                    <h4 className="text-sm font-semibold">Equipos pendientes</h4>
+                    {resumenActualizaciones.pendientes.length === 0 ? (
+                      <p className="text-sm text-muted-foreground">Todos los equipos tienen lectura en el rango.</p>
+                    ) : (
+                      <div className="-mx-4 overflow-x-auto sm:mx-0">
+                        <div className="min-w-full rounded-md border">
+                          <Table className="w-full min-w-[520px]">
+                            <TableHeader>
+                              <TableRow>
+                                <TableHead>Equipo</TableHead>
+                                <TableHead>Ficha</TableHead>
+                                <TableHead>Última actualización</TableHead>
+                                <TableHead>Horas/km actuales</TableHead>
+                              </TableRow>
+                            </TableHeader>
+                            <TableBody>
+                              {resumenActualizaciones.pendientes.map((mantenimiento) => (
+                                <TableRow key={mantenimiento.id}>
+                                  <TableCell className="font-medium">{mantenimiento.nombreEquipo}</TableCell>
+                                  <TableCell>{mantenimiento.ficha}</TableCell>
+                                  <TableCell>{formatDate(mantenimiento.fechaUltimaActualizacion)}</TableCell>
+                                  <TableCell>{mantenimiento.horasKmActuales}</TableCell>
+                                </TableRow>
+                              ))}
+                            </TableBody>
+                          </Table>
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              </div>
+            ) : (
+              <p className="text-sm text-muted-foreground">
+                Completa el rango y genera el reporte para revisar el estado de las lecturas.
+              </p>
+            )}
+          </div>
+        </div>
+        )}
+        <Button
+          className="pointer-events-auto h-14 w-14 rounded-full shadow-lg transition hover:scale-105"
+          onClick={() => setIsResumenOpen((prev) => !prev)}
+          size="icon"
+        >
+          <CalendarRange className="h-5 w-5" />
+          <span className="sr-only">Alternar resumen de actualizaciones</span>
+        </Button>
+      </div>
+    </>
   );
 }
