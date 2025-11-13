@@ -370,7 +370,6 @@ export function EquiposTable({ equipos, onEdit, onDelete, onVerDetalle }: Equipo
                   <TableHead>Marca</TableHead>
                   <TableHead>Modelo</TableHead>
                   <TableHead>N° Serie</TableHead>
-                  <TableHead>Chasis</TableHead>
                   <TableHead>Categoría</TableHead>
                   <TableHead>Placa</TableHead>
                   <TableHead>Estado</TableHead>
@@ -385,7 +384,6 @@ export function EquiposTable({ equipos, onEdit, onDelete, onVerDetalle }: Equipo
                     <TableCell>{equipo.marca}</TableCell>
                     <TableCell>{equipo.modelo}</TableCell>
                     <TableCell>{equipo.numeroSerie}</TableCell>
-                    <TableCell>{equipo.chasis}</TableCell>
                     <TableCell>{equipo.categoria}</TableCell>
                     <TableCell>{equipo.placa}</TableCell>
                     <TableCell>

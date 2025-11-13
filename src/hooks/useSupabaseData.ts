@@ -99,12 +99,10 @@ const mapEquipoToRow = (equipo: EquipoPayload) => ({
   marca: equipo.marca,
   modelo: equipo.modelo,
   numero_serie: equipo.numeroSerie,
-  chasis: equipo.chasis,
   placa: equipo.placa,
   categoria: equipo.categoria,
   activo: equipo.activo,
   motivo_inactividad: equipo.motivoInactividad ?? null,
-  capacitacion_minima: equipo.capacitacionMinima ?? null,
 });
 
 const mapInventarioToRow = (inventario: InventarioPayload) => ({
@@ -134,12 +132,10 @@ const diffEquipo = (current: Equipo, incoming: EquipoPayload) => {
   maybe('Marca', current.marca, incoming.marca);
   maybe('Modelo', current.modelo, incoming.modelo);
   maybe('Número de serie', current.numeroSerie, incoming.numeroSerie);
-  maybe('Chasis', current.chasis, incoming.chasis);
   maybe('Placa', current.placa, incoming.placa);
   maybe('Categoría', current.categoria, incoming.categoria);
   maybe('Estado', current.activo ? 'Activo' : 'Inactivo', incoming.activo ? 'Activo' : 'Inactivo');
   maybe('Motivo inactividad', current.motivoInactividad, incoming.motivoInactividad ?? null);
-  maybe('Capacitación mínima', current.capacitacionMinima, incoming.capacitacionMinima ?? null);
 
   return cambios;
 };
@@ -190,12 +186,10 @@ const toEquipoPayload = (equipo: Equipo): EquipoPayload => ({
   marca: equipo.marca,
   modelo: equipo.modelo,
   numeroSerie: equipo.numeroSerie,
-  chasis: equipo.chasis,
   placa: equipo.placa,
   categoria: equipo.categoria,
   activo: equipo.activo,
   motivoInactividad: equipo.motivoInactividad ?? null,
-  capacitacionMinima: equipo.capacitacionMinima ?? null,
 });
 
 const toInventarioPayload = (inventario: Inventario): InventarioPayload => ({
@@ -442,12 +436,10 @@ export function useSupabaseData() {
           marca: e.marca,
           modelo: e.modelo,
           numeroSerie: e.numero_serie,
-          chasis: e.chasis ?? '',
           placa: e.placa,
           categoria: e.categoria,
           activo: e.activo,
           motivoInactividad: e.motivo_inactividad ?? null,
-          capacitacionMinima: e.capacitacion_minima ?? null,
         })),
         inventarios: inventariosData.map(i => ({
           id: Number(i.id),

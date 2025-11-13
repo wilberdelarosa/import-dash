@@ -221,8 +221,8 @@ export default function ControlMantenimiento() {
     [planCatData.mantenimientosEspeciales, planIntervalo],
   );
 
-  const planCapacitacion = planEquipo?.capacitacionMinima
-    ?? planEspeciales[0]?.responsableSugerido
+  const planCapacitacion = 
+    planEspeciales[0]?.responsableSugerido
     ?? 'Define el responsable certificado para este plan';
 
   const planRuta: RutaPlanItem[] = useMemo(() => {
@@ -249,7 +249,6 @@ export default function ControlMantenimiento() {
           ? catData.intervalos.find((item) => item.codigo === intervalo)?.descripcion ?? 'Sin descripción'
           : 'Sin descripción';
         const capacitacion =
-          equipo.capacitacionMinima ||
           catData?.mantenimientosEspeciales?.find((especial) => especial.intervaloCodigo === intervalo)?.responsableSugerido ||
           'Asignar técnico certificado';
 

@@ -315,10 +315,6 @@ export function EquipoDetalleUnificado({ ficha, open, onOpenChange }: Props) {
                   <p className="font-medium">{equipo.numeroSerie}</p>
                 </div>
                 <div>
-                  <p className="text-sm text-muted-foreground">Chasis</p>
-                  <p className="font-medium">{equipo.chasis || 'No registrado'}</p>
-                </div>
-                <div>
                   <p className="text-sm text-muted-foreground">Placa</p>
                   <p className="font-medium">{equipo.placa}</p>
                 </div>
@@ -338,12 +334,6 @@ export function EquipoDetalleUnificado({ ficha, open, onOpenChange }: Props) {
                     <p className="font-medium">{equipo.motivoInactividad}</p>
                   </div>
                 )}
-                <div className="sm:col-span-2">
-                  <p className="text-sm text-muted-foreground">Capacitación mínima sugerida</p>
-                  <p className="font-medium">
-                    {equipo.capacitacionMinima || 'No definida. Registra la capacitación para planificar cuadrillas.'}
-                  </p>
-                </div>
               </CardContent>
             </Card>
 

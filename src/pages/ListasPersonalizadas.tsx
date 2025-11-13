@@ -118,12 +118,6 @@ const buildColumnOptions = (): ColumnOption[] => [
     accessor: (equipo) => equipo.numeroSerie,
   },
   {
-    key: 'chasis',
-    label: 'Chasis',
-    description: 'Serie de chasis o bastidor registrada.',
-    accessor: (equipo) => equipo.chasis,
-  },
-  {
     key: 'categoria',
     label: 'Categoría',
     description: 'Categoría operativa utilizada para agrupar el equipo.',
@@ -171,12 +165,6 @@ const buildColumnOptions = (): ColumnOption[] => [
     description: 'Actividades críticas incluidas en el kit.',
     accessor: (equipo) => equipo.tareasClave,
   },
-  {
-    key: 'capacitacionMinima',
-    label: 'Capacitación mínima',
-    description: 'Perfil mínimo sugerido para operar o intervenir el equipo.',
-    accessor: (equipo) => equipo.capacitacionMinima ?? 'No definida',
-  },
 ];
 
 export default function ListasPersonalizadas() {
@@ -205,17 +193,6 @@ export default function ListasPersonalizadas() {
       return acc;
     }, {});
   }, [columnOptions]);
-
-  const equiposPorFicha = useMemo(() => {
-    return enrichedEquipos.reduce<Map<string, EnrichedEquipo>>((acc, equipo) => {
-      acc.set(equipo.ficha, equipo);
-      return acc;
-    }, new Map());
-  }, [enrichedEquipos]);
-
-  useEffect(() => {
-    setSelectedFichas((prev) => prev.filter((ficha) => equiposPorFicha.has(ficha)));
-  }, [equiposPorFicha]);
 
   const enrichedEquipos = useMemo<EnrichedEquipo[]>(() => {
     const cache = new Map<string, ReturnType<typeof getStaticCaterpillarData> | null>();
@@ -271,6 +248,17 @@ export default function ListasPersonalizadas() {
       } satisfies EnrichedEquipo;
     });
   }, [data.equipos, data.mantenimientosProgramados]);
+
+  const equiposPorFicha = useMemo(() => {
+    return enrichedEquipos.reduce<Map<string, EnrichedEquipo>>((acc, equipo) => {
+      acc.set(equipo.ficha, equipo);
+      return acc;
+    }, new Map());
+  }, [enrichedEquipos]);
+
+  useEffect(() => {
+    setSelectedFichas((prev) => prev.filter((ficha) => equiposPorFicha.has(ficha)));
+  }, [equiposPorFicha]);
 
   const filteredEquipos = useMemo(() => {
     return enrichedEquipos.filter((equipo) => {
