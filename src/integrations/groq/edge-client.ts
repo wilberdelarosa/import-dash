@@ -36,11 +36,9 @@ export async function createGroqChatCompletion({
     throw new Error('No estás autenticado. Por favor inicia sesión.');
   }
 
-  const { data, error } = await supabase.functions.invoke('groq-chat', {
+  const { data, error } = await supabase.functions.invoke('ai-chat', {
     body: {
       messages,
-      temperature,
-      maxTokens,
     },
   });
 
