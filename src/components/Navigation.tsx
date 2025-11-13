@@ -19,15 +19,8 @@ import {
 import { Button } from '@/components/ui/button';
 import { NotificacionesCentro } from '@/components/NotificacionesCentro';
 import { LogoutButton } from '@/components/LogoutButton';
-import {
-  Sheet,
-  SheetContent,
-  SheetHeader,
-  SheetTitle,
-  SheetDescription,
-  SheetTrigger,
-  SheetClose,
-} from '@/components/ui/sheet';
+import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetDescription, SheetTrigger, SheetClose } from '@/components/ui/sheet';
+import { BrandLogo } from '@/components/BrandLogo';
 
 const navItems = [
   { path: '/', label: 'Dashboard', icon: LayoutDashboard },
@@ -54,17 +47,17 @@ export function Navigation() {
           key={path}
           to={path}
           className={cn(
-            "inline-flex w-full items-center justify-center gap-2 rounded-md px-3 py-3 text-sm font-medium transition-colors sm:w-auto sm:rounded-none sm:py-4",
+            'inline-flex w-full items-center justify-center gap-2 rounded-md px-3 py-3 text-sm font-medium transition-colors sm:w-auto sm:rounded-none sm:py-4',
             location.pathname === path
-              ? "bg-primary/10 text-primary sm:border-b-2 sm:border-primary sm:bg-transparent"
-              : "text-muted-foreground hover:bg-muted sm:border-b-2 sm:border-transparent sm:hover:border-border sm:hover:text-foreground"
+              ? 'bg-primary/10 text-primary sm:border-b-2 sm:border-primary sm:bg-transparent'
+              : 'text-muted-foreground hover:bg-muted sm:border-b-2 sm:border-transparent sm:hover:border-border sm:hover:text-foreground',
           )}
         >
           <Icon className="h-4 w-4" />
           {label}
         </Link>
       )),
-    [location.pathname]
+    [location.pathname],
   );
 
   return (
@@ -72,7 +65,7 @@ export function Navigation() {
       <Sheet>
         <div className="mx-auto w-full max-w-[1600px] px-4 py-3 sm:px-6 lg:px-8">
           <div className="flex items-center justify-between sm:hidden">
-            <span className="text-sm font-semibold text-primary">Navegación</span>
+            <BrandLogo compact showTagline={false} />
             <div className="flex gap-2">
               <NotificacionesCentro />
               <SheetTrigger asChild>
@@ -83,18 +76,28 @@ export function Navigation() {
               </SheetTrigger>
             </div>
           </div>
-          <div className="hidden sm:flex sm:flex-wrap sm:items-center sm:justify-between sm:gap-4">
-            <div className="flex flex-wrap items-center gap-2 lg:gap-4">
-              {navLinks}
+          <div className="hidden w-full flex-col gap-4 sm:flex">
+            <div className="flex w-full flex-col items-center justify-between gap-4 lg:flex-row">
+              <BrandLogo compact showTagline={false} className="shrink-0" />
+              <div className="flex w-full flex-wrap items-center justify-center gap-2 lg:flex-1 lg:justify-center lg:gap-4">
+                {navLinks}
+              </div>
+              <div className="hidden shrink-0 items-center gap-2 lg:flex">
+                <NotificacionesCentro />
+                <LogoutButton />
+              </div>
             </div>
-            <div className="flex items-center gap-2">
-              <NotificacionesCentro />
-              <LogoutButton />
+            <div className="flex w-full items-center justify-between gap-2 lg:hidden">
+              <div className="flex items-center gap-2">
+                <NotificacionesCentro />
+                <LogoutButton />
+              </div>
             </div>
           </div>
         </div>
-        <SheetContent side="left" className="sm:hidden w-[280px] bg-background text-foreground">
-          <SheetHeader className="text-left">
+        <SheetContent side="left" className="w-[300px] bg-background text-foreground sm:hidden">
+          <SheetHeader className="space-y-2 text-left">
+            <BrandLogo compact showTagline={false} />
             <SheetTitle>Ir a</SheetTitle>
             <SheetDescription>Selecciona una sección para gestionar.</SheetDescription>
           </SheetHeader>
@@ -104,17 +107,17 @@ export function Navigation() {
                 <Link
                   to={path}
                   className={cn(
-                    "rounded-md border px-3 py-2 text-sm font-medium transition-colors",
+                    'rounded-md border px-3 py-2 text-sm font-medium transition-colors',
                     location.pathname === path
-                      ? "border-primary bg-primary/10 text-primary"
-                      : "border-border/60 text-foreground hover:border-primary/50 hover:bg-muted"
+                      ? 'border-primary bg-primary/10 text-primary'
+                      : 'border-border/60 text-foreground hover:border-primary/50 hover:bg-muted',
                   )}
                 >
                   {label}
                 </Link>
               </SheetClose>
             ))}
-            <div className="mt-4 pt-4 border-t border-border">
+            <div className="mt-4 border-t border-border pt-4">
               <LogoutButton />
             </div>
           </div>

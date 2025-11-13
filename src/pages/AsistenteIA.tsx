@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from 'react';
+﻿import { useEffect, useMemo, useRef, useState } from 'react';
 import { Layout } from '@/components/Layout';
 import { Navigation } from '@/components/Navigation';
 import { useSupabaseDataContext } from '@/context/SupabaseDataContext';
@@ -62,7 +62,7 @@ const buildChatContext = (data: DatabaseData | null, config: SystemConfig | null
   if (!data) {
     return {
       summary:
-        'Aún no se han cargado datos de Supabase. Indica al usuario que espere a que la sincronización finalice antes de ofrecer recomendaciones específicas.',
+        'AÃºn no se han cargado datos de Supabase. Indica al usuario que espere a que la sincronizaciÃ³n finalice antes de ofrecer recomendaciones especÃ­ficas.',
       sections: [
         {
           title: 'Estado de la base de datos',
@@ -95,7 +95,7 @@ const buildChatContext = (data: DatabaseData | null, config: SystemConfig | null
     .slice(0, 5)
     .map(
       (mantenimiento) =>
-        `${mantenimiento.nombreEquipo} · ${mantenimiento.tipoMantenimiento} · ${mantenimiento.horasKmRestante} horas/km restantes`,
+        `${mantenimiento.nombreEquipo} Â· ${mantenimiento.tipoMantenimiento} Â· ${mantenimiento.horasKmRestante} horas/km restantes`,
     );
 
   const inventariosCriticos = data.inventarios
@@ -103,7 +103,7 @@ const buildChatContext = (data: DatabaseData | null, config: SystemConfig | null
     .slice()
     .sort((a, b) => a.cantidad - b.cantidad)
     .slice(0, 5)
-    .map((inventario) => `${inventario.nombre} (${inventario.codigoIdentificacion}) · ${inventario.cantidad} en stock`);
+    .map((inventario) => `${inventario.nombre} (${inventario.codigoIdentificacion}) Â· ${inventario.cantidad} en stock`);
 
   const actualizacionesRecientes = data.actualizacionesHorasKm
     .slice()
@@ -111,7 +111,7 @@ const buildChatContext = (data: DatabaseData | null, config: SystemConfig | null
     .slice(0, 5)
     .map((actualizacion) => {
       const equipo = actualizacion.nombreEquipo ?? actualizacion.ficha;
-      return `${equipo} · ${actualizacion.horasKm} horas/km el ${formatDate(actualizacion.fecha)}`;
+      return `${equipo} Â· ${actualizacion.horasKm} horas/km el ${formatDate(actualizacion.fecha)}`;
     });
 
   const empleadosActivos = data.empleados?.filter((empleado) => empleado.activo).length ?? 0;
@@ -120,17 +120,17 @@ const buildChatContext = (data: DatabaseData | null, config: SystemConfig | null
     `Equipos registrados: ${totalEquipos} (activos: ${equiposActivos}, inactivos: ${equiposInactivos}).`,
     `Empleados activos disponibles: ${empleadosActivos}.`,
     proximosMantenimientos.length
-      ? `Próximos mantenimientos prioritarios: ${proximosMantenimientos.join(' | ')}`
-      : 'No hay mantenimientos próximos registrados.',
+      ? `PrÃ³ximos mantenimientos prioritarios: ${proximosMantenimientos.join(' | ')}`
+      : 'No hay mantenimientos prÃ³ximos registrados.',
     inventariosCriticos.length
-      ? `Inventarios críticos (≤3 unidades): ${inventariosCriticos.join(' | ')}`
-      : 'No hay repuestos con stock crítico (≤3 unidades).',
+      ? `Inventarios crÃ­ticos (â‰¤3 unidades): ${inventariosCriticos.join(' | ')}`
+      : 'No hay repuestos con stock crÃ­tico (â‰¤3 unidades).',
     actualizacionesRecientes.length
-      ? `Últimas actualizaciones de horas/km: ${actualizacionesRecientes.join(' | ')}`
+      ? `Ãšltimas actualizaciones de horas/km: ${actualizacionesRecientes.join(' | ')}`
       : 'No se registran actualizaciones recientes de horas/km.',
     config
-      ? `Umbral preventivo: ${config.alertaPreventiva} horas/km · Umbral crítico: ${config.alertaCritica} horas/km.`
-      : 'Usa los umbrales predeterminados (50 preventivo / 15 crítico) si no se especifican valores del sistema.',
+      ? `Umbral preventivo: ${config.alertaPreventiva} horas/km Â· Umbral crÃ­tico: ${config.alertaCritica} horas/km.`
+      : 'Usa los umbrales predeterminados (50 preventivo / 15 crÃ­tico) si no se especifican valores del sistema.',
   ];
 
   const sections: ContextSection[] = [
@@ -139,7 +139,7 @@ const buildChatContext = (data: DatabaseData | null, config: SystemConfig | null
       items: [
         `Equipos activos: ${equiposActivos}`,
         `Equipos fuera de servicio: ${equiposInactivos}`,
-        `Categorías destacadas: ${categoriasDestacadas.length ? categoriasDestacadas.join(', ') : 'Sin datos destacados'}`,
+        `CategorÃ­as destacadas: ${categoriasDestacadas.length ? categoriasDestacadas.join(', ') : 'Sin datos destacados'}`,
       ],
     },
     {
@@ -149,16 +149,16 @@ const buildChatContext = (data: DatabaseData | null, config: SystemConfig | null
         : ['No hay mantenimientos activos con prioridad inmediata.'],
     },
     {
-      title: 'Inventarios críticos',
+      title: 'Inventarios crÃ­ticos',
       items: inventariosCriticos.length
         ? inventariosCriticos
-        : ['Todos los repuestos se encuentran por encima del nivel crítico (≤3).'],
+        : ['Todos los repuestos se encuentran por encima del nivel crÃ­tico (â‰¤3).'],
     },
     {
       title: 'Actividad reciente',
       items: actualizacionesRecientes.length
         ? actualizacionesRecientes
-        : ['Sin lecturas recientes de horas/kilómetros registradas.'],
+        : ['Sin lecturas recientes de horas/kilÃ³metros registradas.'],
     },
   ];
 
@@ -169,16 +169,16 @@ const buildChatContext = (data: DatabaseData | null, config: SystemConfig | null
   };
 };
 
-const buildSystemPrompt = (contextSummary: string) => `Eres ALITO BOT, el asistente virtual de soporte de la plataforma de gestión de maquinaria de ALITO GROUP SRL. Tu rol es responder SIEMPRE en español con un tono profesional y empático.
+const buildSystemPrompt = (contextSummary: string) => `Eres ALITO BOT, el asistente virtual de soporte de la plataforma de gestiÃ³n de maquinaria de ALITO GROUP SRL. Tu rol es responder SIEMPRE en espaÃ±ol con un tono profesional y empÃ¡tico.
 
 Instrucciones clave:
-- Usa únicamente la información más reciente proporcionada en el contexto si está disponible. Si necesitas un dato que no aparece, indica de forma transparente que no se encuentra en la base actual.
-- Propón pasos concretos y accionables basados en el estado de los equipos, mantenimientos e inventarios.
-- Si detectas riesgos (por ejemplo, equipos con horas/km por debajo del umbral crítico o repuestos con stock bajo) resáltalos y sugiere cómo mitigarlos.
-- Cuando el usuario pida ayuda fuera del ámbito de la flota o sin relación con los datos proporcionados, responde brevemente y redirígelo a la información disponible.
+- Usa Ãºnicamente la informaciÃ³n mÃ¡s reciente proporcionada en el contexto si estÃ¡ disponible. Si necesitas un dato que no aparece, indica de forma transparente que no se encuentra en la base actual.
+- PropÃ³n pasos concretos y accionables basados en el estado de los equipos, mantenimientos e inventarios.
+- Si detectas riesgos (por ejemplo, equipos con horas/km por debajo del umbral crÃ­tico o repuestos con stock bajo) resÃ¡ltalos y sugiere cÃ³mo mitigarlos.
+- Cuando el usuario pida ayuda fuera del Ã¡mbito de la flota o sin relaciÃ³n con los datos proporcionados, responde brevemente y redirÃ­gelo a la informaciÃ³n disponible.
 
 IMPORTANTE - Formateo de respuestas con tablas:
-- Cuando el usuario solicite listas o información tabular (por ejemplo: "lista de equipos Caterpillar", "muestra todos los rodillos con más de 1000 horas"), genera las respuestas en formato de tabla Markdown
+- Cuando el usuario solicite listas o informaciÃ³n tabular (por ejemplo: "lista de equipos Caterpillar", "muestra todos los rodillos con mÃ¡s de 1000 horas"), genera las respuestas en formato de tabla Markdown
 - Usa la siguiente sintaxis para tablas:
 
 | Nombre | Ficha | Modelo | Horas Actuales |
@@ -187,26 +187,26 @@ IMPORTANTE - Formateo de respuestas con tablas:
 | Rodillo CB10 | RD-003 | CB10 | 890 |
 
 - Las tablas deben incluir las columnas relevantes solicitadas por el usuario
-- Ordena y filtra los datos según los criterios especificados por el usuario
+- Ordena y filtra los datos segÃºn los criterios especificados por el usuario
 - Si el usuario pide filtros complejos (ej: "equipos que no son Caterpillar y ficha > AC-44"), aplica todos los filtros correctamente
 
 Ejemplos de consultas que deben generar tablas:
 - "lista de nombre, ficha, modelo de todos los equipos Caterpillar"
-- "muéstrame los equipos con mantenimiento vencido"
+- "muÃ©strame los equipos con mantenimiento vencido"
 - "dame una tabla de repuestos con stock bajo"
-- "equipos activos con más de 2000 horas"
+- "equipos activos con mÃ¡s de 2000 horas"
 
 Contexto actualizado del negocio:
 ${contextSummary}
 
-Siempre que entregues listados, utiliza tablas Markdown o viñetas claras. Refiérete a los equipos por su nombre comercial y ficha cuando sea posible.`;
+Siempre que entregues listados, utiliza tablas Markdown o viÃ±etas claras. RefiÃ©rete a los equipos por su nombre comercial y ficha cuando sea posible.`;
 
 const buildInitialAssistantMessage = (contextSections: ContextSection[]): string => {
-  const indicador = contextSections[0]?.items.slice(0, 2).join(' · ') ?? '';
+  const indicador = contextSections[0]?.items.slice(0, 2).join(' Â· ') ?? '';
   const mantenimientos = contextSections[1]?.items?.slice(0, 2).join(' | ');
 
   const introduccionBase =
-    'Hola, soy ALITO BOT. Ya estoy conectado a los datos operativos más recientes de tu flota. ¿En qué puedo ayudarte hoy?';
+    'Hola, soy ALITO BOT. Ya estoy conectado a los datos operativos mÃ¡s recientes de tu flota. Â¿En quÃ© puedo ayudarte hoy?';
 
   const detalles: string[] = [];
   if (indicador) {
@@ -228,14 +228,14 @@ export default function AsistenteIA() {
   const [contextSheetOpen, setContextSheetOpen] = useState(false);
 
   const context = useMemo(() => {
-    // Crear contexto enriquecido con datos completos para búsquedas
+    // Crear contexto enriquecido con datos completos para bÃºsquedas
     const baseContext = buildChatContext(loading ? null : data, config);
     
     if (!data) return baseContext;
 
     // Agregar todos los equipos con detalles completos al contexto
     const equiposDetallados = data.equipos.map(e => 
-      `${e.nombre} (Ficha: ${e.ficha}, Marca: ${e.marca}, Modelo: ${e.modelo}, Serie: ${e.numeroSerie}, Categoría: ${e.categoria}, Estado: ${e.activo ? 'Activo' : 'Inactivo'})`
+      `${e.nombre} (Ficha: ${e.ficha}, Marca: ${e.marca}, Modelo: ${e.modelo}, Serie: ${e.numeroSerie}, CategorÃ­a: ${e.categoria}, Estado: ${e.activo ? 'Activo' : 'Inactivo'})`
     ).join(' | ');
 
     const mantenimientosDetallados = data.mantenimientosProgramados.map(m =>
@@ -243,14 +243,14 @@ export default function AsistenteIA() {
     ).join(' | ');
 
     const inventariosDetallados = data.inventarios.map(i =>
-      `${i.nombre} (Código: ${i.codigoIdentificacion}, Stock: ${i.cantidad}, Categoría: ${i.categoriaEquipo})`
+      `${i.nombre} (CÃ³digo: ${i.codigoIdentificacion}, Stock: ${i.cantidad}, CategorÃ­a: ${i.categoriaEquipo})`
     ).join(' | ');
 
     return {
       ...baseContext,
       summary: `${baseContext.summary}
 
-DATOS COMPLETOS PARA BÚSQUEDAS:
+DATOS COMPLETOS PARA BÃšSQUEDAS:
 
 Equipos completos: ${equiposDetallados}
 
@@ -258,7 +258,7 @@ Mantenimientos: ${mantenimientosDetallados}
 
 Inventarios: ${inventariosDetallados}
 
-Usa estos datos para responder consultas específicas y generar tablas filtradas según los criterios del usuario.`
+Usa estos datos para responder consultas especÃ­ficas y generar tablas filtradas segÃºn los criterios del usuario.`
     };
   }, [data, config, loading]);
   const modelPriority = useMemo(() => getGroqModelPriority(), []);
@@ -272,6 +272,16 @@ Usa estos datos para responder consultas específicas y generar tablas filtradas
     systemPrompt,
     initialAssistantMessage,
   });
+  const totalMensajes = messages.length;
+  const userMessages = useMemo(
+    () => messages.filter((message) => message.role === 'user').length,
+    [messages],
+  );
+  const summarySnippet = useMemo(() => {
+    if (!context.summary) return '';
+    return context.summary.length > 180 ? `${context.summary.slice(0, 177)}â€¦` : context.summary;
+  }, [context.summary]);
+  const showDockedPanel = contextMode === 'docked' && !chatExpanded;
 
   const listEndRef = useRef<HTMLDivElement | null>(null);
 
@@ -290,11 +300,11 @@ Usa estos datos para responder consultas específicas y generar tablas filtradas
       <Card>
         <CardHeader>
           <CardTitle>Estado del conocimiento</CardTitle>
-          <CardDescription>Resumen generado automaticamente con la informacion mas reciente.</CardDescription>
+          <CardDescription>Resumen generado automáticamente con la información más reciente.</CardDescription>
         </CardHeader>
         <CardContent className="space-y-4 text-sm">
           <div className="flex items-center justify-between text-xs text-muted-foreground">
-            <span>Ultima actualizacion del contexto</span>
+            <span>Última actualización del contexto</span>
             <span>{context.lastUpdatedLabel}</span>
           </div>
           {context.sections.map((section) => (
@@ -311,9 +321,9 @@ Usa estos datos para responder consultas específicas y generar tablas filtradas
       </Card>
       <Card>
         <CardHeader>
-          <CardTitle>Como funciona el asistente</CardTitle>
+          <CardTitle>Cómo funciona el asistente</CardTitle>
           <CardDescription>
-            El sistema cambia automaticamente de modelo si detecta limites de tokens o saturacion en Groq.
+            El sistema cambia automáticamente de modelo si detecta límites de tokens o saturación en Groq.
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-3 text-sm text-muted-foreground">
@@ -323,7 +333,7 @@ Usa estos datos para responder consultas específicas y generar tablas filtradas
           </p>
           <ul className="list-disc space-y-1 pl-4">
             <li>Se usa el mejor modelo disponible para cada pregunta.</li>
-            <li>Si Groq informa que se alcanzo el limite de tokens o cuota, se reintenta con el siguiente modelo.</li>
+            <li>Si Groq informa que se alcanzó el límite de tokens o cuota, se reintenta con el siguiente modelo.</li>
             <li>
               Puedes personalizar el orden estableciendo <code className="rounded bg-muted px-1 py-0.5 text-xs">VITE_GROQ_MODEL_PRIORITY</code>{' '}
               en tu archivo <code className="rounded bg-muted px-1 py-0.5 text-xs">.env</code>.
@@ -349,10 +359,7 @@ Usa estos datos para responder consultas específicas y generar tablas filtradas
     <Layout title="Asistente inteligente con IA">
       <Navigation />
       {usingDemoData && (
-        <Alert
-          variant="warning"
-          className="mb-6 border-warning/50 bg-warning/10 text-warning-foreground"
-        >
+        <Alert variant="warning" className="mb-6 border-warning/50 bg-warning/10 text-warning-foreground">
           <AlertTriangle className="h-4 w-4" />
           <AlertTitle>Modo demostración con datos locales</AlertTitle>
           <AlertDescription>
@@ -364,16 +371,74 @@ Usa estos datos para responder consultas específicas y generar tablas filtradas
           </AlertDescription>
         </Alert>
       )}
+      <section className="mb-6 grid gap-4 md:grid-cols-2 xl:grid-cols-4">
+        <Card className="border-border/40 bg-gradient-to-br from-primary/10 via-background to-background shadow-inner">
+          <CardHeader className="space-y-2">
+            <CardTitle className="flex items-center gap-2 text-sm font-semibold uppercase tracking-wide text-primary">
+              <Sparkles className="h-4 w-4" />
+              Contexto sincronizado
+            </CardTitle>
+            <CardDescription className="text-base text-foreground">
+              {summarySnippet || 'Conecta los datos para habilitar el contexto corporativo.'}
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="text-xs text-muted-foreground">
+            Última actualización: {context.lastUpdatedLabel}
+          </CardContent>
+        </Card>
+        <Card>
+          <CardHeader className="space-y-1">
+            <CardTitle className="text-sm font-semibold uppercase tracking-wide text-muted-foreground">
+              Motor IA activo
+            </CardTitle>
+            <CardDescription className="text-base text-foreground">
+              {activeModel ?? 'Selección dinámica'}
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <p className="text-xs text-muted-foreground">
+              Prioridad configurada:{' '}
+              <span className="font-semibold text-foreground">{modelPriority.join(' > ')}</span>
+            </p>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardHeader className="space-y-1">
+            <CardTitle className="text-sm font-semibold uppercase tracking-wide text-muted-foreground">
+              Actividad del chat
+            </CardTitle>
+            <CardDescription className="text-base text-foreground">
+              {userMessages} consultas • {totalMensajes} mensajes
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="text-xs text-muted-foreground">
+            Conversaciones personalizadas en tiempo real con datos operativos centralizados.
+          </CardContent>
+        </Card>
+        <Card className="border-dashed">
+          <CardHeader className="space-y-1">
+            <CardTitle className="text-sm font-semibold uppercase tracking-wide text-muted-foreground">
+              Panel contextual
+            </CardTitle>
+            <CardDescription className="text-base text-foreground">
+              {showDockedPanel ? 'Acoplado al chat' : 'Disponible en modo flotante'}
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <Button variant="outline" className="w-full gap-2" onClick={handleToggleContextMode}>
+              {contextMode === 'docked' ? <SidebarOpen className="h-4 w-4" /> : <SidebarClose className="h-4 w-4" />}
+              {contextMode === 'docked' ? 'Ver como panel flotante' : 'Acoplar nuevamente'}
+            </Button>
+          </CardContent>
+        </Card>
+      </section>
       <div
-        className={cn(
-          'flex flex-col gap-6',
-          contextMode === 'docked' && !chatExpanded && 'lg:grid lg:grid-cols-[minmax(0,1fr)_360px]',
-        )}
+        className={cn('flex flex-col gap-6 xl:gap-8', showDockedPanel && 'xl:grid xl:grid-cols-[minmax(0,1fr)_380px]')}
       >
         <Card
           className={cn(
-            'flex flex-col border-border/50 bg-gradient-to-br from-background via-background/95 to-muted/30 shadow-xl backdrop-blur transition-all',
-            chatExpanded ? 'min-h-[75vh] lg:min-h-[calc(100vh-220px)]' : 'h-[70vh] min-h-[520px]',
+            'flex h-full flex-col overflow-hidden rounded-3xl border border-border/50 bg-gradient-to-br from-background via-background/95 to-muted/40 shadow-2xl backdrop-blur transition-all',
+            chatExpanded ? 'min-h-[80vh] lg:min-h-[calc(100vh-200px)]' : 'min-h-[70vh] lg:min-h-[calc(100vh-240px)]',
           )}
         >
           <CardHeader className="border-b border-border/60 bg-card/60">
@@ -384,7 +449,7 @@ Usa estos datos para responder consultas específicas y generar tablas filtradas
                   Centro de conversaciones
                 </CardTitle>
                 <CardDescription>
-                  Chatea con ALITO BOT y obtn respuestas contextualizadas usando la informacin ms reciente de la base de datos.
+                  Chatea con ALITO BOT y obtén respuestas contextualizadas usando la información más reciente de la base de datos.
                 </CardDescription>
               </div>
               <div className="hidden items-center gap-2 sm:flex">
@@ -434,7 +499,7 @@ Usa estos datos para responder consultas específicas y generar tablas filtradas
             </div>
           </CardHeader>
           <CardContent className="flex-1 overflow-hidden p-0">
-            <ScrollArea className="h-full px-6 py-6">
+            <ScrollArea className="h-full px-8 py-8">
               <div className="flex flex-col gap-6">
                 {messages.map((message) => {
                   const isAssistant = message.role === 'assistant';
@@ -470,7 +535,7 @@ Usa estos datos para responder consultas específicas y generar tablas filtradas
                       </Avatar>
                       <div
                         className={cn(
-                          'relative max-w-[80%] rounded-2xl border border-border/50 px-5 py-4 text-sm shadow-[0_18px_45px_-25px_rgba(15,23,42,0.45)] backdrop-blur transition-all duration-300',
+                          'relative w-full max-w-full rounded-3xl border border-border/50 px-6 py-5 text-base shadow-[0_18px_45px_-25px_rgba(15,23,42,0.45)] backdrop-blur transition-all duration-300 sm:max-w-[85%]',
                           isAssistant
                             ? 'bg-gradient-to-br from-primary/10 via-background/90 to-background/60 text-foreground'
                             : 'bg-gradient-to-br from-primary to-primary-foreground/90 text-primary-foreground',
@@ -483,7 +548,7 @@ Usa estos datos para responder consultas específicas y generar tablas filtradas
                               isAssistant ? 'text-primary' : 'text-primary-foreground/80',
                             )}
                           >
-                            {isAssistant ? 'Alito Bot' : 'T'}
+                            {isAssistant ? 'ALITO BOT' : 'Tú'}
                           </span>
                           <span
                             className={cn(
@@ -532,7 +597,7 @@ Usa estos datos para responder consultas específicas y generar tablas filtradas
                       </AvatarFallback>
                     </Avatar>
                     <div className="rounded-2xl border border-primary/20 bg-gradient-to-br from-primary/5 via-background/80 to-background px-5 py-3 text-sm text-muted-foreground shadow-[0_18px_45px_-25px_rgba(59,130,246,0.55)]">
-                      ALITO BOT est redactando la respuesta
+                      ALITO BOT está redactando la respuesta
                     </div>
                   </div>
                 )}
@@ -541,7 +606,7 @@ Usa estos datos para responder consultas específicas y generar tablas filtradas
             </ScrollArea>
           </CardContent>
           <Separator />
-          <CardFooter className="flex flex-col gap-3 p-4">
+          <CardFooter className="flex flex-col gap-3 p-6">
             {error && (
               <Alert variant="destructive">
                 <AlertTitle>No se pudo completar la consulta</AlertTitle>
@@ -556,7 +621,7 @@ Usa estos datos para responder consultas específicas y generar tablas filtradas
               }}
             >
               <Textarea
-                placeholder="Escribe tu pregunta o solicita un anlisis especfico"
+                placeholder="Escribe tu pregunta o solicita un análisis específico"
                 value={input}
                 onChange={(event) => setInput(event.target.value)}
                 onKeyDown={(event) => {
@@ -574,12 +639,14 @@ Usa estos datos para responder consultas específicas y generar tablas filtradas
                       Modelo activo: {activeModel}
                     </Badge>
                   ) : (
-                    <span>El asistente seleccionar automticamente el mejor modelo disponible.</span>
+                    <span>El asistente seleccionará automáticamente el mejor modelo disponible.</span>
                   )}
                   {usage && (
-                    <span>
-                      Uso de tokens  Prompt: {usage.promptTokens}  Respuesta: {usage.completionTokens}  Total: {usage.totalTokens}
-                    </span>
+                    <div className="flex flex-wrap items-center gap-2 text-xs text-muted-foreground">
+                      <span>Tokens prompt: {usage.promptTokens}</span>
+                      <span>• Tokens respuesta: {usage.completionTokens}</span>
+                      <span className="font-semibold text-foreground">Total: {usage.totalTokens}</span>
+                    </div>
                   )}
                 </div>
                 <div className="flex flex-col gap-2 sm:flex-row">
@@ -617,7 +684,7 @@ Usa estos datos para responder consultas específicas y generar tablas filtradas
             </form>
           </CardFooter>
         </Card>
-        {contextMode === 'docked' ? (
+        {showDockedPanel ? (
           <div className="space-y-4">{contextPanels}</div>
         ) : (
           <div className="flex flex-col gap-2 rounded-2xl border border-dashed border-border/60 p-4 text-center">
@@ -636,13 +703,14 @@ Usa estos datos para responder consultas específicas y generar tablas filtradas
         <SheetContent side="right" className="w-full overflow-y-auto sm:max-w-lg">
           <SheetHeader>
             <SheetTitle>Panel contextual del asistente</SheetTitle>
-            <SheetDescription>Consulta el resumen sin dejar la conversacin.</SheetDescription>
+            <SheetDescription>Consulta el resumen sin dejar la conversación.</SheetDescription>
           </SheetHeader>
           <div className="mt-4 space-y-4">{contextPanels}</div>
         </SheetContent>
       </Sheet>    </Layout>
   );
 }
+
 
 
 

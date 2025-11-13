@@ -13,6 +13,7 @@ import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Checkbox } from '@/components/ui/checkbox';
+import { Progress } from '@/components/ui/progress';
 import {
   Loader2,
   Wrench,
@@ -586,67 +587,66 @@ export default function ControlMantenimiento() {
         <Navigation />
 
         <div className="space-y-6 lg:space-y-8">
+          <section className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
+            <Card>
+              <CardHeader className="space-y-1">
+                <CardTitle className="text-sm font-semibold uppercase tracking-wide text-muted-foreground">
+                  Programados
+                </CardTitle>
+                <CardDescription className="text-3xl font-semibold text-foreground">
+                  {totalEquiposPlanificados}
+                </CardDescription>
+              </CardHeader>
+              <CardContent className="text-xs text-muted-foreground">
+                Equipos con plan preventivo activo dentro de la plataforma.
+              </CardContent>
+            </Card>
+            <Card>
+              <CardHeader className="space-y-1">
+                <CardTitle className="text-sm font-semibold uppercase tracking-wide text-muted-foreground">
+                  Cobertura semanal
+                </CardTitle>
+                <CardDescription className="text-3xl font-semibold text-foreground">
+                  {coberturaSemanal}%
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                <Progress value={coberturaSemanal} className="h-2" />
+                <p className="mt-2 text-xs text-muted-foreground">
+                  {resumenActualizaciones?.actualizados.length ?? 0} lecturas registradas en la última ventana.
+                </p>
+              </CardContent>
+            </Card>
+            <Card className={pendientesCriticos.length > 0 ? 'border-destructive/30 bg-destructive/5' : undefined}>
+              <CardHeader className="space-y-1">
+                <CardTitle className="text-sm font-semibold uppercase tracking-wide text-muted-foreground">
+                  Pendientes críticos
+                </CardTitle>
+                <CardDescription className="text-3xl font-semibold text-foreground">
+                  {pendientesCriticos.length}
+                </CardDescription>
+              </CardHeader>
+              <CardContent className="text-xs text-muted-foreground">
+                Equipos con menos de 25 horas/km disponibles para completar su ciclo.
+              </CardContent>
+            </Card>
+            <Card>
+              <CardHeader className="space-y-1">
+                <CardTitle className="text-sm font-semibold uppercase tracking-wide text-muted-foreground">
+                  Ruta inteligente
+                </CardTitle>
+                <CardDescription className="text-3xl font-semibold text-foreground">
+                  {rutaSeleccionadaCount}/{planRutaFiltrada.length || planRuta.length}
+                </CardDescription>
+              </CardHeader>
+              <CardContent className="text-xs text-muted-foreground">
+                Equipos marcados para el siguiente recorrido preventivo Caterpillar.
+              </CardContent>
+            </Card>
+          </section>
           <div className="grid gap-6 xl:grid-cols-[1.35fr,1fr]">
             <div className="space-y-6">
-              <Card>
-                <CardHeader>
-                  <CardTitle className="flex items-center gap-2">
-                    <Wrench className="h-5 w-5 text-primary" /> Selecciona un mantenimiento
-                  </CardTitle>
-                  <CardDescription>Conecta con la programación oficial para trabajar sobre datos en vivo.</CardDescription>
-                </CardHeader>
-                <CardContent className="space-y-4">
-                  <div className="space-y-2">
-                    <Label htmlFor="mantenimiento">Equipo y ficha</Label>
-                    <Select value={selectedId?.toString()} onValueChange={(value) => setSelectedId(Number(value))}>
-                      <SelectTrigger id="mantenimiento">
-                        <SelectValue placeholder="Selecciona un equipo" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {data.mantenimientosProgramados.map((mantenimiento) => (
-                          <SelectItem key={mantenimiento.id} value={mantenimiento.id.toString()}>
-                            {mantenimiento.nombreEquipo} • {mantenimiento.ficha}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  </div>
-                  <div className="grid gap-3 rounded-md border p-4 text-sm">
-                    <div className="flex items-center justify-between">
-                      <span className="text-muted-foreground">Lectura actual</span>
-                      <Badge variant="secondary">{selected.horasKmActuales} h/km</Badge>
-                    </div>
-                    <div className="flex items-center justify-between">
-                      <span className="text-muted-foreground">Próximo mantenimiento</span>
-                      <Badge>{selected.proximoMantenimiento} h/km</Badge>
-                    </div>
-                    <div className="flex items-center justify-between">
-                      <span className="text-muted-foreground">Horas/km restantes</span>
-                      <Badge variant={getRemainingVariant(selected?.horasKmRestante)}>
-                        {formatRemainingLabel(selected?.horasKmRestante, unidadMantenimiento)}
-                      </Badge>
-                    </div>
-                    <div className="flex flex-col gap-1">
-                      <span className="text-muted-foreground">Última actualización</span>
-                      <span className="font-medium">{formatDate(selected.fechaUltimaActualizacion)}</span>
-                    </div>
-                    <div className="flex flex-col gap-1">
-                      <span className="text-muted-foreground">Último mantenimiento</span>
-                      <span className="font-medium">{formatDate(selected.fechaUltimoMantenimiento)}</span>
-                    </div>
-                  </div>
-                  {selected && selected.horasKmRestante <= 25 && (
-                    <Alert variant={selected.horasKmRestante <= 10 ? 'destructive' : 'warning'}>
-                      <AlertTitle>Atención</AlertTitle>
-                      <AlertDescription>
-                        El equipo está próximo a cumplir el ciclo. Actualiza la lectura o programa la intervención.
-                      </AlertDescription>
-                    </Alert>
-                  )}
-                </CardContent>
-              </Card>
-
-              <Card className="overflow-hidden">
+            <Card className="overflow-hidden">
                 <CardHeader>
                   <CardTitle className="flex items-center gap-2">
                     <Route className="h-5 w-5 text-primary" /> Planificador preventivo Caterpillar
@@ -875,6 +875,167 @@ export default function ControlMantenimiento() {
               </CardContent>
             </Card>
 
+            <Card className="overflow-hidden border border-dashed border-border/70">
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <Gauge className="h-5 w-5 text-primary" /> Actualiza y registra
+                </CardTitle>
+                <CardDescription>Gestiona lecturas y mantenimientos desde un mismo panel.</CardDescription>
+              </CardHeader>
+              <CardContent>
+                <Tabs defaultValue="lecturas" className="space-y-6">
+                  <TabsList className="grid w-full grid-cols-2">
+                    <TabsTrigger value="lecturas">Actualizar lectura</TabsTrigger>
+                    <TabsTrigger value="mantenimientos">Registrar mantenimiento</TabsTrigger>
+                  </TabsList>
+                  <TabsContent value="lecturas" className="space-y-4">
+                    <form className="grid gap-4" onSubmit={handleActualizarHoras}>
+                      <div className="grid gap-2">
+                        <Label htmlFor="horasLectura">Nueva lectura</Label>
+                        <Input
+                          id="horasLectura"
+                          type="number"
+                          min={0}
+                          required
+                          value={horasLectura}
+                          onChange={(event) => setHorasLectura(event.target.value)}
+                        />
+                      </div>
+                      <div className="grid gap-2">
+                        <Label htmlFor="unidadLectura">Unidad de medición</Label>
+                        <Select value={unidadLectura} onValueChange={(value) => setUnidadLectura(value as 'horas' | 'km')}>
+                          <SelectTrigger id="unidadLectura" className="w-full">
+                            <SelectValue placeholder="Selecciona unidad" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="horas">Horas de uso</SelectItem>
+                            <SelectItem value="km">Kilómetros</SelectItem>
+                          </SelectContent>
+                        </Select>
+                      </div>
+                      <div className="grid gap-2 md:grid-cols-2">
+                        <div className="grid gap-2">
+                          <Label htmlFor="fechaLectura">Fecha de la lectura</Label>
+                          <Input
+                            id="fechaLectura"
+                            type="date"
+                            required
+                            value={fechaLectura}
+                            onChange={(event) => setFechaLectura(event.target.value)}
+                          />
+                        </div>
+                        <div className="grid gap-2">
+                          <Label htmlFor="responsableLectura">Responsable</Label>
+                          <Input
+                            id="responsableLectura"
+                            placeholder="Operador o técnico"
+                            value={responsableLectura}
+                            onChange={(event) => setResponsableLectura(event.target.value)}
+                          />
+                        </div>
+                      </div>
+                      <div className="grid gap-2">
+                        <Label htmlFor="notasLectura">Observaciones</Label>
+                        <Textarea
+                          id="notasLectura"
+                          placeholder="Ingresa detalles relevantes de la lectura"
+                          value={notasLectura}
+                          onChange={(event) => setNotasLectura(event.target.value)}
+                        />
+                      </div>
+                      <Button type="submit" disabled={updating}>
+                        {updating ? (
+                          <>
+                            <Loader2 className="mr-2 h-4 w-4 animate-spin" /> Guardando
+                          </>
+                        ) : (
+                          'Actualizar lectura'
+                        )}
+                      </Button>
+                    </form>
+                  </TabsContent>
+                  <TabsContent value="mantenimientos" className="space-y-4">
+                    <form className="grid gap-4" onSubmit={handleRegistrarMantenimiento}>
+                      <div className="grid gap-2 md:grid-cols-3">
+                        <div className="grid gap-2">
+                          <Label htmlFor="registroFecha">Fecha del mantenimiento</Label>
+                          <Input
+                            id="registroFecha"
+                            type="date"
+                            required
+                            value={registroFecha}
+                            onChange={(event) => setRegistroFecha(event.target.value)}
+                          />
+                        </div>
+                        <div className="grid gap-2">
+                          <Label htmlFor="registroHoras">Horas/km al momento</Label>
+                          <Input
+                            id="registroHoras"
+                            type="number"
+                            min={0}
+                            required
+                            value={registroHoras}
+                            onChange={(event) => setRegistroHoras(event.target.value)}
+                          />
+                        </div>
+                        <div className="grid gap-2">
+                          <Label htmlFor="registroUnidad">Unidad de medición</Label>
+                          <Select
+                            value={unidadRegistro}
+                            onValueChange={(value) => setUnidadRegistro(value as 'horas' | 'km')}
+                          >
+                            <SelectTrigger id="registroUnidad" className="w-full">
+                              <SelectValue placeholder="Selecciona unidad" />
+                            </SelectTrigger>
+                            <SelectContent>
+                              <SelectItem value="horas">Horas de uso</SelectItem>
+                              <SelectItem value="km">Kilómetros</SelectItem>
+                            </SelectContent>
+                          </Select>
+                        </div>
+                      </div>
+                      <div className="grid gap-2">
+                        <Label htmlFor="registroResponsable">Responsable</Label>
+                        <Input
+                          id="registroResponsable"
+                          placeholder="Técnico o cuadrilla"
+                          value={registroResponsable}
+                          onChange={(event) => setRegistroResponsable(event.target.value)}
+                        />
+                      </div>
+                      <div className="grid gap-2">
+                        <Label htmlFor="registroFiltros">Filtros o repuestos utilizados</Label>
+                        <Textarea
+                          id="registroFiltros"
+                          placeholder="Separar por coma. Ej: Filtro aceite, Filtro aire"
+                          value={registroFiltros}
+                          onChange={(event) => setRegistroFiltros(event.target.value)}
+                        />
+                      </div>
+                      <div className="grid gap-2">
+                        <Label htmlFor="registroObservaciones">Observaciones</Label>
+                        <Textarea
+                          id="registroObservaciones"
+                          placeholder="Describe el trabajo realizado"
+                          value={registroObservaciones}
+                          onChange={(event) => setRegistroObservaciones(event.target.value)}
+                        />
+                      </div>
+                      <Button type="submit" disabled={registering}>
+                        {registering ? (
+                          <>
+                            <Loader2 className="mr-2 h-4 w-4 animate-spin" /> Guardando
+                          </>
+                        ) : (
+                          'Registrar mantenimiento'
+                        )}
+                      </Button>
+                    </form>
+                  </TabsContent>
+                </Tabs>
+              </CardContent>
+            </Card>
+
               <Card className="flex flex-col overflow-hidden">
                 <CardHeader>
                   <CardTitle className="flex items-center gap-2">
@@ -918,166 +1079,7 @@ export default function ControlMantenimiento() {
           </div>
 
           <div className="space-y-6">
-            <Card>
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                  <Gauge className="h-5 w-5 text-primary" /> Actualizar horas/km actuales
-                </CardTitle>
-                <CardDescription>Sincroniza la lectura del equipo y regístrala en el historial.</CardDescription>
-              </CardHeader>
-              <CardContent>
-                <form className="grid gap-4" onSubmit={handleActualizarHoras}>
-                  <div className="grid gap-2">
-                    <Label htmlFor="horasLectura">Nueva lectura</Label>
-                    <Input
-                      id="horasLectura"
-                      type="number"
-                      min={0}
-                      required
-                      value={horasLectura}
-                      onChange={(event) => setHorasLectura(event.target.value)}
-                    />
-                  </div>
-                  <div className="grid gap-2">
-                    <Label htmlFor="unidadLectura">Unidad de medición</Label>
-                    <Select value={unidadLectura} onValueChange={(value) => setUnidadLectura(value as 'horas' | 'km')}>
-                      <SelectTrigger id="unidadLectura" className="w-full">
-                        <SelectValue placeholder="Selecciona unidad" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="horas">Horas de uso</SelectItem>
-                        <SelectItem value="km">Kilómetros</SelectItem>
-                      </SelectContent>
-                    </Select>
-                  </div>
-                  <div className="grid gap-2 md:grid-cols-2">
-                    <div className="grid gap-2">
-                      <Label htmlFor="fechaLectura">Fecha de la lectura</Label>
-                      <Input
-                        id="fechaLectura"
-                        type="date"
-                        required
-                        value={fechaLectura}
-                        onChange={(event) => setFechaLectura(event.target.value)}
-                      />
-                    </div>
-                    <div className="grid gap-2">
-                      <Label htmlFor="responsableLectura">Responsable</Label>
-                      <Input
-                        id="responsableLectura"
-                        placeholder="Operador o técnico"
-                        value={responsableLectura}
-                        onChange={(event) => setResponsableLectura(event.target.value)}
-                      />
-                    </div>
-                  </div>
-                  <div className="grid gap-2">
-                    <Label htmlFor="notasLectura">Observaciones</Label>
-                    <Textarea
-                      id="notasLectura"
-                      placeholder="Ingresa detalles relevantes de la lectura"
-                      value={notasLectura}
-                      onChange={(event) => setNotasLectura(event.target.value)}
-                    />
-                  </div>
-                  <Button type="submit" disabled={updating}>
-                    {updating ? (
-                      <>
-                        <Loader2 className="mr-2 h-4 w-4 animate-spin" /> Guardando
-                      </>
-                    ) : (
-                      'Actualizar lectura'
-                    )}
-                  </Button>
-                </form>
-              </CardContent>
-            </Card>
-
-            <Card>
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                  <CalendarCheck className="h-5 w-5 text-primary" /> Registrar mantenimiento realizado
-                </CardTitle>
-                <CardDescription>Actualiza el ciclo y deja constancia en el historial.</CardDescription>
-              </CardHeader>
-              <CardContent>
-                <form className="grid gap-4" onSubmit={handleRegistrarMantenimiento}>
-                  <div className="grid gap-2 md:grid-cols-3">
-                    <div className="grid gap-2">
-                      <Label htmlFor="registroFecha">Fecha del mantenimiento</Label>
-                      <Input
-                        id="registroFecha"
-                        type="date"
-                        required
-                        value={registroFecha}
-                        onChange={(event) => setRegistroFecha(event.target.value)}
-                      />
-                    </div>
-                    <div className="grid gap-2">
-                      <Label htmlFor="registroHoras">Horas/km al momento</Label>
-                      <Input
-                        id="registroHoras"
-                        type="number"
-                        min={0}
-                        required
-                        value={registroHoras}
-                        onChange={(event) => setRegistroHoras(event.target.value)}
-                      />
-                    </div>
-                    <div className="grid gap-2">
-                      <Label htmlFor="registroUnidad">Unidad de medición</Label>
-                      <Select value={unidadRegistro} onValueChange={(value) => setUnidadRegistro(value as 'horas' | 'km')}>
-                        <SelectTrigger id="registroUnidad" className="w-full">
-                          <SelectValue placeholder="Selecciona unidad" />
-                        </SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="horas">Horas de uso</SelectItem>
-                          <SelectItem value="km">Kilómetros</SelectItem>
-                        </SelectContent>
-                      </Select>
-                    </div>
-                  </div>
-                  <div className="grid gap-2">
-                    <Label htmlFor="registroResponsable">Responsable</Label>
-                    <Input
-                      id="registroResponsable"
-                      placeholder="Técnico o cuadrilla"
-                      value={registroResponsable}
-                      onChange={(event) => setRegistroResponsable(event.target.value)}
-                    />
-                  </div>
-                  <div className="grid gap-2">
-                    <Label htmlFor="registroFiltros">Filtros o repuestos utilizados</Label>
-                    <Textarea
-                      id="registroFiltros"
-                      placeholder="Separar por coma. Ej: Filtro aceite, Filtro aire"
-                      value={registroFiltros}
-                      onChange={(event) => setRegistroFiltros(event.target.value)}
-                    />
-                  </div>
-                  <div className="grid gap-2">
-                    <Label htmlFor="registroObservaciones">Observaciones</Label>
-                    <Textarea
-                      id="registroObservaciones"
-                      placeholder="Describe el trabajo realizado"
-                      value={registroObservaciones}
-                      onChange={(event) => setRegistroObservaciones(event.target.value)}
-                    />
-                  </div>
-                  <Button type="submit" disabled={registering}>
-                    {registering ? (
-                      <>
-                        <Loader2 className="mr-2 h-4 w-4 animate-spin" /> Guardando
-                      </>
-                    ) : (
-                      'Registrar mantenimiento'
-                    )}
-                  </Button>
-                </form>
-              </CardContent>
-            </Card>
-
-            <Card className="overflow-hidden">
+<Card className="overflow-hidden">
               <CardHeader className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
                 <div className="space-y-1">
                   <CardTitle className="flex items-center gap-2">
@@ -1504,3 +1506,5 @@ export default function ControlMantenimiento() {
     </>
   );
 }
+
+

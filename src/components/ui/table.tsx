@@ -4,7 +4,7 @@ import { cn } from "@/lib/utils";
 
 const Table = React.forwardRef<HTMLTableElement, React.HTMLAttributes<HTMLTableElement>>(
   ({ className, ...props }, ref) => (
-    <div className="relative w-full overflow-auto rounded-lg border border-border/60 bg-background/80 dark:border-border/40 dark:bg-muted/20">
+    <div className="relative w-full overflow-auto rounded-xl border border-border/60 bg-card/80 shadow-sm dark:border-slate-800 dark:bg-slate-950/40">
       <table
         ref={ref}
         className={cn("w-full caption-bottom text-sm text-foreground dark:text-slate-100", className)}
@@ -19,7 +19,10 @@ const TableHeader = React.forwardRef<HTMLTableSectionElement, React.HTMLAttribut
   ({ className, ...props }, ref) => (
     <thead
       ref={ref}
-      className={cn("[&_tr]:border-b [&_tr]:bg-muted/30 dark:[&_tr]:bg-slate-900/60", className)}
+      className={cn(
+        "[&_tr]:border-b [&_tr]:bg-muted/30 [&_tr]:backdrop-blur dark:[&_tr]:bg-slate-900/80",
+        className,
+      )}
       {...props}
     />
   ),
@@ -28,7 +31,14 @@ TableHeader.displayName = "TableHeader";
 
 const TableBody = React.forwardRef<HTMLTableSectionElement, React.HTMLAttributes<HTMLTableSectionElement>>(
   ({ className, ...props }, ref) => (
-    <tbody ref={ref} className={cn("[&_tr:last-child]:border-0", className)} {...props} />
+    <tbody
+      ref={ref}
+      className={cn(
+        "[&_tr:last-child]:border-0 [&_tr:nth-child(even)]:bg-muted/20 dark:[&_tr:nth-child(even)]:bg-slate-900/60",
+        className,
+      )}
+      {...props}
+    />
   ),
 );
 TableBody.displayName = "TableBody";
@@ -45,7 +55,7 @@ const TableRow = React.forwardRef<HTMLTableRowElement, React.HTMLAttributes<HTML
     <tr
       ref={ref}
       className={cn(
-        "border-b border-border/70 transition-colors data-[state=selected]:bg-muted/60 dark:border-border/40 dark:data-[state=selected]:bg-primary/15 hover:bg-muted/40 dark:hover:bg-muted/25",
+        "border-b border-border/70 transition-colors hover:bg-muted/40 data-[state=selected]:bg-muted/60 dark:border-slate-800 dark:hover:bg-slate-800/60 dark:data-[state=selected]:bg-primary/20",
         className,
       )}
       {...props}

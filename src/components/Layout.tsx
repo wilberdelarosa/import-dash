@@ -8,6 +8,7 @@ import { ThemeToggle } from '@/components/ThemeToggle';
 import { NotificationButton } from '@/components/NotificationButton';
 import { Badge } from '@/components/ui/badge';
 import { useSystemConfig } from '@/context/SystemConfigContext';
+import { BrandLogo } from '@/components/BrandLogo';
 
 interface LayoutProps {
   children: ReactNode;
@@ -15,7 +16,13 @@ interface LayoutProps {
 }
 
 export function Layout({ children, title }: LayoutProps) {
-  const { migrateFromLocalStorage, importJsonData, syncJsonData, data: supabaseData, clearDatabase } = useSupabaseDataContext();
+  const {
+    migrateFromLocalStorage,
+    importJsonData,
+    syncJsonData,
+    data: supabaseData,
+    clearDatabase,
+  } = useSupabaseDataContext();
   const { importData } = useLocalStorage();
   const { toast } = useToast();
   const { config } = useSystemConfig();
@@ -27,7 +34,9 @@ export function Layout({ children, title }: LayoutProps) {
   };
 
   const handleClear = async () => {
-    const confirmed = window.confirm('¿Estás seguro de que deseas eliminar todos los datos de la base de datos? Esta acción no se puede deshacer.');
+    const confirmed = window.confirm(
+      '¿Estás seguro de que deseas eliminar todos los datos de la base de datos? Esta acción no se puede deshacer.',
+    );
     if (!confirmed) {
       return;
     }
@@ -47,8 +56,8 @@ export function Layout({ children, title }: LayoutProps) {
     document.body.removeChild(link);
     URL.revokeObjectURL(url);
     toast({
-      title: "Éxito",
-      description: "Datos exportados correctamente desde la base de datos.",
+      title: 'Éxito',
+      description: 'Datos exportados correctamente desde la base de datos.',
     });
   };
 
@@ -65,17 +74,17 @@ export function Layout({ children, title }: LayoutProps) {
     const input = document.createElement('input');
     input.type = 'file';
     input.accept = '.json';
-    input.onchange = async (e) => {
-      const file = (e.target as HTMLInputElement).files?.[0];
+    input.onchange = async (event) => {
+      const file = (event.target as HTMLInputElement).files?.[0];
       if (file) {
         try {
           const imported = await importData(file);
           await importJsonData(imported);
         } catch (error) {
           toast({
-            title: "Error",
-            description: error instanceof Error ? error.message : "Error desconocido",
-            variant: "destructive",
+            title: 'Error',
+            description: error instanceof Error ? error.message : 'Error desconocido',
+            variant: 'destructive',
           });
         }
       }
@@ -96,8 +105,8 @@ export function Layout({ children, title }: LayoutProps) {
     const input = document.createElement('input');
     input.type = 'file';
     input.accept = '.json';
-    input.onchange = async (e) => {
-      const file = (e.target as HTMLInputElement).files?.[0];
+    input.onchange = async (event) => {
+      const file = (event.target as HTMLInputElement).files?.[0];
       if (file) {
         try {
           const imported = await importData(file);
@@ -126,9 +135,7 @@ export function Layout({ children, title }: LayoutProps) {
             );
           }
           if (summary.mantenimientosProgramados.inserted.length) {
-            messages.push(
-              `Mantenimientos nuevos: ${summary.mantenimientosProgramados.inserted.join(', ')}`,
-            );
+            messages.push(`Mantenimientos nuevos: ${summary.mantenimientosProgramados.inserted.join(', ')}`);
           }
           if (summary.mantenimientosProgramados.updated.length) {
             messages.push(
@@ -142,19 +149,12 @@ export function Layout({ children, title }: LayoutProps) {
             console.warn('Advertencias de importación:', summary.warnings);
           }
 
-          const description = messages.length
-            ? messages.join('\n')
-            : 'Cambios registrados en la base de datos.';
+          const description = messages.length ? messages.join('\n') : 'Cambios registrados en la base de datos.';
 
           toast({
-            title:
-              summary.totalChanges > 0
-                ? 'Sincronización completada'
-                : 'Sincronización sin cambios',
+            title: summary.totalChanges > 0 ? 'Sincronización completada' : 'Sincronización sin cambios',
             description:
-              summary.totalChanges > 0
-                ? description
-                : 'No se detectaron cambios nuevos en el archivo importado.',
+              summary.totalChanges > 0 ? description : 'No se detectaron cambios nuevos en el archivo importado.',
           });
         } catch (error) {
           toast({
@@ -172,16 +172,19 @@ export function Layout({ children, title }: LayoutProps) {
     <div className="min-h-screen bg-background text-foreground">
       <header className="border-b border-border/60 bg-card/80 shadow-sm backdrop-blur supports-[backdrop-filter]:bg-card/60 dark:border-border/40 dark:bg-card/70">
         <div className="mx-auto w-full max-w-[1600px] px-4 py-4 sm:px-6 lg:px-8">
-          <div className="flex flex-col gap-4 xl:flex-row xl:items-center xl:justify-between">
-            <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:gap-4">
-              <div>
-                <h1 className="text-2xl font-bold text-primary">ALITO GROUP SRL</h1>
-                <p className="text-muted-foreground">{title}</p>
+          <div className="flex flex-col gap-6 xl:flex-row xl:items-center xl:justify-between">
+            <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:gap-6">
+              <BrandLogo />
+              <div className="space-y-1">
+                <p className="text-xs font-semibold uppercase tracking-[0.35em] text-muted-foreground">Panel activo</p>
+                <p className="text-2xl font-bold text-foreground">{title}</p>
               </div>
-              <Badge variant="outline" className="text-xs">v1.0.0</Badge>
+              <Badge variant="outline" className="w-fit text-xs uppercase tracking-widest">
+                v1.0.0
+              </Badge>
             </div>
             <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-end">
-              <div className="flex items-center gap-2 justify-end">
+              <div className="flex items-center justify-end gap-2">
                 <NotificationButton />
                 <ThemeToggle />
               </div>
@@ -194,7 +197,7 @@ export function Layout({ children, title }: LayoutProps) {
                   disabled={importDisabled}
                   title={importDisabled ? 'Importaciones manuales deshabilitadas' : undefined}
                 >
-                  <FileUp className="w-4 h-4 mr-2" />
+                  <FileUp className="mr-2 h-4 w-4" />
                   Importar JSON
                 </Button>
                 <Button
@@ -203,7 +206,7 @@ export function Layout({ children, title }: LayoutProps) {
                   size="sm"
                   className="w-full justify-center sm:w-auto"
                 >
-                  <RefreshCw className="w-4 h-4 mr-2" />
+                  <RefreshCw className="mr-2 h-4 w-4" />
                   Migrar a DB
                 </Button>
                 <Button
@@ -212,7 +215,7 @@ export function Layout({ children, title }: LayoutProps) {
                   size="sm"
                   className="w-full justify-center sm:w-auto"
                 >
-                  <FileDown className="w-4 h-4 mr-2" />
+                  <FileDown className="mr-2 h-4 w-4" />
                   Exportar JSON
                 </Button>
                 <Button
@@ -223,7 +226,7 @@ export function Layout({ children, title }: LayoutProps) {
                   disabled={importDisabled}
                   title={importDisabled ? 'Importaciones manuales deshabilitadas' : undefined}
                 >
-                  <ListChecks className="w-4 h-4 mr-2" />
+                  <ListChecks className="mr-2 h-4 w-4" />
                   Sincronizar cambios
                 </Button>
                 <Button
@@ -232,17 +235,15 @@ export function Layout({ children, title }: LayoutProps) {
                   size="sm"
                   className="w-full justify-center sm:w-auto"
                 >
-                  <Trash2 className="w-4 h-4 mr-2" />
-                  Ü Vaciar Datos
+                  <Trash2 className="mr-2 h-4 w-4" />
+                  Vaciar datos
                 </Button>
               </div>
             </div>
           </div>
         </div>
       </header>
-      <main className="mx-auto w-full max-w-[1600px] px-4 py-6 sm:px-6 lg:px-8">
-        {children}
-      </main>
+      <main className="mx-auto w-full max-w-[1600px] px-4 py-6 sm:px-6 lg:px-8">{children}</main>
     </div>
   );
 }

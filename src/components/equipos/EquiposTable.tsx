@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react';
+﻿import { useMemo, useState } from 'react';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -123,7 +123,7 @@ export function EquiposTable({ equipos, onEdit, onDelete, onVerDetalle }: Equipo
       const categoria = resolveCategoria(term);
       if (categoria) {
         restrictCategories.add(categoria);
-        tags.push(`Solo categoría: ${categoria}`);
+        tags.push(`Solo categorÃ­a: ${categoria}`);
         mentionedCategories.add(categoria);
       } else {
         const matchedBrand = resolveMarca(term);
@@ -234,11 +234,11 @@ export function EquiposTable({ equipos, onEdit, onDelete, onVerDetalle }: Equipo
         <div className="relative">
           <Sparkles className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-primary" />
           <Input
-            placeholder={'Búsqueda inteligente (ej. "equipos que no son Caterpillar y camiones con ficha > AC-44")'}
+            placeholder={'BÃºsqueda inteligente (ej. "equipos que no son Caterpillar y camiones con ficha > AC-44")'}
             value={smartQuery}
             onChange={(e) => setSmartQuery(e.target.value)}
             className="pl-10 text-sm"
-            aria-label="Búsqueda inteligente con IA"
+            aria-label="BÃºsqueda inteligente con IA"
           />
         </div>
         {smartFilters.tags.length > 0 && (
@@ -259,10 +259,10 @@ export function EquiposTable({ equipos, onEdit, onDelete, onVerDetalle }: Equipo
         <Select value={filterCategoria} onValueChange={setFilterCategoria}>
           <SelectTrigger className="w-full sm:w-[200px]">
             <Filter className="mr-2 h-4 w-4" />
-            <SelectValue placeholder="Categoría" />
+            <SelectValue placeholder="CategorÃ­a" />
           </SelectTrigger>
           <SelectContent>
-            <SelectItem value="all">Todas las categorías</SelectItem>
+            <SelectItem value="all">Todas las categorÃ­as</SelectItem>
             {categorias.map(cat => (
               <SelectItem key={cat} value={cat}>{cat}</SelectItem>
             ))}
@@ -299,7 +299,7 @@ export function EquiposTable({ equipos, onEdit, onDelete, onVerDetalle }: Equipo
             <div className="hidden w-full sm:block">{renderFilterControls()}</div>
             <SheetContent side="bottom" className="sm:hidden">
               <SheetHeader className="text-left">
-                <SheetTitle>Filtros y búsqueda</SheetTitle>
+                <SheetTitle>Filtros y bÃºsqueda</SheetTitle>
                 <SheetDescription>Refina la tabla para encontrar el equipo que necesitas.</SheetDescription>
               </SheetHeader>
               <div className="mt-6 space-y-4">
@@ -346,31 +346,29 @@ export function EquiposTable({ equipos, onEdit, onDelete, onVerDetalle }: Equipo
         </div>
       </div>
 
-      <div className="rounded-md border bg-white p-2 sm:p-4">
+      <div className="rounded-2xl border border-border/70 bg-card/80 p-2 shadow-lg ring-1 ring-primary/5 dark:border-slate-800 dark:bg-slate-950/40 sm:p-4">
         <div
-          className={cn(
-            'overflow-x-auto',
-            tableScale > 1 ? 'pb-4' : undefined
-          )}
+          className={cn('overflow-x-auto', tableScale > 1 ? 'pb-4' : undefined)}
           style={{ touchAction: 'pan-y pinch-zoom' }}
         >
-          <div
-            className="origin-top-left"
-            style={{
-              transform: `scale(${tableScale})`,
-              transformOrigin: 'top left',
-              width: `${100 / tableScale}%`,
-            }}
-          >
-            <Table className="min-w-[1100px]">
+          <div className="rounded-xl bg-background/80 p-2 shadow-inner dark:bg-slate-900/70">
+            <div
+              className="origin-top-left"
+              style={{
+                transform: `scale(${tableScale})`,
+                transformOrigin: 'top left',
+                width: `${100 / tableScale}%`,
+              }}
+            >
+              <Table className="min-w-[1100px]">
               <TableHeader>
                 <TableRow>
                   <TableHead>Ficha</TableHead>
                   <TableHead>Nombre</TableHead>
                   <TableHead>Marca</TableHead>
                   <TableHead>Modelo</TableHead>
-                  <TableHead>N° Serie</TableHead>
-                  <TableHead>Categoría</TableHead>
+                  <TableHead>NÂ° Serie</TableHead>
+                  <TableHead>CategorÃ­a</TableHead>
                   <TableHead>Placa</TableHead>
                   <TableHead>Estado</TableHead>
                   <TableHead>Acciones</TableHead>
@@ -424,7 +422,8 @@ export function EquiposTable({ equipos, onEdit, onDelete, onVerDetalle }: Equipo
                   </TableRow>
                 ))}
               </TableBody>
-            </Table>
+              </Table>
+            </div>
           </div>
         </div>
       </div>
@@ -437,3 +436,4 @@ export function EquiposTable({ equipos, onEdit, onDelete, onVerDetalle }: Equipo
     </div>
   );
 }
+
