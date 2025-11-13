@@ -11,6 +11,7 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Checkbox } from '@/components/ui/checkbox';
 import {
   Loader2,
@@ -51,6 +52,37 @@ const resolveIntervaloCodigo = (mantenimiento: MantenimientoProgramado | null | 
   if (mantenimiento.frecuencia <= 1000) return 'PM3';
   if (mantenimiento.frecuencia <= 2000) return 'PM4';
   return '';
+};
+
+const normalizarRangoFechas = (desde: string, hasta: string) => {
+  const inicio = new Date(desde);
+  const fin = new Date(hasta);
+
+  if (Number.isNaN(inicio.getTime()) || Number.isNaN(fin.getTime()) || inicio > fin) {
+    return null;
+  }
+
+  const inicioAjustado = new Date(inicio);
+  inicioAjustado.setHours(0, 0, 0, 0);
+
+  const finAjustado = new Date(fin);
+  finAjustado.setHours(23, 59, 59, 999);
+
+  return {
+    desde: inicioAjustado.toISOString(),
+    hasta: finAjustado.toISOString(),
+  };
+};
+
+const obtenerSemanaActual = () => {
+  const fin = new Date();
+  const inicio = new Date();
+  inicio.setDate(fin.getDate() - 6);
+  const toISODate = (fecha: Date) => fecha.toISOString().split('T')[0];
+  return {
+    desde: toISODate(inicio),
+    hasta: toISODate(fin),
+  };
 };
 
 interface RutaPlanItem {
@@ -103,6 +135,7 @@ export default function ControlMantenimiento() {
   const [reporteHasta, setReporteHasta] = useState('');
   const [reporteRango, setReporteRango] = useState<{ desde: string; hasta: string } | null>(null);
   const [isResumenOpen, setIsResumenOpen] = useState(false);
+  const [reporteSegmento, setReporteSegmento] = useState<'resumen' | 'actualizados' | 'pendientes'>('resumen');
   const caterpillarEquipos = useMemo(
     () =>
       data.equipos
@@ -132,6 +165,17 @@ export default function ControlMantenimiento() {
       setPlanFicha(null);
     }
   }, [caterpillarEquipos]);
+
+  useEffect(() => {
+    if (reporteRango || reporteDesde || reporteHasta) return;
+    const semanaActual = obtenerSemanaActual();
+    setReporteDesde(semanaActual.desde);
+    setReporteHasta(semanaActual.hasta);
+    const rangoNormalizado = normalizarRangoFechas(semanaActual.desde, semanaActual.hasta);
+    if (rangoNormalizado) {
+      setReporteRango(rangoNormalizado);
+    }
+  }, [reporteDesde, reporteHasta, reporteRango]);
 
   const selected = useMemo(
     () => data.mantenimientosProgramados.find((mantenimiento) => mantenimiento.id === selectedId) ?? null,
@@ -375,6 +419,31 @@ export default function ControlMantenimiento() {
     } satisfies ResumenActualizaciones;
   }, [data.actualizacionesHorasKm, data.mantenimientosProgramados, reporteRango]);
 
+  const totalEquiposPlanificados = data.mantenimientosProgramados.length;
+  const coberturaSemanal =
+    resumenActualizaciones && totalEquiposPlanificados > 0
+      ? Math.round((resumenActualizaciones.actualizados.length / totalEquiposPlanificados) * 100)
+      : 0;
+  const pendientesCriticos = resumenActualizaciones
+    ? resumenActualizaciones.pendientes.filter((mantenimiento) => (mantenimiento.horasKmRestante ?? 0) <= 25)
+    : [];
+  const ultimasLecturasSemana = resumenActualizaciones
+    ? resumenActualizaciones.actualizados
+        .slice()
+        .sort((a, b) => {
+          const fechaA = a.evento?.fecha ? new Date(a.evento.fecha).getTime() : 0;
+          const fechaB = b.evento?.fecha ? new Date(b.evento.fecha).getTime() : 0;
+          return fechaB - fechaA;
+        })
+        .slice(0, 3)
+    : [];
+  const pendientesPrioritarios = resumenActualizaciones
+    ? resumenActualizaciones.pendientes
+        .slice()
+        .sort((a, b) => (a.horasKmRestante ?? 0) - (b.horasKmRestante ?? 0))
+        .slice(0, 3)
+    : [];
+
   if (loading || !selected) {
     return (
       <Layout title="Control integral de mantenimiento">
@@ -446,7 +515,7 @@ export default function ControlMantenimiento() {
     }
   };
 
-  const handleGenerarReporte = () => {
+  const handleGenerarReporte = (options?: { abrirResumenFlotante?: boolean }) => {
     if (!reporteDesde || !reporteHasta) {
       toast({
         title: 'Selecciona el rango',
@@ -477,23 +546,38 @@ export default function ControlMantenimiento() {
       return;
     }
 
-    const inicioAjustado = new Date(inicio);
-    inicioAjustado.setHours(0, 0, 0, 0);
+    const rangoNormalizado = normalizarRangoFechas(reporteDesde, reporteHasta);
 
-    const finAjustado = new Date(fin);
-    finAjustado.setHours(23, 59, 59, 999);
+    if (!rangoNormalizado) {
+      toast({
+        title: 'Rango inválido',
+        description: 'No fue posible normalizar las fechas. Intenta nuevamente.',
+        variant: 'destructive',
+      });
+      return;
+    }
 
-    setReporteRango({
-      desde: inicioAjustado.toISOString(),
-      hasta: finAjustado.toISOString(),
-    });
-    setIsResumenOpen(true);
+    setReporteRango(rangoNormalizado);
+    if (options?.abrirResumenFlotante ?? true) {
+      setIsResumenOpen(true);
+    }
   };
 
   const handleLimpiarReporte = () => {
     setReporteDesde('');
     setReporteHasta('');
     setReporteRango(null);
+  };
+
+  const handleSemanaActual = () => {
+    const semanaActual = obtenerSemanaActual();
+    setReporteDesde(semanaActual.desde);
+    setReporteHasta(semanaActual.hasta);
+    const rangoNormalizado = normalizarRangoFechas(semanaActual.desde, semanaActual.hasta);
+    if (rangoNormalizado) {
+      setReporteRango(rangoNormalizado);
+      setReporteSegmento('resumen');
+    }
   };
 
   return (
@@ -750,10 +834,13 @@ export default function ControlMantenimiento() {
                                 </TableRow>
                               </TableHeader>
                               <TableBody>
-                                {planRutaFiltrada.map((item) => {
+                                {planRutaFiltrada.map((item, index) => {
                                   const isMarked = rutaMarcada.includes(item.ficha);
                                   return (
-                                    <TableRow key={item.ficha} className={isMarked ? 'bg-primary/5' : undefined}>
+                                    <TableRow
+                                      key={`${item.ficha}-${item.intervalo}-${item.proximo}-${index}`}
+                                      className={isMarked ? 'bg-primary/5' : undefined}
+                                    >
                                       <TableCell>
                                         <Checkbox
                                           checked={isMarked}
@@ -991,18 +1078,18 @@ export default function ControlMantenimiento() {
             </Card>
 
             <Card className="overflow-hidden">
-              <CardHeader className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+              <CardHeader className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
                 <div className="space-y-1">
                   <CardTitle className="flex items-center gap-2">
-                    <CalendarRange className="h-5 w-5 text-primary" /> Resumen por rango de actualización
+                    <CalendarRange className="h-5 w-5 text-primary" /> Reportes inteligentes de actualizaciones
                   </CardTitle>
                   <CardDescription>
-                    Selecciona un periodo para identificar qué equipos registraron lecturas y cuáles siguen pendientes.
+                    Prioriza las lecturas registradas esta semana y ubica lo que falta por gestionar.
                   </CardDescription>
                 </div>
-                <div className="flex w-full flex-col gap-2 sm:w-auto sm:items-end">
+                <div className="flex flex-wrap items-center gap-2 text-xs text-muted-foreground lg:justify-end">
                   {resumenActualizaciones ? (
-                    <div className="flex flex-wrap items-center gap-2 text-xs text-muted-foreground sm:justify-end">
+                    <>
                       <Badge variant="secondary">
                         Actualizados: {resumenActualizaciones.actualizados.length}
                       </Badge>
@@ -1010,21 +1097,253 @@ export default function ControlMantenimiento() {
                         Pendientes: {resumenActualizaciones.pendientes.length}
                       </Badge>
                       <Badge variant="outline">
-                        {new Date(resumenActualizaciones.desde).toLocaleDateString()} -
-                        {' '}
+                        {new Date(resumenActualizaciones.desde).toLocaleDateString()} -{' '}
                         {new Date(resumenActualizaciones.hasta).toLocaleDateString()}
                       </Badge>
-                    </div>
+                    </>
                   ) : (
-                    <p className="text-xs text-muted-foreground">
-                      Genera un resumen para ver el estado de lecturas del periodo.
-                    </p>
+                    <p>Configura un rango para activar el panel semanal.</p>
                   )}
-                  <Button variant="outline" className="gap-2" onClick={() => setIsResumenOpen(true)}>
-                    <CalendarRange className="h-4 w-4" /> Abrir resumen flotante
-                  </Button>
                 </div>
               </CardHeader>
+              <CardContent className="space-y-6">
+                <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+                  <div className="grid gap-2">
+                    <Label htmlFor="reporteDesdeInline">Desde</Label>
+                    <Input
+                      id="reporteDesdeInline"
+                      type="date"
+                      value={reporteDesde}
+                      onChange={(event) => setReporteDesde(event.target.value)}
+                    />
+                  </div>
+                  <div className="grid gap-2">
+                    <Label htmlFor="reporteHastaInline">Hasta</Label>
+                    <Input
+                      id="reporteHastaInline"
+                      type="date"
+                      value={reporteHasta}
+                      onChange={(event) => setReporteHasta(event.target.value)}
+                    />
+                  </div>
+                  <div className="grid gap-2">
+                    <Label className="text-muted-foreground">Atajo rápido</Label>
+                    <Button type="button" variant="secondary" onClick={handleSemanaActual}>
+                      Semana en curso
+                    </Button>
+                  </div>
+                  <div className="grid gap-2">
+                    <Label className="text-muted-foreground">Vista extendida</Label>
+                    <Button type="button" variant="outline" className="gap-2" onClick={() => setIsResumenOpen(true)}>
+                      <CalendarRange className="h-4 w-4" /> Panel flotante
+                    </Button>
+                  </div>
+                </div>
+
+                <div className="flex flex-wrap gap-2">
+                  <Button type="button" onClick={() => handleGenerarReporte({ abrirResumenFlotante: false })}>
+                    Actualizar vista
+                  </Button>
+                  <Button type="button" variant="ghost" onClick={handleLimpiarReporte}>
+                    Limpiar
+                  </Button>
+                </div>
+
+                {resumenActualizaciones ? (
+                  <Tabs
+                    value={reporteSegmento}
+                    onValueChange={(value) => setReporteSegmento(value as 'resumen' | 'actualizados' | 'pendientes')}
+                    className="space-y-4"
+                  >
+                    <TabsList className="flex w-full flex-col gap-2 sm:flex-row">
+                      <TabsTrigger value="resumen" className="flex-1">
+                        Panorama semanal
+                      </TabsTrigger>
+                      <TabsTrigger value="actualizados" className="flex-1">
+                        Actualizaciones registradas
+                      </TabsTrigger>
+                      <TabsTrigger value="pendientes" className="flex-1">
+                        Por conseguir
+                      </TabsTrigger>
+                    </TabsList>
+
+                    <TabsContent value="resumen" className="space-y-4">
+                      <div className="grid gap-4 lg:grid-cols-3">
+                        <div className="rounded-lg border p-4">
+                          <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+                            Lecturas registradas
+                          </p>
+                          <p className="mt-2 text-3xl font-semibold">
+                            {resumenActualizaciones.actualizados.length}
+                          </p>
+                          <p className="text-sm text-muted-foreground">
+                            Cobertura del {coberturaSemanal}% sobre {totalEquiposPlanificados} mantenimientos monitoreados.
+                          </p>
+                        </div>
+                        <div className="rounded-lg border p-4">
+                          <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+                            Pendientes por conseguir
+                          </p>
+                          <p className="mt-2 text-3xl font-semibold">
+                            {resumenActualizaciones.pendientes.length}
+                          </p>
+                          <p className="text-sm text-muted-foreground">
+                            {pendientesCriticos.length} con menos de 25 horas/km disponibles.
+                          </p>
+                        </div>
+                        <div className="rounded-lg border p-4">
+                          <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+                            Rango analizado
+                          </p>
+                          <p className="mt-2 text-lg font-semibold">
+                            {new Date(resumenActualizaciones.desde).toLocaleDateString()} -{' '}
+                            {new Date(resumenActualizaciones.hasta).toLocaleDateString()}
+                          </p>
+                          <p className="text-sm text-muted-foreground">
+                            Ajusta el rango para inspeccionar otra semana o proyecto.
+                          </p>
+                        </div>
+                      </div>
+
+                      <div className="grid gap-4 lg:grid-cols-2">
+                        <div className="rounded-lg border p-4">
+                          <p className="text-sm font-semibold">Actualizaciones de la semana</p>
+                          <div className="mt-3 space-y-3">
+                            {ultimasLecturasSemana.length === 0 ? (
+                              <p className="text-sm text-muted-foreground">
+                                Aún no se registran lecturas en este rango.
+                              </p>
+                            ) : (
+                              ultimasLecturasSemana.map(({ mantenimiento, evento }) => (
+                                <div
+                                  key={mantenimiento.id}
+                                  className="flex items-center justify-between gap-3 rounded-md border p-3"
+                                >
+                                  <div>
+                                    <p className="font-medium">{mantenimiento.nombreEquipo ?? 'Equipo sin nombre'}</p>
+                                    <p className="text-xs text-muted-foreground">
+                                      {mantenimiento.ficha ? `Ficha ${mantenimiento.ficha}` : 'Sin ficha registrada'}
+                                    </p>
+                                    <p className="text-xs text-muted-foreground">
+                                      Responsable: {evento?.usuarioResponsable ?? 'No registrado'}
+                                    </p>
+                                  </div>
+                                  <div className="text-right">
+                                    <Badge variant="outline">{evento ? formatDate(evento.fecha) : 'Sin fecha'}</Badge>
+                                    <p className="mt-1 text-xs text-muted-foreground">
+                                      {evento ? `${evento.horasKm} h/km` : 'Sin lectura'}
+                                    </p>
+                                  </div>
+                                </div>
+                              ))
+                            )}
+                          </div>
+                        </div>
+                        <div className="rounded-lg border p-4">
+                          <p className="text-sm font-semibold">Pendientes prioritarios</p>
+                          <div className="mt-3 space-y-3">
+                            {pendientesPrioritarios.length === 0 ? (
+                              <p className="text-sm text-muted-foreground">Todos los equipos están al día.</p>
+                            ) : (
+                              pendientesPrioritarios.map((mantenimiento) => (
+                                <div
+                                  key={mantenimiento.id}
+                                  className="flex items-center justify-between gap-3 rounded-md border p-3"
+                                >
+                                  <div>
+                                    <p className="font-medium">{mantenimiento.nombreEquipo ?? 'Equipo sin nombre'}</p>
+                                    <p className="text-xs text-muted-foreground">
+                                      {mantenimiento.ficha ? `Ficha ${mantenimiento.ficha}` : 'Sin ficha registrada'}
+                                    </p>
+                                  </div>
+                                  <div className="text-right">
+                                    <Badge variant={getRemainingVariant(mantenimiento.horasKmRestante)}>
+                                      {formatRemainingLabel(mantenimiento.horasKmRestante)}
+                                    </Badge>
+                                    <p className="mt-1 text-xs text-muted-foreground">
+                                      Lectura actual: {mantenimiento.horasKmActuales} h/km
+                                    </p>
+                                  </div>
+                                </div>
+                              ))
+                            )}
+                          </div>
+                        </div>
+                      </div>
+                    </TabsContent>
+
+                    <TabsContent value="actualizados" className="space-y-4">
+                      {resumenActualizaciones.actualizados.length === 0 ? (
+                        <p className="text-sm text-muted-foreground">No hay registros en el rango seleccionado.</p>
+                      ) : (
+                        <div className="-mx-4 overflow-x-auto sm:mx-0">
+                          <div className="min-w-full rounded-md border">
+                            <Table className="w-full min-w-[560px]">
+                              <TableHeader>
+                                <TableRow>
+                                  <TableHead>Equipo</TableHead>
+                                  <TableHead>Ficha</TableHead>
+                                  <TableHead>Última lectura</TableHead>
+                                  <TableHead>Responsable</TableHead>
+                                </TableRow>
+                              </TableHeader>
+                              <TableBody>
+                                {resumenActualizaciones.actualizados.map(({ mantenimiento, evento }) => (
+                                  <TableRow key={mantenimiento.id}>
+                                    <TableCell className="font-medium">{mantenimiento.nombreEquipo}</TableCell>
+                                    <TableCell>{mantenimiento.ficha}</TableCell>
+                                    <TableCell>
+                                      {evento
+                                        ? `${evento.horasKm} h/km • ${new Date(evento.fecha).toLocaleDateString()}`
+                                        : 'Sin detalle'}
+                                    </TableCell>
+                                    <TableCell>{evento?.usuarioResponsable ?? 'No registrado'}</TableCell>
+                                  </TableRow>
+                                ))}
+                              </TableBody>
+                            </Table>
+                          </div>
+                        </div>
+                      )}
+                    </TabsContent>
+
+                    <TabsContent value="pendientes" className="space-y-4">
+                      {resumenActualizaciones.pendientes.length === 0 ? (
+                        <p className="text-sm text-muted-foreground">Todos los equipos tienen lectura en el rango.</p>
+                      ) : (
+                        <div className="-mx-4 overflow-x-auto sm:mx-0">
+                          <div className="min-w-full rounded-md border">
+                            <Table className="w-full min-w-[520px]">
+                              <TableHeader>
+                                <TableRow>
+                                  <TableHead>Equipo</TableHead>
+                                  <TableHead>Ficha</TableHead>
+                                  <TableHead>Última actualización</TableHead>
+                                  <TableHead>Horas/km actuales</TableHead>
+                                </TableRow>
+                              </TableHeader>
+                              <TableBody>
+                                {resumenActualizaciones.pendientes.map((mantenimiento) => (
+                                  <TableRow key={mantenimiento.id}>
+                                    <TableCell className="font-medium">{mantenimiento.nombreEquipo}</TableCell>
+                                    <TableCell>{mantenimiento.ficha}</TableCell>
+                                    <TableCell>{formatDate(mantenimiento.fechaUltimaActualizacion)}</TableCell>
+                                    <TableCell>{mantenimiento.horasKmActuales}</TableCell>
+                                  </TableRow>
+                                ))}
+                              </TableBody>
+                            </Table>
+                          </div>
+                        </div>
+                      )}
+                    </TabsContent>
+                  </Tabs>
+                ) : (
+                  <p className="text-sm text-muted-foreground">
+                    Completa el rango y actualiza la vista para habilitar el resumen semanal.
+                  </p>
+                )}
+              </CardContent>
             </Card>
           </div>
         </div>
@@ -1072,7 +1391,7 @@ export default function ControlMantenimiento() {
                 />
               </div>
               <div className="flex items-end gap-2 md:col-span-2 lg:col-span-1">
-                <Button type="button" onClick={handleGenerarReporte} className="flex-1">
+                <Button type="button" onClick={() => handleGenerarReporte()} className="flex-1">
                   Generar reporte
                 </Button>
                 <Button type="button" variant="ghost" onClick={handleLimpiarReporte}>

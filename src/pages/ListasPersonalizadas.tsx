@@ -173,17 +173,27 @@ export default function ListasPersonalizadas() {
   const [selectedColumns, setSelectedColumns] = useState<string[]>(DEFAULT_COLUMNS);
   const [selectedCategorias, setSelectedCategorias] = useState<string[]>([]);
   const [selectedMarcas, setSelectedMarcas] = useState<string[]>([]);
+  const [selectedModelos, setSelectedModelos] = useState<string[]>([]);
   const [searchTerm, setSearchTerm] = useState('');
   const [colorScheme, setColorScheme] = useState<'emerald' | 'amber' | 'sky' | 'slate'>('emerald');
   const [selectedFichas, setSelectedFichas] = useState<string[]>([]);
 
   const categoriasDisponibles = useMemo(
-    () => Array.from(new Set(data.equipos.map((equipo) => equipo.categoria))).sort(),
+    () =>
+      Array.from(new Set(data.equipos.map((equipo) => equipo.categoria).filter((categoria): categoria is string => Boolean(categoria)))).sort(),
     [data.equipos],
   );
 
   const marcasDisponibles = useMemo(
-    () => Array.from(new Set(data.equipos.map((equipo) => equipo.marca))).sort(),
+    () =>
+      Array.from(new Set(data.equipos.map((equipo) => equipo.marca).filter((marca): marca is string => Boolean(marca)))).sort(),
+    [data.equipos],
+  );
+
+  const modelosDisponibles = useMemo(
+    () =>
+      Array.from(new Set(data.equipos.map((equipo) => equipo.modelo).filter((modelo): modelo is string => Boolean(modelo))))
+        .sort(),
     [data.equipos],
   );
 
@@ -213,9 +223,10 @@ export default function ListasPersonalizadas() {
       const proximoMantenimiento = mantenimientos[0];
       const horasActuales = proximoMantenimiento?.horasKmActuales ?? null;
       const intervaloCodigo = resolveIntervaloCodigo(proximoMantenimiento);
+      const marcaLower = equipo.marca?.toLowerCase() ?? '';
       const catData =
-        equipo.marca.toLowerCase().includes('cat') || equipo.marca.toLowerCase().includes('caterpillar')
-          ? resolveCatData(equipo.modelo)
+        marcaLower.includes('cat') || marcaLower.includes('caterpillar')
+          ? resolveCatData(equipo.modelo ?? '')
           : null;
 
       const piezas = intervaloCodigo && catData?.piezasPorIntervalo?.[intervaloCodigo]
@@ -228,11 +239,12 @@ export default function ListasPersonalizadas() {
 
       const estadoMantenimiento = proximoMantenimiento
         ? formatRemainingLabel(proximoMantenimiento.horasKmRestante, 'horas/km')
-        : 'Sin programación activa';
+        : 'Sin programacion activa';
 
       return {
         ...equipo,
-        horasKmActualesLabel: horasActuales !== null && horasActuales !== undefined ? `${horasActuales} horas/km` : 'Sin dato',
+        horasKmActualesLabel:
+          horasActuales !== null && horasActuales !== undefined ? `${horasActuales} horas/km` : 'Sin dato',
         estadoMantenimiento,
         proximoIntervalo: intervaloCodigo || 'No asignado',
         proximoIntervaloDescripcion:
@@ -241,10 +253,10 @@ export default function ListasPersonalizadas() {
             : 'Sin detalle disponible para el modelo registrado.',
         kitRecomendado: piezas.length
           ? piezas
-              .map((pieza) => `${pieza.pieza.numero_parte} · ${pieza.pieza.descripcion}`)
+              .map((pieza) => `${pieza.pieza.numero_parte} �� ${pieza.pieza.descripcion}`)
               .join(' \n')
           : 'No hay kit sugerido para este modelo.',
-        tareasClave: tareas.length ? tareas.join(' \n') : 'Sin tareas recomendadas en el catálogo.',
+        tareasClave: tareas.length ? tareas.join(' \n') : 'Sin tareas recomendadas en el catalogo.',
       } satisfies EnrichedEquipo;
     });
   }, [data.equipos, data.mantenimientosProgramados]);
@@ -268,6 +280,9 @@ export default function ListasPersonalizadas() {
       if (selectedMarcas.length > 0 && !selectedMarcas.includes(equipo.marca)) {
         return false;
       }
+      if (selectedModelos.length > 0 && !selectedModelos.includes(equipo.modelo)) {
+        return false;
+      }
       if (searchTerm) {
         const normalized = searchTerm.toLowerCase();
         const values = [
@@ -289,7 +304,7 @@ export default function ListasPersonalizadas() {
       }
       return true;
     });
-  }, [enrichedEquipos, selectedCategorias, selectedMarcas, searchTerm]);
+  }, [enrichedEquipos, selectedCategorias, selectedMarcas, selectedModelos, searchTerm]);
 
   const filteredSelectedFichas = useMemo(() => {
     const fichasSet = new Set(filteredEquipos.map((equipo) => equipo.ficha));
@@ -361,6 +376,15 @@ export default function ListasPersonalizadas() {
         return prev.filter((item) => item !== marca);
       }
       return [...prev, marca];
+    });
+  };
+
+  const handleToggleModelo = (modelo: string) => {
+    setSelectedModelos((prev) => {
+      if (prev.includes(modelo)) {
+        return prev.filter((item) => item !== modelo);
+      }
+      return [...prev, modelo];
     });
   };
 
@@ -498,7 +522,7 @@ export default function ListasPersonalizadas() {
                 <Label className="flex items-center gap-2 text-sm font-semibold">
                   <Tag className="h-4 w-4" /> Marcas
                 </Label>
-                <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
+                <div className="grid max-h-[220px] grid-cols-1 gap-2 overflow-y-auto sm:grid-cols-2">
                   {marcasDisponibles.map((marca) => (
                     <label key={marca} className="flex items-center gap-2 rounded-md border border-border/60 p-2 text-sm">
                       <Checkbox
@@ -506,6 +530,23 @@ export default function ListasPersonalizadas() {
                         onCheckedChange={() => handleToggleMarca(marca)}
                       />
                       <span>{marca}</span>
+                    </label>
+                  ))}
+                </div>
+              </div>
+
+              <div className="space-y-3">
+                <Label className="flex items-center gap-2 text-sm font-semibold">
+                  <LayoutTemplate className="h-4 w-4" /> Modelos
+                </Label>
+                <div className="grid max-h-[220px] grid-cols-1 gap-2 overflow-y-auto sm:grid-cols-2">
+                  {modelosDisponibles.map((modelo) => (
+                    <label key={modelo} className="flex items-center gap-2 rounded-md border border-border/60 p-2 text-sm">
+                      <Checkbox
+                        checked={selectedModelos.includes(modelo)}
+                        onCheckedChange={() => handleToggleModelo(modelo)}
+                      />
+                      <span>{modelo}</span>
                     </label>
                   ))}
                 </div>
@@ -612,6 +653,11 @@ export default function ListasPersonalizadas() {
                 <CardDescription>
                   {filteredEquipos.length} equipo{filteredEquipos.length === 1 ? '' : 's'} coinciden con los filtros aplicados.
                 </CardDescription>
+                <div className="mt-2 flex flex-wrap gap-2 text-xs text-muted-foreground">
+                  <Badge variant="outline">Columnas: {selectedColumns.length}</Badge>
+                  <Badge variant="outline">Fichas marcadas: {selectedCount}</Badge>
+                  <Badge variant="outline">Tema: {theme.name}</Badge>
+                </div>
               </div>
               <div className="flex flex-wrap items-center gap-2">
                 <Button variant="outline" size="sm" onClick={handleExportPdf} disabled={selectedColumns.length === 0}>
@@ -698,3 +744,5 @@ export default function ListasPersonalizadas() {
     </Layout>
   );
 }
+
+

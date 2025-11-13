@@ -882,7 +882,7 @@ export default function Historial() {
               <ScrollArea className="h-[600px]">
                 <div className="rounded-md border">
                   <table className="w-full">
-                    <thead className="bg-muted/50 sticky top-0 z-10">
+                    <thead className="bg-muted/50">
                       <tr className="border-b">
                         <th className="px-4 py-3 text-left text-xs font-medium">Fecha/Hora</th>
                         <th className="px-4 py-3 text-left text-xs font-medium">Tipo</th>

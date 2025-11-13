@@ -186,55 +186,55 @@ export function Layout({ children, title }: LayoutProps) {
                 <ThemeToggle />
               </div>
               <div className="grid grid-cols-2 gap-2 sm:grid-cols-3 md:flex md:flex-wrap md:justify-end md:gap-3">
-              <Button
-                variant="outline"
-                onClick={handleImport}
-                size="sm"
-                className="w-full sm:w-auto justify-center"
-                disabled={importDisabled}
-                title={importDisabled ? 'Importaciones manuales deshabilitadas' : undefined}
-              >
-                <FileUp className="w-4 h-4 mr-2" />
-                Importar JSON
-              </Button>
-              <Button
-                variant="outline"
-                onClick={handleSmartImport}
-                size="sm"
-                className="w-full sm:w-auto justify-center"
-                disabled={importDisabled}
-                title={importDisabled ? 'Importaciones manuales deshabilitadas' : undefined}
-              >
-                <ListChecks className="w-4 h-4 mr-2" />
-                Sincronizar cambios
-              </Button>
-              <Button
-                variant="outline"
-                onClick={handleMigrate}
-                size="sm"
-                className="w-full sm:w-auto justify-center"
-              >
-                <RefreshCw className="w-4 h-4 mr-2" />
-                Migrar a DB
-              </Button>
-              <Button
-                variant="destructive"
-                onClick={handleClear}
-                size="sm"
-                className="w-full sm:w-auto justify-center"
-              >
-                <Trash2 className="w-4 h-4 mr-2" />
-                Vaciar Datos
-              </Button>
-              <Button
-                variant="outline"
-                onClick={handleExport}
-                size="sm"
-                className="w-full sm:w-auto justify-center"
-              >
-                <FileDown className="w-4 h-4 mr-2" />
-                Exportar JSON
-              </Button>
+                <Button
+                  variant="outline"
+                  onClick={handleImport}
+                  size="sm"
+                  className="w-full justify-center sm:w-auto"
+                  disabled={importDisabled}
+                  title={importDisabled ? 'Importaciones manuales deshabilitadas' : undefined}
+                >
+                  <FileUp className="w-4 h-4 mr-2" />
+                  Importar JSON
+                </Button>
+                <Button
+                  variant="outline"
+                  onClick={handleMigrate}
+                  size="sm"
+                  className="w-full justify-center sm:w-auto"
+                >
+                  <RefreshCw className="w-4 h-4 mr-2" />
+                  Migrar a DB
+                </Button>
+                <Button
+                  variant="outline"
+                  onClick={handleExport}
+                  size="sm"
+                  className="w-full justify-center sm:w-auto"
+                >
+                  <FileDown className="w-4 h-4 mr-2" />
+                  Exportar JSON
+                </Button>
+                <Button
+                  variant="outline"
+                  onClick={handleSmartImport}
+                  size="sm"
+                  className="w-full justify-center sm:w-auto"
+                  disabled={importDisabled}
+                  title={importDisabled ? 'Importaciones manuales deshabilitadas' : undefined}
+                >
+                  <ListChecks className="w-4 h-4 mr-2" />
+                  Sincronizar cambios
+                </Button>
+                <Button
+                  variant="destructive"
+                  onClick={handleClear}
+                  size="sm"
+                  className="w-full justify-center sm:w-auto"
+                >
+                  <Trash2 className="w-4 h-4 mr-2" />
+                  Ü Vaciar Datos
+                </Button>
               </div>
             </div>
           </div>
