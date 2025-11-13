@@ -12,12 +12,17 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { Separator } from '@/components/ui/separator';
+import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle } from '@/components/ui/sheet';
 import {
   CircleStop,
   Loader2,
   MessageSquare,
+  Minimize2,
+  Maximize2,
   RefreshCw,
   SendHorizontal,
+  SidebarOpen,
+  SidebarClose,
   Sparkles,
   UserRound,
   AlertTriangle,
@@ -218,6 +223,9 @@ export default function AsistenteIA() {
   const { data, loading, usingDemoData } = useSupabaseDataContext();
   const { config } = useSystemConfig();
   const [input, setInput] = useState('');
+  const [chatExpanded, setChatExpanded] = useState(false);
+  const [contextMode, setContextMode] = useState<'docked' | 'floating'>('docked');
+  const [contextSheetOpen, setContextSheetOpen] = useState(false);
 
   const context = useMemo(() => {
     // Crear contexto enriquecido con datos completos para búsquedas
@@ -277,6 +285,66 @@ Usa estos datos para responder consultas específicas y generar tablas filtradas
     setInput('');
   };
 
+  const contextPanels = (
+    <>
+      <Card>
+        <CardHeader>
+          <CardTitle>Estado del conocimiento</CardTitle>
+          <CardDescription>Resumen generado automaticamente con la informacion mas reciente.</CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-4 text-sm">
+          <div className="flex items-center justify-between text-xs text-muted-foreground">
+            <span>Ultima actualizacion del contexto</span>
+            <span>{context.lastUpdatedLabel}</span>
+          </div>
+          {context.sections.map((section) => (
+            <div key={section.title} className="space-y-2">
+              <h3 className="text-sm font-semibold text-foreground">{section.title}</h3>
+              <ul className="list-disc space-y-1 pl-4 text-muted-foreground">
+                {section.items.map((item, index) => (
+                  <li key={`${section.title}-${index}`}>{item}</li>
+                ))}
+              </ul>
+            </div>
+          ))}
+        </CardContent>
+      </Card>
+      <Card>
+        <CardHeader>
+          <CardTitle>Como funciona el asistente</CardTitle>
+          <CardDescription>
+            El sistema cambia automaticamente de modelo si detecta limites de tokens o saturacion en Groq.
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-3 text-sm text-muted-foreground">
+          <p>
+            Prioridad de modelos configurada:{' '}
+            <span className="font-medium text-foreground">{modelPriority.join(' > ')}</span>
+          </p>
+          <ul className="list-disc space-y-1 pl-4">
+            <li>Se usa el mejor modelo disponible para cada pregunta.</li>
+            <li>Si Groq informa que se alcanzo el limite de tokens o cuota, se reintenta con el siguiente modelo.</li>
+            <li>
+              Puedes personalizar el orden estableciendo <code className="rounded bg-muted px-1 py-0.5 text-xs">VITE_GROQ_MODEL_PRIORITY</code>{' '}
+              en tu archivo <code className="rounded bg-muted px-1 py-0.5 text-xs">.env</code>.
+            </li>
+          </ul>
+        </CardContent>
+      </Card>
+    </>
+  );
+
+  const handleToggleContextMode = () => {
+    setContextMode((prev) => {
+      if (prev === 'docked') {
+        setContextSheetOpen(true);
+        return 'floating';
+      }
+      setContextSheetOpen(false);
+      return 'docked';
+    });
+  };
+
   return (
     <Layout title="Asistente inteligente con IA">
       <Navigation />
@@ -296,16 +364,74 @@ Usa estos datos para responder consultas específicas y generar tablas filtradas
           </AlertDescription>
         </Alert>
       )}
-      <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_320px]">
-        <Card className="flex flex-col h-[70vh] min-h-[520px] border-border/50 bg-gradient-to-br from-background via-background/95 to-muted/30 shadow-xl backdrop-blur">
+      <div
+        className={cn(
+          'flex flex-col gap-6',
+          contextMode === 'docked' && !chatExpanded && 'lg:grid lg:grid-cols-[minmax(0,1fr)_360px]',
+        )}
+      >
+        <Card
+          className={cn(
+            'flex flex-col border-border/50 bg-gradient-to-br from-background via-background/95 to-muted/30 shadow-xl backdrop-blur transition-all',
+            chatExpanded ? 'min-h-[75vh] lg:min-h-[calc(100vh-220px)]' : 'h-[70vh] min-h-[520px]',
+          )}
+        >
           <CardHeader className="border-b border-border/60 bg-card/60">
-            <CardTitle className="flex items-center gap-2 text-lg">
-              <MessageSquare className="h-5 w-5 text-primary" />
-              Centro de conversaciones
-            </CardTitle>
-            <CardDescription>
-              Chatea con ALITO BOT y obtén respuestas contextualizadas usando la información más reciente de la base de datos.
-            </CardDescription>
+            <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
+              <div>
+                <CardTitle className="flex items-center gap-2 text-lg">
+                  <MessageSquare className="h-5 w-5 text-primary" />
+                  Centro de conversaciones
+                </CardTitle>
+                <CardDescription>
+                  Chatea con ALITO BOT y obtn respuestas contextualizadas usando la informacin ms reciente de la base de datos.
+                </CardDescription>
+              </div>
+              <div className="hidden items-center gap-2 sm:flex">
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="icon"
+                  onClick={() => setChatExpanded((prev) => !prev)}
+                  className="rounded-full border-border/70 bg-background/70 shadow-sm backdrop-blur hover:border-primary/40"
+                >
+                  {chatExpanded ? <Minimize2 className="h-4 w-4" /> : <Maximize2 className="h-4 w-4" />}
+                  <span className="sr-only">{chatExpanded ? 'Reducir chat' : 'Expandir chat'}</span>
+                </Button>
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="icon"
+                  onClick={handleToggleContextMode}
+                  className="rounded-full border-border/70 bg-background/70 shadow-sm backdrop-blur hover:border-primary/40"
+                >
+                  {contextMode === 'docked' ? <SidebarOpen className="h-4 w-4" /> : <SidebarClose className="h-4 w-4" />}
+                  <span className="sr-only">
+                    {contextMode === 'docked' ? 'Mostrar panel flotante' : 'Volver a acoplar panel'}
+                  </span>
+                </Button>
+              </div>
+            </div>
+            <div className="flex gap-2 sm:hidden">
+              <Button
+                type="button"
+                variant="outline"
+                className="flex-1 gap-2 rounded-full border-border/70 bg-background/70 shadow-sm backdrop-blur hover:border-primary/40"
+                onClick={() => setChatExpanded((prev) => !prev)}
+              >
+                {chatExpanded ? <Minimize2 className="h-4 w-4" /> : <Maximize2 className="h-4 w-4" />}
+                {chatExpanded ? 'Vista compacta' : 'Pantalla completa'}
+              </Button>
+              <Button
+                type="button"
+                variant="outline"
+                className="flex-1 gap-2 rounded-full border-border/70 bg-background/70 shadow-sm backdrop-blur hover:border-primary/40"
+                onClick={handleToggleContextMode}
+              >
+                {contextMode === 'docked' ? <SidebarOpen className="h-4 w-4" /> : <SidebarClose className="h-4 w-4" />}
+                {contextMode === 'docked' ? 'Panel flotante' : 'Acoplar panel'}
+              </Button>
+            </div>
           </CardHeader>
           <CardContent className="flex-1 overflow-hidden p-0">
             <ScrollArea className="h-full px-6 py-6">
@@ -357,7 +483,7 @@ Usa estos datos para responder consultas específicas y generar tablas filtradas
                               isAssistant ? 'text-primary' : 'text-primary-foreground/80',
                             )}
                           >
-                            {isAssistant ? 'Alito Bot' : 'Tú'}
+                            {isAssistant ? 'Alito Bot' : 'T'}
                           </span>
                           <span
                             className={cn(
@@ -406,7 +532,7 @@ Usa estos datos para responder consultas específicas y generar tablas filtradas
                       </AvatarFallback>
                     </Avatar>
                     <div className="rounded-2xl border border-primary/20 bg-gradient-to-br from-primary/5 via-background/80 to-background px-5 py-3 text-sm text-muted-foreground shadow-[0_18px_45px_-25px_rgba(59,130,246,0.55)]">
-                      ALITO BOT está redactando la respuesta…
+                      ALITO BOT est redactando la respuesta
                     </div>
                   </div>
                 )}
@@ -430,7 +556,7 @@ Usa estos datos para responder consultas específicas y generar tablas filtradas
               }}
             >
               <Textarea
-                placeholder="Escribe tu pregunta o solicita un análisis específico…"
+                placeholder="Escribe tu pregunta o solicita un anlisis especfico"
                 value={input}
                 onChange={(event) => setInput(event.target.value)}
                 onKeyDown={(event) => {
@@ -448,12 +574,11 @@ Usa estos datos para responder consultas específicas y generar tablas filtradas
                       Modelo activo: {activeModel}
                     </Badge>
                   ) : (
-                    <span>El asistente seleccionará automáticamente el mejor modelo disponible.</span>
+                    <span>El asistente seleccionar automticamente el mejor modelo disponible.</span>
                   )}
                   {usage && (
                     <span>
-                      Uso de tokens · Prompt: {usage.promptTokens} · Respuesta: {usage.completionTokens} · Total:{' '}
-                      {usage.totalTokens}
+                      Uso de tokens  Prompt: {usage.promptTokens}  Respuesta: {usage.completionTokens}  Total: {usage.totalTokens}
                     </span>
                   )}
                 </div>
@@ -474,7 +599,7 @@ Usa estos datos para responder consultas específicas y generar tablas filtradas
                     className="gap-2 rounded-full px-6 text-sm shadow-lg transition-all hover:shadow-xl"
                   >
                     {isLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : <SendHorizontal className="h-4 w-4" />}
-                    {isLoading ? 'Enviando…' : 'Enviar'}
+                    {isLoading ? 'Enviando' : 'Enviar'}
                   </Button>
                   {isLoading && (
                     <Button
@@ -492,55 +617,32 @@ Usa estos datos para responder consultas específicas y generar tablas filtradas
             </form>
           </CardFooter>
         </Card>
-        <div className="space-y-4">
-          <Card>
-            <CardHeader>
-              <CardTitle>Estado del conocimiento</CardTitle>
-              <CardDescription>Resumen generado automáticamente con la información más reciente.</CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-4 text-sm">
-              <div className="flex items-center justify-between text-xs text-muted-foreground">
-                <span>Última actualización del contexto</span>
-                <span>{context.lastUpdatedLabel}</span>
-              </div>
-              {context.sections.map((section) => (
-                <div key={section.title} className="space-y-2">
-                  <h3 className="text-sm font-semibold text-foreground">{section.title}</h3>
-                  <ul className="list-disc space-y-1 pl-4 text-muted-foreground">
-                    {section.items.map((item, index) => (
-                      <li key={`${section.title}-${index}`}>{item}</li>
-                    ))}
-                  </ul>
-                </div>
-              ))}
-            </CardContent>
-          </Card>
-          <Card>
-            <CardHeader>
-              <CardTitle>Cómo funciona el asistente</CardTitle>
-              <CardDescription>
-                El sistema cambia automáticamente de modelo si detecta límites de tokens o saturación en Groq.
-              </CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-3 text-sm text-muted-foreground">
-              <p>
-                Prioridad de modelos configurada:{' '}
-                <span className="font-medium text-foreground">
-                  {modelPriority.join(' → ')}
-                </span>
-              </p>
-              <ul className="list-disc space-y-1 pl-4">
-                <li>Se usa el mejor modelo disponible para cada pregunta.</li>
-                <li>Si Groq informa que se alcanzó el límite de tokens o cuota, se reintenta con el siguiente modelo.</li>
-                <li>
-                  Puedes personalizar el orden estableciendo <code className="rounded bg-muted px-1 py-0.5 text-xs">VITE_GROQ_MODEL_PRIORITY</code>{' '}
-                  en tu archivo <code className="rounded bg-muted px-1 py-0.5 text-xs">.env</code>.
-                </li>
-              </ul>
-            </CardContent>
-          </Card>
-        </div>
+        {contextMode === 'docked' ? (
+          <div className="space-y-4">{contextPanels}</div>
+        ) : (
+          <div className="flex flex-col gap-2 rounded-2xl border border-dashed border-border/60 p-4 text-center">
+            <p className="text-sm font-medium text-foreground">Panel contextual desacoplado</p>
+            <p className="text-xs text-muted-foreground">
+              Abre el panel lateral para consultar el resumen mientras mantienes el chat a pantalla completa.
+            </p>
+            <Button variant="outline" className="gap-2 self-center" onClick={() => setContextSheetOpen(true)}>
+              <SidebarOpen className="h-4 w-4" />
+              Abrir panel contextual
+            </Button>
+          </div>
+        )}
       </div>
-    </Layout>
+      <Sheet open={contextMode === 'floating' && contextSheetOpen} onOpenChange={setContextSheetOpen}>
+        <SheetContent side="right" className="w-full overflow-y-auto sm:max-w-lg">
+          <SheetHeader>
+            <SheetTitle>Panel contextual del asistente</SheetTitle>
+            <SheetDescription>Consulta el resumen sin dejar la conversacin.</SheetDescription>
+          </SheetHeader>
+          <div className="mt-4 space-y-4">{contextPanels}</div>
+        </SheetContent>
+      </Sheet>    </Layout>
   );
 }
+
+
+

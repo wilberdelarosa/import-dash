@@ -1372,20 +1372,25 @@ export default function Mantenimiento() {
             Mantenimiento de datos
           </CardTitle>
 
-          <CardDescription>
-            Elimina todos los registros de equipos, inventarios y mantenimientos almacenados en la base de datos.
+          <CardDescription className="space-y-2 text-sm leading-relaxed">
+            <p className="flex items-center gap-2 font-semibold text-destructive">
+              <span className="text-lg leading-none">Ü</span> Mantenimiento de datos
+            </p>
+            <p>Elimina todos los registros de equipos, inventarios y mantenimientos almacenados en la base de datos.</p>
+            <p className="flex items-center gap-2 font-semibold text-destructive">
+              <span className="text-lg leading-none">Ü</span> Vaciar base de datos
+            </p>
+            <p>Esta acción es irreversible. Asegúrate de haber realizado una copia de seguridad antes de continuar.</p>
           </CardDescription>
         </CardHeader>
         <CardContent className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-
           <p className="text-sm text-muted-foreground">
-            Esta acción es irreversible. Asegúrate de haber realizado una copia de seguridad antes de continuar.
+            Ejecuta esta limpieza solo cuando el equipo de datos lo autorice.
           </p>
           <Button
             variant="destructive"
             onClick={handleClearDatabase}
             disabled={clearing}
-
             className="w-full sm:w-auto"
           >
             <Trash2 className="w-4 h-4 mr-2" />

@@ -24,6 +24,12 @@ const formatDate = (value: string | null | undefined) => {
   return date.toLocaleDateString();
 };
 
+const formatEquipoReferencia = (nombre?: string | null, ficha?: string | null) => {
+  if (nombre && ficha) return `${nombre} (Ficha ${ficha})`;
+  if (ficha) return `Ficha ${ficha}`;
+  return nombre ?? 'Equipo sin ficha';
+};
+
 export default function Dashboard() {
   const { data, loading } = useSupabaseDataContext();
   const navigate = useNavigate();
@@ -58,6 +64,16 @@ export default function Dashboard() {
   const proximoMantenimiento = [...data.mantenimientosProgramados]
     .filter((m) => m.activo)
     .sort((a, b) => a.horasKmRestante - b.horasKmRestante)[0];
+  const PROXIMO_MAX_UMBRAL = 100;
+  const mantenimientosVencidosList = data.mantenimientosProgramados
+    .filter((mantenimiento) => mantenimiento.horasKmRestante <= 0)
+    .sort((a, b) => a.horasKmRestante - b.horasKmRestante);
+  const mantenimientosProximosList = data.mantenimientosProgramados
+    .filter(
+      (mantenimiento) =>
+        mantenimiento.horasKmRestante > 0 && mantenimiento.horasKmRestante <= PROXIMO_MAX_UMBRAL,
+    )
+    .sort((a, b) => a.horasKmRestante - b.horasKmRestante);
   const ultimasActualizaciones = [...data.actualizacionesHorasKm]
     .sort((a, b) => new Date(b.fecha).getTime() - new Date(a.fecha).getTime())
     .slice(0, 5);
@@ -140,7 +156,7 @@ export default function Dashboard() {
           <AlertTitle>Próximo mantenimiento crítico</AlertTitle>
           <AlertDescription className="flex items-center justify-between">
             <span>
-              {proximoMantenimiento.nombreEquipo} requiere intervención en {proximoMantenimiento.horasKmRestante} horas/km restantes.
+              {formatEquipoReferencia(proximoMantenimiento.nombreEquipo, proximoMantenimiento.ficha)} requiere intervención en {proximoMantenimiento.horasKmRestante} horas/km restantes.
             </span>
             <Button 
               variant="outline" 
@@ -226,6 +242,106 @@ export default function Dashboard() {
       <section className="grid gap-6 xl:grid-cols-2">
         <Card className="flex flex-col">
           <CardHeader>
+            <CardTitle className="flex items-center gap-2 text-destructive">
+              <AlertTriangle className="h-5 w-5" /> Mantenimientos vencidos
+            </CardTitle>
+            <CardDescription>Equipos con horas/km excedidas. Haz clic para abrir la ficha y tomar acción inmediata.</CardDescription>
+          </CardHeader>
+          <CardContent className="flex-1">
+            {mantenimientosVencidosList.length === 0 ? (
+              <p className="text-sm text-muted-foreground">No hay mantenimientos vencidos en este momento.</p>
+            ) : (
+              <Table className="w-full min-w-[720px]">
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>Equipo / Ficha</TableHead>
+                    <TableHead>Tipo</TableHead>
+                    <TableHead className="text-right">Horas/km vencidas</TableHead>
+                    <TableHead>Última actualización</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {mantenimientosVencidosList.map((mantenimiento) => (
+                    <TableRow
+                      key={`${mantenimiento.id}-vencido`}
+                      className="cursor-pointer hover:bg-muted/50"
+                      onClick={() => handleVerEquipo(mantenimiento.ficha)}
+                    >
+                      <TableCell className="font-medium">
+                        <div className="flex flex-col">
+                          <span>{mantenimiento.nombreEquipo ?? 'Equipo sin nombre'}</span>
+                          <span className="text-xs text-muted-foreground">
+                            {mantenimiento.ficha ? `Ficha ${mantenimiento.ficha}` : 'Sin ficha registrada'}
+                          </span>
+                        </div>
+                      </TableCell>
+                      <TableCell>{mantenimiento.tipoMantenimiento}</TableCell>
+                      <TableCell className="text-right">
+                        <Badge variant="destructive">{formatRemainingLabel(mantenimiento.horasKmRestante)}</Badge>
+                      </TableCell>
+                      <TableCell>{formatDate(mantenimiento.fechaUltimaActualizacion)}</TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            )}
+          </CardContent>
+        </Card>
+
+        <Card className="flex flex-col">
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2 text-primary">
+              <CalendarClock className="h-5 w-5" /> Mantenimientos próximos
+            </CardTitle>
+            <CardDescription>Próximas intervenciones con la misma estructura para comparar con los vencidos.</CardDescription>
+          </CardHeader>
+          <CardContent className="flex-1">
+            {mantenimientosProximosList.length === 0 ? (
+              <p className="text-sm text-muted-foreground">No hay mantenimientos próximos registrados.</p>
+            ) : (
+              <Table className="w-full min-w-[720px]">
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>Equipo / Ficha</TableHead>
+                    <TableHead>Tipo</TableHead>
+                    <TableHead className="text-right">Horas/km restantes</TableHead>
+                    <TableHead>Última actualización</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {mantenimientosProximosList.map((mantenimiento) => (
+                    <TableRow
+                      key={`${mantenimiento.id}-proximo`}
+                      className="cursor-pointer hover:bg-muted/50"
+                      onClick={() => handleVerEquipo(mantenimiento.ficha)}
+                    >
+                      <TableCell className="font-medium">
+                        <div className="flex flex-col">
+                          <span>{mantenimiento.nombreEquipo ?? 'Equipo sin nombre'}</span>
+                          <span className="text-xs text-muted-foreground">
+                            {mantenimiento.ficha ? `Ficha ${mantenimiento.ficha}` : 'Sin ficha registrada'}
+                          </span>
+                        </div>
+                      </TableCell>
+                      <TableCell>{mantenimiento.tipoMantenimiento}</TableCell>
+                      <TableCell className="text-right">
+                        <Badge variant={getRemainingVariant(mantenimiento.horasKmRestante)}>
+                          {formatRemainingLabel(mantenimiento.horasKmRestante)}
+                        </Badge>
+                      </TableCell>
+                      <TableCell>{formatDate(mantenimiento.fechaUltimaActualizacion)}</TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            )}
+          </CardContent>
+        </Card>
+      </section>
+
+      <section className="grid gap-6 xl:grid-cols-2">
+        <Card className="flex flex-col">
+          <CardHeader>
             <CardTitle>Próximas actualizaciones</CardTitle>
             <CardDescription>Planifica las inspecciones prioritarias</CardDescription>
           </CardHeader>
@@ -235,7 +351,7 @@ export default function Dashboard() {
               <Table className="w-full min-w-[720px]">
                 <TableHeader>
                   <TableRow>
-                    <TableHead>Equipo</TableHead>
+                    <TableHead>Equipo / Ficha</TableHead>
                     <TableHead>Tipo</TableHead>
                     <TableHead className="text-right">Horas/km restantes</TableHead>
                     <TableHead>Última actualización</TableHead>
@@ -252,7 +368,14 @@ export default function Dashboard() {
                         className="cursor-pointer hover:bg-muted/50"
                         onClick={() => handleVerEquipo(mantenimiento.ficha)}
                       >
-                        <TableCell className="font-medium">{mantenimiento.nombreEquipo}</TableCell>
+                        <TableCell className="font-medium">
+                          <div className="flex flex-col">
+                            <span>{mantenimiento.nombreEquipo ?? 'Equipo sin nombre'}</span>
+                            <span className="text-xs text-muted-foreground">
+                              {mantenimiento.ficha ? `Ficha ${mantenimiento.ficha}` : 'Sin ficha registrada'}
+                            </span>
+                          </div>
+                        </TableCell>
                         <TableCell>{mantenimiento.tipoMantenimiento}</TableCell>
                         <TableCell className="text-right">
                           <Badge variant={getRemainingVariant(mantenimiento.horasKmRestante)}>
@@ -287,7 +410,12 @@ export default function Dashboard() {
                   {ultimasActualizaciones.map((actualizacion) => (
                     <div key={actualizacion.id} className="rounded-md border p-3">
                       <div className="flex items-center justify-between">
-                        <span className="font-medium">{actualizacion.nombreEquipo ?? actualizacion.ficha}</span>
+                        <div>
+                          <p className="font-medium">{actualizacion.nombreEquipo ?? 'Equipo sin nombre'}</p>
+                          <p className="text-xs text-muted-foreground">
+                            {actualizacion.ficha ? `Ficha ${actualizacion.ficha}` : 'Sin ficha registrada'}
+                          </p>
+                        </div>
                         <Badge variant="outline">{formatDate(actualizacion.fecha)}</Badge>
                       </div>
                       <p className="text-sm text-muted-foreground mt-1">
@@ -311,7 +439,12 @@ export default function Dashboard() {
                   {mantenimientosRecientes.map((mantenimiento) => (
                     <div key={mantenimiento.id} className="rounded-md border p-3">
                       <div className="flex items-center justify-between">
-                        <span className="font-medium">{mantenimiento.nombreEquipo ?? mantenimiento.ficha}</span>
+                        <div>
+                          <p className="font-medium">{mantenimiento.nombreEquipo ?? 'Equipo sin nombre'}</p>
+                          <p className="text-xs text-muted-foreground">
+                            {mantenimiento.ficha ? `Ficha ${mantenimiento.ficha}` : 'Sin ficha registrada'}
+                          </p>
+                        </div>
                         <Badge variant="outline">{formatDate(mantenimiento.fechaMantenimiento)}</Badge>
                       </div>
                       <p className="text-sm text-muted-foreground mt-1">
