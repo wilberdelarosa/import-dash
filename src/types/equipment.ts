@@ -5,12 +5,10 @@ export interface Equipo {
   marca: string;
   modelo: string;
   numeroSerie: string;
-  chasis: string;
   placa: string;
   categoria: string;
   activo: boolean;
   motivoInactividad: string | null;
-  capacitacionMinima: string | null;
 }
 
 export interface Inventario {
