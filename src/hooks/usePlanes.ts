@@ -1,0 +1,227 @@
+import { useState, useEffect } from 'react';
+import { supabase } from '@/integrations/supabase/client';
+import { useToast } from '@/hooks/use-toast';
+import type { PlanMantenimiento, PlanIntervalo, PlanConIntervalos, IntervaloConKits } from '@/types/maintenance-plans';
+
+export function usePlanes() {
+  const [planes, setPlanes] = useState<PlanConIntervalos[]>([]);
+  const [loading, setLoading] = useState(true);
+  const { toast } = useToast();
+
+  const loadPlanes = async () => {
+    try {
+      setLoading(true);
+      
+      const { data: planesData, error: planesError } = await supabase
+        .from('planes_mantenimiento')
+        .select('*')
+        .order('nombre');
+
+      if (planesError) throw planesError;
+
+      const { data: intervalosData, error: intervalosError } = await supabase
+        .from('plan_intervalos')
+        .select('*')
+        .order('orden');
+
+      if (intervalosError) throw intervalosError;
+
+      const planesConIntervalos = (planesData || []).map(plan => ({
+        ...plan,
+        intervalos: (intervalosData || [])
+          .filter(int => int.plan_id === plan.id)
+          .map(int => ({
+            ...int,
+            tareas: Array.isArray(int.tareas) ? int.tareas as string[] : []
+          }))
+      }));
+
+      setPlanes(planesConIntervalos as PlanConIntervalos[]);
+    } catch (error: any) {
+      console.error('Error loading plans:', error);
+      toast({
+        title: 'Error',
+        description: 'No se pudieron cargar los planes de mantenimiento',
+        variant: 'destructive',
+      });
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    loadPlanes();
+
+    const channel = supabase
+      .channel('planes-changes')
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'planes_mantenimiento' }, loadPlanes)
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'plan_intervalos' }, loadPlanes)
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, []);
+
+  const createPlan = async (plan: Omit<PlanMantenimiento, 'id' | 'created_at'>) => {
+    try {
+      const { data, error } = await supabase
+        .from('planes_mantenimiento')
+        .insert([plan])
+        .select()
+        .single();
+
+      if (error) throw error;
+
+      toast({
+        title: 'Plan creado',
+        description: 'El plan de mantenimiento se creó correctamente',
+      });
+
+      return data;
+    } catch (error: any) {
+      console.error('Error creating plan:', error);
+      toast({
+        title: 'Error',
+        description: 'No se pudo crear el plan',
+        variant: 'destructive',
+      });
+      throw error;
+    }
+  };
+
+  const updatePlan = async (id: number, plan: Partial<PlanMantenimiento>) => {
+    try {
+      const { error } = await supabase
+        .from('planes_mantenimiento')
+        .update(plan)
+        .eq('id', id);
+
+      if (error) throw error;
+
+      toast({
+        title: 'Plan actualizado',
+        description: 'El plan se actualizó correctamente',
+      });
+    } catch (error: any) {
+      console.error('Error updating plan:', error);
+      toast({
+        title: 'Error',
+        description: 'No se pudo actualizar el plan',
+        variant: 'destructive',
+      });
+      throw error;
+    }
+  };
+
+  const deletePlan = async (id: number) => {
+    try {
+      const { error } = await supabase
+        .from('planes_mantenimiento')
+        .delete()
+        .eq('id', id);
+
+      if (error) throw error;
+
+      toast({
+        title: 'Plan eliminado',
+        description: 'El plan se eliminó correctamente',
+      });
+    } catch (error: any) {
+      console.error('Error deleting plan:', error);
+      toast({
+        title: 'Error',
+        description: 'No se pudo eliminar el plan',
+        variant: 'destructive',
+      });
+      throw error;
+    }
+  };
+
+  const createIntervalo = async (intervalo: Omit<PlanIntervalo, 'id' | 'created_at'>) => {
+    try {
+      const { data, error } = await supabase
+        .from('plan_intervalos')
+        .insert([intervalo])
+        .select()
+        .single();
+
+      if (error) throw error;
+
+      toast({
+        title: 'Intervalo creado',
+        description: 'El intervalo se agregó al plan',
+      });
+
+      return data;
+    } catch (error: any) {
+      console.error('Error creating interval:', error);
+      toast({
+        title: 'Error',
+        description: 'No se pudo crear el intervalo',
+        variant: 'destructive',
+      });
+      throw error;
+    }
+  };
+
+  const updateIntervalo = async (id: number, intervalo: Partial<PlanIntervalo>) => {
+    try {
+      const { error } = await supabase
+        .from('plan_intervalos')
+        .update(intervalo)
+        .eq('id', id);
+
+      if (error) throw error;
+
+      toast({
+        title: 'Intervalo actualizado',
+        description: 'El intervalo se actualizó correctamente',
+      });
+    } catch (error: any) {
+      console.error('Error updating interval:', error);
+      toast({
+        title: 'Error',
+        description: 'No se pudo actualizar el intervalo',
+        variant: 'destructive',
+      });
+      throw error;
+    }
+  };
+
+  const deleteIntervalo = async (id: number) => {
+    try {
+      const { error } = await supabase
+        .from('plan_intervalos')
+        .delete()
+        .eq('id', id);
+
+      if (error) throw error;
+
+      toast({
+        title: 'Intervalo eliminado',
+        description: 'El intervalo se eliminó correctamente',
+      });
+    } catch (error: any) {
+      console.error('Error deleting interval:', error);
+      toast({
+        title: 'Error',
+        description: 'No se pudo eliminar el intervalo',
+        variant: 'destructive',
+      });
+      throw error;
+    }
+  };
+
+  return {
+    planes,
+    loading,
+    createPlan,
+    updatePlan,
+    deletePlan,
+    createIntervalo,
+    updateIntervalo,
+    deleteIntervalo,
+    refreshPlanes: loadPlanes,
+  };
+}

@@ -8,6 +8,8 @@ import Equipos from "./pages/Equipos";
 import ControlMantenimiento from "./pages/ControlMantenimiento";
 import Inventario from "./pages/Inventario";
 import Mantenimiento from "./pages/Mantenimiento";
+import PlanesMantenimiento from "./pages/PlanesMantenimiento";
+import KitsMantenimiento from "./pages/KitsMantenimiento";
 import Historial from "./pages/Historial";
 import Reportes from "./pages/Reportes";
 import Configuraciones from "./pages/Configuraciones";
@@ -38,6 +40,8 @@ const App = () => (
                 <Route path="/control-mantenimiento" element={<ProtectedRoute><ControlMantenimiento /></ProtectedRoute>} />
                 <Route path="/inventario" element={<ProtectedRoute><Inventario /></ProtectedRoute>} />
                 <Route path="/mantenimiento" element={<ProtectedRoute><Mantenimiento /></ProtectedRoute>} />
+                <Route path="/planes-mantenimiento" element={<ProtectedRoute><PlanesMantenimiento /></ProtectedRoute>} />
+                <Route path="/kits-mantenimiento" element={<ProtectedRoute><KitsMantenimiento /></ProtectedRoute>} />
                 <Route path="/historial" element={<ProtectedRoute><Historial /></ProtectedRoute>} />
                 <Route path="/reportes" element={<ProtectedRoute><Reportes /></ProtectedRoute>} />
                 <Route path="/configuraciones" element={<ProtectedRoute><Configuraciones /></ProtectedRoute>} />

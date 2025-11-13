@@ -13,6 +13,8 @@ import {
   Wrench,
   MessageSquareText,
   ListChecks,
+  ClipboardList,
+  PackageOpen,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { NotificacionesCentro } from '@/components/NotificacionesCentro';
@@ -33,6 +35,8 @@ const navItems = [
   { path: '/control-mantenimiento', label: 'Control Mantenimiento', icon: Wrench },
   { path: '/inventario', label: 'Inventario', icon: Package },
   { path: '/mantenimiento', label: 'Mantenimiento', icon: Calendar },
+  { path: '/planes-mantenimiento', label: 'Planes Mant.', icon: ClipboardList },
+  { path: '/kits-mantenimiento', label: 'Kits Mant.', icon: PackageOpen },
   { path: '/historial', label: 'Historial', icon: History },
   { path: '/reportes', label: 'Reportes', icon: BarChart3 },
   { path: '/listas-personalizadas', label: 'Listas personalizadas', icon: ListChecks },
