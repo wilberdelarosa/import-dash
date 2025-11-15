@@ -29,12 +29,18 @@ export const useSMSService = () => {
         };
       }
 
-      // En producción, usar el backend para enviar con Twilio
-      const response = await fetch('/api/send-sms', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(options),
-      });
+      // En producción, usar Supabase Function para enviar con Twilio
+      const response = await fetch(
+        `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/send-sms`,
+        {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${localStorage.getItem('sb-auth-token') || ''}`,
+          },
+          body: JSON.stringify(options),
+        }
+      );
 
       if (!response.ok) {
         const data = await response.json();
