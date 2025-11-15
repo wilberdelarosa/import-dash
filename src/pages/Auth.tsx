@@ -113,13 +113,12 @@ export default function Auth() {
   };
 
   return (
-    <div className="relative min-h-screen w-full overflow-hidden bg-slate-950">
-      {/* Animated gradient background */}
+    <div className="relative min-h-screen w-full overflow-hidden bg-gradient-to-br from-slate-50 via-slate-100 to-slate-50">
+      {/* Animated gradient blobs - Colores verde corporativo */}
       <div className="absolute inset-0">
-        <div className="absolute top-0 -left-4 w-96 h-96 bg-blue-500/20 rounded-full mix-blend-multiply filter blur-3xl animate-blob"></div>
-        <div className="absolute top-0 -right-4 w-96 h-96 bg-purple-500/20 rounded-full mix-blend-multiply filter blur-3xl animate-blob animation-delay-2000"></div>
-        <div className="absolute -bottom-8 left-20 w-96 h-96 bg-cyan-500/20 rounded-full mix-blend-multiply filter blur-3xl animate-blob animation-delay-4000"></div>
-        <div className="absolute inset-0 bg-slate-950/40 backdrop-blur-3xl"></div>
+        <div className="absolute top-0 -left-4 w-96 h-96 bg-green-300/15 rounded-full mix-blend-multiply filter blur-3xl animate-blob"></div>
+        <div className="absolute top-0 -right-4 w-96 h-96 bg-green-400/15 rounded-full mix-blend-multiply filter blur-3xl animate-blob animation-delay-2000"></div>
+        <div className="absolute -bottom-8 left-20 w-96 h-96 bg-emerald-300/15 rounded-full mix-blend-multiply filter blur-3xl animate-blob animation-delay-4000"></div>
       </div>
 
       {/* Content */}
@@ -128,31 +127,34 @@ export default function Auth() {
           {/* Logo and Header */}
           <div className="mb-8 text-center animate-fade-in">
             <div className="flex justify-center mb-6">
-              <div className="relative w-20 h-20 bg-gradient-to-br from-blue-500 to-purple-600 rounded-2xl flex items-center justify-center shadow-2xl transform hover:scale-110 transition-transform duration-300">
-                <span className="text-4xl font-bold text-white">⚙</span>
-                <div className="absolute inset-0 rounded-2xl bg-gradient-to-r from-blue-500 to-purple-600 opacity-0 group-hover:opacity-100 transition-opacity duration-300 blur-lg -z-10"></div>
+              <div className="relative w-24 h-24 bg-white rounded-2xl flex items-center justify-center shadow-2xl transform hover:scale-110 transition-transform duration-300 border-2 border-green-100">
+                <img 
+                  src="/favicon.ico" 
+                  alt="ALITO Logo" 
+                  className="w-16 h-16 object-contain"
+                />
               </div>
             </div>
-            <h1 className="text-4xl font-bold text-white mb-2 drop-shadow-lg">ALITO GROUP</h1>
-            <p className="text-sm text-blue-300 font-medium">Sistema de Gestión de Maquinaria</p>
-            <p className="text-xs text-slate-400 mt-1">Mantén el control de tu equipo</p>
+            <h1 className="text-4xl font-bold text-slate-800 mb-2 drop-shadow">ALITO GROUP</h1>
+            <p className="text-sm text-green-700 font-semibold">Sistema de Gestión de Maquinaria</p>
+            <p className="text-xs text-slate-500 mt-1">Mantén el control de tu equipo</p>
           </div>
 
           {/* Auth Card */}
-          <div className="bg-slate-900/80 backdrop-blur-xl rounded-2xl border border-slate-700/50 shadow-2xl overflow-hidden animate-slide-up">
+          <div className="bg-white/95 backdrop-blur-xl rounded-2xl border border-green-100/50 shadow-2xl overflow-hidden animate-slide-up">
             {/* Tabs */}
             <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-              <TabsList className="grid w-full grid-cols-2 bg-slate-800/50 border-b border-slate-700/50 rounded-none p-1">
+              <TabsList className="grid w-full grid-cols-2 bg-green-50/50 border-b border-green-100/50 rounded-none p-1">
                 <TabsTrigger 
                   value="signin"
-                  className="rounded-lg data-[state=active]:bg-gradient-to-r data-[state=active]:from-blue-600 data-[state=active]:to-purple-600 data-[state=active]:text-white data-[state=active]:shadow-lg transition-all duration-200"
+                  className="rounded-lg data-[state=active]:bg-gradient-to-r data-[state=active]:from-green-600 data-[state=active]:to-emerald-600 data-[state=active]:text-white data-[state=active]:shadow-lg transition-all duration-200"
                 >
                   <User className="w-4 h-4 mr-2" />
                   Iniciar Sesión
                 </TabsTrigger>
                 <TabsTrigger 
                   value="signup"
-                  className="rounded-lg data-[state=active]:bg-gradient-to-r data-[state=active]:from-blue-600 data-[state=active]:to-purple-600 data-[state=active]:text-white data-[state=active]:shadow-lg transition-all duration-200"
+                  className="rounded-lg data-[state=active]:bg-gradient-to-r data-[state=active]:from-green-600 data-[state=active]:to-emerald-600 data-[state=active]:text-white data-[state=active]:shadow-lg transition-all duration-200"
                 >
                   <CheckCircle2 className="w-4 h-4 mr-2" />
                   Registrarse
@@ -164,9 +166,9 @@ export default function Auth() {
                 <form onSubmit={handleSignIn} className="space-y-4">
                   {/* Email Input */}
                   <div className="space-y-2">
-                    <Label htmlFor="email-signin" className="text-slate-200 font-medium">Email</Label>
+                    <Label htmlFor="email-signin" className="text-slate-700 font-semibold">Email</Label>
                     <div className="relative">
-                      <Mail className="absolute left-3 top-3 h-5 w-5 text-slate-500 pointer-events-none" />
+                      <Mail className="absolute left-3 top-3 h-5 w-5 text-green-600 pointer-events-none" />
                       <Input
                         id="email-signin"
                         type="email"
@@ -175,16 +177,16 @@ export default function Auth() {
                         onChange={(e) => setEmail(e.target.value)}
                         required
                         disabled={loading}
-                        className="pl-10 bg-slate-800/50 border-slate-600 text-white placeholder:text-slate-500 focus:border-blue-500 focus:ring-blue-500/50 focus:ring-2 transition-all duration-200"
+                        className="pl-10 bg-white border-2 border-green-200 text-slate-800 placeholder:text-slate-400 focus:border-green-500 focus:ring-green-500/50 focus:ring-2 transition-all duration-200"
                       />
                     </div>
                   </div>
 
                   {/* Password Input */}
                   <div className="space-y-2">
-                    <Label htmlFor="password-signin" className="text-slate-200 font-medium">Contraseña</Label>
+                    <Label htmlFor="password-signin" className="text-slate-700 font-semibold">Contraseña</Label>
                     <div className="relative">
-                      <Lock className="absolute left-3 top-3 h-5 w-5 text-slate-500 pointer-events-none" />
+                      <Lock className="absolute left-3 top-3 h-5 w-5 text-green-600 pointer-events-none" />
                       <Input
                         id="password-signin"
                         type="password"
@@ -193,23 +195,23 @@ export default function Auth() {
                         onChange={(e) => setPassword(e.target.value)}
                         required
                         disabled={loading}
-                        className="pl-10 bg-slate-800/50 border-slate-600 text-white placeholder:text-slate-500 focus:border-blue-500 focus:ring-blue-500/50 focus:ring-2 transition-all duration-200"
+                        className="pl-10 bg-white border-2 border-green-200 text-slate-800 placeholder:text-slate-400 focus:border-green-500 focus:ring-green-500/50 focus:ring-2 transition-all duration-200"
                       />
                     </div>
                   </div>
 
                   {/* Error Alert */}
                   {error && (
-                    <Alert variant="destructive" className="bg-red-500/10 border-red-500/30 animate-shake">
-                      <AlertCircle className="h-4 w-4 text-red-500" />
-                      <AlertDescription className="text-red-400 text-sm ml-2">{error}</AlertDescription>
+                    <Alert variant="destructive" className="bg-red-50/80 border-red-200/80 animate-shake">
+                      <AlertCircle className="h-4 w-4 text-red-600" />
+                      <AlertDescription className="text-red-700 text-sm ml-2 font-medium">{error}</AlertDescription>
                     </Alert>
                   )}
 
                   {/* Sign In Button */}
                   <Button 
                     type="submit" 
-                    className="w-full bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white font-semibold py-2 h-11 rounded-lg transition-all duration-200 shadow-lg hover:shadow-xl transform hover:scale-105 disabled:opacity-50 disabled:cursor-not-allowed" 
+                    className="w-full bg-gradient-to-r from-green-600 to-emerald-600 hover:from-green-700 hover:to-emerald-700 text-white font-semibold py-2 h-11 rounded-lg transition-all duration-200 shadow-lg hover:shadow-xl transform hover:scale-105 disabled:opacity-50 disabled:cursor-not-allowed" 
                     disabled={loading}
                   >
                     {loading ? (
@@ -229,9 +231,9 @@ export default function Auth() {
                 <form onSubmit={handleSignUp} className="space-y-4">
                   {/* Email Input */}
                   <div className="space-y-2">
-                    <Label htmlFor="email-signup" className="text-slate-200 font-medium">Email</Label>
+                    <Label htmlFor="email-signup" className="text-slate-700 font-semibold">Email</Label>
                     <div className="relative">
-                      <Mail className="absolute left-3 top-3 h-5 w-5 text-slate-500 pointer-events-none" />
+                      <Mail className="absolute left-3 top-3 h-5 w-5 text-green-600 pointer-events-none" />
                       <Input
                         id="email-signup"
                         type="email"
@@ -240,16 +242,16 @@ export default function Auth() {
                         onChange={(e) => setEmail(e.target.value)}
                         required
                         disabled={loading}
-                        className="pl-10 bg-slate-800/50 border-slate-600 text-white placeholder:text-slate-500 focus:border-blue-500 focus:ring-blue-500/50 focus:ring-2 transition-all duration-200"
+                        className="pl-10 bg-white border-2 border-green-200 text-slate-800 placeholder:text-slate-400 focus:border-green-500 focus:ring-green-500/50 focus:ring-2 transition-all duration-200"
                       />
                     </div>
                   </div>
 
                   {/* Password Input */}
                   <div className="space-y-2">
-                    <Label htmlFor="password-signup" className="text-slate-200 font-medium">Contraseña</Label>
+                    <Label htmlFor="password-signup" className="text-slate-700 font-semibold">Contraseña</Label>
                     <div className="relative">
-                      <Lock className="absolute left-3 top-3 h-5 w-5 text-slate-500 pointer-events-none" />
+                      <Lock className="absolute left-3 top-3 h-5 w-5 text-green-600 pointer-events-none" />
                       <Input
                         id="password-signup"
                         type="password"
@@ -258,16 +260,16 @@ export default function Auth() {
                         onChange={(e) => setPassword(e.target.value)}
                         required
                         disabled={loading}
-                        className="pl-10 bg-slate-800/50 border-slate-600 text-white placeholder:text-slate-500 focus:border-blue-500 focus:ring-blue-500/50 focus:ring-2 transition-all duration-200"
+                        className="pl-10 bg-white border-2 border-green-200 text-slate-800 placeholder:text-slate-400 focus:border-green-500 focus:ring-green-500/50 focus:ring-2 transition-all duration-200"
                       />
                     </div>
                   </div>
 
                   {/* Confirm Password Input */}
                   <div className="space-y-2">
-                    <Label htmlFor="confirm-password" className="text-slate-200 font-medium">Confirmar Contraseña</Label>
+                    <Label htmlFor="confirm-password" className="text-slate-700 font-semibold">Confirmar Contraseña</Label>
                     <div className="relative">
-                      <Lock className="absolute left-3 top-3 h-5 w-5 text-slate-500 pointer-events-none" />
+                      <Lock className="absolute left-3 top-3 h-5 w-5 text-green-600 pointer-events-none" />
                       <Input
                         id="confirm-password"
                         type="password"
@@ -276,23 +278,23 @@ export default function Auth() {
                         onChange={(e) => setConfirmPassword(e.target.value)}
                         required
                         disabled={loading}
-                        className="pl-10 bg-slate-800/50 border-slate-600 text-white placeholder:text-slate-500 focus:border-blue-500 focus:ring-blue-500/50 focus:ring-2 transition-all duration-200"
+                        className="pl-10 bg-white border-2 border-green-200 text-slate-800 placeholder:text-slate-400 focus:border-green-500 focus:ring-green-500/50 focus:ring-2 transition-all duration-200"
                       />
                     </div>
                   </div>
 
                   {/* Error Alert */}
                   {error && (
-                    <Alert variant="destructive" className="bg-red-500/10 border-red-500/30 animate-shake">
-                      <AlertCircle className="h-4 w-4 text-red-500" />
-                      <AlertDescription className="text-red-400 text-sm ml-2">{error}</AlertDescription>
+                    <Alert variant="destructive" className="bg-red-50/80 border-red-200/80 animate-shake">
+                      <AlertCircle className="h-4 w-4 text-red-600" />
+                      <AlertDescription className="text-red-700 text-sm ml-2 font-medium">{error}</AlertDescription>
                     </Alert>
                   )}
 
                   {/* Sign Up Button */}
                   <Button 
                     type="submit" 
-                    className="w-full bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white font-semibold py-2 h-11 rounded-lg transition-all duration-200 shadow-lg hover:shadow-xl transform hover:scale-105 disabled:opacity-50 disabled:cursor-not-allowed" 
+                    className="w-full bg-gradient-to-r from-green-600 to-emerald-600 hover:from-green-700 hover:to-emerald-700 text-white font-semibold py-2 h-11 rounded-lg transition-all duration-200 shadow-lg hover:shadow-xl transform hover:scale-105 disabled:opacity-50 disabled:cursor-not-allowed" 
                     disabled={loading}
                   >
                     {loading ? (
@@ -309,20 +311,20 @@ export default function Auth() {
             </Tabs>
 
             {/* Footer */}
-            <div className="px-6 py-4 bg-slate-800/30 border-t border-slate-700/50">
-              <p className="text-xs text-center text-slate-400">
+            <div className="px-6 py-4 bg-green-50/30 border-t border-green-100/50">
+              <p className="text-xs text-center text-slate-600">
                 Al continuar, aceptas nuestros{' '}
-                <span className="text-blue-400 hover:text-blue-300 cursor-pointer transition-colors">términos de servicio</span>
+                <span className="text-green-700 hover:text-green-800 cursor-pointer transition-colors font-semibold">términos de servicio</span>
                 {' '}y{' '}
-                <span className="text-blue-400 hover:text-blue-300 cursor-pointer transition-colors">política de privacidad</span>
+                <span className="text-green-700 hover:text-green-800 cursor-pointer transition-colors font-semibold">política de privacidad</span>
               </p>
             </div>
           </div>
 
           {/* Security Badge */}
-          <div className="mt-6 text-center text-xs text-slate-500 flex items-center justify-center gap-1">
-            <CheckCircle2 className="w-4 h-4 text-green-500" />
-            <span>Conexión segura y encriptada</span>
+          <div className="mt-6 text-center text-xs text-slate-600 flex items-center justify-center gap-1">
+            <CheckCircle2 className="w-4 h-4 text-green-600" />
+            <span className="font-medium">Conexión segura y encriptada</span>
           </div>
         </div>
       </div>
