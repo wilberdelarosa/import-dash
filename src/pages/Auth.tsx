@@ -8,6 +8,7 @@ import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Loader2, Mail, Lock, User, CheckCircle2, AlertCircle, Phone, Key } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
+import { useSMSService } from '@/hooks/useSMSService';
 
 // PIN de registro (hardcodeado por seguridad)
 const REGISTRATION_PIN = '2510';
@@ -26,6 +27,7 @@ export default function Auth() {
   const [pinSent, setPinSent] = useState(false);
   const navigate = useNavigate();
   const { toast } = useToast();
+  const { sendSMS } = useSMSService();
 
   useEffect(() => {
     // Check if user is already logged in
@@ -37,31 +39,6 @@ export default function Auth() {
     };
     checkUser();
   }, [navigate]);
-
-  const sendSMS = async (phoneNumber: string) => {
-    try {
-      // Aquí integramos con un servicio de SMS (Twilio, etc.)
-      // Por ahora, simularemos el envío
-      console.log(`SMS enviado a ${phoneNumber} con PIN: ${REGISTRATION_PIN}`);
-      
-      // En producción, llamarías a tu backend para enviar SMS con Twilio
-      // const response = await fetch('/api/send-sms', {
-      //   method: 'POST',
-      //   headers: { 'Content-Type': 'application/json' },
-      //   body: JSON.stringify({ phone: phoneNumber, pin: REGISTRATION_PIN })
-      // });
-      
-      setPinSent(true);
-      toast({
-        title: '✓ PIN Enviado',
-        description: `Se ha enviado un PIN a ${phoneNumber}`,
-      });
-      return true;
-    } catch (err) {
-      setError('Error al enviar el PIN. Intenta nuevamente.');
-      return false;
-    }
-  };
 
   const handleSignIn = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -101,9 +78,20 @@ export default function Auth() {
     }
 
     // Enviar PIN al teléfono
-    const sent = await sendSMS(phone);
-    if (sent) {
+    const result = await sendSMS({
+      phoneNumber: phone,
+      message: `Tu PIN de registro en ALITO es: ${REGISTRATION_PIN}. No compartas este código con nadie.`,
+    });
+
+    if (result.success) {
+      setPinSent(true);
       setShowPinVerification(true);
+      toast({
+        title: '✓ PIN Enviado',
+        description: `Se ha enviado un PIN a ${phone}`,
+      });
+    } else {
+      setError(result.error || 'Error al enviar el PIN. Intenta nuevamente.');
     }
   };
 
