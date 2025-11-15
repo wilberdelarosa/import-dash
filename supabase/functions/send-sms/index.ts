@@ -39,9 +39,10 @@ serve(async (req) => {
     // Get Twilio credentials from environment variables
     const accountSid = Deno.env.get("TWILIO_ACCOUNT_SID");
     const authToken = Deno.env.get("TWILIO_AUTH_TOKEN");
+    const messagingServiceSid = Deno.env.get("TWILIO_MESSAGING_SERVICE_SID");
     const fromNumber = Deno.env.get("TWILIO_PHONE_NUMBER");
 
-    if (!accountSid || !authToken || !fromNumber) {
+    if (!accountSid || !authToken || (!messagingServiceSid && !fromNumber)) {
       console.error("Missing Twilio environment variables");
       return new Response(
         JSON.stringify({ error: "SMS service not configured" }),
@@ -55,7 +56,14 @@ serve(async (req) => {
     // Prepare Twilio API request
     const credentials = btoa(`${accountSid}:${authToken}`);
     const formData = new URLSearchParams();
-    formData.append("From", fromNumber);
+    
+    // Use Messaging Service SID if available (more reliable), otherwise use From number
+    if (messagingServiceSid) {
+      formData.append("MessagingServiceSid", messagingServiceSid);
+    } else {
+      formData.append("From", fromNumber);
+    }
+    
     formData.append("To", phoneNumber);
     formData.append("Body", message);
 
