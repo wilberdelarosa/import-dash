@@ -14,13 +14,18 @@ export interface Equipo {
 export interface Inventario {
   id: number;
   nombre: string;
+  numeroParte: string;
   tipo: string;
+  sistema: string | null;
   categoriaEquipo: string;
   cantidad: number;
+  stockMinimo: number;
   movimientos: Movimiento[];
   activo: boolean;
   codigoIdentificacion: string;
+  ubicacion: string | null;
   empresaSuplidora: string;
+  marcaFabricante: string | null;
   marcasCompatibles: string[];
   modelosCompatibles: string[];
 }

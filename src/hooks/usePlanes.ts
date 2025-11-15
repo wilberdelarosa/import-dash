@@ -1,7 +1,19 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 import { useState, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
-import type { PlanMantenimiento, PlanIntervalo, PlanConIntervalos, IntervaloConKits } from '@/types/maintenance-plans';
+import type {
+  PlanMantenimiento,
+  PlanIntervalo,
+  PlanConIntervalos,
+  IntervaloConKits,
+  IntervaloKitAssignment,
+  KitMantenimiento,
+} from '@/types/maintenance-plans';
+
+type MutationOptions = {
+  silent?: boolean;
+};
 
 export function usePlanes() {
   const [planes, setPlanes] = useState<PlanConIntervalos[]>([]);
@@ -26,13 +38,30 @@ export function usePlanes() {
 
       if (intervalosError) throw intervalosError;
 
+      const { data: intervalosKitsData, error: intervalosKitsError } = await supabase
+        .from('plan_intervalo_kits')
+        .select('id, plan_intervalo_id, kit_id, created_at, kits_mantenimiento(*)');
+
+      if (intervalosKitsError) throw intervalosKitsError;
+
+      const asignaciones: IntervaloKitAssignment[] = (intervalosKitsData || [])
+        .filter((row) => Boolean(row.kits_mantenimiento))
+        .map((row) => ({
+          id: row.id,
+          plan_intervalo_id: row.plan_intervalo_id,
+          kit_id: row.kit_id,
+          created_at: row.created_at,
+          kit: row.kits_mantenimiento as KitMantenimiento,
+        }));
+
       const planesConIntervalos = (planesData || []).map(plan => ({
         ...plan,
         intervalos: (intervalosData || [])
           .filter(int => int.plan_id === plan.id)
           .map(int => ({
             ...int,
-            tareas: Array.isArray(int.tareas) ? int.tareas as string[] : []
+            tareas: Array.isArray(int.tareas) ? int.tareas as string[] : [],
+            kits: asignaciones.filter((link) => link.plan_intervalo_id === int.id),
           }))
       }));
 
@@ -56,6 +85,7 @@ export function usePlanes() {
       .channel('planes-changes')
       .on('postgres_changes', { event: '*', schema: 'public', table: 'planes_mantenimiento' }, loadPlanes)
       .on('postgres_changes', { event: '*', schema: 'public', table: 'plan_intervalos' }, loadPlanes)
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'plan_intervalo_kits' }, loadPlanes)
       .subscribe();
 
     return () => {
@@ -213,6 +243,57 @@ export function usePlanes() {
     }
   };
 
+  const linkKitToInterval = async (intervaloId: number, kitId: number) => {
+    try {
+      const { error } = await supabase
+        .from('plan_intervalo_kits')
+        .insert({ plan_intervalo_id: intervaloId, kit_id: kitId });
+
+      if (error) throw error;
+
+      toast({
+        title: 'Kit asignado',
+        description: 'El kit se vincul�� al intervalo correctamente.',
+      });
+      await loadPlanes();
+    } catch (error: any) {
+      console.error('Error linking kit:', error);
+      toast({
+        title: 'Error',
+        description: error.message?.includes('duplicate')
+          ? 'El kit ya est�� asignado a este intervalo'
+          : 'No se pudo asignar el kit al intervalo',
+        variant: 'destructive',
+      });
+      throw error;
+    }
+  };
+
+  const unlinkKitFromInterval = async (linkId: number) => {
+    try {
+      const { error } = await supabase
+        .from('plan_intervalo_kits')
+        .delete()
+        .eq('id', linkId);
+
+      if (error) throw error;
+
+      toast({
+        title: 'Kit eliminado',
+        description: 'El kit se desvincul�� del intervalo.',
+      });
+      await loadPlanes();
+    } catch (error: any) {
+      console.error('Error removing kit:', error);
+      toast({
+        title: 'Error',
+        description: 'No se pudo remover el kit del intervalo',
+        variant: 'destructive',
+      });
+      throw error;
+    }
+  };
+
   return {
     planes,
     loading,
@@ -223,5 +304,7 @@ export function usePlanes() {
     updateIntervalo,
     deleteIntervalo,
     refreshPlanes: loadPlanes,
+    linkKitToInterval,
+    unlinkKitFromInterval,
   };
 }

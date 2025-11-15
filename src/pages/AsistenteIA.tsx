@@ -62,7 +62,7 @@ const buildChatContext = (data: DatabaseData | null, config: SystemConfig | null
   if (!data) {
     return {
       summary:
-        'AÃºn no se han cargado datos de Supabase. Indica al usuario que espere a que la sincronizaciÃ³n finalice antes de ofrecer recomendaciones especÃ­ficas.',
+        'Aun no se han cargado datos de Supabase. Indica al usuario que espere a que la sincronizacion finalice antes de ofrecer recomendaciones especificas.',
       sections: [
         {
           title: 'Estado de la base de datos',
@@ -95,7 +95,7 @@ const buildChatContext = (data: DatabaseData | null, config: SystemConfig | null
     .slice(0, 5)
     .map(
       (mantenimiento) =>
-        `${mantenimiento.nombreEquipo} Â· ${mantenimiento.tipoMantenimiento} Â· ${mantenimiento.horasKmRestante} horas/km restantes`,
+        `${mantenimiento.nombreEquipo} - ${mantenimiento.tipoMantenimiento} - ${mantenimiento.horasKmRestante} horas/km restantes`,
     );
 
   const inventariosCriticos = data.inventarios
@@ -103,7 +103,7 @@ const buildChatContext = (data: DatabaseData | null, config: SystemConfig | null
     .slice()
     .sort((a, b) => a.cantidad - b.cantidad)
     .slice(0, 5)
-    .map((inventario) => `${inventario.nombre} (${inventario.codigoIdentificacion}) Â· ${inventario.cantidad} en stock`);
+    .map((inventario) => `${inventario.nombre} (${inventario.codigoIdentificacion}) - ${inventario.cantidad} en stock`);
 
   const actualizacionesRecientes = data.actualizacionesHorasKm
     .slice()
@@ -111,7 +111,7 @@ const buildChatContext = (data: DatabaseData | null, config: SystemConfig | null
     .slice(0, 5)
     .map((actualizacion) => {
       const equipo = actualizacion.nombreEquipo ?? actualizacion.ficha;
-      return `${equipo} Â· ${actualizacion.horasKm} horas/km el ${formatDate(actualizacion.fecha)}`;
+      return `${equipo} - ${actualizacion.horasKm} horas/km el ${formatDate(actualizacion.fecha)}`;
     });
 
   const empleadosActivos = data.empleados?.filter((empleado) => empleado.activo).length ?? 0;
@@ -120,17 +120,17 @@ const buildChatContext = (data: DatabaseData | null, config: SystemConfig | null
     `Equipos registrados: ${totalEquipos} (activos: ${equiposActivos}, inactivos: ${equiposInactivos}).`,
     `Empleados activos disponibles: ${empleadosActivos}.`,
     proximosMantenimientos.length
-      ? `PrÃ³ximos mantenimientos prioritarios: ${proximosMantenimientos.join(' | ')}`
-      : 'No hay mantenimientos prÃ³ximos registrados.',
+      ? `Proximos mantenimientos prioritarios: ${proximosMantenimientos.join(' | ')}`
+      : 'No hay mantenimientos proximos registrados.',
     inventariosCriticos.length
-      ? `Inventarios crÃ­ticos (â‰¤3 unidades): ${inventariosCriticos.join(' | ')}`
-      : 'No hay repuestos con stock crÃ­tico (â‰¤3 unidades).',
+      ? `Inventarios criticos (<=3 unidades): ${inventariosCriticos.join(' | ')}`
+      : 'No hay repuestos con stock critico (<=3 unidades).',
     actualizacionesRecientes.length
-      ? `Ãšltimas actualizaciones de horas/km: ${actualizacionesRecientes.join(' | ')}`
+      ? `Ultimas actualizaciones de horas/km: ${actualizacionesRecientes.join(' | ')}`
       : 'No se registran actualizaciones recientes de horas/km.',
     config
-      ? `Umbral preventivo: ${config.alertaPreventiva} horas/km Â· Umbral crÃ­tico: ${config.alertaCritica} horas/km.`
-      : 'Usa los umbrales predeterminados (50 preventivo / 15 crÃ­tico) si no se especifican valores del sistema.',
+      ? `Umbral preventivo: ${config.alertaPreventiva} horas/km - Umbral critico: ${config.alertaCritica} horas/km.`
+      : 'Usa los umbrales predeterminados (50 preventivo / 15 critico) si no se especifican valores del sistema.',
   ];
 
   const sections: ContextSection[] = [
@@ -139,7 +139,9 @@ const buildChatContext = (data: DatabaseData | null, config: SystemConfig | null
       items: [
         `Equipos activos: ${equiposActivos}`,
         `Equipos fuera de servicio: ${equiposInactivos}`,
-        `CategorÃ­as destacadas: ${categoriasDestacadas.length ? categoriasDestacadas.join(', ') : 'Sin datos destacados'}`,
+        categoriasDestacadas.length
+          ? `Categorias destacadas: ${categoriasDestacadas.join(', ')}`
+          : 'Categorias destacadas: Sin datos destacados',
       ],
     },
     {
@@ -149,16 +151,16 @@ const buildChatContext = (data: DatabaseData | null, config: SystemConfig | null
         : ['No hay mantenimientos activos con prioridad inmediata.'],
     },
     {
-      title: 'Inventarios crÃ­ticos',
+      title: 'Inventarios criticos',
       items: inventariosCriticos.length
         ? inventariosCriticos
-        : ['Todos los repuestos se encuentran por encima del nivel crÃ­tico (â‰¤3).'],
+        : ['Todos los repuestos se encuentran por encima del nivel critico (<=3).'],
     },
     {
       title: 'Actividad reciente',
       items: actualizacionesRecientes.length
         ? actualizacionesRecientes
-        : ['Sin lecturas recientes de horas/kilÃ³metros registradas.'],
+        : ['Sin lecturas recientes de horas/kilometros registradas.'],
     },
   ];
 
@@ -169,16 +171,17 @@ const buildChatContext = (data: DatabaseData | null, config: SystemConfig | null
   };
 };
 
-const buildSystemPrompt = (contextSummary: string) => `Eres ALITO BOT, el asistente virtual de soporte de la plataforma de gestiÃ³n de maquinaria de ALITO GROUP SRL. Tu rol es responder SIEMPRE en espaÃ±ol con un tono profesional y empÃ¡tico.
+
+const buildSystemPrompt = (contextSummary: string) => `Eres ALITO BOT, el asistente virtual de soporte de la plataforma de gestión de maquinaria de ALITO GROUP SRL. Tu rol es responder SIEMPRE en español con un tono profesional y empático.
 
 Instrucciones clave:
-- Usa Ãºnicamente la informaciÃ³n mÃ¡s reciente proporcionada en el contexto si estÃ¡ disponible. Si necesitas un dato que no aparece, indica de forma transparente que no se encuentra en la base actual.
-- PropÃ³n pasos concretos y accionables basados en el estado de los equipos, mantenimientos e inventarios.
-- Si detectas riesgos (por ejemplo, equipos con horas/km por debajo del umbral crÃ­tico o repuestos con stock bajo) resÃ¡ltalos y sugiere cÃ³mo mitigarlos.
-- Cuando el usuario pida ayuda fuera del Ã¡mbito de la flota o sin relaciÃ³n con los datos proporcionados, responde brevemente y redirÃ­gelo a la informaciÃ³n disponible.
+- Usa únicamente la información más reciente proporcionada en el contexto si está disponible. Si necesitas un dato que no aparece, indica de forma transparente que no se encuentra en la base actual.
+- Propón pasos concretos y accionables basados en el estado de los equipos, mantenimientos e inventarios.
+- Si detectas riesgos (por ejemplo, equipos con horas/km por debajo del umbral crítico o repuestos con stock bajo) resáltalos y sugiere cómo mitigarlos.
+- Cuando el usuario pida ayuda fuera del ámbito de la flota o sin relación con los datos proporcionados, responde brevemente y redirígelo a la información disponible.
 
 IMPORTANTE - Formateo de respuestas con tablas:
-- Cuando el usuario solicite listas o informaciÃ³n tabular (por ejemplo: "lista de equipos Caterpillar", "muestra todos los rodillos con mÃ¡s de 1000 horas"), genera las respuestas en formato de tabla Markdown
+- Cuando el usuario solicite listas o información tabular (por ejemplo: "lista de equipos Caterpillar", "muestra todos los rodillos con más de 1000 horas"), genera las respuestas en formato de tabla Markdown.
 - Usa la siguiente sintaxis para tablas:
 
 | Nombre | Ficha | Modelo | Horas Actuales |
@@ -186,27 +189,27 @@ IMPORTANTE - Formateo de respuestas con tablas:
 | Excavadora 320 | EX-001 | 320 | 1,250 |
 | Rodillo CB10 | RD-003 | CB10 | 890 |
 
-- Las tablas deben incluir las columnas relevantes solicitadas por el usuario
-- Ordena y filtra los datos segÃºn los criterios especificados por el usuario
-- Si el usuario pide filtros complejos (ej: "equipos que no son Caterpillar y ficha > AC-44"), aplica todos los filtros correctamente
+- Las tablas deben incluir las columnas relevantes solicitadas por el usuario.
+- Ordena y filtra los datos según los criterios especificados por el usuario.
+- Si el usuario pide filtros complejos (ej: "equipos que no son Caterpillar y ficha > AC-44"), aplica todos los filtros correctamente.
 
 Ejemplos de consultas que deben generar tablas:
 - "lista de nombre, ficha, modelo de todos los equipos Caterpillar"
-- "muÃ©strame los equipos con mantenimiento vencido"
+- "muéstrame los equipos con mantenimiento vencido"
 - "dame una tabla de repuestos con stock bajo"
-- "equipos activos con mÃ¡s de 2000 horas"
+- "equipos activos con más de 2000 horas"
 
 Contexto actualizado del negocio:
 ${contextSummary}
 
-Siempre que entregues listados, utiliza tablas Markdown o viÃ±etas claras. RefiÃ©rete a los equipos por su nombre comercial y ficha cuando sea posible.`;
+Siempre que entregues listados, utiliza tablas Markdown o viñetas claras. Refiérete a los equipos por su nombre comercial y ficha cuando sea posible.`;
 
 const buildInitialAssistantMessage = (contextSections: ContextSection[]): string => {
-  const indicador = contextSections[0]?.items.slice(0, 2).join(' Â· ') ?? '';
+  const indicador = contextSections[0]?.items.slice(0, 2).join(' · ') ?? '';
   const mantenimientos = contextSections[1]?.items?.slice(0, 2).join(' | ');
 
   const introduccionBase =
-    'Hola, soy ALITO BOT. Ya estoy conectado a los datos operativos mÃ¡s recientes de tu flota. Â¿En quÃ© puedo ayudarte hoy?';
+    'Hola, soy ALITO BOT. Ya estoy conectado a los datos operativos más recientes de tu flota. ¿En qué puedo ayudarte hoy?';
 
   const detalles: string[] = [];
   if (indicador) {
@@ -222,20 +225,20 @@ const buildInitialAssistantMessage = (contextSections: ContextSection[]): string
 export default function AsistenteIA() {
   const { data, loading, usingDemoData } = useSupabaseDataContext();
   const { config } = useSystemConfig();
-  const [input, setInput] = useState('');
-  const [chatExpanded, setChatExpanded] = useState(false);
   const [contextMode, setContextMode] = useState<'docked' | 'floating'>('docked');
   const [contextSheetOpen, setContextSheetOpen] = useState(false);
+  const [chatExpanded, setChatExpanded] = useState(false);
+  const [input, setInput] = useState('');
 
   const context = useMemo(() => {
-    // Crear contexto enriquecido con datos completos para bÃºsquedas
+    // Crear contexto enriquecido con datos completos para búsquedas
     const baseContext = buildChatContext(loading ? null : data, config);
     
     if (!data) return baseContext;
 
     // Agregar todos los equipos con detalles completos al contexto
     const equiposDetallados = data.equipos.map(e => 
-      `${e.nombre} (Ficha: ${e.ficha}, Marca: ${e.marca}, Modelo: ${e.modelo}, Serie: ${e.numeroSerie}, CategorÃ­a: ${e.categoria}, Estado: ${e.activo ? 'Activo' : 'Inactivo'})`
+      `${e.nombre} (Ficha: ${e.ficha}, Marca: ${e.marca}, Modelo: ${e.modelo}, Serie: ${e.numeroSerie}, Categoría: ${e.categoria}, Estado: ${e.activo ? 'Activo' : 'Inactivo'})`
     ).join(' | ');
 
     const mantenimientosDetallados = data.mantenimientosProgramados.map(m =>
@@ -243,14 +246,14 @@ export default function AsistenteIA() {
     ).join(' | ');
 
     const inventariosDetallados = data.inventarios.map(i =>
-      `${i.nombre} (CÃ³digo: ${i.codigoIdentificacion}, Stock: ${i.cantidad}, CategorÃ­a: ${i.categoriaEquipo})`
+      `${i.nombre} (Código: ${i.codigoIdentificacion}, Stock: ${i.cantidad}, Categoría: ${i.categoriaEquipo})`
     ).join(' | ');
 
     return {
       ...baseContext,
       summary: `${baseContext.summary}
 
-DATOS COMPLETOS PARA BÃšSQUEDAS:
+DATOS COMPLETOS PARA BÚSQUEDAS:
 
 Equipos completos: ${equiposDetallados}
 
@@ -258,7 +261,7 @@ Mantenimientos: ${mantenimientosDetallados}
 
 Inventarios: ${inventariosDetallados}
 
-Usa estos datos para responder consultas especÃ­ficas y generar tablas filtradas segÃºn los criterios del usuario.`
+Usa estos datos para responder consultas específicas y generar tablas filtradas según los criterios del usuario.`
     };
   }, [data, config, loading]);
   const modelPriority = useMemo(() => getGroqModelPriority(), []);

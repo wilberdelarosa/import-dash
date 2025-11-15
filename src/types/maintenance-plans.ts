@@ -52,8 +52,12 @@ export interface PlanIntervaloKit {
   created_at: string;
 }
 
+export interface IntervaloKitAssignment extends PlanIntervaloKit {
+  kit: KitMantenimiento;
+}
+
 export interface PlanConIntervalos extends PlanMantenimiento {
-  intervalos: PlanIntervalo[];
+  intervalos: IntervaloConKits[];
 }
 
 export interface KitConPiezas extends KitMantenimiento {
@@ -61,5 +65,5 @@ export interface KitConPiezas extends KitMantenimiento {
 }
 
 export interface IntervaloConKits extends PlanIntervalo {
-  kits: KitMantenimiento[];
+  kits: IntervaloKitAssignment[];
 }
