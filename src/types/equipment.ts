@@ -21,8 +21,11 @@ export interface Inventario {
   activo: boolean;
   codigoIdentificacion: string;
   empresaSuplidora: string;
-  marcasCompatibles: string[];
-  modelosCompatibles: string[];
+  numeroParte: string;
+  sistema: string | null;
+  stockMinimo: number;
+  ubicacion: string | null;
+  marcaFabricante: string | null;
 }
 
 export interface Movimiento {

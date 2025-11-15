@@ -27,8 +27,8 @@ export function useKits() {
 
       const kitsConPiezas = (kitsData || []).map(kit => ({
         ...kit,
-        piezas: (piezasData || []).filter(pieza => pieza.kit_id === kit.id)
-      }));
+        piezas: (piezasData || []).filter((pieza: any) => pieza.kit_id === kit.id)
+      })) as KitConPiezas[];
 
       setKits(kitsConPiezas);
     } catch (error: any) {

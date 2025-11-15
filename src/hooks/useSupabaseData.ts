@@ -451,8 +451,11 @@ export function useSupabaseData() {
           activo: i.activo,
           codigoIdentificacion: i.codigo_identificacion,
           empresaSuplidora: i.empresa_suplidora,
-          marcasCompatibles: i.marcas_compatibles || [],
-          modelosCompatibles: i.modelos_compatibles || []
+          numeroParte: i.numero_parte || '',
+          sistema: i.sistema || null,
+          stockMinimo: i.stock_minimo || 5,
+          ubicacion: i.ubicacion || null,
+          marcaFabricante: i.marca_fabricante || null
         })),
         mantenimientosProgramados: mantenimientosData.map(m => ({
           id: Number(m.id),

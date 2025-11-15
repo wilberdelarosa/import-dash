@@ -40,8 +40,18 @@ export interface KitPieza {
   descripcion: string;
   tipo: string;
   cantidad: number;
-  unidad: string;
+  unidad: string | null;
   notas: string | null;
+  created_at: string;
+}
+
+export interface EquipoPlan {
+  id: number;
+  equipo_id: number;
+  plan_id: number;
+  fecha_inicio: string;
+  horas_inicio: number;
+  activo: boolean;
   created_at: string;
 }
 
