@@ -4,10 +4,9 @@ import { supabase } from '@/integrations/supabase/client';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Loader2 } from 'lucide-react';
+import { Loader2, Mail, Lock, User, CheckCircle2, AlertCircle } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 
 export default function Auth() {
@@ -16,6 +15,7 @@ export default function Auth() {
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
   const [error, setError] = useState<string | null>(null);
+  const [activeTab, setActiveTab] = useState('signin');
   const navigate = useNavigate();
   const { toast } = useToast();
 
@@ -47,8 +47,8 @@ export default function Auth() {
       }
 
       toast({
-        title: 'Inicio de sesión exitoso',
-        description: 'Bienvenido de vuelta',
+        title: '✓ Bienvenido',
+        description: 'Iniciaste sesión correctamente',
       });
       navigate('/');
     } catch (err) {
@@ -89,7 +89,7 @@ export default function Auth() {
       }
 
       toast({
-        title: 'Cuenta creada exitosamente',
+        title: '✓ Cuenta creada',
         description: 'Ya puedes iniciar sesión',
       });
       
@@ -113,126 +113,273 @@ export default function Auth() {
   };
 
   return (
-    <div className="flex min-h-screen items-center justify-center bg-gradient-to-br from-background via-background/95 to-muted/30 p-4">
-      <Card className="w-full max-w-md border-border/50 shadow-xl">
-        <CardHeader className="space-y-1">
-          <CardTitle className="text-2xl font-bold">ALITO GROUP SRL</CardTitle>
-          <CardDescription>
-            Sistema de Gestión de Maquinaria
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
-          <Tabs defaultValue="signin" className="w-full">
-            <TabsList className="grid w-full grid-cols-2">
-              <TabsTrigger value="signin">Iniciar Sesión</TabsTrigger>
-              <TabsTrigger value="signup">Registrarse</TabsTrigger>
-            </TabsList>
-            <TabsContent value="signin">
-              <form onSubmit={handleSignIn} className="space-y-4">
-                <div className="space-y-2">
-                  <Label htmlFor="email-signin">Email</Label>
-                  <Input
-                    id="email-signin"
-                    type="email"
-                    placeholder="tu@email.com"
-                    value={email}
-                    onChange={(e) => setEmail(e.target.value)}
-                    required
-                    disabled={loading}
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="password-signin">Contraseña</Label>
-                  <Input
-                    id="password-signin"
-                    type="password"
-                    placeholder="••••••••"
-                    value={password}
-                    onChange={(e) => setPassword(e.target.value)}
-                    required
-                    disabled={loading}
-                  />
-                </div>
-                {error && (
-                  <Alert variant="destructive">
-                    <AlertDescription>{error}</AlertDescription>
-                  </Alert>
-                )}
-                <Button type="submit" className="w-full" disabled={loading}>
-                  {loading ? (
-                    <>
-                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                      Iniciando sesión...
-                    </>
-                  ) : (
-                    'Iniciar Sesión'
+    <div className="relative min-h-screen w-full overflow-hidden bg-slate-950">
+      {/* Animated gradient background */}
+      <div className="absolute inset-0">
+        <div className="absolute top-0 -left-4 w-96 h-96 bg-blue-500/20 rounded-full mix-blend-multiply filter blur-3xl animate-blob"></div>
+        <div className="absolute top-0 -right-4 w-96 h-96 bg-purple-500/20 rounded-full mix-blend-multiply filter blur-3xl animate-blob animation-delay-2000"></div>
+        <div className="absolute -bottom-8 left-20 w-96 h-96 bg-cyan-500/20 rounded-full mix-blend-multiply filter blur-3xl animate-blob animation-delay-4000"></div>
+        <div className="absolute inset-0 bg-slate-950/40 backdrop-blur-3xl"></div>
+      </div>
+
+      {/* Content */}
+      <div className="relative z-10 flex min-h-screen items-center justify-center p-4">
+        <div className="w-full max-w-md">
+          {/* Logo and Header */}
+          <div className="mb-8 text-center animate-fade-in">
+            <div className="flex justify-center mb-6">
+              <div className="relative w-20 h-20 bg-gradient-to-br from-blue-500 to-purple-600 rounded-2xl flex items-center justify-center shadow-2xl transform hover:scale-110 transition-transform duration-300">
+                <span className="text-4xl font-bold text-white">⚙</span>
+                <div className="absolute inset-0 rounded-2xl bg-gradient-to-r from-blue-500 to-purple-600 opacity-0 group-hover:opacity-100 transition-opacity duration-300 blur-lg -z-10"></div>
+              </div>
+            </div>
+            <h1 className="text-4xl font-bold text-white mb-2 drop-shadow-lg">ALITO GROUP</h1>
+            <p className="text-sm text-blue-300 font-medium">Sistema de Gestión de Maquinaria</p>
+            <p className="text-xs text-slate-400 mt-1">Mantén el control de tu equipo</p>
+          </div>
+
+          {/* Auth Card */}
+          <div className="bg-slate-900/80 backdrop-blur-xl rounded-2xl border border-slate-700/50 shadow-2xl overflow-hidden animate-slide-up">
+            {/* Tabs */}
+            <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
+              <TabsList className="grid w-full grid-cols-2 bg-slate-800/50 border-b border-slate-700/50 rounded-none p-1">
+                <TabsTrigger 
+                  value="signin"
+                  className="rounded-lg data-[state=active]:bg-gradient-to-r data-[state=active]:from-blue-600 data-[state=active]:to-purple-600 data-[state=active]:text-white data-[state=active]:shadow-lg transition-all duration-200"
+                >
+                  <User className="w-4 h-4 mr-2" />
+                  Iniciar Sesión
+                </TabsTrigger>
+                <TabsTrigger 
+                  value="signup"
+                  className="rounded-lg data-[state=active]:bg-gradient-to-r data-[state=active]:from-blue-600 data-[state=active]:to-purple-600 data-[state=active]:text-white data-[state=active]:shadow-lg transition-all duration-200"
+                >
+                  <CheckCircle2 className="w-4 h-4 mr-2" />
+                  Registrarse
+                </TabsTrigger>
+              </TabsList>
+
+              {/* Sign In Tab */}
+              <TabsContent value="signin" className="p-6 space-y-4">
+                <form onSubmit={handleSignIn} className="space-y-4">
+                  {/* Email Input */}
+                  <div className="space-y-2">
+                    <Label htmlFor="email-signin" className="text-slate-200 font-medium">Email</Label>
+                    <div className="relative">
+                      <Mail className="absolute left-3 top-3 h-5 w-5 text-slate-500 pointer-events-none" />
+                      <Input
+                        id="email-signin"
+                        type="email"
+                        placeholder="ejemplo@empresa.com"
+                        value={email}
+                        onChange={(e) => setEmail(e.target.value)}
+                        required
+                        disabled={loading}
+                        className="pl-10 bg-slate-800/50 border-slate-600 text-white placeholder:text-slate-500 focus:border-blue-500 focus:ring-blue-500/50 focus:ring-2 transition-all duration-200"
+                      />
+                    </div>
+                  </div>
+
+                  {/* Password Input */}
+                  <div className="space-y-2">
+                    <Label htmlFor="password-signin" className="text-slate-200 font-medium">Contraseña</Label>
+                    <div className="relative">
+                      <Lock className="absolute left-3 top-3 h-5 w-5 text-slate-500 pointer-events-none" />
+                      <Input
+                        id="password-signin"
+                        type="password"
+                        placeholder="••••••••"
+                        value={password}
+                        onChange={(e) => setPassword(e.target.value)}
+                        required
+                        disabled={loading}
+                        className="pl-10 bg-slate-800/50 border-slate-600 text-white placeholder:text-slate-500 focus:border-blue-500 focus:ring-blue-500/50 focus:ring-2 transition-all duration-200"
+                      />
+                    </div>
+                  </div>
+
+                  {/* Error Alert */}
+                  {error && (
+                    <Alert variant="destructive" className="bg-red-500/10 border-red-500/30 animate-shake">
+                      <AlertCircle className="h-4 w-4 text-red-500" />
+                      <AlertDescription className="text-red-400 text-sm ml-2">{error}</AlertDescription>
+                    </Alert>
                   )}
-                </Button>
-              </form>
-            </TabsContent>
-            <TabsContent value="signup">
-              <form onSubmit={handleSignUp} className="space-y-4">
-                <div className="space-y-2">
-                  <Label htmlFor="email-signup">Email</Label>
-                  <Input
-                    id="email-signup"
-                    type="email"
-                    placeholder="tu@email.com"
-                    value={email}
-                    onChange={(e) => setEmail(e.target.value)}
-                    required
+
+                  {/* Sign In Button */}
+                  <Button 
+                    type="submit" 
+                    className="w-full bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white font-semibold py-2 h-11 rounded-lg transition-all duration-200 shadow-lg hover:shadow-xl transform hover:scale-105 disabled:opacity-50 disabled:cursor-not-allowed" 
                     disabled={loading}
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="password-signup">Contraseña</Label>
-                  <Input
-                    id="password-signup"
-                    type="password"
-                    placeholder="••••••••"
-                    value={password}
-                    onChange={(e) => setPassword(e.target.value)}
-                    required
-                    disabled={loading}
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="confirm-password">Confirmar Contraseña</Label>
-                  <Input
-                    id="confirm-password"
-                    type="password"
-                    placeholder="••••••••"
-                    value={confirmPassword}
-                    onChange={(e) => setConfirmPassword(e.target.value)}
-                    required
-                    disabled={loading}
-                  />
-                </div>
-                {error && (
-                  <Alert variant="destructive">
-                    <AlertDescription>{error}</AlertDescription>
-                  </Alert>
-                )}
-                <Button type="submit" className="w-full" disabled={loading}>
-                  {loading ? (
-                    <>
-                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                      Creando cuenta...
-                    </>
-                  ) : (
-                    'Crear Cuenta'
+                  >
+                    {loading ? (
+                      <>
+                        <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                        Iniciando sesión...
+                      </>
+                    ) : (
+                      'Iniciar Sesión'
+                    )}
+                  </Button>
+                </form>
+              </TabsContent>
+
+              {/* Sign Up Tab */}
+              <TabsContent value="signup" className="p-6 space-y-4">
+                <form onSubmit={handleSignUp} className="space-y-4">
+                  {/* Email Input */}
+                  <div className="space-y-2">
+                    <Label htmlFor="email-signup" className="text-slate-200 font-medium">Email</Label>
+                    <div className="relative">
+                      <Mail className="absolute left-3 top-3 h-5 w-5 text-slate-500 pointer-events-none" />
+                      <Input
+                        id="email-signup"
+                        type="email"
+                        placeholder="ejemplo@empresa.com"
+                        value={email}
+                        onChange={(e) => setEmail(e.target.value)}
+                        required
+                        disabled={loading}
+                        className="pl-10 bg-slate-800/50 border-slate-600 text-white placeholder:text-slate-500 focus:border-blue-500 focus:ring-blue-500/50 focus:ring-2 transition-all duration-200"
+                      />
+                    </div>
+                  </div>
+
+                  {/* Password Input */}
+                  <div className="space-y-2">
+                    <Label htmlFor="password-signup" className="text-slate-200 font-medium">Contraseña</Label>
+                    <div className="relative">
+                      <Lock className="absolute left-3 top-3 h-5 w-5 text-slate-500 pointer-events-none" />
+                      <Input
+                        id="password-signup"
+                        type="password"
+                        placeholder="••••••••"
+                        value={password}
+                        onChange={(e) => setPassword(e.target.value)}
+                        required
+                        disabled={loading}
+                        className="pl-10 bg-slate-800/50 border-slate-600 text-white placeholder:text-slate-500 focus:border-blue-500 focus:ring-blue-500/50 focus:ring-2 transition-all duration-200"
+                      />
+                    </div>
+                  </div>
+
+                  {/* Confirm Password Input */}
+                  <div className="space-y-2">
+                    <Label htmlFor="confirm-password" className="text-slate-200 font-medium">Confirmar Contraseña</Label>
+                    <div className="relative">
+                      <Lock className="absolute left-3 top-3 h-5 w-5 text-slate-500 pointer-events-none" />
+                      <Input
+                        id="confirm-password"
+                        type="password"
+                        placeholder="••••••••"
+                        value={confirmPassword}
+                        onChange={(e) => setConfirmPassword(e.target.value)}
+                        required
+                        disabled={loading}
+                        className="pl-10 bg-slate-800/50 border-slate-600 text-white placeholder:text-slate-500 focus:border-blue-500 focus:ring-blue-500/50 focus:ring-2 transition-all duration-200"
+                      />
+                    </div>
+                  </div>
+
+                  {/* Error Alert */}
+                  {error && (
+                    <Alert variant="destructive" className="bg-red-500/10 border-red-500/30 animate-shake">
+                      <AlertCircle className="h-4 w-4 text-red-500" />
+                      <AlertDescription className="text-red-400 text-sm ml-2">{error}</AlertDescription>
+                    </Alert>
                   )}
-                </Button>
-              </form>
-            </TabsContent>
-          </Tabs>
-        </CardContent>
-        <CardFooter className="flex flex-col space-y-2">
-          <p className="text-xs text-center text-muted-foreground">
-            Al continuar, aceptas nuestros términos de servicio y política de privacidad
-          </p>
-        </CardFooter>
-      </Card>
+
+                  {/* Sign Up Button */}
+                  <Button 
+                    type="submit" 
+                    className="w-full bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white font-semibold py-2 h-11 rounded-lg transition-all duration-200 shadow-lg hover:shadow-xl transform hover:scale-105 disabled:opacity-50 disabled:cursor-not-allowed" 
+                    disabled={loading}
+                  >
+                    {loading ? (
+                      <>
+                        <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                        Creando cuenta...
+                      </>
+                    ) : (
+                      'Crear Cuenta'
+                    )}
+                  </Button>
+                </form>
+              </TabsContent>
+            </Tabs>
+
+            {/* Footer */}
+            <div className="px-6 py-4 bg-slate-800/30 border-t border-slate-700/50">
+              <p className="text-xs text-center text-slate-400">
+                Al continuar, aceptas nuestros{' '}
+                <span className="text-blue-400 hover:text-blue-300 cursor-pointer transition-colors">términos de servicio</span>
+                {' '}y{' '}
+                <span className="text-blue-400 hover:text-blue-300 cursor-pointer transition-colors">política de privacidad</span>
+              </p>
+            </div>
+          </div>
+
+          {/* Security Badge */}
+          <div className="mt-6 text-center text-xs text-slate-500 flex items-center justify-center gap-1">
+            <CheckCircle2 className="w-4 h-4 text-green-500" />
+            <span>Conexión segura y encriptada</span>
+          </div>
+        </div>
+      </div>
+
+      <style>{`
+        @keyframes blob {
+          0%, 100% { transform: translate(0, 0) scale(1); }
+          33% { transform: translate(30px, -50px) scale(1.1); }
+          66% { transform: translate(-20px, 20px) scale(0.9); }
+        }
+        
+        @keyframes fade-in {
+          from { opacity: 0; }
+          to { opacity: 1; }
+        }
+        
+        @keyframes slide-up {
+          from {
+            opacity: 0;
+            transform: translateY(20px);
+          }
+          to {
+            opacity: 1;
+            transform: translateY(0);
+          }
+        }
+        
+        @keyframes shake {
+          0%, 100% { transform: translateX(0); }
+          25% { transform: translateX(-5px); }
+          75% { transform: translateX(5px); }
+        }
+        
+        .animate-blob {
+          animation: blob 7s infinite;
+        }
+        
+        .animation-delay-2000 {
+          animation-delay: 2s;
+        }
+        
+        .animation-delay-4000 {
+          animation-delay: 4s;
+        }
+        
+        .animate-fade-in {
+          animation: fade-in 0.8s ease-out;
+        }
+        
+        .animate-slide-up {
+          animation: slide-up 0.6s ease-out;
+        }
+        
+        .animate-shake {
+          animation: shake 0.5s ease-in-out;
+        }
+      `}</style>
     </div>
   );
 }
