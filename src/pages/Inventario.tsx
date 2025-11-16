@@ -17,7 +17,7 @@ const Inventario = () => {
 
   if (loading) {
     return (
-      <Layout>
+      <Layout title="Inventario de Repuestos">
         <Navigation />
         <div className="flex items-center justify-center h-64">
           <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary"></div>
@@ -46,7 +46,7 @@ const Inventario = () => {
   const tiposUnicos = ['todos', ...Array.from(new Set(inventario.map(item => item.tipo)))];
 
   return (
-    <Layout>
+    <Layout title="Inventario de Repuestos">
       <Navigation />
 
       <div className="container mx-auto py-6 space-y-6">
