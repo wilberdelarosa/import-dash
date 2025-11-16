@@ -1539,7 +1539,7 @@ export default function ControlMantenimiento() {
           </div>
         </div>
       </div>
-      </Layout>
+
       <div className="pointer-events-none fixed bottom-6 right-6 z-40 flex flex-col items-end gap-3">
         {planificadorOpen && (
           <div
@@ -1570,20 +1570,20 @@ export default function ControlMantenimiento() {
             aria-modal="false"
             className="pointer-events-auto w-full max-w-5xl overflow-hidden rounded-2xl border border-primary/20 bg-background/95 shadow-2xl backdrop-blur supports-[backdrop-filter]:backdrop-blur"
           >
-          <div className="flex items-start justify-between gap-4 border-b px-6 py-4">
-            <div>
-              <h3 className="flex items-center gap-2 text-base font-semibold">
-                <CalendarRange className="h-5 w-5 text-primary" /> Resumen por rango de actualización
-              </h3>
-              <p className="mt-1 text-sm text-muted-foreground">
-                Mantén abierta la ventana para actualizar lecturas o registrar mantenimientos en paralelo.
-              </p>
+            <div className="flex items-start justify-between gap-4 border-b px-6 py-4">
+              <div>
+                <h3 className="flex items-center gap-2 text-base font-semibold">
+                  <CalendarRange className="h-5 w-5 text-primary" /> Resumen por rango de actualización
+                </h3>
+                <p className="mt-1 text-sm text-muted-foreground">
+                  Mantén abierta la ventana para actualizar lecturas o registrar mantenimientos en paralelo.
+                </p>
+              </div>
+              <Button variant="ghost" size="icon" onClick={() => setIsResumenOpen(false)}>
+                <X className="h-4 w-4" />
+                <span className="sr-only">Cerrar resumen</span>
+              </Button>
             </div>
-            <Button variant="ghost" size="icon" onClick={() => setIsResumenOpen(false)}>
-              <X className="h-4 w-4" />
-              <span className="sr-only">Cerrar resumen</span>
-            </Button>
-          </div>
           <div className="max-h-[70vh] space-y-6 overflow-y-auto px-6 py-6">
             <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
               <div className="grid gap-2">
@@ -1723,6 +1723,7 @@ export default function ControlMantenimiento() {
           <span className="sr-only">Alternar resumen de actualizaciones</span>
         </Button>
       </div>
+      </Layout>
     </>
   );
 }
