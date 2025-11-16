@@ -260,8 +260,8 @@ export default function ControlMantenimiento() {
     () =>
       planIntervalo
         ? (planCatData.mantenimientosEspeciales ?? []).filter(
-            (especial) => especial.intervaloCodigo === planIntervalo,
-          )
+          (especial) => especial.intervaloCodigo === planIntervalo,
+        )
         : [],
     [planCatData.mantenimientosEspeciales, planIntervalo],
   );
@@ -269,6 +269,147 @@ export default function ControlMantenimiento() {
   const planCapacitacion = 
     planEspeciales[0]?.responsableSugerido
     ?? 'Define el responsable certificado para este plan';
+
+  const planPanelContent = (
+    <div className="space-y-6">
+      <div className="flex items-center justify-between gap-6 flex-wrap">
+        <div className="flex items-center gap-2">
+          <Route className="h-4 w-4 text-primary" />
+          <span className="font-semibold">Planificador preventivo Caterpillar</span>
+        </div>
+        <div className="text-xs text-muted-foreground">Selecciona tu equipo y intervalo</div>
+      </div>
+      {caterpillarEquipos.length === 0 ? (
+        <p className="text-sm text-muted-foreground">
+          Registra equipos Caterpillar para habilitar la planificación inteligente de rutas preventivas.
+        </p>
+      ) : (
+        <>
+          <div className="grid gap-4 md:grid-cols-2">
+            <div className="grid gap-2">
+              <Label htmlFor="planFichaFloating">Equipo Caterpillar</Label>
+              <Select
+                id="planFichaFloating"
+                value={planFicha ?? ''}
+                onValueChange={(value) => setPlanFicha(value)}
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder="Selecciona un equipo" />
+                </SelectTrigger>
+                <SelectContent>
+                  {caterpillarEquipos.map((equipo) => (
+                    <SelectItem key={equipo.ficha} value={equipo.ficha}>
+                      {equipo.nombre} · {equipo.ficha}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="grid gap-2">
+              <Label htmlFor="planIntervaloFloating">Intervalo oficial</Label>
+              <Select
+                id="planIntervaloFloating"
+                value={planIntervalo}
+                onValueChange={(value) => setPlanIntervalo(value)}
+                disabled={intervalosDisponibles.length === 0}
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder="MP disponible" />
+                </SelectTrigger>
+                <SelectContent>
+                  {intervalosDisponibles.map((intervalo) => (
+                    <SelectItem key={intervalo.codigo} value={intervalo.codigo}>
+                      {intervalo.codigo} · {intervalo.nombre}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+          </div>
+          {loadingPlanCat && (
+            <div className="flex items-center gap-2 text-sm text-muted-foreground">
+              <Loader2 className="h-4 w-4 animate-spin" /> Consultando catálogo Caterpillar...
+            </div>
+          )}
+          <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
+            <div className="rounded-lg border p-3">
+              <p className="text-xs text-muted-foreground">Lectura actual</p>
+              <p className="text-lg font-semibold">
+                {planProximo ? `${planProximo.horasKmActuales} h/km` : 'Sin registro'}
+              </p>
+            </div>
+            <div className="rounded-lg border p-3">
+              <p className="text-xs text-muted-foreground">Próximo objetivo</p>
+              <p className="text-lg font-semibold">
+                {planProximo ? `${planProximo.proximoMantenimiento} h/km` : 'Sin programación'}
+              </p>
+            </div>
+            <div className="rounded-lg border p-3">
+              <p className="text-xs text-muted-foreground">Restante estimado</p>
+              <Badge variant={planProximo ? getRemainingVariant(planProximo.horasKmRestante) : 'outline'}>
+                {planProximo ? `${planProximo.horasKmRestante} h/km` : 'Sin dato'}
+              </Badge>
+            </div>
+            <div className="rounded-lg border p-3">
+              <p className="flex items-center gap-2 text-xs text-muted-foreground">
+                <GraduationCap className="h-4 w-4 text-primary" /> Capacitación mínima
+              </p>
+              <p className="mt-1 text-sm font-medium leading-snug">{planCapacitacion}</p>
+            </div>
+          </div>
+          <div className="rounded-lg border border-dashed p-4">
+            <p className="text-sm font-semibold">Descripción del intervalo {planIntervalo || 'seleccionado'}</p>
+            <p className="mt-1 text-sm text-muted-foreground">{planIntervaloDescripcion}</p>
+          </div>
+          <div className="grid gap-4 lg:grid-cols-[1.5fr,1fr]">
+            <div className="space-y-3 rounded-lg border p-4">
+              <p className="flex items-center gap-2 text-sm font-semibold">
+                <ClipboardList className="h-4 w-4 text-primary" /> Tareas clave
+              </p>
+              {planTareas.length > 0 ? (
+                <ul className="space-y-1 text-sm">
+                  {planTareas.map((tarea) => (
+                    <li key={tarea} className="flex items-start gap-2">
+                      <span className="mt-1 h-1.5 w-1.5 rounded-full bg-primary" />
+                      <span className="leading-snug">{tarea}</span>
+                    </li>
+                  ))}
+                </ul>
+              ) : (
+                <p className="text-sm text-muted-foreground">Registra el intervalo para mostrar el checklist oficial.</p>
+              )}
+            </div>
+            <div className="space-y-3">
+              <div className="rounded-lg border p-4">
+                <p className="flex items-center gap-2 text-sm font-semibold">
+                  <MapPinned className="h-4 w-4 text-primary" /> Kit recomendado
+                </p>
+                {planKit.length > 0 ? (
+                  <ul className="mt-2 space-y-1 text-sm">
+                    {planKit.map((pieza) => (
+                      <li key={pieza} className="leading-snug">{pieza}</li>
+                    ))}
+                  </ul>
+                ) : (
+                  <p className="text-sm text-muted-foreground">No hay repuestos registrados para este intervalo.</p>
+                )}
+              </div>
+              {planEspeciales.length > 0 && (
+                <div className="rounded-lg border border-amber-200 bg-amber-50/60 p-4 text-sm">
+                  <p className="font-semibold text-amber-800">Mantenimiento especial</p>
+                  <ul className="mt-2 space-y-1 text-amber-800">
+                    {planEspeciales.map((especial) => (
+                      <li key={especial.id} className="leading-snug">{especial.descripcion}</li>
+                    ))}
+                  </ul>
+                </div>
+              )}
+            </div>
+          </div>
+        </>
+      )}
+    </div>
+  );
 
   const planRuta: RutaPlanItem[] = useMemo(() => {
     const cache = new Map<string, ReturnType<typeof getStaticCaterpillarData> | null>();
@@ -444,8 +585,9 @@ export default function ControlMantenimiento() {
         .sort((a, b) => (a.horasKmRestante ?? 0) - (b.horasKmRestante ?? 0))
         .slice(0, 3)
     : [];
+  const hasMantenimientosProgramados = data.mantenimientosProgramados.length > 0;
 
-  if (loading || !selected) {
+  if (loading) {
     return (
       <Layout title="Control integral de mantenimiento">
         <Navigation />
@@ -457,6 +599,51 @@ export default function ControlMantenimiento() {
           <CardContent className="flex items-center gap-3">
             <Loader2 className="h-5 w-5 animate-spin" />
             <span className="text-sm text-muted-foreground">Cargando información de mantenimiento</span>
+          </CardContent>
+        </Card>
+      </Layout>
+    );
+  }
+
+  if (!hasMantenimientosProgramados) {
+    return (
+      <Layout title="Control integral de mantenimiento">
+        <Navigation />
+        <div className="space-y-4 px-4 pb-4">
+          <Alert variant="warning">
+            <AlertTitle>Sin mantenimientos programados</AlertTitle>
+            <AlertDescription>
+              Define al menos un plan de mantenimiento en el módulo de Planes de mantenimiento o sincroniza tus registros para empezar a visualizar el control integral.
+            </AlertDescription>
+          </Alert>
+          <Card className="border-dashed border-border/70">
+            <CardHeader>
+              <CardTitle>Planificador preventivo</CardTitle>
+              <CardDescription>
+                Una vez que haya fichas vinculadas y tareas programadas la información aparecerá automáticamente en este espacio.
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="text-sm text-muted-foreground">
+              Agrega equipos, asigna intervalos y vincula kits para mantener tu programa actualizado.
+            </CardContent>
+          </Card>
+        </div>
+      </Layout>
+    );
+  }
+
+  if (!selected) {
+    return (
+      <Layout title="Control integral de mantenimiento">
+        <Navigation />
+        <Card>
+          <CardHeader>
+            <CardTitle>Preparando selección</CardTitle>
+            <CardDescription>Estamos escogiendo el equipo más relevante para mostrarte los detalles.</CardDescription>
+          </CardHeader>
+          <CardContent className="flex items-center gap-3">
+            <Loader2 className="h-5 w-5 animate-spin" />
+            <span className="text-sm text-muted-foreground">Recuperando datos del equipo</span>
           </CardContent>
         </Card>
       </Layout>
@@ -646,6 +833,7 @@ export default function ControlMantenimiento() {
           </section>
           <div className="grid gap-6 xl:grid-cols-[1.35fr,1fr]">
             <div className="space-y-6">
+            <div className="hidden">
             <Card className="overflow-hidden">
                 <CardHeader>
                   <CardTitle className="flex items-center gap-2">
@@ -874,6 +1062,7 @@ export default function ControlMantenimiento() {
                 )}
               </CardContent>
             </Card>
+            </div>
 
             <Card className="overflow-hidden border border-dashed border-border/70">
               <CardHeader>
@@ -1352,6 +1541,29 @@ export default function ControlMantenimiento() {
       </div>
       </Layout>
       <div className="pointer-events-none fixed bottom-6 right-6 z-40 flex flex-col items-end gap-3">
+        {planificadorOpen && (
+          <div
+            role="dialog"
+            aria-modal="false"
+            className="pointer-events-auto w-full max-w-5xl overflow-hidden rounded-2xl border border-primary/25 bg-background/95 shadow-2xl backdrop-blur supports-[backdrop-filter]:backdrop-blur"
+          >
+            <div className="flex items-start justify-between gap-4 border-b px-6 py-4">
+              <div>
+                <h3 className="flex items-center gap-2 text-base font-semibold">
+                  <Route className="h-5 w-5 text-primary" /> Planificador preventivo Caterpillar
+                </h3>
+                <p className="mt-1 text-sm text-muted-foreground">
+                  Usa esta burbuja para ver los kits, tareas y rutas sin ocupar toda la pantalla.
+                </p>
+              </div>
+              <Button variant="ghost" size="icon" onClick={() => setPlanificadorOpen(false)}>
+                <X className="h-4 w-4" />
+                <span className="sr-only">Cerrar planificador</span>
+              </Button>
+            </div>
+            <div className="max-h-[70vh] space-y-6 overflow-y-auto px-6 py-6">{planPanelContent}</div>
+          </div>
+        )}
         {isResumenOpen && (
           <div
             role="dialog"
@@ -1494,6 +1706,14 @@ export default function ControlMantenimiento() {
           </div>
         </div>
         )}
+        <Button
+          className="pointer-events-auto h-14 w-14 rounded-full shadow-lg transition hover:scale-105"
+          onClick={() => setPlanificadorOpen((prev) => !prev)}
+          size="icon"
+        >
+          <Route className="h-5 w-5" />
+          <span className="sr-only">Alternar planificador preventivo</span>
+        </Button>
         <Button
           className="pointer-events-auto h-14 w-14 rounded-full shadow-lg transition hover:scale-105"
           onClick={() => setIsResumenOpen((prev) => !prev)}

@@ -1,5 +1,5 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 import type {
@@ -20,7 +20,7 @@ export function usePlanes() {
   const [loading, setLoading] = useState(true);
   const { toast } = useToast();
 
-  const loadPlanes = async () => {
+  const loadPlanes = useCallback(async () => {
     try {
       setLoading(true);
       
@@ -76,22 +76,22 @@ export function usePlanes() {
     } finally {
       setLoading(false);
     }
-  };
+  }, [toast]);
 
   useEffect(() => {
     loadPlanes();
 
     const channel = supabase
       .channel('planes-changes')
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'planes_mantenimiento' }, loadPlanes)
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'plan_intervalos' }, loadPlanes)
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'plan_intervalo_kits' }, loadPlanes)
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'planes_mantenimiento' }, () => loadPlanes())
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'plan_intervalos' }, () => loadPlanes())
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'plan_intervalo_kits' }, () => loadPlanes())
       .subscribe();
 
     return () => {
       supabase.removeChannel(channel);
     };
-  }, []);
+  }, [loadPlanes]);
 
   const createPlan = async (plan: Omit<PlanMantenimiento, 'id' | 'created_at'>) => {
     try {

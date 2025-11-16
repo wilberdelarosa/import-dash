@@ -1,0 +1,17 @@
+  if (loading || !selected) {
+    return (
+      <Layout title="Control integral de mantenimiento">
+        <Navigation />
+        <Card>
+          <CardHeader>
+            <CardTitle>Preparando datos</CardTitle>
+            <CardDescription>Esperando información de los equipos...</CardDescription>
+          </CardHeader>
+          <CardContent className="flex items-center gap-3">
+            <Loader2 className="h-5 w-5 animate-spin" />
+            <span className="text-sm text-muted-foreground">Cargando información de mantenimiento</span>
+          </CardContent>
+        </Card>
+      </Layout>
+    );
+  }

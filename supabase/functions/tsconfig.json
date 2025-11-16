@@ -1,0 +1,14 @@
+{
+  "extends": "../../tsconfig.app.json",
+  "compilerOptions": {
+    "lib": ["ES2022", "DOM"],
+    "module": "ESNext",
+    "moduleResolution": "bundler",
+    "allowImportingTsExtensions": true,
+    "isolatedModules": true,
+    "moduleDetection": "force",
+    "strict": false,
+    "noEmit": true
+  },
+  "include": ["types.d.ts", "**/*.ts"]
+}
