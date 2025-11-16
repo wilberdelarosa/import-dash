@@ -48,7 +48,7 @@ export function useNotificaciones() {
     [],
   );
 
-  const loadNotificaciones = async () => {
+  const loadNotificaciones = useCallback(async () => {
     try {
       const { data, error } = await supabase
         .from('notificaciones')
@@ -79,7 +79,7 @@ export function useNotificaciones() {
     } finally {
       setLoading(false);
     }
-  };
+  }, [construirMensajeConFicha]);
 
   useEffect(() => {
     const inicializar = async () => {
@@ -154,7 +154,7 @@ export function useNotificaciones() {
     return () => {
       supabase.removeChannel(channel);
     };
-  }, [registrarEnvioExterno, permission, sendNotification, construirMensajeConFicha]);
+  }, [registrarEnvioExterno, permission, sendNotification, construirMensajeConFicha, loadNotificaciones]);
 
   const marcarComoLeida = async (id: number) => {
     try {

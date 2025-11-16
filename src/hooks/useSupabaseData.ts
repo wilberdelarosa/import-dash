@@ -1,5 +1,5 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useRef, useState, useCallback } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from '@/hooks/use-toast';
 import {
@@ -313,7 +313,7 @@ export function useSupabaseData() {
     }
   };
 
-  const loadData = async (showToast = false) => {
+  const loadData = useCallback(async (showToast = false) => {
     try {
       if (usingDemoData && !showToast) {
         setData(DEMO_DATABASE_DATA);
@@ -516,7 +516,7 @@ export function useSupabaseData() {
     } finally {
       setLoading(false);
     }
-  };
+  }, [usingDemoData]);
 
   useEffect(() => {
     if (usingDemoData) {
@@ -562,7 +562,7 @@ export function useSupabaseData() {
       supabase.removeChannel(mantenimientosChannel);
       supabase.removeChannel(historialChannel);
     };
-  }, [usingDemoData]);
+  }, [loadData, usingDemoData]);
 
   const clearDatabase = async () => {
     try {

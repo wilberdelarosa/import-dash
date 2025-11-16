@@ -1,5 +1,5 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 import type { KitMantenimiento, KitPieza, KitConPiezas } from '@/types/maintenance-plans';
@@ -9,7 +9,7 @@ export function useKits() {
   const [loading, setLoading] = useState(true);
   const { toast } = useToast();
 
-  const loadKits = async () => {
+  const loadKits = useCallback(async () => {
     try {
       setLoading(true);
       
@@ -42,21 +42,21 @@ export function useKits() {
     } finally {
       setLoading(false);
     }
-  };
+  }, [toast]);
 
   useEffect(() => {
     loadKits();
 
     const channel = supabase
       .channel('kits-changes')
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'kits_mantenimiento' }, loadKits)
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'kit_piezas' }, loadKits)
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'kits_mantenimiento' }, () => loadKits())
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'kit_piezas' }, () => loadKits())
       .subscribe();
 
     return () => {
       supabase.removeChannel(channel);
     };
-  }, []);
+  }, [loadKits]);
 
   const createKit = async (kit: Omit<KitMantenimiento, 'id' | 'created_at'>) => {
     try {

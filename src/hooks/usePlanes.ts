@@ -24,21 +24,21 @@ export function usePlanes() {
     try {
       setLoading(true);
       
-      const { data: planesData, error: planesError } = await supabase
+      const { data: planesData, error: planesError } = await (supabase as any)
         .from('planes_mantenimiento')
         .select('*')
         .order('nombre');
 
       if (planesError) throw planesError;
 
-      const { data: intervalosData, error: intervalosError } = await supabase
+      const { data: intervalosData, error: intervalosError } = await (supabase as any)
         .from('plan_intervalos')
         .select('*')
         .order('orden');
 
       if (intervalosError) throw intervalosError;
 
-      const { data: intervalosKitsData, error: intervalosKitsError } = await supabase
+      const { data: intervalosKitsData, error: intervalosKitsError } = await (supabase as any)
         .from('plan_intervalo_kits')
         .select('id, plan_intervalo_id, kit_id, created_at, kits_mantenimiento(*)');
 
