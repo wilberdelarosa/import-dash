@@ -89,7 +89,9 @@ export default function Inventario() {
     updateInventario,
     deleteInventario,
   } = useSupabaseDataContext();
-  const inventarios = data.inventarios ?? [];
+  
+  const inventarios = useMemo(() => data.inventarios ?? [], [data.inventarios]);
+  
   const [searchTerm, setSearchTerm] = useState('');
   const [filterTipo, setFilterTipo] = useState('all');
   const [openForm, setOpenForm] = useState(false);

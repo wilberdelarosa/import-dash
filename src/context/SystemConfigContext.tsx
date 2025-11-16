@@ -139,7 +139,7 @@ export function SystemConfigProvider({ children }: { children: React.ReactNode }
         setSaving(false);
       }
     },
-    [config],
+    [],
   );
 
   const value = useMemo<SystemConfigContextValue>(
