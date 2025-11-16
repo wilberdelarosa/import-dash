@@ -114,8 +114,11 @@ const mapInventarioToRow = (inventario: InventarioPayload) => ({
   activo: inventario.activo,
   codigo_identificacion: inventario.codigoIdentificacion,
   empresa_suplidora: inventario.empresaSuplidora,
-  marcas_compatibles: inventario.marcasCompatibles ?? [],
-  modelos_compatibles: inventario.modelosCompatibles ?? [],
+  numero_parte: inventario.numeroParte ?? '',
+  sistema: inventario.sistema ?? null,
+  stock_minimo: inventario.stockMinimo ?? 5,
+  ubicacion: inventario.ubicacion ?? null,
+  marca_fabricante: inventario.marcaFabricante ?? null,
 });
 
 const mantenimientoKey = (ficha: string, tipo: string) => `${ficha}__${tipo}`.toLowerCase();
@@ -154,8 +157,11 @@ const diffInventario = (current: Inventario, incoming: InventarioPayload) => {
   maybe('Cantidad', current.cantidad, incoming.cantidad);
   maybe('Estado', current.activo ? 'Activo' : 'Inactivo', incoming.activo ? 'Activo' : 'Inactivo');
   maybe('Empresa suplidora', current.empresaSuplidora, incoming.empresaSuplidora);
-  maybe('Marcas compatibles', current.marcasCompatibles, incoming.marcasCompatibles);
-  maybe('Modelos compatibles', current.modelosCompatibles, incoming.modelosCompatibles);
+  maybe('Número de parte', current.numeroParte, incoming.numeroParte);
+  maybe('Sistema', current.sistema, incoming.sistema);
+  maybe('Stock mínimo', current.stockMinimo, incoming.stockMinimo);
+  maybe('Ubicación', current.ubicacion, incoming.ubicacion);
+  maybe('Marca fabricante', current.marcaFabricante, incoming.marcaFabricante);
 
   return cambios;
 };
@@ -201,8 +207,11 @@ const toInventarioPayload = (inventario: Inventario): InventarioPayload => ({
   activo: inventario.activo,
   codigoIdentificacion: inventario.codigoIdentificacion,
   empresaSuplidora: inventario.empresaSuplidora,
-  marcasCompatibles: inventario.marcasCompatibles,
-  modelosCompatibles: inventario.modelosCompatibles,
+  numeroParte: inventario.numeroParte,
+  sistema: inventario.sistema,
+  stockMinimo: inventario.stockMinimo,
+  ubicacion: inventario.ubicacion,
+  marcaFabricante: inventario.marcaFabricante,
 });
 
 const toMantenimientoPayload = (mantenimiento: MantenimientoProgramado): MantenimientoPayload => ({
@@ -1412,8 +1421,11 @@ export function useSupabaseData() {
         activo: inventarioData.activo ?? true,
         codigo_identificacion: inventarioData.codigoIdentificacion ?? '',
         empresa_suplidora: inventarioData.empresaSuplidora ?? '',
-        marcas_compatibles: inventarioData.marcasCompatibles ?? [],
-        modelos_compatibles: inventarioData.modelosCompatibles ?? [],
+        numero_parte: inventarioData.numeroParte ?? '',
+        sistema: inventarioData.sistema ?? null,
+        stock_minimo: inventarioData.stockMinimo ?? 5,
+        ubicacion: inventarioData.ubicacion ?? null,
+        marca_fabricante: inventarioData.marcaFabricante ?? null,
       }]);
       if (error) throw error;
       inventariosMigrados++;
