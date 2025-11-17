@@ -1157,6 +1157,23 @@ export function useSupabaseData() {
     }
   };
 
+  const normalizeDateInputToIso = (value?: string) => {
+    if (!value) {
+      return new Date().toISOString();
+    }
+
+    const trimmed = value.trim();
+    const localDateMatch = trimmed.match(/^(\d{4})-(\d{2})-(\d{2})$/);
+
+    if (localDateMatch) {
+      const [, year, month, day] = localDateMatch;
+      return new Date(Number(year), Number(month) - 1, Number(day)).toISOString();
+    }
+
+    const parsed = new Date(trimmed);
+    return Number.isNaN(parsed.getTime()) ? new Date().toISOString() : parsed.toISOString();
+  };
+
   const updateHorasActuales = async ({
     mantenimientoId,
     horasKm,
@@ -1185,7 +1202,7 @@ export function useSupabaseData() {
     const horasActuales = Number(horasKm);
     const unidadLectura = unidad ?? (mantenimiento.tipoMantenimiento.toLowerCase().includes('km') ? 'km' : 'horas');
     const incremento = horasActuales - horasPrevias;
-    const fechaIso = fecha ? new Date(fecha).toISOString() : new Date().toISOString();
+    const fechaIso = normalizeDateInputToIso(fecha);
     const restanteCalculado = Math.max(mantenimiento.proximoMantenimiento - horasActuales, 0);
 
     try {
@@ -1283,7 +1300,7 @@ export function useSupabaseData() {
       throw new Error('Mantenimiento no encontrado');
     }
 
-    const fechaIso = fecha ? new Date(fecha).toISOString() : new Date().toISOString();
+    const fechaIso = normalizeDateInputToIso(fecha);
     const lectura = Number(horasKm);
     const unidadMantenimiento = unidad ?? (mantenimiento.tipoMantenimiento.toLowerCase().includes('km') ? 'km' : 'horas');
     const horasPrevias = Number(mantenimiento.horasKmUltimoMantenimiento ?? 0);

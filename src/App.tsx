@@ -5,7 +5,7 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route } from "react-router-dom";
 import Dashboard from "./pages/Dashboard";
 import Equipos from "./pages/Equipos";
-import ControlMantenimiento from "./pages/ControlMantenimiento";
+import ControlMantenimiento from "./pages/ControlMantenimientoProfesional";
 import Inventario from "./pages/Inventario";
 import Mantenimiento from "./pages/Mantenimiento";
 import PlanesMantenimiento from "./pages/PlanesMantenimiento";
