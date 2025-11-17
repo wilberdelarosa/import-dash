@@ -467,7 +467,6 @@ export default function ListasPersonalizadas() {
 
   return (
     <Layout title="Listas personalizadas">
-      <Navigation />
 
       <div className="space-y-6 lg:space-y-8">
         <Alert className="border-primary/40 bg-primary/5">

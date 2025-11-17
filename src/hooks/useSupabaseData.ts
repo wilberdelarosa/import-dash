@@ -1,4 +1,49 @@
-import { useEffect, useRef, useState } from 'react';
+/* eslint-disable @typescript-eslint/no-explicit-any */
+/**
+ * Hook principal para gestionar todos los datos de la aplicación con Supabase
+ * 
+ * Este hook centraliza todas las operaciones CRUD y sincronización con la base de datos.
+ * Proporciona métodos para:
+ * - CRUD de equipos, inventarios, mantenimientos
+ * - Migración de datos desde localStorage
+ * - Importación y sincronización de archivos JSON
+ * - Suscripciones en tiempo real a cambios en la BD
+ * 
+ * @example
+ * ```tsx
+ * function MyComponent() {
+ *   const { data, loading, createEquipo, updateEquipo } = useSupabaseData();
+ *   
+ *   const handleCreate = async () => {
+ *     await createEquipo({
+ *       ficha: 'AC-001',
+ *       nombre: 'Excavadora',
+ *       marca: 'Caterpillar',
+ *       modelo: '320D',
+ *       activo: true
+ *     });
+ *   };
+ *   
+ *   return <div>{data.equipos.map(e => <div key={e.id}>{e.nombre}</div>)}</div>;
+ * }
+ * ```
+ * 
+ * @returns {Object} Estado y métodos para gestionar datos
+ * @returns {DatabaseData} data - Todos los datos cargados de la BD
+ * @returns {boolean} loading - Indica si está cargando datos iniciales
+ * @returns {boolean} isMigrating - Indica si está migrando datos
+ * @returns {Function} createEquipo - Crea un nuevo equipo
+ * @returns {Function} updateEquipo - Actualiza un equipo existente
+ * @returns {Function} deleteEquipo - Elimina un equipo
+ * @returns {Function} createInventario - Crea un ítem de inventario
+ * @returns {Function} updateInventario - Actualiza inventario
+ * @returns {Function} deleteInventario - Elimina inventario
+ * @returns {Function} migrateFromLocalStorage - Migra datos desde localStorage
+ * @returns {Function} importJsonData - Importa datos desde archivo JSON
+ * @returns {Function} syncJsonData - Sincroniza cambios desde JSON (smart merge)
+ * @returns {Function} clearDatabase - Limpia toda la base de datos
+ */
+import { useEffect, useRef, useState, useCallback } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from '@/hooks/use-toast';
 import {
@@ -107,18 +152,20 @@ const mapEquipoToRow = (equipo: EquipoPayload) => ({
 
 const mapInventarioToRow = (inventario: InventarioPayload) => ({
   nombre: inventario.nombre,
+  numero_parte: inventario.numeroParte || inventario.codigoIdentificacion || '',
   tipo: inventario.tipo,
+  sistema: inventario.sistema ?? null,
   categoria_equipo: inventario.categoriaEquipo,
   cantidad: Number(inventario.cantidad ?? 0),
+  stock_minimo: Number(inventario.stockMinimo ?? 0),
   movimientos: (Array.isArray(inventario.movimientos) ? inventario.movimientos : []) as any,
   activo: inventario.activo,
   codigo_identificacion: inventario.codigoIdentificacion,
-  empresa_suplidora: inventario.empresaSuplidora,
-  numero_parte: inventario.numeroParte ?? '',
-  sistema: inventario.sistema ?? null,
-  stock_minimo: inventario.stockMinimo ?? 5,
   ubicacion: inventario.ubicacion ?? null,
+  empresa_suplidora: inventario.empresaSuplidora,
   marca_fabricante: inventario.marcaFabricante ?? null,
+  marcas_compatibles: inventario.marcasCompatibles ?? [],
+  modelos_compatibles: inventario.modelosCompatibles ?? [],
 });
 
 const mantenimientoKey = (ficha: string, tipo: string) => `${ficha}__${tipo}`.toLowerCase();
@@ -150,19 +197,20 @@ const diffInventario = (current: Inventario, incoming: InventarioPayload) => {
     if (change) cambios.push(change);
   };
 
-  maybe('Código', current.codigoIdentificacion, incoming.codigoIdentificacion);
+  maybe('Codigo', current.codigoIdentificacion, incoming.codigoIdentificacion);
   maybe('Nombre', current.nombre, incoming.nombre);
+  maybe('Numero de parte', current.numeroParte, incoming.numeroParte);
   maybe('Tipo', current.tipo, incoming.tipo);
-  maybe('Categoría', current.categoriaEquipo, incoming.categoriaEquipo);
-  maybe('Cantidad', current.cantidad, incoming.cantidad);
-  maybe('Estado', current.activo ? 'Activo' : 'Inactivo', incoming.activo ? 'Activo' : 'Inactivo');
-  maybe('Empresa suplidora', current.empresaSuplidora, incoming.empresaSuplidora);
-  maybe('Número de parte', current.numeroParte, incoming.numeroParte);
   maybe('Sistema', current.sistema, incoming.sistema);
-  maybe('Stock mínimo', current.stockMinimo, incoming.stockMinimo);
-  maybe('Ubicación', current.ubicacion, incoming.ubicacion);
+  maybe('Categoria', current.categoriaEquipo, incoming.categoriaEquipo);
+  maybe('Cantidad', current.cantidad, incoming.cantidad);
+  maybe('Stock minimo', current.stockMinimo, incoming.stockMinimo);
+  maybe('Estado', current.activo ? 'Activo' : 'Inactivo', incoming.activo ? 'Activo' : 'Inactivo');
+  maybe('Ubicacion', current.ubicacion, incoming.ubicacion);
+  maybe('Empresa suplidora', current.empresaSuplidora, incoming.empresaSuplidora);
   maybe('Marca fabricante', current.marcaFabricante, incoming.marcaFabricante);
-
+  maybe('Marcas compatibles', current.marcasCompatibles, incoming.marcasCompatibles);
+  maybe('Modelos compatibles', current.modelosCompatibles, incoming.modelosCompatibles);
   return cambios;
 };
 
@@ -200,18 +248,20 @@ const toEquipoPayload = (equipo: Equipo): EquipoPayload => ({
 
 const toInventarioPayload = (inventario: Inventario): InventarioPayload => ({
   nombre: inventario.nombre,
+  numeroParte: inventario.numeroParte,
   tipo: inventario.tipo,
+  sistema: inventario.sistema,
   categoriaEquipo: inventario.categoriaEquipo,
   cantidad: inventario.cantidad,
+  stockMinimo: inventario.stockMinimo,
   movimientos: inventario.movimientos,
   activo: inventario.activo,
   codigoIdentificacion: inventario.codigoIdentificacion,
-  empresaSuplidora: inventario.empresaSuplidora,
-  numeroParte: inventario.numeroParte,
-  sistema: inventario.sistema,
-  stockMinimo: inventario.stockMinimo,
   ubicacion: inventario.ubicacion,
+  empresaSuplidora: inventario.empresaSuplidora,
   marcaFabricante: inventario.marcaFabricante,
+  marcasCompatibles: inventario.marcasCompatibles,
+  modelosCompatibles: inventario.modelosCompatibles,
 });
 
 const toMantenimientoPayload = (mantenimiento: MantenimientoProgramado): MantenimientoPayload => ({
@@ -307,7 +357,7 @@ export function useSupabaseData() {
     }
   };
 
-  const loadData = async (showToast = false) => {
+  const loadData = useCallback(async (showToast = false) => {
     try {
       if (usingDemoData && !showToast) {
         setData(DEMO_DATABASE_DATA);
@@ -453,18 +503,20 @@ export function useSupabaseData() {
         inventarios: inventariosData.map(i => ({
           id: Number(i.id),
           nombre: i.nombre,
+          numeroParte: i.numero_parte ?? '',
           tipo: i.tipo,
+          sistema: i.sistema ?? null,
           categoriaEquipo: i.categoria_equipo,
           cantidad: i.cantidad,
+          stockMinimo: Number(i.stock_minimo ?? 0),
           movimientos: i.movimientos as any[],
           activo: i.activo,
           codigoIdentificacion: i.codigo_identificacion,
+          ubicacion: i.ubicacion ?? null,
           empresaSuplidora: i.empresa_suplidora,
-          numeroParte: i.numero_parte || '',
-          sistema: i.sistema || null,
-          stockMinimo: i.stock_minimo || 5,
-          ubicacion: i.ubicacion || null,
-          marcaFabricante: i.marca_fabricante || null
+          marcaFabricante: i.marca_fabricante ?? null,
+          marcasCompatibles: i.marcas_compatibles || [],
+          modelosCompatibles: i.modelos_compatibles || []
         })),
         mantenimientosProgramados: mantenimientosData.map(m => ({
           id: Number(m.id),
@@ -508,7 +560,7 @@ export function useSupabaseData() {
     } finally {
       setLoading(false);
     }
-  };
+  }, [usingDemoData]);
 
   useEffect(() => {
     if (usingDemoData) {
@@ -554,7 +606,7 @@ export function useSupabaseData() {
       supabase.removeChannel(mantenimientosChannel);
       supabase.removeChannel(historialChannel);
     };
-  }, [usingDemoData]);
+  }, [loadData, usingDemoData]);
 
   const clearDatabase = async () => {
     try {
@@ -783,6 +835,166 @@ export function useSupabaseData() {
       toast({
         title: '❌ Error',
         description: 'No se pudo eliminar el equipo',
+        variant: 'destructive',
+      });
+      throw error;
+    }
+  };
+
+  const createInventario = async (inventario: InventarioPayload) => {
+    if (usingDemoData) {
+      showDemoWriteNotice();
+      return;
+    }
+
+    try {
+      const payload = mapInventarioToRow(inventario);
+      const { data: inserted, error } = await supabase
+        .from('inventarios')
+        .insert(payload)
+        .select()
+        .single();
+
+      if (error) throw error;
+
+      await recordHistorialEvent({
+        tipo: 'inventario_creado',
+        modulo: 'inventarios',
+        descripcion: `Se registr�� el repuesto ${inventario.nombre}`,
+        nombre: inventario.nombre,
+        datosDespues: { id: inserted?.id, ...inventario },
+        metadata: {
+          codigo: inventario.codigoIdentificacion,
+          numeroParte: inventario.numeroParte,
+          sistema: inventario.sistema,
+        },
+      });
+
+      toast({
+        title: 'Inventario registrado',
+        description: `Se agreg�� ${inventario.nombre} al cat��logo.`,
+      });
+
+      await loadData(true);
+    } catch (error) {
+      console.error('Error creating inventario:', error);
+      toast({
+        title: '�?O Error',
+        description: 'No se pudo registrar el item de inventario',
+        variant: 'destructive',
+      });
+      throw error;
+    }
+  };
+
+  const updateInventario = async (id: number, inventario: InventarioPayload) => {
+    if (usingDemoData) {
+      showDemoWriteNotice();
+      return;
+    }
+
+    try {
+      const existing = data.inventarios.find((item) => item.id === id);
+      if (!existing) {
+        toast({
+          title: '�?O Error',
+          description: 'No se encontr�� el item seleccionado',
+          variant: 'destructive',
+        });
+        throw new Error('Inventario no encontrado');
+      }
+
+      const cambios = diffInventario(existing, inventario);
+      if (cambios.length === 0) {
+        toast({
+          title: 'Sin cambios detectados',
+          description: 'No se aplicaron modificaciones al inventario.',
+        });
+        return;
+      }
+
+      const payload = mapInventarioToRow(inventario);
+      const { error } = await supabase
+        .from('inventarios')
+        .update(payload)
+        .eq('id', id);
+
+      if (error) throw error;
+
+      await recordHistorialEvent({
+        tipo: 'inventario_actualizado',
+        modulo: 'inventarios',
+        descripcion: `Se actualiz�� ${inventario.nombre}`,
+        nombre: inventario.nombre,
+        datosAntes: existing,
+        datosDespues: { id, ...inventario },
+        metadata: { cambios },
+      });
+
+      toast({
+        title: 'Inventario actualizado',
+        description: `Se guardaron los cambios para ${inventario.nombre}.`,
+      });
+
+      await loadData(true);
+    } catch (error) {
+      console.error('Error updating inventario:', error);
+      toast({
+        title: '�?O Error',
+        description: 'No se pudo actualizar el inventario',
+        variant: 'destructive',
+      });
+      throw error;
+    }
+  };
+
+  const deleteInventario = async (id: number) => {
+    if (usingDemoData) {
+      showDemoWriteNotice();
+      return;
+    }
+
+    try {
+      const existing = data.inventarios.find((item) => item.id === id);
+      if (!existing) {
+        toast({
+          title: '�?O Error',
+          description: 'No se encontr�� el item de inventario a eliminar',
+          variant: 'destructive',
+        });
+        throw new Error('Inventario no encontrado');
+      }
+
+      const { error } = await supabase
+        .from('inventarios')
+        .delete()
+        .eq('id', id);
+
+      if (error) throw error;
+
+      await recordHistorialEvent({
+        tipo: 'inventario_eliminado',
+        modulo: 'inventarios',
+        descripcion: `Se elimin�� ${existing.nombre} del inventario`,
+        nombre: existing.nombre,
+        datosAntes: existing,
+        metadata: {
+          codigo: existing.codigoIdentificacion,
+          numeroParte: existing.numeroParte,
+        },
+      });
+
+      toast({
+        title: 'Inventario eliminado',
+        description: 'El registro se elimin�� correctamente.',
+      });
+
+      await loadData(true);
+    } catch (error) {
+      console.error('Error deleting inventario:', error);
+      toast({
+        title: '�?O Error',
+        description: 'No se pudo eliminar el registro de inventario',
         variant: 'destructive',
       });
       throw error;
@@ -1413,19 +1625,21 @@ export function useSupabaseData() {
     for (const inventario of inventariosLocal) {
       const { id, ...inventarioData } = inventario;
       const { error } = await supabase.from('inventarios').insert([{
-        nombre: inventarioData.tipo, // Using tipo as nombre since nombre doesn't exist in original data
-        tipo: inventarioData.tipo,
-        categoria_equipo: inventarioData.categoriaEquipo,
+        nombre: inventarioData.nombre ?? inventarioData.tipo ?? 'Repuesto',
+        numero_parte: inventarioData.numeroParte ?? inventarioData.codigoIdentificacion ?? '',
+        tipo: inventarioData.tipo ?? 'Consumible',
+        sistema: inventarioData.sistema ?? null,
+        categoria_equipo: inventarioData.categoriaEquipo ?? 'General',
         cantidad: Number(inventarioData.cantidad ?? 0),
+        stock_minimo: Number(inventarioData.stockMinimo ?? 0),
         movimientos: (Array.isArray(inventarioData.movimientos) ? inventarioData.movimientos : []) as any,
         activo: inventarioData.activo ?? true,
         codigo_identificacion: inventarioData.codigoIdentificacion ?? '',
-        empresa_suplidora: inventarioData.empresaSuplidora ?? '',
-        numero_parte: inventarioData.numeroParte ?? '',
-        sistema: inventarioData.sistema ?? null,
-        stock_minimo: inventarioData.stockMinimo ?? 5,
         ubicacion: inventarioData.ubicacion ?? null,
+        empresa_suplidora: inventarioData.empresaSuplidora ?? '',
         marca_fabricante: inventarioData.marcaFabricante ?? null,
+        marcas_compatibles: inventarioData.marcasCompatibles ?? [],
+        modelos_compatibles: inventarioData.modelosCompatibles ?? [],
       }]);
       if (error) throw error;
       inventariosMigrados++;
@@ -1642,6 +1856,9 @@ export function useSupabaseData() {
     createEquipo,
     updateEquipo,
     deleteEquipo,
+    createInventario,
+    updateInventario,
+    deleteInventario,
     createMantenimiento,
     updateMantenimiento,
     deleteMantenimiento,

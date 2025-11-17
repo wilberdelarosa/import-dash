@@ -1,4 +1,4 @@
-import { ReactNode } from 'react';
+import { ReactNode, useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { RefreshCw, FileDown, FileUp, Trash2, ListChecks } from 'lucide-react';
 import { useSupabaseDataContext } from '@/context/SupabaseDataContext';
@@ -9,6 +9,9 @@ import { NotificationButton } from '@/components/NotificationButton';
 import { Badge } from '@/components/ui/badge';
 import { useSystemConfig } from '@/context/SystemConfigContext';
 import { BrandLogo } from '@/components/BrandLogo';
+import { Navigation } from '@/components/Navigation';
+import { ConfirmDialog } from '@/components/ConfirmDialog';
+import { CommandPalette } from '@/components/CommandPalette';
 
 interface LayoutProps {
   children: ReactNode;
@@ -26,6 +29,7 @@ export function Layout({ children, title }: LayoutProps) {
   const { importData } = useLocalStorage();
   const { toast } = useToast();
   const { config } = useSystemConfig();
+  const [confirmClearOpen, setConfirmClearOpen] = useState(false);
 
   const importDisabled = !config.permitirImportaciones;
 
@@ -34,14 +38,12 @@ export function Layout({ children, title }: LayoutProps) {
   };
 
   const handleClear = async () => {
-    const confirmed = window.confirm(
-      '¿Estás seguro de que deseas eliminar todos los datos de la base de datos? Esta acción no se puede deshacer.',
-    );
-    if (!confirmed) {
-      return;
-    }
+    setConfirmClearOpen(true);
+  };
 
+  const confirmClear = async () => {
     await clearDatabase();
+    setConfirmClearOpen(false);
   };
 
   const handleExport = () => {
@@ -172,78 +174,101 @@ export function Layout({ children, title }: LayoutProps) {
     <div className="min-h-screen bg-background text-foreground">
       <header className="border-b border-border/60 bg-card/80 shadow-sm backdrop-blur supports-[backdrop-filter]:bg-card/60 dark:border-border/40 dark:bg-card/70">
         <div className="mx-auto w-full max-w-[1600px] px-4 py-4 sm:px-6 lg:px-8">
-          <div className="flex flex-col gap-6 xl:flex-row xl:items-center xl:justify-between">
-            <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:gap-6">
-              <BrandLogo />
-              <div className="space-y-1">
-                <p className="text-xs font-semibold uppercase tracking-[0.35em] text-muted-foreground">Panel activo</p>
-                <p className="text-2xl font-bold text-foreground">{title}</p>
+          <div className="flex flex-col gap-6">
+            <div className="flex flex-col gap-6 md:flex-row md:items-center md:justify-between">
+              <div className="flex flex-col gap-4 md:flex-row md:items-center md:gap-6">
+                <BrandLogo />
+                <div className="space-y-1">
+                  <div className="flex items-center gap-3">
+                    <div className="h-px w-8 bg-gradient-to-r from-transparent via-primary to-transparent" />
+                    <p className="text-xs font-semibold uppercase tracking-[0.35em] text-primary">Panel activo</p>
+                    <div className="h-px w-8 bg-gradient-to-r from-primary via-transparent to-transparent" />
+                  </div>
+                  <p className="text-3xl font-bold bg-gradient-to-r from-foreground to-foreground/70 bg-clip-text text-transparent leading-tight">{title}</p>
+                  <p className="text-sm text-muted-foreground max-w-2xl">
+                    En este panel puedes ver el estado global del sistema y administrar importaciones, sincronizaciones
+                    y respaldos desde una sola línea de comandos.
+                  </p>
+                </div>
               </div>
-              <Badge variant="outline" className="w-fit text-xs uppercase tracking-widest">
+              <Badge variant="outline" className="text-xs uppercase tracking-[0.35em] px-3 py-1">
                 v1.0.0
               </Badge>
             </div>
-            <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-end">
-              <div className="flex items-center justify-end gap-2">
-                <NotificationButton />
-                <ThemeToggle />
-              </div>
-              <div className="grid grid-cols-2 gap-2 sm:grid-cols-3 md:flex md:flex-wrap md:justify-end md:gap-3">
+            <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
+              <div className="flex flex-wrap gap-3">
                 <Button
                   variant="outline"
                   onClick={handleImport}
                   size="sm"
-                  className="w-full justify-center sm:w-auto"
+                  className="gap-2 transition-all duration-300 hover:bg-primary/10 hover:text-primary hover:border-primary/50 hover:shadow-md"
                   disabled={importDisabled}
                   title={importDisabled ? 'Importaciones manuales deshabilitadas' : undefined}
                 >
-                  <FileUp className="mr-2 h-4 w-4" />
+                  <FileUp className="h-4 w-4" />
                   Importar JSON
                 </Button>
                 <Button
                   variant="outline"
                   onClick={handleMigrate}
                   size="sm"
-                  className="w-full justify-center sm:w-auto"
+                  className="gap-2 transition-all duration-300 hover:bg-primary/10 hover:text-primary hover:border-primary/50 hover:shadow-md"
                 >
-                  <RefreshCw className="mr-2 h-4 w-4" />
+                  <RefreshCw className="h-4 w-4" />
                   Migrar a DB
                 </Button>
                 <Button
                   variant="outline"
                   onClick={handleExport}
                   size="sm"
-                  className="w-full justify-center sm:w-auto"
+                  className="gap-2 transition-all duration-300 hover:bg-emerald-500/10 hover:text-emerald-600 hover:border-emerald-500/50 hover:shadow-md"
                 >
-                  <FileDown className="mr-2 h-4 w-4" />
+                  <FileDown className="h-4 w-4" />
                   Exportar JSON
                 </Button>
                 <Button
                   variant="outline"
                   onClick={handleSmartImport}
                   size="sm"
-                  className="w-full justify-center sm:w-auto"
+                  className="gap-2 transition-all duration-300 hover:bg-blue-500/10 hover:text-blue-600 hover:border-blue-500/50 hover:shadow-md"
                   disabled={importDisabled}
                   title={importDisabled ? 'Importaciones manuales deshabilitadas' : undefined}
                 >
-                  <ListChecks className="mr-2 h-4 w-4" />
+                  <ListChecks className="h-4 w-4" />
                   Sincronizar cambios
                 </Button>
                 <Button
                   variant="destructive"
                   onClick={handleClear}
                   size="sm"
-                  className="w-full justify-center sm:w-auto"
+                  className="gap-2"
                 >
-                  <Trash2 className="mr-2 h-4 w-4" />
+                  <Trash2 className="h-4 w-4" />
                   Vaciar datos
                 </Button>
+              </div>
+              <div className="flex items-center gap-2">
+                <CommandPalette />
+                <NotificationButton />
+                <ThemeToggle />
               </div>
             </div>
           </div>
         </div>
+        <Navigation hideBrand />
       </header>
-      <main className="mx-auto w-full max-w-[1600px] px-4 py-6 sm:px-6 lg:px-8">{children}</main>
+      <main className="mx-auto w-full max-w-[1600px] px-4 py-8 sm:px-6 lg:px-8 bg-gradient-to-br from-background via-background to-muted/20">{children}</main>
+
+      <ConfirmDialog
+        open={confirmClearOpen}
+        onOpenChange={setConfirmClearOpen}
+        onConfirm={confirmClear}
+        title="Vaciar base de datos"
+        description="¿Está seguro de que desea eliminar todos los datos de la base de datos? Esta acción es irreversible y se perderá toda la información."
+        confirmText="Eliminar todo"
+        cancelText="Cancelar"
+        variant="destructive"
+      />
     </div>
   );
 }

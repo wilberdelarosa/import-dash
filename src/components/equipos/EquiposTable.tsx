@@ -17,6 +17,7 @@ import { cn } from '@/lib/utils';
 import { Trash2, Edit, Search, Filter, ZoomIn, ZoomOut, Sparkles } from 'lucide-react';
 import { Equipo } from '@/types/equipment';
 import { EquipoDialog } from './EquipoDialog';
+import { EquipoLink } from '@/components/EquipoLink';
 
 const CATEGORY_SYNONYMS: Record<string, string[]> = {
   transporte: ['camion', 'camiones', 'volquete', 'dump truck', 'haul truck'],
@@ -378,7 +379,11 @@ export function EquiposTable({ equipos, onEdit, onDelete, onVerDetalle }: Equipo
                 {filteredEquipos.map((equipo) => (
                   <TableRow key={equipo.id}>
                     <TableCell className="font-medium">{equipo.ficha}</TableCell>
-                    <TableCell>{equipo.nombre}</TableCell>
+                    <TableCell>
+                      <EquipoLink ficha={equipo.ficha} variant="link" className="p-0 h-auto font-normal hover:underline">
+                        {equipo.nombre}
+                      </EquipoLink>
+                    </TableCell>
                     <TableCell>{equipo.marca}</TableCell>
                     <TableCell>{equipo.modelo}</TableCell>
                     <TableCell>{equipo.numeroSerie}</TableCell>

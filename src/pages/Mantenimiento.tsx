@@ -1,6 +1,8 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 import { Layout } from '@/components/Layout';
 import { Navigation } from '@/components/Navigation';
 import { useSupabaseDataContext } from '@/context/SupabaseDataContext';
+import { EquipoLink } from '@/components/EquipoLink';
 import type { MantenimientoProgramado } from '@/types/equipment';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
@@ -8,6 +10,7 @@ import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Slider } from '@/components/ui/slider';
+import { ConfirmDialog } from '@/components/ConfirmDialog';
 import {
   Sheet,
   SheetContent,
@@ -142,6 +145,7 @@ export default function Mantenimiento() {
   const [printMode, setPrintMode] = useState<'all' | 'categories'>('all');
   const [selectedCategories, setSelectedCategories] = useState<string[]>([]);
   const [isGeneratingPDF, setIsGeneratingPDF] = useState(false);
+  const [confirmClearOpen, setConfirmClearOpen] = useState(false);
 
   const { toast } = useToast();
 
@@ -698,16 +702,16 @@ export default function Mantenimiento() {
   };
 
   const handleClearDatabase = async () => {
-    const confirmed = window.confirm('¿Estás seguro de que deseas eliminar todos los datos de la base de datos? Esta acción no se puede deshacer.');
-    if (!confirmed) {
-      return;
-    }
+    setConfirmClearOpen(true);
+  };
 
+  const confirmClearDatabase = async () => {
     try {
       setClearing(true);
       await clearDatabase();
     } finally {
       setClearing(false);
+      setConfirmClearOpen(false);
     }
   };
 
@@ -1011,7 +1015,6 @@ export default function Mantenimiento() {
 
   return (
     <Layout title="Mantenimiento Programado">
-      <Navigation />
 
       <Dialog open={isFormOpen} onOpenChange={(open) => { if (!open) handleCloseForm(); }}>
         <DialogContent className="max-h-[90vh] overflow-y-auto">
@@ -1365,41 +1368,6 @@ export default function Mantenimiento() {
       </Dialog>
 
       <div className="space-y-6 lg:space-y-8">
-      <Card className="border-destructive/40">
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2 text-destructive">
-            <Trash2 className="w-5 h-5" />
-            Mantenimiento de datos
-          </CardTitle>
-
-          <CardDescription className="space-y-2 text-sm leading-relaxed">
-            <p className="flex items-center gap-2 font-semibold text-destructive">
-              <span className="text-lg leading-none">Ü</span> Mantenimiento de datos
-            </p>
-            <p>Elimina todos los registros de equipos, inventarios y mantenimientos almacenados en la base de datos.</p>
-            <p className="flex items-center gap-2 font-semibold text-destructive">
-              <span className="text-lg leading-none">Ü</span> Vaciar base de datos
-            </p>
-            <p>Esta acción es irreversible. Asegúrate de haber realizado una copia de seguridad antes de continuar.</p>
-          </CardDescription>
-        </CardHeader>
-        <CardContent className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-          <p className="text-sm text-muted-foreground">
-            Ejecuta esta limpieza solo cuando el equipo de datos lo autorice.
-          </p>
-          <Button
-            variant="destructive"
-            onClick={handleClearDatabase}
-            disabled={clearing}
-            className="w-full sm:w-auto"
-          >
-            <Trash2 className="w-4 h-4 mr-2" />
-            {clearing ? 'Eliminando datos...' : 'Vaciar base de datos'}
-          </Button>
-        </CardContent>
-      </Card>
-
-
       <section className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
         <Card>
           <CardHeader className="pb-2">
@@ -1568,7 +1536,11 @@ export default function Mantenimiento() {
                         return (
                           <TableRow key={mant.id}>
                             <TableCell className="font-medium">{mant.ficha}</TableCell>
-                            <TableCell>{mant.nombreEquipo}</TableCell>
+                            <TableCell>
+                              <EquipoLink ficha={mant.ficha} variant="link" className="p-0 h-auto font-normal hover:underline">
+                                {mant.nombreEquipo}
+                              </EquipoLink>
+                            </TableCell>
                             <TableCell>{equipo?.categoria || 'N/A'}</TableCell>
                             <TableCell>{mant.tipoMantenimiento}</TableCell>
                             <TableCell>{mant.horasKmActuales.toLocaleString()} {unidad}</TableCell>
@@ -1655,6 +1627,17 @@ export default function Mantenimiento() {
         </CardContent>
       </Card>
       </div>
+
+      <ConfirmDialog
+        open={confirmClearOpen}
+        onOpenChange={setConfirmClearOpen}
+        onConfirm={confirmClearDatabase}
+        title="Eliminar todos los datos"
+        description="¿Está seguro de que desea eliminar todos los datos de la base de datos? Esta acción no se puede deshacer y se perderá toda la información almacenada."
+        confirmText="Eliminar todo"
+        cancelText="Cancelar"
+        variant="destructive"
+      />
     </Layout>
   );
 }

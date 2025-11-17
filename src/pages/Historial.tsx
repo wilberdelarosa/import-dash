@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 import { ReactNode, useMemo, useState } from 'react';
 import { Layout } from '@/components/Layout';
 import { Navigation } from '@/components/Navigation';
@@ -395,7 +396,6 @@ export default function Historial() {
 
   return (
     <Layout title="Historial de Eventos">
-      <Navigation />
       <div className="space-y-6">
         {/* Header con Tabs */}
         <div className="flex flex-col gap-4">

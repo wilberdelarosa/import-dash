@@ -2,6 +2,7 @@ import { Layout } from '@/components/Layout';
 import { Navigation } from '@/components/Navigation';
 import { usePlanes } from '@/hooks/usePlanes';
 import { useKits } from '@/hooks/useKits';
+import { useToast } from '@/hooks/use-toast';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -18,6 +19,7 @@ import {
   DialogTitle,
   DialogTrigger,
 } from '@/components/ui/dialog';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import {
   Table,
   TableBody,
@@ -32,18 +34,94 @@ import {
   AccordionItem,
   AccordionTrigger,
 } from '@/components/ui/accordion';
-import { Plus, Pencil, Trash2, ClipboardList, Package, Clock } from 'lucide-react';
-import { useState } from 'react';
-import type { PlanMantenimiento, PlanIntervalo } from '@/types/maintenance-plans';
+import { Plus, Pencil, Trash2, ClipboardList, Package, Clock, Sparkles, X, ChevronRight, Factory, Layers } from 'lucide-react';
+import { useMemo, useState } from 'react';
+import type { PlanMantenimiento, PlanIntervalo, IntervaloConKits } from '@/types/maintenance-plans';
+import { getStaticModelAliases, getStaticCaterpillarData } from '@/data/caterpillarMaintenance';
 
 export default function PlanesMantenimiento() {
-  const { planes, loading, createPlan, updatePlan, deletePlan, createIntervalo, updateIntervalo, deleteIntervalo } = usePlanes();
-  const { kits } = useKits();
+  const { toast } = useToast();
+  const {
+    planes,
+    loading,
+    createPlan,
+    updatePlan,
+    deletePlan,
+    createIntervalo,
+    updateIntervalo,
+    deleteIntervalo,
+    linkKitToInterval,
+    unlinkKitFromInterval,
+  } = usePlanes();
+  const { kits, createKit, createPieza } = useKits();
   const [openPlanDialog, setOpenPlanDialog] = useState(false);
   const [openIntervaloDialog, setOpenIntervaloDialog] = useState(false);
+  const [openKitDialog, setOpenKitDialog] = useState(false);
+  const [importDialogOpen, setImportDialogOpen] = useState(false);
   const [editingPlan, setEditingPlan] = useState<PlanMantenimiento | null>(null);
   const [editingIntervalo, setEditingIntervalo] = useState<PlanIntervalo | null>(null);
   const [selectedPlanId, setSelectedPlanId] = useState<number | null>(null);
+  const [kitDialogContext, setKitDialogContext] = useState<{
+    planMarca: string;
+    planModelo?: string | null;
+    intervalo: IntervaloConKits;
+  } | null>(null);
+  const [selectedKitId, setSelectedKitId] = useState('');
+  const [selectedCatModel, setSelectedCatModel] = useState('');
+  const [isImportingCatPlan, setIsImportingCatPlan] = useState(false);
+  const catModelOptions = useMemo(() => getStaticModelAliases(), []);
+  
+  // Estados para control de vista: 'index' muestra resumen, 'details' muestra planes
+  const [view, setView] = useState<'index' | 'details'>('index');
+  const [selectedMarca, setSelectedMarca] = useState<string | null>(null);
+
+  const compatibleKits = useMemo(() => {
+    const base = kits.filter((kit) => kit.activo);
+    if (!kitDialogContext) {
+      return base;
+    }
+
+    return base.filter((kit) => {
+      if (kitDialogContext.planMarca && kit.marca && kit.marca !== kitDialogContext.planMarca) {
+        return false;
+      }
+
+      if (
+        kitDialogContext.planModelo &&
+        kit.modelo_aplicable &&
+        kit.modelo_aplicable !== kitDialogContext.planModelo
+      ) {
+        return false;
+      }
+
+      return true;
+    });
+  }, [kits, kitDialogContext]);
+
+  // Agrupar planes por marca
+  const planesPorMarca = useMemo(() => {
+    const grupos: Record<string, typeof planes> = {};
+    planes.forEach(plan => {
+      if (!grupos[plan.marca]) {
+        grupos[plan.marca] = [];
+      }
+      grupos[plan.marca].push(plan);
+    });
+    return grupos;
+  }, [planes]);
+
+  // Agrupar kits por marca
+  const kitsPorMarca = useMemo(() => {
+    const grupos: Record<string, typeof kits> = {};
+    kits.forEach(kit => {
+      const marca = kit.marca || 'Sin marca';
+      if (!grupos[marca]) {
+        grupos[marca] = [];
+      }
+      grupos[marca].push(kit);
+    });
+    return grupos;
+  }, [kits]);
 
   const [planForm, setPlanForm] = useState({
     nombre: '',
@@ -159,14 +237,169 @@ export default function PlanesMantenimiento() {
   };
 
   const handleDeletePlan = async (id: number) => {
-    if (confirm('¿Eliminar este plan? Se eliminarán todos sus intervalos.')) {
+    if (confirm('Eliminar este plan? Se eliminaran todos sus intervalos.')) {
       await deletePlan(id);
     }
   };
 
   const handleDeleteIntervalo = async (id: number) => {
-    if (confirm('¿Eliminar este intervalo?')) {
+    if (confirm('Eliminar este intervalo?')) {
       await deleteIntervalo(id);
+    }
+  };
+
+  const handleOpenKitDialog = (plan: PlanMantenimiento, intervalo: IntervaloConKits) => {
+    setKitDialogContext({ planMarca: plan.marca, planModelo: plan.modelo, intervalo });
+    setSelectedKitId('');
+    setOpenKitDialog(true);
+  };
+
+  const handleAssignKit = async () => {
+    if (!kitDialogContext || !selectedKitId) return;
+    try {
+      await linkKitToInterval(kitDialogContext.intervalo.id, Number(selectedKitId));
+      setOpenKitDialog(false);
+      setKitDialogContext(null);
+      setSelectedKitId('');
+    } catch (error) {
+      console.error(error);
+    }
+  };
+
+  const handleRemoveKit = async (linkId: number) => {
+    try {
+      await unlinkKitFromInterval(linkId);
+    } catch (error) {
+      console.error(error);
+    }
+  };
+
+  const handleImportCaterpillarPlan = async () => {
+    if (!selectedCatModel) {
+      toast({
+        title: 'Selecciona un modelo',
+        description: 'Elige un modelo Caterpillar antes de importar la plantilla.',
+        variant: 'destructive',
+      });
+      return;
+    }
+
+    const existingPlan = planes.find(
+      (plan) => (plan.modelo ?? '').toLowerCase() === selectedCatModel.toLowerCase(),
+    );
+    if (existingPlan) {
+      toast({
+        title: 'Plan ya registrado',
+        description: `Ya existe un plan para ${selectedCatModel}. Eliminalo o editalo antes de importar nuevamente.`,
+        variant: 'destructive',
+      });
+      return;
+    }
+
+    const dataset = getStaticCaterpillarData(selectedCatModel);
+    if (!dataset) {
+      toast({
+        title: 'Plantilla no disponible',
+        description: 'No se encontro informacion para el modelo seleccionado.',
+        variant: 'destructive',
+      });
+      return;
+    }
+
+    setIsImportingCatPlan(true);
+    try {
+      const planPayload = {
+        nombre: `Plan ${dataset.modelo?.modelo ?? selectedCatModel}`,
+        marca: 'Caterpillar',
+        modelo: dataset.modelo?.modelo ?? selectedCatModel,
+        categoria: dataset.modelo?.categoria ?? 'Maquinaria',
+        descripcion:
+          dataset.modelo?.notas ??
+          `Plan automatico basado en intervalos Caterpillar para ${selectedCatModel}`,
+        activo: true,
+      };
+      const newPlan = await createPlan(planPayload);
+      if (!newPlan) {
+        throw new Error('No se pudo crear el plan');
+      }
+      const planId = Number(newPlan.id);
+      if (Number.isNaN(planId)) {
+        throw new Error('El identificador del plan generado no es numerico');
+      }
+
+      for (const intervalo of dataset.intervalos) {
+        const tareas = dataset.tareasPorIntervalo[intervalo.codigo] ?? [];
+        const intervaloRecord = await createIntervalo({
+          plan_id: planId,
+          codigo: intervalo.codigo,
+          nombre: intervalo.nombre,
+          horas_intervalo: intervalo.horas_intervalo,
+          descripcion: intervalo.descripcion,
+          tareas,
+          orden: intervalo.horas_intervalo,
+        });
+
+        const piezasIntervalo = dataset.piezasPorIntervalo[intervalo.codigo] ?? [];
+        if (!intervaloRecord) {
+          continue;
+        }
+        const intervaloId = Number(intervaloRecord.id);
+        if (Number.isNaN(intervaloId)) {
+          continue;
+        }
+        if (piezasIntervalo.length === 0) {
+          continue;
+        }
+
+        const baseModelo = dataset.modelo?.modelo ?? selectedCatModel;
+        const kitCodeRaw = `CAT-${baseModelo}-${intervalo.codigo}`.toUpperCase();
+        const kitRecord = await createKit({
+          nombre: `Kit ${intervalo.codigo} - ${baseModelo}`,
+          codigo: kitCodeRaw.replace(/[^A-Z0-9]+/g, '-'),
+          descripcion: `Kit Caterpillar ${intervalo.codigo} para ${baseModelo}`,
+          marca: 'Caterpillar',
+          modelo_aplicable: baseModelo,
+          categoria: dataset.modelo?.categoria ?? 'Maquinaria',
+          activo: true,
+        });
+        if (!kitRecord) {
+          continue;
+        }
+        const kitId = Number(kitRecord.id);
+        if (Number.isNaN(kitId)) {
+          continue;
+        }
+
+        for (const pieza of piezasIntervalo) {
+          await createPieza({
+            kit_id: kitId,
+            numero_parte: pieza.pieza.numero_parte,
+            descripcion: pieza.pieza.descripcion,
+            tipo: pieza.pieza.tipo || 'Repuesto',
+            cantidad: Number(pieza.cantidad ?? 0),
+            unidad: 'pieza',
+            notas: pieza.notas,
+          });
+        }
+
+        await linkKitToInterval(intervaloId, kitId);
+      }
+
+      toast({
+        title: 'Plan importado',
+        description: `Se genero el plan y kits para ${selectedCatModel}.`,
+      });
+      setImportDialogOpen(false);
+      setSelectedCatModel('');
+    } catch (error) {
+      console.error(error);
+      toast({
+        title: 'Error al importar',
+        description: 'Ocurrio un problema creando el plan y los kits.',
+        variant: 'destructive',
+      });
+    } finally {
+      setIsImportingCatPlan(false);
     }
   };
 
@@ -179,7 +412,6 @@ export default function PlanesMantenimiento() {
   if (loading) {
     return (
       <Layout title="Planes de Mantenimiento">
-        <Navigation />
         <div className="flex items-center justify-center min-h-screen">
           <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary"></div>
         </div>
@@ -189,22 +421,35 @@ export default function PlanesMantenimiento() {
 
   return (
     <Layout title="Planes de Mantenimiento">
-      <Navigation />
       <div className="container mx-auto py-8 px-4">
-        <div className="flex justify-between items-center mb-8">
+        <div className="flex items-start justify-between mb-6">
           <div>
             <h1 className="text-3xl font-bold flex items-center gap-2">
               <ClipboardList className="w-8 h-8" />
               Planes de Mantenimiento
             </h1>
             <p className="text-muted-foreground mt-1">
-              Define planes con intervalos PM para cada marca y modelo
+              {view === 'index' 
+                ? 'Resumen de planes y kits organizados por marca' 
+                : selectedMarca 
+                  ? `Planes de ${selectedMarca}` 
+                  : 'Define planes con intervalos PM para cada marca y modelo'}
             </p>
           </div>
-          <Dialog open={openPlanDialog} onOpenChange={(open) => {
-            setOpenPlanDialog(open);
-            if (!open) resetPlanForm();
-          }}>
+          <div className="flex items-center gap-2">
+            {view === 'details' && (
+              <Button variant="outline" onClick={() => {
+                setView('index');
+                setSelectedMarca(null);
+              }}>
+                <ChevronRight className="w-4 h-4 mr-2 rotate-180" />
+                Volver al índice
+              </Button>
+            )}
+            <Dialog open={openPlanDialog} onOpenChange={(open) => {
+              setOpenPlanDialog(open);
+              if (!open) resetPlanForm();
+            }}>
             <DialogTrigger asChild>
               <Button>
                 <Plus className="w-4 h-4 mr-2" />
@@ -248,7 +493,7 @@ export default function PlanesMantenimiento() {
                     />
                   </div>
                   <div>
-                    <Label htmlFor="categoria">Categoría *</Label>
+                    <Label htmlFor="categoria">Categoria *</Label>
                     <Input
                       id="categoria"
                       value={planForm.categoria}
@@ -258,12 +503,12 @@ export default function PlanesMantenimiento() {
                   </div>
                 </div>
                 <div>
-                  <Label htmlFor="descripcion">Descripción</Label>
+                  <Label htmlFor="descripcion">Descripcion</Label>
                   <Textarea
                     id="descripcion"
                     value={planForm.descripcion}
                     onChange={(e) => setPlanForm({ ...planForm, descripcion: e.target.value })}
-                    placeholder="Descripción del plan..."
+                    placeholder="Descripcion del plan..."
                   />
                 </div>
                 <div className="flex items-center gap-2">
@@ -282,6 +527,11 @@ export default function PlanesMantenimiento() {
               </DialogFooter>
             </DialogContent>
           </Dialog>
+            <Button variant="outline" className="gap-2" onClick={() => setImportDialogOpen(true)}>
+              <Sparkles className="w-4 h-4" />
+              Plantilla Caterpillar
+            </Button>
+          </div>
         </div>
 
         {planes.length === 0 ? (
@@ -295,9 +545,127 @@ export default function PlanesMantenimiento() {
               </Button>
             </CardContent>
           </Card>
-        ) : (
+        ) : view === 'index' ? (
+          // Vista de Índice/Resumen
           <div className="grid gap-6">
-            {planes.map((plan) => (
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <Layers className="w-6 h-6" />
+                  Resumen de Planes por Marca
+                </CardTitle>
+                <CardDescription>
+                  Haz clic en una marca para ver sus planes detallados
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+                  {Object.entries(planesPorMarca).map(([marca, planesGrupo]) => {
+                    const totalIntervalos = planesGrupo.reduce((sum, p) => sum + p.intervalos.length, 0);
+                    const totalKits = planesGrupo.reduce((sum, p) => 
+                      sum + p.intervalos.reduce((s, i) => s + i.kits.length, 0), 0
+                    );
+                    
+                    return (
+                      <Card 
+                        key={marca}
+                        className="group cursor-pointer transition-all duration-300 hover:shadow-xl hover:scale-105 hover:border-primary/50"
+                        onClick={() => {
+                          setSelectedMarca(marca);
+                          setView('details');
+                        }}
+                      >
+                        <CardHeader className="pb-3">
+                          <div className="flex items-center justify-between">
+                            <CardTitle className="flex items-center gap-2 text-lg">
+                              <Factory className="w-5 h-5 text-primary transition-transform group-hover:scale-110" />
+                              {marca}
+                            </CardTitle>
+                            <ChevronRight className="w-5 h-5 text-muted-foreground transition-transform group-hover:translate-x-1" />
+                          </div>
+                        </CardHeader>
+                        <CardContent>
+                          <div className="space-y-2">
+                            <div className="flex items-center justify-between text-sm">
+                              <span className="text-muted-foreground group-hover:text-foreground transition-colors">Planes:</span>
+                              <Badge variant="secondary" className="group-hover:bg-primary/20">{planesGrupo.length}</Badge>
+                            </div>
+                            <div className="flex items-center justify-between text-sm">
+                              <span className="text-muted-foreground group-hover:text-foreground transition-colors">Intervalos PM:</span>
+                              <Badge variant="outline" className="group-hover:border-primary">{totalIntervalos}</Badge>
+                            </div>
+                            <div className="flex items-center justify-between text-sm">
+                              <span className="text-muted-foreground group-hover:text-foreground transition-colors">Kits asociados:</span>
+                              <Badge variant="outline" className="group-hover:border-primary">{totalKits}</Badge>
+                            </div>
+                            <div className="pt-2 border-t mt-3">
+                              <p className="text-xs text-muted-foreground group-hover:text-foreground/80 transition-colors">
+                                Modelos: {[...new Set(planesGrupo.map(p => p.modelo).filter(Boolean))].join(', ') || 'Varios'}
+                              </p>
+                            </div>
+                          </div>
+                        </CardContent>
+                      </Card>
+                    );
+                  })}
+                </div>
+              </CardContent>
+            </Card>
+
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <Package className="w-6 h-6" />
+                  Resumen de Kits por Marca
+                </CardTitle>
+                <CardDescription>
+                  Visualización rápida de kits disponibles organizados por marca
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+                  {Object.entries(kitsPorMarca).map(([marca, kitsGrupo]) => {
+                    const kitsActivos = kitsGrupo.filter(k => k.activo).length;
+                    
+                    return (
+                      <Card key={marca} className="group transition-all duration-300 hover:shadow-xl hover:scale-105 hover:border-primary/50">
+                        <CardHeader className="pb-3">
+                          <CardTitle className="flex items-center gap-2 text-lg">
+                            <Package className="w-5 h-5 text-primary transition-transform group-hover:scale-110" />
+                            {marca}
+                          </CardTitle>
+                        </CardHeader>
+                        <CardContent>
+                          <div className="space-y-2">
+                            <div className="flex items-center justify-between text-sm">
+                              <span className="text-muted-foreground group-hover:text-foreground transition-colors">Total kits:</span>
+                              <Badge variant="secondary" className="group-hover:bg-primary/20">{kitsGrupo.length}</Badge>
+                            </div>
+                            <div className="flex items-center justify-between text-sm">
+                              <span className="text-muted-foreground">Activos:</span>
+                              <Badge variant="default">{kitsActivos}</Badge>
+                            </div>
+                            <div className="pt-2 border-t mt-3">
+                              <p className="text-xs text-muted-foreground line-clamp-2">
+                                {kitsGrupo.slice(0, 3).map(k => k.codigo).join(', ')}
+                                {kitsGrupo.length > 3 && '...'}
+                              </p>
+                            </div>
+                          </div>
+                        </CardContent>
+                      </Card>
+                    );
+                  })}
+                </div>
+              </CardContent>
+            </Card>
+          </div>
+        ) : (
+          // Vista de Detalles (planes filtrados por marca)
+          <div className="grid gap-6">
+            {planes
+              .filter(plan => !selectedMarca || plan.marca === selectedMarca)
+              .map((plan) => (
               <Card key={plan.id}>
                 <CardHeader>
                   <div className="flex items-start justify-between">
@@ -307,7 +675,7 @@ export default function PlanesMantenimiento() {
                         {!plan.activo && <Badge variant="secondary">Inactivo</Badge>}
                       </CardTitle>
                       <CardDescription>
-                        {plan.marca} {plan.modelo && `• ${plan.modelo}`} • {plan.categoria}
+                        {plan.marca} {plan.modelo && ` ${plan.modelo}`}  {plan.categoria}
                       </CardDescription>
                       {plan.descripcion && (
                         <p className="text-sm text-muted-foreground mt-2">{plan.descripcion}</p>
@@ -340,10 +708,11 @@ export default function PlanesMantenimiento() {
                     <Table>
                       <TableHeader>
                         <TableRow>
-                          <TableHead>Código</TableHead>
+                          <TableHead>Codigo</TableHead>
                           <TableHead>Nombre</TableHead>
                           <TableHead>Horas</TableHead>
                           <TableHead>Tareas</TableHead>
+                          <TableHead>Kits asignados</TableHead>
                           <TableHead className="text-right">Acciones</TableHead>
                         </TableRow>
                       </TableHeader>
@@ -361,6 +730,39 @@ export default function PlanesMantenimiento() {
                               ) : (
                                 <span className="text-sm text-muted-foreground">Sin tareas</span>
                               )}
+                            </TableCell>
+                            <TableCell>
+                              <div className="flex flex-wrap gap-2">
+                                {intervalo.kits.length === 0 ? (
+                                  <span className="text-xs text-muted-foreground">Sin kits asociados</span>
+                                ) : (
+                                  intervalo.kits.map((link) => (
+                                    <div
+                                      key={link.id}
+                                      className="flex items-center gap-1 rounded-full border px-2 py-1 text-xs"
+                                    >
+                                      <span className="font-medium">{link.kit.codigo}</span>
+                                      <button
+                                        type="button"
+                                        className="text-muted-foreground transition hover:text-destructive"
+                                        onClick={() => handleRemoveKit(link.id)}
+                                        title="Quitar kit"
+                                      >
+                                        <X className="h-3 w-3" />
+                                      </button>
+                                    </div>
+                                  ))
+                                )}
+                              </div>
+                              <Button
+                                size="sm"
+                                variant="ghost"
+                                className="mt-2"
+                                onClick={() => handleOpenKitDialog(plan, intervalo)}
+                              >
+                                <Plus className="mr-1 h-3 w-3" />
+                                Asignar kit
+                              </Button>
                             </TableCell>
                             <TableCell className="text-right">
                               <Button size="sm" variant="ghost" onClick={() => handleEditIntervalo(intervalo)}>
@@ -393,7 +795,7 @@ export default function PlanesMantenimiento() {
             <div className="grid gap-4 py-4">
               <div className="grid grid-cols-2 gap-4">
                 <div>
-                  <Label htmlFor="codigo">Código *</Label>
+                  <Label htmlFor="codigo">Codigo *</Label>
                   <Input
                     id="codigo"
                     value={intervaloForm.codigo}
@@ -418,25 +820,25 @@ export default function PlanesMantenimiento() {
                   id="nombre_intervalo"
                   value={intervaloForm.nombre}
                   onChange={(e) => setIntervaloForm({ ...intervaloForm, nombre: e.target.value })}
-                  placeholder="Servicio básico 250h"
+                  placeholder="Servicio basico 250h"
                 />
               </div>
               <div>
-                <Label htmlFor="descripcion_intervalo">Descripción</Label>
+                <Label htmlFor="descripcion_intervalo">Descripcion</Label>
                 <Textarea
                   id="descripcion_intervalo"
                   value={intervaloForm.descripcion}
                   onChange={(e) => setIntervaloForm({ ...intervaloForm, descripcion: e.target.value })}
-                  placeholder="Descripción del intervalo..."
+                  placeholder="Descripcion del intervalo..."
                 />
               </div>
               <div>
-                <Label htmlFor="tareas">Tareas (una por línea)</Label>
+                <Label htmlFor="tareas">Tareas (una por linea)</Label>
                 <Textarea
                   id="tareas"
                   value={intervaloForm.tareas}
                   onChange={(e) => setIntervaloForm({ ...intervaloForm, tareas: e.target.value })}
-                  placeholder="Cambio de aceite&#10;Cambio de filtros&#10;Inspección general"
+                  placeholder="Cambio de aceite&#10;Cambio de filtros&#10;Inspeccion general"
                   rows={5}
                 />
               </div>
@@ -459,6 +861,109 @@ export default function PlanesMantenimiento() {
             </DialogFooter>
           </DialogContent>
         </Dialog>
+
+      <Dialog
+        open={openKitDialog}
+        onOpenChange={(open) => {
+          setOpenKitDialog(open);
+          if (!open) {
+            setKitDialogContext(null);
+            setSelectedKitId('');
+          }
+        }}
+      >
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Asignar kit al intervalo</DialogTitle>
+            <DialogDescription>
+              Vuelve reutilizable cada PM vinculando un kit predefinido para el intervalo seleccionado.
+            </DialogDescription>
+          </DialogHeader>
+          {kitDialogContext && (
+            <div className="space-y-1 rounded-md border bg-muted/30 p-3 text-sm">
+              <p>
+                <span className="font-semibold">Plan:</span> {kitDialogContext.planMarca}
+                {kitDialogContext.planModelo ? ` - ${kitDialogContext.planModelo}` : ''}
+              </p>
+              <p>
+                <span className="font-semibold">Intervalo:</span> {kitDialogContext.intervalo.codigo} - {kitDialogContext.intervalo.nombre}
+              </p>
+            </div>
+          )}
+          {compatibleKits.length === 0 ? (
+            <p className="text-sm text-muted-foreground">
+              No hay kits activos que coincidan con la marca o modelo del plan. Crea uno nuevo o activa un kit existente.
+            </p>
+          ) : (
+            <div className="space-y-2">
+              <Label htmlFor="kitSelect">Selecciona un kit</Label>
+              <Select value={selectedKitId} onValueChange={setSelectedKitId}>
+                <SelectTrigger id="kitSelect">
+                  <SelectValue placeholder="Elige un kit disponible" />
+                </SelectTrigger>
+                <SelectContent>
+                  {compatibleKits.map((kit) => (
+                    <SelectItem key={kit.id} value={String(kit.id)}>
+                      {kit.codigo} - {kit.nombre}
+                      {kit.modelo_aplicable ? ` (${kit.modelo_aplicable})` : ''}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+          )}
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setOpenKitDialog(false)}>
+              Cancelar
+            </Button>
+            <Button onClick={handleAssignKit} disabled={!selectedKitId || compatibleKits.length === 0}>
+              Asignar kit
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+      <Dialog
+        open={importDialogOpen}
+        onOpenChange={(open) => {
+          setImportDialogOpen(open);
+          if (!open) {
+            setSelectedCatModel('');
+          }
+        }}
+      >
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Importar plantilla Caterpillar</DialogTitle>
+            <DialogDescription>
+              Genera automaticamente el plan (PM1-PM4) y los kits con filtros oficiales para tu modelo.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-2">
+            <Label htmlFor="cat-model-select">Modelo Caterpillar</Label>
+            <Select value={selectedCatModel} onValueChange={setSelectedCatModel}>
+              <SelectTrigger id="cat-model-select">
+                <SelectValue placeholder="Selecciona un modelo disponible" />
+              </SelectTrigger>
+              <SelectContent className="max-h-64">
+                {catModelOptions.map((option) => (
+                  <SelectItem key={option.modelo} value={option.modelo}>
+                    {option.modelo}
+                    {option.aliases?.length ? ` (${option.aliases.slice(0, 2).join(', ')})` : ''}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setImportDialogOpen(false)}>
+              Cancelar
+            </Button>
+            <Button onClick={handleImportCaterpillarPlan} disabled={!selectedCatModel || isImportingCatPlan}>
+              {isImportingCatPlan ? 'Importando...' : 'Importar'}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
       </div>
     </Layout>
   );

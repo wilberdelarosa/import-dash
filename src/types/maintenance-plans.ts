@@ -6,7 +6,18 @@ export interface PlanMantenimiento {
   categoria: string;
   descripcion: string | null;
   activo: boolean;
+  marcas_asociadas?: string[] | null;
   created_at: string;
+}
+
+export interface PlanEquipoManual {
+  id: number;
+  plan_id: number;
+  equipo_ficha: string;
+  agregado_manualmente: boolean;
+  excluido: boolean;
+  created_at: string;
+  updated_at: string;
 }
 
 export interface PlanIntervalo {
@@ -62,8 +73,12 @@ export interface PlanIntervaloKit {
   created_at: string;
 }
 
+export interface IntervaloKitAssignment extends PlanIntervaloKit {
+  kit: KitMantenimiento;
+}
+
 export interface PlanConIntervalos extends PlanMantenimiento {
-  intervalos: PlanIntervalo[];
+  intervalos: IntervaloConKits[];
 }
 
 export interface KitConPiezas extends KitMantenimiento {
@@ -71,5 +86,5 @@ export interface KitConPiezas extends KitMantenimiento {
 }
 
 export interface IntervaloConKits extends PlanIntervalo {
-  kits: KitMantenimiento[];
+  kits: IntervaloKitAssignment[];
 }

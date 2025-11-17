@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 import { useNotificaciones } from '@/hooks/useNotificaciones';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';

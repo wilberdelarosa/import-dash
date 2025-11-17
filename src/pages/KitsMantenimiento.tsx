@@ -8,6 +8,7 @@ import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Badge } from '@/components/ui/badge';
 import { Switch } from '@/components/ui/switch';
+import { ConfirmDialog } from '@/components/ConfirmDialog';
 import {
   Dialog,
   DialogContent,
@@ -25,8 +26,8 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table';
-import { Plus, Pencil, Trash2, Package, Wrench } from 'lucide-react';
-import { useState } from 'react';
+import { Plus, Pencil, Trash2, Package, Wrench, ChevronRight, Factory, Layers } from 'lucide-react';
+import { useState, useMemo } from 'react';
 import type { KitMantenimiento, KitPieza } from '@/types/maintenance-plans';
 
 const TIPOS_PIEZA = ['Filtro', 'Aceite', 'Lubricante', 'Repuesto', 'Consumible', 'Otro'];
@@ -38,6 +39,23 @@ export default function KitsMantenimiento() {
   const [editingKit, setEditingKit] = useState<KitMantenimiento | null>(null);
   const [editingPieza, setEditingPieza] = useState<KitPieza | null>(null);
   const [selectedKitId, setSelectedKitId] = useState<number | null>(null);
+  
+  // Estados para control de vista
+  const [view, setView] = useState<'index' | 'details'>('index');
+  const [selectedMarca, setSelectedMarca] = useState<string | null>(null);
+
+  // Agrupar kits por marca
+  const kitsPorMarca = useMemo(() => {
+    const grupos: Record<string, typeof kits> = {};
+    kits.forEach(kit => {
+      const marca = kit.marca || 'Sin marca';
+      if (!grupos[marca]) {
+        grupos[marca] = [];
+      }
+      grupos[marca].push(kit);
+    });
+    return grupos;
+  }, [kits]);
 
   const [kitForm, setKitForm] = useState({
     nombre: '',
@@ -175,7 +193,6 @@ export default function KitsMantenimiento() {
   if (loading) {
     return (
       <Layout title="Kits de Mantenimiento">
-        <Navigation />
         <div className="flex items-center justify-center min-h-screen">
           <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary"></div>
         </div>
@@ -185,7 +202,6 @@ export default function KitsMantenimiento() {
 
   return (
     <Layout title="Kits de Mantenimiento">
-      <Navigation />
       <div className="container mx-auto py-8 px-4">
         <div className="flex justify-between items-center mb-8">
           <div>
@@ -194,13 +210,27 @@ export default function KitsMantenimiento() {
               Kits de Mantenimiento
             </h1>
             <p className="text-muted-foreground mt-1">
-              Gestiona kits con números de parte y repuestos
+              {view === 'index' 
+                ? 'Resumen de kits organizados por marca' 
+                : selectedMarca 
+                  ? `Kits de ${selectedMarca}` 
+                  : 'Gestiona kits con números de parte y repuestos'}
             </p>
           </div>
-          <Dialog open={openKitDialog} onOpenChange={(open) => {
-            setOpenKitDialog(open);
-            if (!open) resetKitForm();
-          }}>
+          <div className="flex items-center gap-2">
+            {view === 'details' && (
+              <Button variant="outline" onClick={() => {
+                setView('index');
+                setSelectedMarca(null);
+              }}>
+                <ChevronRight className="w-4 h-4 mr-2 rotate-180" />
+                Volver al índice
+              </Button>
+            )}
+            <Dialog open={openKitDialog} onOpenChange={(open) => {
+              setOpenKitDialog(open);
+              if (!open) resetKitForm();
+            }}>
             <DialogTrigger asChild>
               <Button>
                 <Plus className="w-4 h-4 mr-2" />
@@ -287,6 +317,7 @@ export default function KitsMantenimiento() {
               </DialogFooter>
             </DialogContent>
           </Dialog>
+          </div>
         </div>
 
         {kits.length === 0 ? (
@@ -300,9 +331,76 @@ export default function KitsMantenimiento() {
               </Button>
             </CardContent>
           </Card>
+        ) : view === 'index' ? (
+          // Vista de Índice/Resumen
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <Layers className="w-6 h-6" />
+                Resumen de Kits por Marca
+              </CardTitle>
+              <CardDescription>
+                Haz clic en una marca para ver sus kits detallados
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+                {Object.entries(kitsPorMarca).map(([marca, kitsGrupo]) => {
+                  const kitsActivos = kitsGrupo.filter(k => k.activo).length;
+                  const totalPiezas = kitsGrupo.reduce((sum, k) => sum + (k.piezas?.length || 0), 0);
+                  
+                  return (
+                    <Card 
+                      key={marca}
+                      className="group cursor-pointer transition-all duration-300 hover:shadow-xl hover:scale-105 hover:border-primary/50"
+                      onClick={() => {
+                        setSelectedMarca(marca);
+                        setView('details');
+                      }}
+                    >
+                      <CardHeader className="pb-3">
+                        <div className="flex items-center justify-between">
+                          <CardTitle className="flex items-center gap-2 text-lg">
+                            <Factory className="w-5 h-5 text-primary transition-transform group-hover:scale-110" />
+                            {marca}
+                          </CardTitle>
+                          <ChevronRight className="w-5 h-5 text-muted-foreground transition-transform group-hover:translate-x-1" />
+                        </div>
+                      </CardHeader>
+                      <CardContent>
+                        <div className="space-y-2">
+                          <div className="flex items-center justify-between text-sm">
+                            <span className="text-muted-foreground group-hover:text-foreground transition-colors">Total kits:</span>
+                            <Badge variant="secondary" className="group-hover:bg-primary/20">{kitsGrupo.length}</Badge>
+                          </div>
+                          <div className="flex items-center justify-between text-sm">
+                            <span className="text-muted-foreground group-hover:text-foreground transition-colors">Activos:</span>
+                            <Badge variant="default" className="group-hover:bg-primary">{kitsActivos}</Badge>
+                          </div>
+                          <div className="flex items-center justify-between text-sm">
+                            <span className="text-muted-foreground group-hover:text-foreground transition-colors">Total piezas:</span>
+                            <Badge variant="outline" className="group-hover:border-primary">{totalPiezas}</Badge>
+                          </div>
+                          <div className="pt-2 border-t mt-3">
+                            <p className="text-xs text-muted-foreground group-hover:text-foreground/80 transition-colors line-clamp-2">
+                              {kitsGrupo.slice(0, 3).map(k => k.codigo).join(', ')}
+                              {kitsGrupo.length > 3 && '...'}
+                            </p>
+                          </div>
+                        </div>
+                      </CardContent>
+                    </Card>
+                  );
+                })}
+              </div>
+            </CardContent>
+          </Card>
         ) : (
+          // Vista de Detalles (kits filtrados por marca)
           <div className="grid gap-6">
-            {kits.map((kit) => (
+            {kits
+              .filter(kit => !selectedMarca || (kit.marca || 'Sin marca') === selectedMarca)
+              .map((kit) => (
               <Card key={kit.id}>
                 <CardHeader>
                   <div className="flex items-start justify-between">

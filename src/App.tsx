@@ -16,6 +16,7 @@ import Configuraciones from "./pages/Configuraciones";
 import NotFound from "./pages/NotFound";
 import AsistenteIA from "./pages/AsistenteIA";
 import ListasPersonalizadas from "./pages/ListasPersonalizadas";
+import ImportarDatosCaterpillar from "./pages/ImportarDatosCaterpillar";
 import { SupabaseDataProvider } from "@/context/SupabaseDataContext";
 import { SystemConfigProvider } from "@/context/SystemConfigContext";
 import { AuthProvider } from "@/context/AuthContext";
@@ -47,6 +48,7 @@ const App = () => (
                 <Route path="/configuraciones" element={<ProtectedRoute><Configuraciones /></ProtectedRoute>} />
                 <Route path="/asistente" element={<ProtectedRoute><AsistenteIA /></ProtectedRoute>} />
                 <Route path="/listas-personalizadas" element={<ProtectedRoute><ListasPersonalizadas /></ProtectedRoute>} />
+                <Route path="/importar-caterpillar" element={<ProtectedRoute><ImportarDatosCaterpillar /></ProtectedRoute>} />
                 {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
                 <Route path="*" element={<NotFound />} />
               </Routes>

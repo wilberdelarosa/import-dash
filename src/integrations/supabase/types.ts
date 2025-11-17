@@ -207,51 +207,6 @@ export type Database = {
         }
         Relationships: []
       }
-      equipo_planes: {
-        Row: {
-          activo: boolean
-          created_at: string | null
-          equipo_id: number
-          fecha_inicio: string
-          horas_inicio: number
-          id: number
-          plan_id: number
-        }
-        Insert: {
-          activo?: boolean
-          created_at?: string | null
-          equipo_id: number
-          fecha_inicio?: string
-          horas_inicio?: number
-          id?: number
-          plan_id: number
-        }
-        Update: {
-          activo?: boolean
-          created_at?: string | null
-          equipo_id?: number
-          fecha_inicio?: string
-          horas_inicio?: number
-          id?: number
-          plan_id?: number
-        }
-        Relationships: [
-          {
-            foreignKeyName: "equipo_planes_equipo_id_fkey"
-            columns: ["equipo_id"]
-            isOneToOne: false
-            referencedRelation: "equipos"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "equipo_planes_plan_id_fkey"
-            columns: ["plan_id"]
-            isOneToOne: false
-            referencedRelation: "planes_mantenimiento"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
       equipos: {
         Row: {
           activo: boolean
@@ -302,12 +257,10 @@ export type Database = {
           descripcion: string
           ficha_equipo: string | null
           id: number
-          kit_usado_id: number | null
           metadata: Json | null
           modulo: string
           nivel_importancia: string
           nombre_equipo: string | null
-          partes_consumidas: Json | null
           tipo_evento: string
           usuario_responsable: string
         }
@@ -318,12 +271,10 @@ export type Database = {
           descripcion: string
           ficha_equipo?: string | null
           id?: number
-          kit_usado_id?: number | null
           metadata?: Json | null
           modulo: string
           nivel_importancia?: string
           nombre_equipo?: string | null
-          partes_consumidas?: Json | null
           tipo_evento: string
           usuario_responsable?: string
         }
@@ -334,24 +285,14 @@ export type Database = {
           descripcion?: string
           ficha_equipo?: string | null
           id?: number
-          kit_usado_id?: number | null
           metadata?: Json | null
           modulo?: string
           nivel_importancia?: string
           nombre_equipo?: string | null
-          partes_consumidas?: Json | null
           tipo_evento?: string
           usuario_responsable?: string
         }
-        Relationships: [
-          {
-            foreignKeyName: "historial_eventos_kit_usado_id_fkey"
-            columns: ["kit_usado_id"]
-            isOneToOne: false
-            referencedRelation: "kits_mantenimiento"
-            referencedColumns: ["id"]
-          },
-        ]
+        Relationships: []
       }
       inventarios: {
         Row: {
@@ -362,14 +303,11 @@ export type Database = {
           created_at: string | null
           empresa_suplidora: string
           id: number
-          marca_fabricante: string | null
+          marcas_compatibles: string[] | null
+          modelos_compatibles: string[] | null
           movimientos: Json | null
           nombre: string
-          numero_parte: string
-          sistema: string | null
-          stock_minimo: number
           tipo: string
-          ubicacion: string | null
         }
         Insert: {
           activo?: boolean
@@ -379,14 +317,11 @@ export type Database = {
           created_at?: string | null
           empresa_suplidora: string
           id?: number
-          marca_fabricante?: string | null
+          marcas_compatibles?: string[] | null
+          modelos_compatibles?: string[] | null
           movimientos?: Json | null
           nombre: string
-          numero_parte?: string
-          sistema?: string | null
-          stock_minimo?: number
           tipo: string
-          ubicacion?: string | null
         }
         Update: {
           activo?: boolean
@@ -396,14 +331,11 @@ export type Database = {
           created_at?: string | null
           empresa_suplidora?: string
           id?: number
-          marca_fabricante?: string | null
+          marcas_compatibles?: string[] | null
+          modelos_compatibles?: string[] | null
           movimientos?: Json | null
           nombre?: string
-          numero_parte?: string
-          sistema?: string | null
-          stock_minimo?: number
           tipo?: string
-          ubicacion?: string | null
         }
         Relationships: []
       }
@@ -445,10 +377,9 @@ export type Database = {
           {
             foreignKeyName: "kit_piezas_kit_id_fkey"
             columns: ["kit_id"]
-            isOneToOne: false
             referencedRelation: "kits_mantenimiento"
             referencedColumns: ["id"]
-          },
+          }
         ]
       }
       kits_mantenimiento: {
@@ -459,7 +390,6 @@ export type Database = {
           created_at: string | null
           descripcion: string | null
           id: number
-          intervalo_horas: number | null
           marca: string | null
           modelo_aplicable: string | null
           nombre: string
@@ -471,7 +401,6 @@ export type Database = {
           created_at?: string | null
           descripcion?: string | null
           id?: number
-          intervalo_horas?: number | null
           marca?: string | null
           modelo_aplicable?: string | null
           nombre: string
@@ -483,12 +412,167 @@ export type Database = {
           created_at?: string | null
           descripcion?: string | null
           id?: number
-          intervalo_horas?: number | null
           marca?: string | null
           modelo_aplicable?: string | null
           nombre?: string
         }
         Relationships: []
+      }
+      planes_mantenimiento: {
+        Row: {
+          activo: boolean
+          categoria: string
+          created_at: string | null
+          descripcion: string | null
+          id: number
+          marca: string
+          marcas_asociadas: string[] | null
+          modelo: string | null
+          nombre: string
+        }
+        Insert: {
+          activo?: boolean
+          categoria: string
+          created_at?: string | null
+          descripcion?: string | null
+          id?: number
+          marca: string
+          marcas_asociadas?: string[] | null
+          modelo?: string | null
+          nombre: string
+        }
+        Update: {
+          activo?: boolean
+          categoria?: string
+          created_at?: string | null
+          descripcion?: string | null
+          id?: number
+          marca?: string
+          marcas_asociadas?: string[] | null
+          modelo?: string | null
+          nombre?: string
+        }
+        Relationships: []
+      }
+      plan_equipos_manuales: {
+        Row: {
+          agregado_manualmente: boolean
+          created_at: string | null
+          equipo_ficha: string
+          excluido: boolean
+          id: number
+          plan_id: number
+          updated_at: string | null
+        }
+        Insert: {
+          agregado_manualmente?: boolean
+          created_at?: string | null
+          equipo_ficha: string
+          excluido?: boolean
+          id?: number
+          plan_id: number
+          updated_at?: string | null
+        }
+        Update: {
+          agregado_manualmente?: boolean
+          created_at?: string | null
+          equipo_ficha?: string
+          excluido?: boolean
+          id?: number
+          plan_id?: number
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "plan_equipos_manuales_plan_id_fkey"
+            columns: ["plan_id"]
+            referencedRelation: "planes_mantenimiento"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "plan_equipos_manuales_equipo_ficha_fkey"
+            columns: ["equipo_ficha"]
+            referencedRelation: "equipos"
+            referencedColumns: ["ficha"]
+          }
+        ]
+      }
+      plan_intervalos: {
+        Row: {
+          codigo: string
+          created_at: string | null
+          descripcion: string | null
+          horas_intervalo: number
+          id: number
+          nombre: string
+          orden: number
+          plan_id: number
+          tareas: Json | null
+        }
+        Insert: {
+          codigo: string
+          created_at?: string | null
+          descripcion?: string | null
+          horas_intervalo: number
+          id?: number
+          nombre: string
+          orden?: number
+          plan_id: number
+          tareas?: Json | null
+        }
+        Update: {
+          codigo?: string
+          created_at?: string | null
+          descripcion?: string | null
+          horas_intervalo?: number
+          id?: number
+          nombre?: string
+          orden?: number
+          plan_id?: number
+          tareas?: Json | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "plan_intervalos_plan_id_fkey"
+            columns: ["plan_id"]
+            referencedRelation: "planes_mantenimiento"
+            referencedColumns: ["id"]
+          }
+        ]
+      }
+      plan_intervalo_kits: {
+        Row: {
+          created_at: string | null
+          id: number
+          kit_id: number
+          plan_intervalo_id: number
+        }
+        Insert: {
+          created_at?: string | null
+          id?: number
+          kit_id: number
+          plan_intervalo_id: number
+        }
+        Update: {
+          created_at?: string | null
+          id?: number
+          kit_id?: number
+          plan_intervalo_id?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "plan_intervalo_kits_plan_intervalo_id_fkey"
+            columns: ["plan_intervalo_id"]
+            referencedRelation: "plan_intervalos"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "plan_intervalo_kits_kit_id_fkey"
+            columns: ["kit_id"]
+            referencedRelation: "kits_mantenimiento"
+            referencedColumns: ["id"]
+          }
+        ]
       }
       mantenimientos_programados: {
         Row: {
@@ -502,14 +586,12 @@ export type Database = {
           horas_km_restante: number
           horas_km_ultimo_mantenimiento: number
           id: number
-          intervalo_codigo: string | null
-          kit_usado_id: number | null
           nombre_equipo: string
-          partes_consumidas: Json | null
-          plan_id: number | null
-          proximo_intervalo_codigo: string | null
           proximo_mantenimiento: number
           tipo_mantenimiento: string
+          plan_id: number | null
+          intervalo_codigo: string | null
+          proximo_intervalo_codigo: string | null
         }
         Insert: {
           activo?: boolean
@@ -522,14 +604,12 @@ export type Database = {
           horas_km_restante: number
           horas_km_ultimo_mantenimiento?: number
           id?: number
-          intervalo_codigo?: string | null
-          kit_usado_id?: number | null
           nombre_equipo: string
-          partes_consumidas?: Json | null
-          plan_id?: number | null
-          proximo_intervalo_codigo?: string | null
           proximo_mantenimiento: number
           tipo_mantenimiento: string
+          plan_id?: number | null
+          intervalo_codigo?: string | null
+          proximo_intervalo_codigo?: string | null
         }
         Update: {
           activo?: boolean
@@ -542,30 +622,20 @@ export type Database = {
           horas_km_restante?: number
           horas_km_ultimo_mantenimiento?: number
           id?: number
-          intervalo_codigo?: string | null
-          kit_usado_id?: number | null
           nombre_equipo?: string
-          partes_consumidas?: Json | null
-          plan_id?: number | null
-          proximo_intervalo_codigo?: string | null
           proximo_mantenimiento?: number
           tipo_mantenimiento?: string
+          plan_id?: number | null
+          intervalo_codigo?: string | null
+          proximo_intervalo_codigo?: string | null
         }
         Relationships: [
           {
-            foreignKeyName: "mantenimientos_programados_kit_usado_id_fkey"
-            columns: ["kit_usado_id"]
-            isOneToOne: false
-            referencedRelation: "kits_mantenimiento"
-            referencedColumns: ["id"]
-          },
-          {
             foreignKeyName: "mantenimientos_programados_plan_id_fkey"
             columns: ["plan_id"]
-            isOneToOne: false
             referencedRelation: "planes_mantenimiento"
             referencedColumns: ["id"]
-          },
+          }
         ]
       }
       notificaciones: {
@@ -648,122 +718,6 @@ export type Database = {
           },
         ]
       }
-      plan_intervalo_kits: {
-        Row: {
-          created_at: string | null
-          id: number
-          kit_id: number
-          plan_intervalo_id: number
-        }
-        Insert: {
-          created_at?: string | null
-          id?: number
-          kit_id: number
-          plan_intervalo_id: number
-        }
-        Update: {
-          created_at?: string | null
-          id?: number
-          kit_id?: number
-          plan_intervalo_id?: number
-        }
-        Relationships: [
-          {
-            foreignKeyName: "plan_intervalo_kits_kit_id_fkey"
-            columns: ["kit_id"]
-            isOneToOne: false
-            referencedRelation: "kits_mantenimiento"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "plan_intervalo_kits_plan_intervalo_id_fkey"
-            columns: ["plan_intervalo_id"]
-            isOneToOne: false
-            referencedRelation: "plan_intervalos"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
-      plan_intervalos: {
-        Row: {
-          codigo: string
-          created_at: string | null
-          descripcion: string | null
-          es_activo: boolean
-          horas_intervalo: number
-          id: number
-          nombre: string
-          orden: number
-          plan_id: number
-          tareas: Json | null
-        }
-        Insert: {
-          codigo: string
-          created_at?: string | null
-          descripcion?: string | null
-          es_activo?: boolean
-          horas_intervalo: number
-          id?: number
-          nombre: string
-          orden?: number
-          plan_id: number
-          tareas?: Json | null
-        }
-        Update: {
-          codigo?: string
-          created_at?: string | null
-          descripcion?: string | null
-          es_activo?: boolean
-          horas_intervalo?: number
-          id?: number
-          nombre?: string
-          orden?: number
-          plan_id?: number
-          tareas?: Json | null
-        }
-        Relationships: [
-          {
-            foreignKeyName: "plan_intervalos_plan_id_fkey"
-            columns: ["plan_id"]
-            isOneToOne: false
-            referencedRelation: "planes_mantenimiento"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
-      planes_mantenimiento: {
-        Row: {
-          activo: boolean
-          categoria: string
-          created_at: string | null
-          descripcion: string | null
-          id: number
-          marca: string
-          modelo: string | null
-          nombre: string
-        }
-        Insert: {
-          activo?: boolean
-          categoria: string
-          created_at?: string | null
-          descripcion?: string | null
-          id?: number
-          marca: string
-          modelo?: string | null
-          nombre: string
-        }
-        Update: {
-          activo?: boolean
-          categoria?: string
-          created_at?: string | null
-          descripcion?: string | null
-          id?: number
-          marca?: string
-          modelo?: string | null
-          nombre?: string
-        }
-        Relationships: []
-      }
       user_roles: {
         Row: {
           created_at: string
@@ -790,17 +744,6 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
-      calcular_proximo_mantenimiento: {
-        Args: { p_horas_actuales: number; p_plan_id: number }
-        Returns: {
-          horas_intervalo: number
-          horas_proximo: number
-          intervalo_codigo: string
-          intervalo_id: number
-          intervalo_nombre: string
-          kit_id: number
-        }[]
-      }
       generar_notificaciones_mantenimientos: { Args: never; Returns: undefined }
       generar_notificaciones_stock_bajo: { Args: never; Returns: undefined }
       has_role: {

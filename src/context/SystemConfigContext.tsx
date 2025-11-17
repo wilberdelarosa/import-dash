@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { DEFAULT_SYSTEM_CONFIG, SystemConfig } from '@/types/config';
@@ -138,7 +139,7 @@ export function SystemConfigProvider({ children }: { children: React.ReactNode }
         setSaving(false);
       }
     },
-    [config],
+    [],
   );
 
   const value = useMemo<SystemConfigContextValue>(
