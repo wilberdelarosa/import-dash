@@ -452,14 +452,32 @@ export default function ControlMantenimientoProfesional() {
       const matchCategoria = filtroCategoria === 'all' || 
         (equipo?.categoria || '') === filtroCategoria;
       
-      const matchEstado = filtroEstado === 'all' ||
-        (filtroEstado === 'critico' && m.horasKmRestante <= 25) ||
-        (filtroEstado === 'alerta' && m.horasKmRestante > 25 && m.horasKmRestante <= 50) ||
-        (filtroEstado === 'normal' && m.horasKmRestante > 50);
+      let matchEstado = true;
+      
+      // Si hay rango de reporte y el filtro es registrada/pendientes
+      if (reporteRango && (filtroEstado === 'registrada' || filtroEstado === 'pendientes')) {
+        const fechaUltima = new Date(m.fechaUltimaActualizacion);
+        const inicioRango = new Date(reporteRango.desde);
+        const finRango = new Date(reporteRango.hasta);
+        
+        fechaUltima.setHours(0, 0, 0, 0);
+        inicioRango.setHours(0, 0, 0, 0);
+        finRango.setHours(23, 59, 59, 999);
+        
+        const actualizadoEnRango = fechaUltima >= inicioRango && fechaUltima <= finRango;
+        
+        matchEstado = (filtroEstado === 'registrada' && actualizadoEnRango) ||
+                      (filtroEstado === 'pendientes' && !actualizadoEnRango);
+      } else if (filtroEstado !== 'all' && filtroEstado !== 'registrada' && filtroEstado !== 'pendientes') {
+        // Filtros de criticidad (cuando no hay rango o no se usan registrada/pendientes)
+        matchEstado = (filtroEstado === 'critico' && m.horasKmRestante <= 25) ||
+                      (filtroEstado === 'alerta' && m.horasKmRestante > 25 && m.horasKmRestante <= 50) ||
+                      (filtroEstado === 'normal' && m.horasKmRestante > 50);
+      }
       
       return matchBusqueda && matchCategoria && matchEstado;
     }).sort((a, b) => a.ficha.localeCompare(b.ficha));
-  }, [data.mantenimientosProgramados, data.equipos, busqueda, filtroCategoria, filtroEstado]);
+  }, [data.mantenimientosProgramados, data.equipos, busqueda, filtroCategoria, filtroEstado, reporteRango]);
 
   const resumenActualizaciones = useMemo(() => {
     if (!reporteRango) return null;
@@ -771,14 +789,23 @@ export default function ControlMantenimientoProfesional() {
               </Select>
               
               <Select value={filtroEstado} onValueChange={setFiltroEstado}>
-                <SelectTrigger className="w-28 h-9 text-xs">
+                <SelectTrigger className="w-32 h-9 text-xs">
                   <SelectValue placeholder="Estado" />
                 </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="all">Todos</SelectItem>
-                  <SelectItem value="critico">Crítico</SelectItem>
-                  <SelectItem value="alerta">Alerta</SelectItem>
-                  <SelectItem value="normal">Normal</SelectItem>
+                  {reporteRango ? (
+                    <>
+                      <SelectItem value="registrada">Lectura registrada</SelectItem>
+                      <SelectItem value="pendientes">Pendientes</SelectItem>
+                    </>
+                  ) : (
+                    <>
+                      <SelectItem value="critico">Crítico</SelectItem>
+                      <SelectItem value="alerta">Alerta</SelectItem>
+                      <SelectItem value="normal">Normal</SelectItem>
+                    </>
+                  )}
                 </SelectContent>
               </Select>
             </div>
