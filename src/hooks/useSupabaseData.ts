@@ -515,8 +515,8 @@ export function useSupabaseData() {
           ubicacion: i.ubicacion ?? null,
           empresaSuplidora: i.empresa_suplidora,
           marcaFabricante: i.marca_fabricante ?? null,
-          marcasCompatibles: i.marcas_compatibles || [],
-          modelosCompatibles: i.modelos_compatibles || []
+          marcasCompatibles: [],
+          modelosCompatibles: []
         })),
         mantenimientosProgramados: mantenimientosData.map(m => ({
           id: Number(m.id),

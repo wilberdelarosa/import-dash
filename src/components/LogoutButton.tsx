@@ -4,7 +4,7 @@ import { useAuth } from '@/context/AuthContext';
 import { useNavigate } from 'react-router-dom';
 import { useToast } from '@/hooks/use-toast';
 
-export function LogoutButton() {
+export function LogoutButton({ className }: { className?: string }) {
   const { signOut } = useAuth();
   const navigate = useNavigate();
   const { toast } = useToast();
@@ -31,7 +31,7 @@ export function LogoutButton() {
       variant="ghost"
       size="sm"
       onClick={handleLogout}
-      className="gap-2"
+      className={`gap-2 ${className || ''}`}
     >
       <LogOut className="h-4 w-4" />
       Cerrar Sesión
