@@ -112,8 +112,7 @@ export default function Configuraciones() {
 
   if (loading) {
     return (
-      <Layout title="Preferencias y automatizaciones">
-        <Navigation />
+    <Layout title="Preferencias y automatizaciones">
         <div className="flex items-center justify-center h-64">
           <div className="text-sm text-muted-foreground">Cargando preferencias...</div>
         </div>
@@ -123,7 +122,6 @@ export default function Configuraciones() {
 
   return (
     <Layout title="Preferencias y automatizaciones">
-      <Navigation />
 
       <div className="grid gap-6 lg:grid-cols-2">
         <Card>

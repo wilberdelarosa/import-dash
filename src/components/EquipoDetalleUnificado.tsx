@@ -11,6 +11,8 @@ import {
 import { Badge } from '@/components/ui/badge';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { Button } from '@/components/ui/button';
+import { Label } from '@/components/ui/label';
 import {
   Truck,
   Wrench,
@@ -23,12 +25,16 @@ import {
   Clock3,
   Sparkles,
   ListChecks,
+  X,
 } from 'lucide-react';
 import { format, formatDistanceToNow } from 'date-fns';
 import { es } from 'date-fns/locale';
 import { CaterpillarDataCard } from './CaterpillarDataCard';
 import { formatRemainingLabel, getRemainingVariant } from '@/lib/maintenanceUtils';
 import { useCaterpillarData } from '@/hooks/useCaterpillarData';
+import { useSugerenciaMantenimiento } from '@/hooks/useSugerenciaMantenimiento';
+import { usePlanes } from '@/hooks/usePlanes';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 
 interface Props {
   ficha: string | null;
@@ -39,12 +45,14 @@ interface Props {
 export function EquipoDetalleUnificado({ ficha, open, onOpenChange }: Props) {
   const { data } = useSupabaseDataContext();
   const { eventos } = useHistorial();
+  const { planes } = usePlanes();
   const [equipo, setEquipo] = useState<any>(null);
   const [mantenimientos, setMantenimientos] = useState<any[]>([]);
   const [inventariosRelacionados, setInventariosRelacionados] = useState<any[]>([]);
   const [historialEquipo, setHistorialEquipo] = useState<any[]>([]);
   const [mantenimientosRealizadosData, setMantenimientosRealizadosData] = useState<any[]>([]);
   const [actualizacionesHorasKmData, setActualizacionesHorasKmData] = useState<any[]>([]);
+  const [intervaloSeleccionado, setIntervaloSeleccionado] = useState<string | null>(null);
 
   const esCaterpillar = useMemo(
     () => equipo?.marca?.toLowerCase().includes('caterpillar') || equipo?.marca?.toLowerCase().includes('cat'),
@@ -56,12 +64,62 @@ export function EquipoDetalleUnificado({ ficha, open, onOpenChange }: Props) {
     esCaterpillar ? equipo?.numeroSerie ?? '' : '',
   );
 
+  // Obtener próximo mantenimiento (necesario para calcular horas actuales)
   const proximoMantenimiento = useMemo(() => {
     if (!mantenimientos.length) return null;
     return [...mantenimientos].sort((a, b) => a.horasKmRestante - b.horasKmRestante)[0];
   }, [mantenimientos]);
 
+  // Obtener último mantenimiento realizado
+  const ultimoMantenimientoRealizado = useMemo(() => {
+    if (mantenimientosRealizadosData.length === 0) return null;
+    return mantenimientosRealizadosData[mantenimientosRealizadosData.length - 1];
+  }, [mantenimientosRealizadosData]);
+
+  // Obtener última lectura de horas/km
+  const ultimaLectura = useMemo(() => {
+    if (actualizacionesHorasKmData.length === 0) return null;
+    return actualizacionesHorasKmData[actualizacionesHorasKmData.length - 1];
+  }, [actualizacionesHorasKmData]);
+
+  // Calcular horas actuales y horas del último mantenimiento
+  const horasActuales = ultimaLectura?.horasKm || proximoMantenimiento?.horasKmActuales || 0;
+  const horasUltimoMantenimiento = ultimoMantenimientoRealizado?.horasKmAlMomento || 0;
+
+  // Usar hook de sugerencia de mantenimiento
+  const sugerencia = useSugerenciaMantenimiento(
+    equipo?.marca,
+    equipo?.modelo,
+    equipo?.categoria,
+    horasActuales,
+    horasUltimoMantenimiento
+  );
+
+  // Determinar plan disponible para este equipo
+  const planDisponible = useMemo(() => {
+    if (!equipo?.marca || !equipo?.modelo || !equipo?.categoria) return null;
+    
+    return planes.find((plan) => {
+      const marcaCoincide = plan.marca.toLowerCase() === equipo.marca.toLowerCase();
+      const modeloCoincide = plan.modelo?.toLowerCase() === equipo.modelo.toLowerCase();
+      const categoriaCoincide = plan.categoria.toLowerCase() === equipo.categoria.toLowerCase();
+      
+      return marcaCoincide && modeloCoincide && categoriaCoincide && plan.activo;
+    });
+  }, [planes, equipo]);
+
+  // Intervalo actual a mostrar (sugerido o seleccionado manualmente)
+  const intervaloActual = useMemo(() => {
+    if (intervaloSeleccionado && planDisponible) {
+      return planDisponible.intervalos.find(int => int.id.toString() === intervaloSeleccionado) || sugerencia.intervaloSugerido;
+    }
+    return sugerencia.intervaloSugerido;
+  }, [intervaloSeleccionado, planDisponible, sugerencia.intervaloSugerido]);
+
   const intervaloCodigo = useMemo(() => {
+    if (intervaloActual) {
+      return intervaloActual.codigo;
+    }
     if (!proximoMantenimiento) return null;
     const match = proximoMantenimiento.tipoMantenimiento?.match(/(PM\d)/i);
     if (match?.[1]) {
@@ -74,23 +132,37 @@ export function EquipoDetalleUnificado({ ficha, open, onOpenChange }: Props) {
     if (frecuencia <= 1000) return 'PM3';
     if (frecuencia <= 2000) return 'PM4';
     return null;
-  }, [proximoMantenimiento]);
+  }, [intervaloActual, proximoMantenimiento]);
 
   const piezasSugeridas = useMemo(() => {
+    if (intervaloActual && intervaloActual.kits && intervaloActual.kits.length > 0) {
+      // Obtener piezas de los kits vinculados al intervalo
+      return intervaloActual.kits.flatMap(kitLink => {
+        const kit = kitLink.kit;
+        // Asumimos que el kit tiene piezas cargadas
+        return (kit as any).piezas || [];
+      });
+    }
     if (!intervaloCodigo || !caterpillarData?.piezasPorIntervalo) return [];
     return caterpillarData.piezasPorIntervalo[intervaloCodigo] ?? [];
-  }, [intervaloCodigo, caterpillarData]);
+  }, [intervaloActual, intervaloCodigo, caterpillarData]);
 
   const tareasSugeridas = useMemo(() => {
+    if (intervaloActual && intervaloActual.tareas && intervaloActual.tareas.length > 0) {
+      return intervaloActual.tareas;
+    }
     if (!intervaloCodigo || !caterpillarData?.tareasPorIntervalo) return [];
     return caterpillarData.tareasPorIntervalo[intervaloCodigo] ?? [];
-  }, [intervaloCodigo, caterpillarData]);
+  }, [intervaloActual, intervaloCodigo, caterpillarData]);
 
   const descripcionIntervalo = useMemo(() => {
+    if (intervaloActual) {
+      return intervaloActual.descripcion;
+    }
     if (!intervaloCodigo || !caterpillarData?.intervalos) return null;
     const intervalo = caterpillarData.intervalos.find((item) => item.codigo === intervaloCodigo);
     return intervalo?.descripcion ?? null;
-  }, [intervaloCodigo, caterpillarData]);
+  }, [intervaloActual, intervaloCodigo, caterpillarData]);
 
   const ultimaActualizacionLabel = useMemo(() => {
     if (!proximoMantenimiento?.fechaUltimaActualizacion) return 'Sin registro reciente';
@@ -146,14 +218,6 @@ export function EquipoDetalleUnificado({ ficha, open, onOpenChange }: Props) {
 
   const mantenimientoVencido = mantenimientos.some(m => m.horasKmRestante < 0);
   const mantenimientoProximo = mantenimientos.some(m => m.horasKmRestante > 0 && m.horasKmRestante <= 50);
-  const ultimoMantenimientoRealizado =
-    mantenimientosRealizadosData.length > 0
-      ? mantenimientosRealizadosData[mantenimientosRealizadosData.length - 1]
-      : null;
-  const ultimaLectura =
-    actualizacionesHorasKmData.length > 0
-      ? actualizacionesHorasKmData[actualizacionesHorasKmData.length - 1]
-      : null;
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -199,43 +263,106 @@ export function EquipoDetalleUnificado({ ficha, open, onOpenChange }: Props) {
           </TabsList>
 
           <TabsContent value="general" className="space-y-4">
-            {proximoMantenimiento && (
+            {/* Sección de sugerencia de mantenimiento inteligente */}
+            {(intervaloActual || planDisponible) && (
               <Card className="border border-primary/30 bg-primary/5">
-                <CardHeader className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
-                  <div className="space-y-1">
-                    <CardTitle className="text-lg flex items-center gap-2 text-primary">
-                      <Sparkles className="h-5 w-5" /> Próxima intervención programada
-                    </CardTitle>
-                    <p className="text-sm text-muted-foreground">
-                      Basado en las lecturas más recientes registradas para este equipo.
-                    </p>
+                <CardHeader className="space-y-3">
+                  <div className="flex flex-col gap-3 lg:flex-row lg:items-start lg:justify-between">
+                    <div className="space-y-1 flex-1">
+                      <CardTitle className="text-lg flex items-center gap-2 text-primary">
+                        <Sparkles className="h-5 w-5" /> Próxima intervención programada
+                      </CardTitle>
+                      <p className="text-sm text-muted-foreground">
+                        {sugerencia.razon}
+                      </p>
+                      {planDisponible && (
+                        <p className="text-xs text-muted-foreground/80">
+                          Plan: {planDisponible.nombre}
+                        </p>
+                      )}
+                    </div>
+                    <div className="flex flex-wrap items-center gap-2">
+                      {intervaloCodigo && (
+                        <Badge variant="outline" className="border-primary/40 bg-primary/10 text-primary">
+                          {intervaloCodigo}
+                        </Badge>
+                      )}
+                      {proximoMantenimiento && (
+                        <Badge variant={getRemainingVariant(proximoMantenimiento.horasKmRestante)}>
+                          {formatRemainingLabel(proximoMantenimiento.horasKmRestante)}
+                        </Badge>
+                      )}
+                    </div>
                   </div>
-                  <div className="flex flex-wrap items-center gap-2">
-                    {intervaloCodigo && (
-                      <Badge variant="outline" className="border-primary/40 bg-primary/10 text-primary">
-                        {intervaloCodigo}
-                      </Badge>
-                    )}
-                    <Badge variant={getRemainingVariant(proximoMantenimiento.horasKmRestante)}>
-                      {formatRemainingLabel(proximoMantenimiento.horasKmRestante)}
-                    </Badge>
-                  </div>
+
+                  {/* Selector de intervalo manual */}
+                  {planDisponible && planDisponible.intervalos.length > 0 && (
+                    <div className="flex items-center gap-3 pt-2 border-t border-primary/20">
+                      <Label htmlFor="intervalo-select" className="text-sm font-medium whitespace-nowrap">
+                        Cambiar intervalo:
+                      </Label>
+                      <Select 
+                        value={intervaloSeleccionado || sugerencia.intervaloSugerido?.id.toString() || ''}
+                        onValueChange={(value) => setIntervaloSeleccionado(value)}
+                      >
+                        <SelectTrigger id="intervalo-select" className="w-[280px]">
+                          <SelectValue placeholder="Seleccionar intervalo" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {planDisponible.intervalos.map((int) => (
+                            <SelectItem key={int.id} value={int.id.toString()}>
+                              {int.nombre} ({int.horas_intervalo}h)
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                      {intervaloSeleccionado && (
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => setIntervaloSeleccionado(null)}
+                          className="text-xs"
+                        >
+                          <X className="h-3 w-3 mr-1" />
+                          Restaurar sugerencia
+                        </Button>
+                      )}
+                    </div>
+                  )}
                 </CardHeader>
                 <CardContent className="grid gap-4 md:grid-cols-2">
                   <div className="space-y-3">
                     <div>
                       <p className="text-xs uppercase tracking-wide text-primary/70">Servicio asignado</p>
                       <p className="text-sm font-semibold text-primary">
-                        {proximoMantenimiento.tipoMantenimiento || 'Mantenimiento programado'}
+                        {intervaloActual?.nombre || proximoMantenimiento?.tipoMantenimiento || 'Mantenimiento programado'}
                       </p>
                       {descripcionIntervalo && (
                         <p className="mt-1 text-xs text-muted-foreground leading-relaxed">{descripcionIntervalo}</p>
                       )}
+                      {intervaloActual && (
+                        <div className="mt-2 text-xs">
+                          <Badge variant="outline" className="text-xs">
+                            Frecuencia: {intervaloActual.horas_intervalo} horas
+                          </Badge>
+                        </div>
+                      )}
                     </div>
                     <div className="rounded-md border border-primary/20 bg-white/70 p-3 text-xs text-muted-foreground dark:bg-background">
-                      <p className="font-semibold text-primary">Última lectura registrada</p>
-                      <p className="mt-1 text-sm text-foreground">{lecturaActualLabel}</p>
-                      <p className="text-[11px] text-muted-foreground">Actualizado {ultimaActualizacionLabel}</p>
+                      <p className="font-semibold text-primary">Estado del equipo</p>
+                      <div className="mt-2 space-y-1">
+                        <p className="text-sm text-foreground">
+                          Horas actuales: <span className="font-medium">{horasActuales}</span>
+                        </p>
+                        <p className="text-sm text-foreground">
+                          Último mant.: <span className="font-medium">{horasUltimoMantenimiento || 'N/A'}</span>
+                        </p>
+                        {ultimaLectura && (
+                          <p className="text-[11px] text-muted-foreground">
+                            Actualizado {formatDistanceToNow(new Date(ultimaLectura.fecha), { addSuffix: true, locale: es })}
+                          </p>
+                        )}
+                      </div>
                     </div>
                   </div>
                   <div className="space-y-4">
@@ -243,26 +370,22 @@ export function EquipoDetalleUnificado({ ficha, open, onOpenChange }: Props) {
                       <p className="flex items-center gap-2 text-xs font-semibold uppercase tracking-wide text-primary/80">
                         <Package className="h-4 w-4" /> Kit sugerido
                       </p>
-                      {esCaterpillar ? (
-                        piezasSugeridas.length > 0 ? (
-                          <ul className="mt-2 space-y-2 text-xs text-foreground">
-                            {piezasSugeridas.map((pieza) => (
-                              <li key={pieza.id} className="flex items-start gap-2">
-                                <Badge variant="outline" className="border-primary/30 bg-primary/5 text-primary">
-                                  {pieza.pieza.numero_parte}
-                                </Badge>
-                                <span className="leading-snug">{pieza.pieza.descripcion}</span>
-                              </li>
-                            ))}
-                          </ul>
-                        ) : (
-                          <p className="mt-2 text-xs text-muted-foreground">
-                            No hay kits asociados a este intervalo en la base actual. Verifica el OMM para confirmar repuestos.
-                          </p>
-                        )
+                      {piezasSugeridas.length > 0 ? (
+                        <ul className="mt-2 space-y-2 text-xs text-foreground max-h-40 overflow-y-auto">
+                          {piezasSugeridas.map((pieza: any, idx: number) => (
+                            <li key={pieza.id || idx} className="flex items-start gap-2">
+                              <Badge variant="outline" className="border-primary/30 bg-primary/5 text-primary shrink-0">
+                                {pieza.numero_parte || (pieza.pieza && pieza.pieza.numero_parte)}
+                              </Badge>
+                              <span className="leading-snug">
+                                {pieza.descripcion || (pieza.pieza && pieza.pieza.descripcion)}
+                              </span>
+                            </li>
+                          ))}
+                        </ul>
                       ) : (
                         <p className="mt-2 text-xs text-muted-foreground">
-                          Registra el equipo como Caterpillar para sugerir kits homologados por modelo y serie.
+                          No hay kits asociados a este intervalo. {planDisponible ? 'Importa kits o asígnalos manualmente.' : 'Crea un plan de mantenimiento para este equipo.'}
                         </p>
                       )}
                     </div>
@@ -271,17 +394,17 @@ export function EquipoDetalleUnificado({ ficha, open, onOpenChange }: Props) {
                         <ListChecks className="h-4 w-4" /> Tareas clave
                       </p>
                       {tareasSugeridas.length > 0 ? (
-                        <ul className="mt-2 space-y-1 text-xs text-foreground">
-                          {tareasSugeridas.map((tarea) => (
-                            <li key={tarea} className="flex items-start gap-2">
-                              <span className="mt-1 h-1.5 w-1.5 rounded-full bg-primary" />
+                        <ul className="mt-2 space-y-1 text-xs text-foreground max-h-40 overflow-y-auto">
+                          {tareasSugeridas.map((tarea, idx) => (
+                            <li key={idx} className="flex items-start gap-2">
+                              <span className="mt-1 h-1.5 w-1.5 rounded-full bg-primary shrink-0" />
                               <span className="leading-snug">{tarea}</span>
                             </li>
                           ))}
                         </ul>
                       ) : (
                         <p className="mt-2 text-xs text-muted-foreground">
-                          Cuando se identifique el kit, mostraremos aquí las actividades recomendadas para el intervalo.
+                          No hay tareas definidas para este intervalo.
                         </p>
                       )}
                     </div>

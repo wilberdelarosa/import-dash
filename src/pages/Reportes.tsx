@@ -337,7 +337,6 @@ export default function Reportes() {
 
   return (
     <Layout title="Reportes y Analytics">
-      <Navigation />
       
       {/* Barra de filtros avanzados */}
       <Card className="mb-6">

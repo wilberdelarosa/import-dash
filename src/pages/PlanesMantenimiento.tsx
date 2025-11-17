@@ -34,7 +34,7 @@ import {
   AccordionItem,
   AccordionTrigger,
 } from '@/components/ui/accordion';
-import { Plus, Pencil, Trash2, ClipboardList, Package, Clock, Sparkles, X } from 'lucide-react';
+import { Plus, Pencil, Trash2, ClipboardList, Package, Clock, Sparkles, X, ChevronRight, Factory, Layers } from 'lucide-react';
 import { useMemo, useState } from 'react';
 import type { PlanMantenimiento, PlanIntervalo, IntervaloConKits } from '@/types/maintenance-plans';
 import { getStaticModelAliases, getStaticCaterpillarData } from '@/data/caterpillarMaintenance';
@@ -70,6 +70,10 @@ export default function PlanesMantenimiento() {
   const [selectedCatModel, setSelectedCatModel] = useState('');
   const [isImportingCatPlan, setIsImportingCatPlan] = useState(false);
   const catModelOptions = useMemo(() => getStaticModelAliases(), []);
+  
+  // Estados para control de vista: 'index' muestra resumen, 'details' muestra planes
+  const [view, setView] = useState<'index' | 'details'>('index');
+  const [selectedMarca, setSelectedMarca] = useState<string | null>(null);
 
   const compatibleKits = useMemo(() => {
     const base = kits.filter((kit) => kit.activo);
@@ -93,6 +97,31 @@ export default function PlanesMantenimiento() {
       return true;
     });
   }, [kits, kitDialogContext]);
+
+  // Agrupar planes por marca
+  const planesPorMarca = useMemo(() => {
+    const grupos: Record<string, typeof planes> = {};
+    planes.forEach(plan => {
+      if (!grupos[plan.marca]) {
+        grupos[plan.marca] = [];
+      }
+      grupos[plan.marca].push(plan);
+    });
+    return grupos;
+  }, [planes]);
+
+  // Agrupar kits por marca
+  const kitsPorMarca = useMemo(() => {
+    const grupos: Record<string, typeof kits> = {};
+    kits.forEach(kit => {
+      const marca = kit.marca || 'Sin marca';
+      if (!grupos[marca]) {
+        grupos[marca] = [];
+      }
+      grupos[marca].push(kit);
+    });
+    return grupos;
+  }, [kits]);
 
   const [planForm, setPlanForm] = useState({
     nombre: '',
@@ -383,7 +412,6 @@ export default function PlanesMantenimiento() {
   if (loading) {
     return (
       <Layout title="Planes de Mantenimiento">
-        <Navigation />
         <div className="flex items-center justify-center min-h-screen">
           <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary"></div>
         </div>
@@ -393,19 +421,31 @@ export default function PlanesMantenimiento() {
 
   return (
     <Layout title="Planes de Mantenimiento">
-      <Navigation />
       <div className="container mx-auto py-8 px-4">
-        <div className="flex justify-between items-center mb-8">
+        <div className="flex items-start justify-between mb-6">
           <div>
             <h1 className="text-3xl font-bold flex items-center gap-2">
               <ClipboardList className="w-8 h-8" />
               Planes de Mantenimiento
             </h1>
             <p className="text-muted-foreground mt-1">
-              Define planes con intervalos PM para cada marca y modelo
+              {view === 'index' 
+                ? 'Resumen de planes y kits organizados por marca' 
+                : selectedMarca 
+                  ? `Planes de ${selectedMarca}` 
+                  : 'Define planes con intervalos PM para cada marca y modelo'}
             </p>
           </div>
           <div className="flex items-center gap-2">
+            {view === 'details' && (
+              <Button variant="outline" onClick={() => {
+                setView('index');
+                setSelectedMarca(null);
+              }}>
+                <ChevronRight className="w-4 h-4 mr-2 rotate-180" />
+                Volver al índice
+              </Button>
+            )}
             <Dialog open={openPlanDialog} onOpenChange={(open) => {
               setOpenPlanDialog(open);
               if (!open) resetPlanForm();
@@ -505,9 +545,127 @@ export default function PlanesMantenimiento() {
               </Button>
             </CardContent>
           </Card>
-        ) : (
+        ) : view === 'index' ? (
+          // Vista de Índice/Resumen
           <div className="grid gap-6">
-            {planes.map((plan) => (
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <Layers className="w-6 h-6" />
+                  Resumen de Planes por Marca
+                </CardTitle>
+                <CardDescription>
+                  Haz clic en una marca para ver sus planes detallados
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+                  {Object.entries(planesPorMarca).map(([marca, planesGrupo]) => {
+                    const totalIntervalos = planesGrupo.reduce((sum, p) => sum + p.intervalos.length, 0);
+                    const totalKits = planesGrupo.reduce((sum, p) => 
+                      sum + p.intervalos.reduce((s, i) => s + i.kits.length, 0), 0
+                    );
+                    
+                    return (
+                      <Card 
+                        key={marca}
+                        className="group cursor-pointer transition-all duration-300 hover:shadow-xl hover:scale-105 hover:border-primary/50"
+                        onClick={() => {
+                          setSelectedMarca(marca);
+                          setView('details');
+                        }}
+                      >
+                        <CardHeader className="pb-3">
+                          <div className="flex items-center justify-between">
+                            <CardTitle className="flex items-center gap-2 text-lg">
+                              <Factory className="w-5 h-5 text-primary transition-transform group-hover:scale-110" />
+                              {marca}
+                            </CardTitle>
+                            <ChevronRight className="w-5 h-5 text-muted-foreground transition-transform group-hover:translate-x-1" />
+                          </div>
+                        </CardHeader>
+                        <CardContent>
+                          <div className="space-y-2">
+                            <div className="flex items-center justify-between text-sm">
+                              <span className="text-muted-foreground group-hover:text-foreground transition-colors">Planes:</span>
+                              <Badge variant="secondary" className="group-hover:bg-primary/20">{planesGrupo.length}</Badge>
+                            </div>
+                            <div className="flex items-center justify-between text-sm">
+                              <span className="text-muted-foreground group-hover:text-foreground transition-colors">Intervalos PM:</span>
+                              <Badge variant="outline" className="group-hover:border-primary">{totalIntervalos}</Badge>
+                            </div>
+                            <div className="flex items-center justify-between text-sm">
+                              <span className="text-muted-foreground group-hover:text-foreground transition-colors">Kits asociados:</span>
+                              <Badge variant="outline" className="group-hover:border-primary">{totalKits}</Badge>
+                            </div>
+                            <div className="pt-2 border-t mt-3">
+                              <p className="text-xs text-muted-foreground group-hover:text-foreground/80 transition-colors">
+                                Modelos: {[...new Set(planesGrupo.map(p => p.modelo).filter(Boolean))].join(', ') || 'Varios'}
+                              </p>
+                            </div>
+                          </div>
+                        </CardContent>
+                      </Card>
+                    );
+                  })}
+                </div>
+              </CardContent>
+            </Card>
+
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <Package className="w-6 h-6" />
+                  Resumen de Kits por Marca
+                </CardTitle>
+                <CardDescription>
+                  Visualización rápida de kits disponibles organizados por marca
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+                  {Object.entries(kitsPorMarca).map(([marca, kitsGrupo]) => {
+                    const kitsActivos = kitsGrupo.filter(k => k.activo).length;
+                    
+                    return (
+                      <Card key={marca} className="group transition-all duration-300 hover:shadow-xl hover:scale-105 hover:border-primary/50">
+                        <CardHeader className="pb-3">
+                          <CardTitle className="flex items-center gap-2 text-lg">
+                            <Package className="w-5 h-5 text-primary transition-transform group-hover:scale-110" />
+                            {marca}
+                          </CardTitle>
+                        </CardHeader>
+                        <CardContent>
+                          <div className="space-y-2">
+                            <div className="flex items-center justify-between text-sm">
+                              <span className="text-muted-foreground group-hover:text-foreground transition-colors">Total kits:</span>
+                              <Badge variant="secondary" className="group-hover:bg-primary/20">{kitsGrupo.length}</Badge>
+                            </div>
+                            <div className="flex items-center justify-between text-sm">
+                              <span className="text-muted-foreground">Activos:</span>
+                              <Badge variant="default">{kitsActivos}</Badge>
+                            </div>
+                            <div className="pt-2 border-t mt-3">
+                              <p className="text-xs text-muted-foreground line-clamp-2">
+                                {kitsGrupo.slice(0, 3).map(k => k.codigo).join(', ')}
+                                {kitsGrupo.length > 3 && '...'}
+                              </p>
+                            </div>
+                          </div>
+                        </CardContent>
+                      </Card>
+                    );
+                  })}
+                </div>
+              </CardContent>
+            </Card>
+          </div>
+        ) : (
+          // Vista de Detalles (planes filtrados por marca)
+          <div className="grid gap-6">
+            {planes
+              .filter(plan => !selectedMarca || plan.marca === selectedMarca)
+              .map((plan) => (
               <Card key={plan.id}>
                 <CardHeader>
                   <div className="flex items-start justify-between">

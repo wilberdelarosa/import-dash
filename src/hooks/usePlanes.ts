@@ -24,6 +24,7 @@ export function usePlanes() {
     try {
       setLoading(true);
       
+      // Cargar planes con intervalos en una sola query
       const { data: planesData, error: planesError } = await (supabase as any)
         .from('planes_mantenimiento')
         .select('*')
@@ -31,6 +32,7 @@ export function usePlanes() {
 
       if (planesError) throw planesError;
 
+      // Cargar intervalos
       const { data: intervalosData, error: intervalosError } = await (supabase as any)
         .from('plan_intervalos')
         .select('*')
@@ -38,22 +40,33 @@ export function usePlanes() {
 
       if (intervalosError) throw intervalosError;
 
-      const { data: intervalosKitsData, error: intervalosKitsError } = await (supabase as any)
+      // Cargar kits con sus piezas en una query
+      const { data: intervalosKitsData, error: intervalosKitsError} = await (supabase as any)
         .from('plan_intervalo_kits')
-        .select('id, plan_intervalo_id, kit_id, created_at, kits_mantenimiento(*)');
+        .select('id, plan_intervalo_id, kit_id, created_at, kits_mantenimiento(*, kit_piezas(*))');
 
       if (intervalosKitsError) throw intervalosKitsError;
 
+      // Procesar asignaciones de kits
       const asignaciones: IntervaloKitAssignment[] = (intervalosKitsData || [])
         .filter((row) => Boolean(row.kits_mantenimiento))
-        .map((row) => ({
-          id: row.id,
-          plan_intervalo_id: row.plan_intervalo_id,
-          kit_id: row.kit_id,
-          created_at: row.created_at,
-          kit: row.kits_mantenimiento as KitMantenimiento,
-        }));
+        .map((row) => {
+          const kit = row.kits_mantenimiento as any;
+          // Agregar las piezas al kit
+          if (kit && kit.kit_piezas) {
+            kit.piezas = kit.kit_piezas;
+            delete kit.kit_piezas;
+          }
+          return {
+            id: row.id,
+            plan_intervalo_id: row.plan_intervalo_id,
+            kit_id: row.kit_id,
+            created_at: row.created_at,
+            kit: kit as KitMantenimiento,
+          };
+        });
 
+      // Combinar todo
       const planesConIntervalos = (planesData || []).map(plan => ({
         ...plan,
         intervalos: (intervalosData || [])
@@ -103,6 +116,13 @@ export function usePlanes() {
 
       if (error) throw error;
 
+      // Actualización optimista: agregar inmediatamente a la lista local
+      const newPlan: PlanConIntervalos = {
+        ...data,
+        intervalos: [],
+      };
+      setPlanes(prev => [...prev, newPlan].sort((a, b) => a.nombre.localeCompare(b.nombre)));
+
       toast({
         title: 'Plan creado',
         description: 'El plan de mantenimiento se creó correctamente',
@@ -122,12 +142,21 @@ export function usePlanes() {
 
   const updatePlan = async (id: number, plan: Partial<PlanMantenimiento>) => {
     try {
+      // Actualización optimista: actualizar inmediatamente en la UI
+      setPlanes(prev => prev.map(p => 
+        p.id === id ? { ...p, ...plan } : p
+      ).sort((a, b) => a.nombre.localeCompare(b.nombre)));
+
       const { error } = await supabase
         .from('planes_mantenimiento')
         .update(plan)
         .eq('id', id);
 
-      if (error) throw error;
+      if (error) {
+        // Revertir en caso de error
+        await loadPlanes();
+        throw error;
+      }
 
       toast({
         title: 'Plan actualizado',
@@ -146,12 +175,19 @@ export function usePlanes() {
 
   const deletePlan = async (id: number) => {
     try {
+      // Actualización optimista: remover inmediatamente de la UI
+      setPlanes(prev => prev.filter(p => p.id !== id));
+
       const { error } = await supabase
         .from('planes_mantenimiento')
         .delete()
         .eq('id', id);
 
-      if (error) throw error;
+      if (error) {
+        // Revertir en caso de error
+        await loadPlanes();
+        throw error;
+      }
 
       toast({
         title: 'Plan eliminado',
@@ -178,6 +214,22 @@ export function usePlanes() {
 
       if (error) throw error;
 
+      // Actualización optimista: agregar intervalo inmediatamente al plan
+      setPlanes(prev => prev.map(plan => {
+        if (plan.id === intervalo.plan_id) {
+          const newIntervalo: IntervaloConKits = {
+            ...data,
+            tareas: Array.isArray(data.tareas) ? data.tareas as string[] : [],
+            kits: [],
+          };
+          return {
+            ...plan,
+            intervalos: [...plan.intervalos, newIntervalo].sort((a, b) => a.orden - b.orden),
+          };
+        }
+        return plan;
+      }));
+
       toast({
         title: 'Intervalo creado',
         description: 'El intervalo se agregó al plan',
@@ -197,12 +249,23 @@ export function usePlanes() {
 
   const updateIntervalo = async (id: number, intervalo: Partial<PlanIntervalo>) => {
     try {
+      // Actualización optimista
+      setPlanes(prev => prev.map(plan => ({
+        ...plan,
+        intervalos: plan.intervalos.map(int => 
+          int.id === id ? { ...int, ...intervalo } : int
+        ).sort((a, b) => a.orden - b.orden),
+      })));
+
       const { error } = await supabase
         .from('plan_intervalos')
         .update(intervalo)
         .eq('id', id);
 
-      if (error) throw error;
+      if (error) {
+        await loadPlanes();
+        throw error;
+      }
 
       toast({
         title: 'Intervalo actualizado',
@@ -221,12 +284,21 @@ export function usePlanes() {
 
   const deleteIntervalo = async (id: number) => {
     try {
+      // Actualización optimista
+      setPlanes(prev => prev.map(plan => ({
+        ...plan,
+        intervalos: plan.intervalos.filter(int => int.id !== id),
+      })));
+
       const { error } = await supabase
         .from('plan_intervalos')
         .delete()
         .eq('id', id);
 
-      if (error) throw error;
+      if (error) {
+        await loadPlanes();
+        throw error;
+      }
 
       toast({
         title: 'Intervalo eliminado',
@@ -245,18 +317,48 @@ export function usePlanes() {
 
   const linkKitToInterval = async (intervaloId: number, kitId: number) => {
     try {
-      const { error } = await supabase
+      const { data, error } = await supabase
         .from('plan_intervalo_kits')
-        .insert({ plan_intervalo_id: intervaloId, kit_id: kitId });
+        .insert({ plan_intervalo_id: intervaloId, kit_id: kitId })
+        .select('*, kits_mantenimiento(*, kit_piezas(*))')
+        .single();
 
       if (error) throw error;
 
+      // Actualización optimista
+      if (data && data.kits_mantenimiento) {
+        const kit = data.kits_mantenimiento as any;
+        if (kit.kit_piezas) {
+          kit.piezas = kit.kit_piezas;
+          delete kit.kit_piezas;
+        }
+        
+        setPlanes(prev => prev.map(plan => ({
+          ...plan,
+          intervalos: plan.intervalos.map(int => {
+            if (int.id === intervaloId) {
+              return {
+                ...int,
+                kits: [...int.kits, {
+                  id: data.id,
+                  plan_intervalo_id: data.plan_intervalo_id,
+                  kit_id: data.kit_id,
+                  created_at: data.created_at,
+                  kit: kit as KitMantenimiento,
+                }],
+              };
+            }
+            return int;
+          }),
+        })));
+      }
+
       toast({
         title: 'Kit asignado',
-        description: 'El kit se vincul�� al intervalo correctamente.',
+        description: 'El kit se vinculó al intervalo correctamente.',
       });
-      await loadPlanes();
     } catch (error: any) {
+      await loadPlanes();
       console.error('Error linking kit:', error);
       toast({
         title: 'Error',
@@ -271,18 +373,29 @@ export function usePlanes() {
 
   const unlinkKitFromInterval = async (linkId: number) => {
     try {
+      // Actualización optimista: remover el kit de la lista inmediatamente
+      setPlanes(prev => prev.map(plan => ({
+        ...plan,
+        intervalos: plan.intervalos.map(int => ({
+          ...int,
+          kits: int.kits.filter(k => k.id !== linkId),
+        })),
+      })));
+
       const { error } = await supabase
         .from('plan_intervalo_kits')
         .delete()
         .eq('id', linkId);
 
-      if (error) throw error;
+      if (error) {
+        await loadPlanes();
+        throw error;
+      }
 
       toast({
         title: 'Kit eliminado',
-        description: 'El kit se desvincul�� del intervalo.',
+        description: 'El kit se desvinculó del intervalo.',
       });
-      await loadPlanes();
     } catch (error: any) {
       console.error('Error removing kit:', error);
       toast({
@@ -291,6 +404,137 @@ export function usePlanes() {
         variant: 'destructive',
       });
       throw error;
+    }
+  };
+
+  const addEquipoManual = async (planId: number, equipoFicha: string) => {
+    try {
+      const { error } = await supabase
+        .from('plan_equipos_manuales')
+        .insert({ 
+          plan_id: planId, 
+          equipo_ficha: equipoFicha,
+          agregado_manualmente: true,
+          excluido: false
+        });
+
+      if (error) {
+        if (error.message?.includes('duplicate')) {
+          toast({
+            title: 'Equipo ya asociado',
+            description: 'Este equipo ya está en el plan',
+            variant: 'default',
+          });
+          return;
+        }
+        throw error;
+      }
+
+      toast({
+        title: 'Equipo agregado',
+        description: 'El equipo se agregó manualmente al plan',
+      });
+      await loadPlanes();
+    } catch (error: any) {
+      console.error('Error adding manual equipment:', error);
+      toast({
+        title: 'Error',
+        description: 'No se pudo agregar el equipo al plan',
+        variant: 'destructive',
+      });
+      throw error;
+    }
+  };
+
+  const removeEquipoManual = async (planId: number, equipoFicha: string) => {
+    try {
+      const { error } = await supabase
+        .from('plan_equipos_manuales')
+        .delete()
+        .eq('plan_id', planId)
+        .eq('equipo_ficha', equipoFicha);
+
+      if (error) throw error;
+
+      toast({
+        title: 'Equipo removido',
+        description: 'El equipo se quitó del plan',
+      });
+      await loadPlanes();
+    } catch (error: any) {
+      console.error('Error removing manual equipment:', error);
+      toast({
+        title: 'Error',
+        description: 'No se pudo quitar el equipo del plan',
+        variant: 'destructive',
+      });
+      throw error;
+    }
+  };
+
+  const toggleExcluirEquipo = async (planId: number, equipoFicha: string, excluir: boolean) => {
+    try {
+      // Verificar si ya existe un registro
+      const { data: existing } = await supabase
+        .from('plan_equipos_manuales')
+        .select('*')
+        .eq('plan_id', planId)
+        .eq('equipo_ficha', equipoFicha)
+        .single();
+
+      if (existing) {
+        // Actualizar registro existente
+        const { error } = await supabase
+          .from('plan_equipos_manuales')
+          .update({ excluido: excluir })
+          .eq('plan_id', planId)
+          .eq('equipo_ficha', equipoFicha);
+
+        if (error) throw error;
+      } else {
+        // Crear nuevo registro como excluido
+        const { error } = await supabase
+          .from('plan_equipos_manuales')
+          .insert({ 
+            plan_id: planId, 
+            equipo_ficha: equipoFicha,
+            agregado_manualmente: false,
+            excluido: excluir
+          });
+
+        if (error) throw error;
+      }
+
+      toast({
+        title: excluir ? 'Equipo excluido' : 'Equipo incluido',
+        description: excluir 
+          ? 'El equipo se excluyó del plan automático' 
+          : 'El equipo se incluyó nuevamente en el plan',
+      });
+      await loadPlanes();
+    } catch (error: any) {
+      console.error('Error toggling equipment exclusion:', error);
+      toast({
+        title: 'Error',
+        description: 'No se pudo modificar el estado del equipo',
+        variant: 'destructive',
+      });
+      throw error;
+    }
+  };
+
+  const getEquiposAsociados = async (planId: number) => {
+    try {
+      const { data, error } = await supabase
+        .from('plan_equipos_manuales')
+        .select('*')
+        .eq('plan_id', planId);
+
+      if (error) throw error;
+      return data || [];
+    } catch (error: any) {
+      console.error('Error getting associated equipment:', error);
+      return [];
     }
   };
 
@@ -306,5 +550,9 @@ export function usePlanes() {
     refreshPlanes: loadPlanes,
     linkKitToInterval,
     unlinkKitFromInterval,
+    addEquipoManual,
+    removeEquipoManual,
+    toggleExcluirEquipo,
+    getEquiposAsociados,
   };
 }

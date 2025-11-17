@@ -6,6 +6,28 @@ import {
 } from '@/integrations/groq/edge-client';
 import { ChatMessage, ChatUsage } from '@/types/chat';
 
+const STORAGE_KEY = 'chatbot-conversation-history';
+
+const loadMessagesFromStorage = (): ChatMessage[] => {
+  try {
+    const stored = localStorage.getItem(STORAGE_KEY);
+    if (stored) {
+      return JSON.parse(stored);
+    }
+  } catch (error) {
+    console.error('Error loading chat history:', error);
+  }
+  return [];
+};
+
+const saveMessagesToStorage = (messages: ChatMessage[]) => {
+  try {
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(messages));
+  } catch (error) {
+    console.error('Error saving chat history:', error);
+  }
+};
+
 const createId = () => {
   if (typeof crypto !== 'undefined' && 'randomUUID' in crypto) {
     return crypto.randomUUID();
@@ -29,6 +51,13 @@ interface UseChatbotOptions {
 
 export function useChatbot({ systemPrompt, initialAssistantMessage }: UseChatbotOptions) {
   const [messages, setMessages] = useState<ChatMessage[]>(() => {
+    // Intentar cargar del localStorage primero
+    const storedMessages = loadMessagesFromStorage();
+    if (storedMessages.length > 0) {
+      return storedMessages;
+    }
+    
+    // Si no hay mensajes guardados y hay mensaje inicial, usarlo
     if (!initialAssistantMessage) return [];
     return [
       {
@@ -54,6 +83,10 @@ export function useChatbot({ systemPrompt, initialAssistantMessage }: UseChatbot
 
   useEffect(() => {
     messagesRef.current = messages;
+    // Guardar en localStorage cada vez que cambien los mensajes
+    if (messages.length > 0) {
+      saveMessagesToStorage(messages);
+    }
   }, [messages]);
 
   useEffect(() => {
@@ -102,6 +135,9 @@ export function useChatbot({ systemPrompt, initialAssistantMessage }: UseChatbot
     setError(null);
     setUsage(null);
     setActiveModel(null);
+
+    // Limpiar localStorage al resetear
+    localStorage.removeItem(STORAGE_KEY);
 
     if (!initialAssistantMessage) {
       messagesRef.current = [];

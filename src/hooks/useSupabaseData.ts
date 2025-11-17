@@ -1,4 +1,48 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
+/**
+ * Hook principal para gestionar todos los datos de la aplicación con Supabase
+ * 
+ * Este hook centraliza todas las operaciones CRUD y sincronización con la base de datos.
+ * Proporciona métodos para:
+ * - CRUD de equipos, inventarios, mantenimientos
+ * - Migración de datos desde localStorage
+ * - Importación y sincronización de archivos JSON
+ * - Suscripciones en tiempo real a cambios en la BD
+ * 
+ * @example
+ * ```tsx
+ * function MyComponent() {
+ *   const { data, loading, createEquipo, updateEquipo } = useSupabaseData();
+ *   
+ *   const handleCreate = async () => {
+ *     await createEquipo({
+ *       ficha: 'AC-001',
+ *       nombre: 'Excavadora',
+ *       marca: 'Caterpillar',
+ *       modelo: '320D',
+ *       activo: true
+ *     });
+ *   };
+ *   
+ *   return <div>{data.equipos.map(e => <div key={e.id}>{e.nombre}</div>)}</div>;
+ * }
+ * ```
+ * 
+ * @returns {Object} Estado y métodos para gestionar datos
+ * @returns {DatabaseData} data - Todos los datos cargados de la BD
+ * @returns {boolean} loading - Indica si está cargando datos iniciales
+ * @returns {boolean} isMigrating - Indica si está migrando datos
+ * @returns {Function} createEquipo - Crea un nuevo equipo
+ * @returns {Function} updateEquipo - Actualiza un equipo existente
+ * @returns {Function} deleteEquipo - Elimina un equipo
+ * @returns {Function} createInventario - Crea un ítem de inventario
+ * @returns {Function} updateInventario - Actualiza inventario
+ * @returns {Function} deleteInventario - Elimina inventario
+ * @returns {Function} migrateFromLocalStorage - Migra datos desde localStorage
+ * @returns {Function} importJsonData - Importa datos desde archivo JSON
+ * @returns {Function} syncJsonData - Sincroniza cambios desde JSON (smart merge)
+ * @returns {Function} clearDatabase - Limpia toda la base de datos
+ */
 import { useEffect, useRef, useState, useCallback } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from '@/hooks/use-toast';

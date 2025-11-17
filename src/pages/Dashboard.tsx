@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useMemo } from 'react';
 import { Layout } from '@/components/Layout';
 import { Navigation } from '@/components/Navigation';
 import { useSupabaseDataContext } from '@/context/SupabaseDataContext';
@@ -11,9 +11,15 @@ import { Button } from '@/components/ui/button';
 import { Activity, AlertTriangle, CalendarClock, Clock, Users, ExternalLink, Sparkles, ListChecks } from 'lucide-react';
 import { Skeleton } from '@/components/ui/skeleton';
 import { EquipoDetalleUnificado } from '@/components/EquipoDetalleUnificado';
+import { EquipoLink } from '@/components/EquipoLink';
 import { useNavigate } from 'react-router-dom';
 import { formatRemainingLabel, getRemainingVariant } from '@/lib/maintenanceUtils';
 import { Link } from 'react-router-dom';
+import { 
+  UMBRAL_MANTENIMIENTO_PROXIMO_HRS, 
+  LIMITE_MANTENIMIENTOS_RECIENTES,
+  LIMITE_MANTENIMIENTOS_DASHBOARD 
+} from '@/lib/constants';
 
 const formatDate = (value: string | null | undefined) => {
   if (!value) return 'Sin registro';
@@ -36,10 +42,68 @@ export default function Dashboard() {
   const [fichaSeleccionada, setFichaSeleccionada] = useState<string | null>(null);
   const [dialogOpen, setDialogOpen] = useState(false);
 
+  // Memoizar estadísticas para evitar recálculos en cada render
+  const estadisticas = useMemo(() => {
+    const equiposActivos = data.equipos.filter((equipo) => equipo.activo).length;
+    const equiposInactivos = data.equipos.length - equiposActivos;
+    const mantenimientosPendientes = data.mantenimientosProgramados.filter(
+      (m) => m.horasKmRestante <= 50
+    ).length;
+    const mantenimientosVencidos = data.mantenimientosProgramados.filter(
+      (m) => m.horasKmRestante < 0
+    ).length;
+    const proximoMantenimiento = [...data.mantenimientosProgramados]
+      .filter((m) => m.activo)
+      .sort((a, b) => a.horasKmRestante - b.horasKmRestante)[0];
+
+    return {
+      equiposActivos,
+      equiposInactivos,
+      mantenimientosPendientes,
+      mantenimientosVencidos,
+      proximoMantenimiento,
+    };
+  }, [data.equipos, data.mantenimientosProgramados]);
+
+  // Memoizar listas de mantenimientos para evitar ordenamiento repetido
+  const mantenimientosVencidosList = useMemo(() => {
+    return data.mantenimientosProgramados
+      .filter((mantenimiento) => mantenimiento.horasKmRestante <= 0)
+      .sort((a, b) => a.horasKmRestante - b.horasKmRestante)
+      .slice(0, LIMITE_MANTENIMIENTOS_DASHBOARD);
+  }, [data.mantenimientosProgramados]);
+
+  const mantenimientosProximosList = useMemo(() => {
+    return data.mantenimientosProgramados
+      .filter(
+        (mantenimiento) =>
+          mantenimiento.horasKmRestante > 0 && 
+          mantenimiento.horasKmRestante <= UMBRAL_MANTENIMIENTO_PROXIMO_HRS
+      )
+      .sort((a, b) => a.horasKmRestante - b.horasKmRestante)
+      .slice(0, LIMITE_MANTENIMIENTOS_DASHBOARD);
+  }, [data.mantenimientosProgramados]);
+
+  const ultimasActualizaciones = useMemo(() => {
+    return [...data.actualizacionesHorasKm]
+      .sort((a, b) => new Date(b.fecha).getTime() - new Date(a.fecha).getTime())
+      .slice(0, LIMITE_MANTENIMIENTOS_RECIENTES);
+  }, [data.actualizacionesHorasKm]);
+
+  const mantenimientosRecientes = useMemo(() => {
+    return [...data.mantenimientosRealizados]
+      .sort((a, b) => new Date(b.fechaMantenimiento).getTime() - new Date(a.fechaMantenimiento).getTime())
+      .slice(0, LIMITE_MANTENIMIENTOS_RECIENTES);
+  }, [data.mantenimientosRealizados]);
+
+  const handleVerEquipo = (ficha: string) => {
+    setFichaSeleccionada(ficha);
+    setDialogOpen(true);
+  };
+
   if (loading) {
     return (
       <Layout title="Resumen ejecutivo">
-        <Navigation />
         <div className="grid gap-6 md:grid-cols-2 xl:grid-cols-4">
           {Array.from({ length: 4 }).map((_, index) => (
             <Card key={index}>
@@ -57,112 +121,82 @@ export default function Dashboard() {
     );
   }
 
-  const equiposActivos = data.equipos.filter((equipo) => equipo.activo).length;
-  const equiposInactivos = data.equipos.length - equiposActivos;
-  const mantenimientosPendientes = data.mantenimientosProgramados.filter((m) => m.horasKmRestante <= 50).length;
-  const mantenimientosVencidos = data.mantenimientosProgramados.filter((m) => m.horasKmRestante < 0).length;
-  const proximoMantenimiento = [...data.mantenimientosProgramados]
-    .filter((m) => m.activo)
-    .sort((a, b) => a.horasKmRestante - b.horasKmRestante)[0];
-  const PROXIMO_MAX_UMBRAL = 100;
-  const mantenimientosVencidosList = data.mantenimientosProgramados
-    .filter((mantenimiento) => mantenimiento.horasKmRestante <= 0)
-    .sort((a, b) => a.horasKmRestante - b.horasKmRestante);
-  const mantenimientosProximosList = data.mantenimientosProgramados
-    .filter(
-      (mantenimiento) =>
-        mantenimiento.horasKmRestante > 0 && mantenimiento.horasKmRestante <= PROXIMO_MAX_UMBRAL,
-    )
-    .sort((a, b) => a.horasKmRestante - b.horasKmRestante);
-  const ultimasActualizaciones = [...data.actualizacionesHorasKm]
-    .sort((a, b) => new Date(b.fecha).getTime() - new Date(a.fecha).getTime())
-    .slice(0, 5);
-  const mantenimientosRecientes = [...data.mantenimientosRealizados]
-    .sort((a, b) => new Date(b.fechaMantenimiento).getTime() - new Date(a.fechaMantenimiento).getTime())
-    .slice(0, 5);
-
-  const handleVerEquipo = (ficha: string) => {
-    setFichaSeleccionada(ficha);
-    setDialogOpen(true);
-  };
-
   return (
     <Layout title="Resumen ejecutivo">
-      <Navigation />
 
       <div className="space-y-6 lg:space-y-8">
         <Card className="border-primary/30 bg-primary/5">
-          <CardHeader className="pb-3">
-            <CardTitle className="flex items-center gap-2 text-primary">
-              <Sparkles className="h-5 w-5" /> Novedades del módulo de mantenimiento inteligente
+          <CardHeader className="pb-3 space-y-3">
+            <CardTitle className="flex items-center gap-2 text-primary text-lg sm:text-xl">
+              <Sparkles className="h-5 w-5 sm:h-6 sm:w-6" /> Novedades del módulo de mantenimiento inteligente
             </CardTitle>
-            <CardDescription>
+            <CardDescription className="text-sm">
               Accede rápidamente a los kits Caterpillar sugeridos, crea listas personalizadas y abre la ficha del equipo desde el tablero.
             </CardDescription>
           </CardHeader>
           <CardContent className="space-y-3 text-sm">
-            <div className="flex flex-col gap-2">
+            <div className="flex flex-col gap-2.5">
               <div className="flex items-start gap-2">
-                <ListChecks className="mt-0.5 h-4 w-4 text-primary" />
-                <span>
+                <ListChecks className="mt-0.5 h-4 w-4 text-primary shrink-0" />
+                <span className="text-sm">
                   Consulta los kits recomendados y tareas clave desde la ficha del equipo en <strong>Equipos &gt; Ver detalle</strong>.
                 </span>
               </div>
               <div className="flex items-start gap-2">
-                <ListChecks className="mt-0.5 h-4 w-4 text-primary" />
-                <span>
+                <ListChecks className="mt-0.5 h-4 w-4 text-primary shrink-0" />
+                <span className="text-sm">
                   Utiliza el nuevo <strong>constructor de listas personalizadas</strong> para elegir columnas, filtros y exportar reportes en PDF/Excel.
                 </span>
               </div>
               <div className="flex items-start gap-2">
-                <ListChecks className="mt-0.5 h-4 w-4 text-primary" />
-                <span>
+                <ListChecks className="mt-0.5 h-4 w-4 text-primary shrink-0" />
+                <span className="text-sm">
                   Desde este dashboard, haz clic en los indicadores para abrir listas filtradas y revisar los equipos con alerta.
                 </span>
               </div>
             </div>
-            <div className="flex flex-wrap items-center gap-3 pt-2">
-              <Button variant="default" size="sm" asChild>
+            <div className="flex flex-col sm:flex-row sm:flex-wrap items-stretch sm:items-center gap-2 sm:gap-3 pt-2">
+              <Button variant="default" size="sm" asChild className="w-full sm:w-auto">
                 <Link to="/equipos">Abrir gestión de equipos</Link>
               </Button>
-              <Button variant="outline" size="sm" asChild>
+              <Button variant="outline" size="sm" asChild className="w-full sm:w-auto">
                 <Link to="/listas-personalizadas">Listas personalizadas</Link>
               </Button>
-              <Button variant="ghost" size="sm" onClick={() => navigate('/asistente')} className="text-primary">
+              <Button variant="ghost" size="sm" onClick={() => navigate('/asistente')} className="text-primary w-full sm:w-auto">
                 Asistente IA
               </Button>
             </div>
           </CardContent>
         </Card>
 
-      {mantenimientosVencidos > 0 && (
+      {estadisticas.mantenimientosVencidos > 0 && (
         <Alert variant="destructive">
-          <AlertTriangle className="h-4 w-4" />
+          <AlertTriangle className="h-4 w-4 shrink-0" />
           <AlertTitle>Mantenimientos vencidos</AlertTitle>
-          <AlertDescription className="flex items-center justify-between">
-            <span>
-              {mantenimientosVencidos} equipo{mantenimientosVencidos > 1 ? 's tienen' : ' tiene'} mantenimientos vencidos que requieren atención inmediata.
+          <AlertDescription className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+            <span className="text-sm">
+              {estadisticas.mantenimientosVencidos} equipo{estadisticas.mantenimientosVencidos > 1 ? 's tienen' : ' tiene'} mantenimientos vencidos que requieren atención inmediata.
             </span>
-            <Button variant="outline" size="sm" onClick={() => navigate('/mantenimiento')} className="ml-4">
+            <Button variant="outline" size="sm" onClick={() => navigate('/mantenimiento')} className="w-full sm:w-auto sm:ml-4 shrink-0">
               Ver detalles <ExternalLink className="ml-2 h-3 w-3" />
             </Button>
           </AlertDescription>
         </Alert>
       )}
       
-      {proximoMantenimiento && proximoMantenimiento.horasKmRestante > 0 && proximoMantenimiento.horasKmRestante <= 25 && (
+      {estadisticas.proximoMantenimiento && estadisticas.proximoMantenimiento.horasKmRestante > 0 && estadisticas.proximoMantenimiento.horasKmRestante <= 25 && (
         <Alert variant="warning" className="border-warning/50">
-          <AlertTriangle className="h-4 w-4" />
+          <AlertTriangle className="h-4 w-4 shrink-0" />
           <AlertTitle>Próximo mantenimiento crítico</AlertTitle>
-          <AlertDescription className="flex items-center justify-between">
-            <span>
-              {formatEquipoReferencia(proximoMantenimiento.nombreEquipo, proximoMantenimiento.ficha)} requiere intervención en {proximoMantenimiento.horasKmRestante} horas/km restantes.
+          <AlertDescription className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+            <span className="text-sm">
+              {formatEquipoReferencia(estadisticas.proximoMantenimiento.nombreEquipo, estadisticas.proximoMantenimiento.ficha)} requiere intervención en {estadisticas.proximoMantenimiento.horasKmRestante} horas/km restantes.
             </span>
             <Button 
               variant="outline" 
               size="sm" 
-              onClick={() => handleVerEquipo(proximoMantenimiento.ficha)}
-              className="ml-4"
+              onClick={() => handleVerEquipo(estadisticas.proximoMantenimiento.ficha)}
+              className="w-full sm:w-auto sm:ml-4 shrink-0"
             >
               Ver equipo <ExternalLink className="ml-2 h-3 w-3" />
             </Button>
@@ -170,71 +204,71 @@ export default function Dashboard() {
         </Alert>
       )}
 
-      <section className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
+      <section className="grid gap-3 sm:gap-4 grid-cols-2 xl:grid-cols-4">
         <Card 
-          className="cursor-pointer transition-all hover:shadow-lg hover:-translate-y-1"
+          className="group cursor-pointer transition-all duration-300 hover:shadow-xl hover:scale-105 hover:border-success/50"
           onClick={() => navigate('/equipos')}
         >
-          <CardHeader className="pb-2">
-            <CardDescription>Equipos activos</CardDescription>
-            <CardTitle className="text-3xl flex items-center gap-2">
-              <Activity className="h-6 w-6 text-success" />
-              {equiposActivos}
+          <CardHeader className="pb-2 sm:pb-3">
+            <CardDescription className="text-xs font-medium uppercase tracking-wide">Equipos activos</CardDescription>
+            <CardTitle className="text-3xl sm:text-4xl font-bold flex items-center gap-2 sm:gap-3">
+              <Activity className="h-6 w-6 sm:h-7 sm:w-7 text-success transition-transform group-hover:scale-110" />
+              {estadisticas.equiposActivos}
             </CardTitle>
           </CardHeader>
-          <CardContent>
-            <p className="text-sm text-muted-foreground flex items-center gap-1">
+          <CardContent className="pb-4">
+            <p className="text-xs sm:text-sm text-muted-foreground flex items-center gap-1.5 group-hover:text-foreground transition-colors">
               Operativos actualmente
-              <ExternalLink className="h-3 w-3 opacity-50" />
+              <ExternalLink className="h-3 w-3 sm:h-3.5 sm:w-3.5 opacity-0 group-hover:opacity-100 transition-opacity" />
             </p>
           </CardContent>
         </Card>
         <Card 
-          className="cursor-pointer transition-all hover:shadow-lg hover:-translate-y-1"
+          className="group cursor-pointer transition-all duration-300 hover:shadow-xl hover:scale-105 hover:border-warning/50"
           onClick={() => navigate('/equipos')}
         >
-          <CardHeader className="pb-2">
-            <CardDescription>Equipos fuera de servicio</CardDescription>
-            <CardTitle className="text-3xl flex items-center gap-2">
-              <AlertTriangle className="h-6 w-6 text-warning" />
-              {equiposInactivos}
+          <CardHeader className="pb-3">
+            <CardDescription className="text-xs font-medium uppercase tracking-wide">Equipos fuera de servicio</CardDescription>
+            <CardTitle className="text-4xl font-bold flex items-center gap-3">
+              <AlertTriangle className="h-7 w-7 text-warning transition-transform group-hover:scale-110" />
+              {estadisticas.equiposInactivos}
             </CardTitle>
           </CardHeader>
           <CardContent>
-            <p className="text-sm text-muted-foreground flex items-center gap-1">
+            <p className="text-sm text-muted-foreground flex items-center gap-1.5 group-hover:text-foreground transition-colors">
               Requieren revisión o baja temporal
-              <ExternalLink className="h-3 w-3 opacity-50" />
+              <ExternalLink className="h-3.5 w-3.5 opacity-0 group-hover:opacity-100 transition-opacity" />
             </p>
           </CardContent>
         </Card>
         <Card 
-          className="cursor-pointer transition-all hover:shadow-lg hover:-translate-y-1"
+          className="group cursor-pointer transition-all duration-300 hover:shadow-xl hover:scale-105 hover:border-primary/50"
           onClick={() => navigate('/mantenimiento')}
         >
-          <CardHeader className="pb-2">
-            <CardDescription>Mantenimientos próximos</CardDescription>
-            <CardTitle className="text-3xl flex items-center gap-2">
-              <CalendarClock className="h-6 w-6 text-primary" />
-              {mantenimientosPendientes}
+          <CardHeader className="pb-3">
+            <CardDescription className="text-xs font-medium uppercase tracking-wide">Mantenimientos próximos</CardDescription>
+            <CardTitle className="text-4xl font-bold flex items-center gap-3">
+              <CalendarClock className="h-7 w-7 text-primary transition-transform group-hover:scale-110" />
+              {estadisticas.mantenimientosPendientes}
             </CardTitle>
           </CardHeader>
           <CardContent>
-            <p className="text-sm text-muted-foreground flex items-center gap-1">
+            <p className="text-sm text-muted-foreground flex items-center gap-1.5 group-hover:text-foreground transition-colors">
               Con menos de 50 horas/km restantes
-              <ExternalLink className="h-3 w-3 opacity-50" />
+              <ExternalLink className="h-3.5 w-3.5 opacity-0 group-hover:opacity-100 transition-opacity" />
             </p>
           </CardContent>
         </Card>
-        <Card className="transition-all hover:shadow-lg hover:-translate-y-1">
-          <CardHeader className="pb-2">
-            <CardDescription>Técnicos registrados</CardDescription>
-            <CardTitle className="text-3xl flex items-center gap-2">
-              <Users className="h-6 w-6 text-info" />
+        <Card className="group transition-all duration-300 hover:shadow-xl hover:scale-105 hover:border-info/50">
+          <CardHeader className="pb-3">
+            <CardDescription className="text-xs font-medium uppercase tracking-wide">Técnicos registrados</CardDescription>
+            <CardTitle className="text-4xl font-bold flex items-center gap-3">
+              <Users className="h-7 w-7 text-info transition-transform group-hover:scale-110" />
               {data.empleados?.length ?? 0}
             </CardTitle>
           </CardHeader>
           <CardContent>
-            <p className="text-sm text-muted-foreground">Personal disponible en la base</p>
+            <p className="text-sm text-muted-foreground group-hover:text-foreground transition-colors">Personal disponible en la base</p>
           </CardContent>
         </Card>
       </section>
@@ -264,7 +298,7 @@ export default function Dashboard() {
                   {mantenimientosVencidosList.map((mantenimiento) => (
                     <TableRow
                       key={`${mantenimiento.id}-vencido`}
-                      className="cursor-pointer hover:bg-muted/50"
+                      className="cursor-pointer transition-colors hover:bg-destructive/10 group"
                       onClick={() => handleVerEquipo(mantenimiento.ficha)}
                     >
                       <TableCell className="font-medium">
@@ -312,7 +346,7 @@ export default function Dashboard() {
                   {mantenimientosProximosList.map((mantenimiento) => (
                     <TableRow
                       key={`${mantenimiento.id}-proximo`}
-                      className="cursor-pointer hover:bg-muted/50"
+                      className="cursor-pointer transition-colors hover:bg-primary/10 group"
                       onClick={() => handleVerEquipo(mantenimiento.ficha)}
                     >
                       <TableCell className="font-medium">
@@ -340,58 +374,6 @@ export default function Dashboard() {
       </section>
 
       <section className="grid gap-6 xl:grid-cols-2">
-        <Card className="flex flex-col">
-          <CardHeader>
-            <CardTitle>Próximas actualizaciones</CardTitle>
-            <CardDescription>Planifica las inspecciones prioritarias</CardDescription>
-          </CardHeader>
-          <CardContent className="flex-1">
-            <div className="-mx-4 overflow-x-auto sm:mx-0">
-              <div className="min-w-full rounded-md border">
-              <Table className="w-full min-w-[720px]">
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>Equipo / Ficha</TableHead>
-                    <TableHead>Tipo</TableHead>
-                    <TableHead className="text-right">Horas/km restantes</TableHead>
-                    <TableHead>Última actualización</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {data.mantenimientosProgramados
-                    .slice()
-                    .sort((a, b) => a.horasKmRestante - b.horasKmRestante)
-                    .slice(0, 6)
-                    .map((mantenimiento) => (
-                      <TableRow 
-                        key={mantenimiento.id}
-                        className="cursor-pointer hover:bg-muted/50"
-                        onClick={() => handleVerEquipo(mantenimiento.ficha)}
-                      >
-                        <TableCell className="font-medium">
-                          <div className="flex flex-col">
-                            <span>{mantenimiento.nombreEquipo ?? 'Equipo sin nombre'}</span>
-                            <span className="text-xs text-muted-foreground">
-                              {mantenimiento.ficha ? `Ficha ${mantenimiento.ficha}` : 'Sin ficha registrada'}
-                            </span>
-                          </div>
-                        </TableCell>
-                        <TableCell>{mantenimiento.tipoMantenimiento}</TableCell>
-                        <TableCell className="text-right">
-                          <Badge variant={getRemainingVariant(mantenimiento.horasKmRestante)}>
-                            {formatRemainingLabel(mantenimiento.horasKmRestante)}
-                          </Badge>
-                        </TableCell>
-                        <TableCell>{formatDate(mantenimiento.fechaUltimaActualizacion)}</TableCell>
-                      </TableRow>
-                    ))}
-                </TableBody>
-              </Table>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-
         <Card className="flex flex-col">
           <CardHeader>
             <CardTitle>Actividad reciente</CardTitle>

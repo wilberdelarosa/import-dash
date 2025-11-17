@@ -13,25 +13,16 @@ export function useKits() {
     try {
       setLoading(true);
       
+      // Query optimizada: traer kits con sus piezas en una sola consulta
       const { data: kitsData, error: kitsError } = await supabase
         .from('kits_mantenimiento')
-        .select('*')
+        .select('*, piezas:kit_piezas(*)')
         .order('nombre');
 
       if (kitsError) throw kitsError;
 
-      const { data: piezasData, error: piezasError } = await supabase
-        .from('kit_piezas')
-        .select('*');
-
-      if (piezasError) throw piezasError;
-
-      const kitsConPiezas = (kitsData || []).map(kit => ({
-        ...kit,
-        piezas: (piezasData || []).filter(pieza => pieza.kit_id === kit.id)
-      }));
-
-      setKits(kitsConPiezas);
+      // Los datos ya vienen estructurados correctamente
+      setKits(kitsData || []);
     } catch (error: any) {
       console.error('Error loading kits:', error);
       toast({
@@ -60,13 +51,28 @@ export function useKits() {
 
   const createKit = async (kit: Omit<KitMantenimiento, 'id' | 'created_at'>) => {
     try {
+      // Actualización optimista: agregar kit temporalmente con ID negativo
+      const tempKit: KitConPiezas = {
+        ...kit,
+        id: -Date.now(),
+        created_at: new Date().toISOString(),
+        piezas: [],
+      };
+      setKits(prev => [...prev, tempKit].sort((a, b) => a.nombre.localeCompare(b.nombre)));
+
       const { data, error } = await supabase
         .from('kits_mantenimiento')
         .insert([kit])
         .select()
         .single();
 
-      if (error) throw error;
+      if (error) {
+        await loadKits();
+        throw error;
+      }
+
+      // Reemplazar kit temporal con datos reales
+      setKits(prev => prev.map(k => k.id === tempKit.id ? { ...data, piezas: [] } : k));
 
       toast({
         title: 'Kit creado',
@@ -87,12 +93,18 @@ export function useKits() {
 
   const updateKit = async (id: number, kit: Partial<KitMantenimiento>) => {
     try {
+      // Actualización optimista
+      setKits(prev => prev.map(k => k.id === id ? { ...k, ...kit } : k));
+
       const { error } = await supabase
         .from('kits_mantenimiento')
         .update(kit)
         .eq('id', id);
 
-      if (error) throw error;
+      if (error) {
+        await loadKits();
+        throw error;
+      }
 
       toast({
         title: 'Kit actualizado',
@@ -111,12 +123,18 @@ export function useKits() {
 
   const deleteKit = async (id: number) => {
     try {
+      // Actualización optimista: remover kit inmediatamente
+      setKits(prev => prev.filter(k => k.id !== id));
+
       const { error } = await supabase
         .from('kits_mantenimiento')
         .delete()
         .eq('id', id);
 
-      if (error) throw error;
+      if (error) {
+        await loadKits();
+        throw error;
+      }
 
       toast({
         title: 'Kit eliminado',
@@ -135,13 +153,35 @@ export function useKits() {
 
   const createPieza = async (pieza: Omit<KitPieza, 'id' | 'created_at'>) => {
     try {
+      // Actualización optimista: agregar pieza temporalmente con ID negativo
+      const tempPieza: KitPieza = {
+        ...pieza,
+        id: -Date.now(),
+        created_at: new Date().toISOString(),
+      };
+      setKits(prev => prev.map(kit => {
+        if (kit.id === pieza.kit_id) {
+          return { ...kit, piezas: [...kit.piezas, tempPieza] };
+        }
+        return kit;
+      }));
+
       const { data, error } = await supabase
         .from('kit_piezas')
         .insert([pieza])
         .select()
         .single();
 
-      if (error) throw error;
+      if (error) {
+        await loadKits();
+        throw error;
+      }
+
+      // Reemplazar pieza temporal con datos reales
+      setKits(prev => prev.map(kit => ({
+        ...kit,
+        piezas: kit.piezas.map(p => p.id === tempPieza.id ? data : p),
+      })));
 
       toast({
         title: 'Pieza agregada',
@@ -162,12 +202,21 @@ export function useKits() {
 
   const updatePieza = async (id: number, pieza: Partial<KitPieza>) => {
     try {
+      // Actualización optimista
+      setKits(prev => prev.map(kit => ({
+        ...kit,
+        piezas: kit.piezas.map(p => p.id === id ? { ...p, ...pieza } : p),
+      })));
+
       const { error } = await supabase
         .from('kit_piezas')
         .update(pieza)
         .eq('id', id);
 
-      if (error) throw error;
+      if (error) {
+        await loadKits();
+        throw error;
+      }
 
       toast({
         title: 'Pieza actualizada',
@@ -186,12 +235,21 @@ export function useKits() {
 
   const deletePieza = async (id: number) => {
     try {
+      // Actualización optimista: remover pieza inmediatamente
+      setKits(prev => prev.map(kit => ({
+        ...kit,
+        piezas: kit.piezas.filter(p => p.id !== id),
+      })));
+
       const { error } = await supabase
         .from('kit_piezas')
         .delete()
         .eq('id', id);
 
-      if (error) throw error;
+      if (error) {
+        await loadKits();
+        throw error;
+      }
 
       toast({
         title: 'Pieza eliminada',

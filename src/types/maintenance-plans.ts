@@ -6,7 +6,18 @@ export interface PlanMantenimiento {
   categoria: string;
   descripcion: string | null;
   activo: boolean;
+  marcas_asociadas?: string[] | null;
   created_at: string;
+}
+
+export interface PlanEquipoManual {
+  id: number;
+  plan_id: number;
+  equipo_ficha: string;
+  agregado_manualmente: boolean;
+  excluido: boolean;
+  created_at: string;
+  updated_at: string;
 }
 
 export interface PlanIntervalo {

@@ -396,7 +396,6 @@ export default function Historial() {
 
   return (
     <Layout title="Historial de Eventos">
-      <Navigation />
       <div className="space-y-6">
         {/* Header con Tabs */}
         <div className="flex flex-col gap-4">

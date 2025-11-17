@@ -27,6 +27,9 @@ import {
   X,
   Activity,
   AlertTriangle,
+  Calendar,
+  Users,
+  FileText,
 } from 'lucide-react';
 import { formatRemainingLabel, getRemainingVariant } from '@/lib/maintenanceUtils';
 import type { ActualizacionHorasKm, MantenimientoProgramado, MantenimientoRealizado } from '@/types/equipment';
@@ -780,67 +783,104 @@ export default function ControlMantenimiento() {
 
           <TabsContent value="mantenimiento" className="space-y-8 lg:space-y-10 mt-0">
         <div className="space-y-6 lg:space-y-8">
-          <section className="grid gap-3.5 md:grid-cols-2 xl:grid-cols-4">
-            <Card className="group overflow-hidden border-l-4 border-l-blue-500 bg-gradient-to-br from-blue-50/40 to-transparent dark:from-blue-950/20 hover:shadow-lg hover:scale-[1.02] transition-all duration-300">
-              <CardHeader className="space-y-1.5 pb-3">
-                <CardTitle className="text-[0.7rem] font-bold uppercase tracking-wider text-muted-foreground flex items-center gap-2">
-                  <CalendarCheck className="h-4 w-4 text-blue-500" />
+          <section className="grid gap-5 md:grid-cols-2 xl:grid-cols-4">
+            <Card className="group relative overflow-hidden border-2 border-blue-200 bg-gradient-to-br from-blue-50/60 via-blue-50/30 to-transparent dark:from-blue-950/30 dark:via-blue-950/15 hover:shadow-2xl hover:scale-[1.03] hover:border-blue-300 transition-all duration-500">
+              <div className="absolute top-0 right-0 w-40 h-40 bg-blue-500/10 rounded-full blur-3xl -mr-20 -mt-20 group-hover:scale-150 transition-transform duration-700" />
+              <CardHeader className="space-y-2 pb-4 relative z-10">
+                <div className="flex items-center justify-between">
+                  <div className="p-2.5 bg-blue-500/15 rounded-xl group-hover:bg-blue-500/25 transition-colors duration-300">
+                    <CalendarCheck className="h-6 w-6 text-blue-600 dark:text-blue-400" />
+                  </div>
+                  <Badge variant="secondary" className="text-[0.65rem] px-2 py-0.5 bg-blue-500/10 text-blue-700 border-blue-200">Activos</Badge>
+                </div>
+                <CardTitle className="text-[0.7rem] font-bold uppercase tracking-wider text-muted-foreground">
                   Programados
                 </CardTitle>
-                <CardDescription className="text-3xl font-black text-foreground">
+                <CardDescription className="text-4xl font-black text-blue-600 dark:text-blue-400 tabular-nums">
                   {totalEquiposPlanificados}
                 </CardDescription>
               </CardHeader>
-              <CardContent className="text-[0.7rem] text-muted-foreground pb-3 pt-0">
+              <CardContent className="text-xs text-muted-foreground pb-4 pt-0 relative z-10 font-medium">
                 Equipos con plan preventivo activo
               </CardContent>
             </Card>
-            <Card className="group overflow-hidden border-l-4 border-l-green-500 bg-gradient-to-br from-green-50/40 to-transparent dark:from-green-950/20 hover:shadow-lg hover:scale-[1.02] transition-all duration-300">
-              <CardHeader className="space-y-1.5 pb-3">
-                <CardTitle className="text-[0.7rem] font-bold uppercase tracking-wider text-muted-foreground flex items-center gap-2">
-                  <Activity className="h-4 w-4 text-green-500" />
-                  Cobertura semanal
+
+            <Card className="group relative overflow-hidden border-2 border-green-200 bg-gradient-to-br from-green-50/60 via-green-50/30 to-transparent dark:from-green-950/30 dark:via-green-950/15 hover:shadow-2xl hover:scale-[1.03] hover:border-green-300 transition-all duration-500">
+              <div className="absolute top-0 right-0 w-40 h-40 bg-green-500/10 rounded-full blur-3xl -mr-20 -mt-20 group-hover:scale-150 transition-transform duration-700" />
+              <CardHeader className="space-y-2 pb-4 relative z-10">
+                <div className="flex items-center justify-between">
+                  <div className="p-2.5 bg-green-500/15 rounded-xl group-hover:bg-green-500/25 transition-colors duration-300">
+                    <Activity className="h-6 w-6 text-green-600 dark:text-green-400" />
+                  </div>
+                  <Badge variant="secondary" className="text-[0.65rem] px-2 py-0.5 bg-green-500/10 text-green-700 border-green-200">Cobertura</Badge>
+                </div>
+                <CardTitle className="text-[0.7rem] font-bold uppercase tracking-wider text-muted-foreground">
+                  Cobertura Semanal
                 </CardTitle>
-                <CardDescription className="text-3xl font-black text-foreground">
+                <CardDescription className="text-4xl font-black text-green-600 dark:text-green-400 tabular-nums">
                   {coberturaSemanal}%
                 </CardDescription>
               </CardHeader>
-              <CardContent className="pb-3 pt-0 space-y-2">
-                <Progress value={coberturaSemanal} className="h-2.5 bg-green-100 dark:bg-green-950" />
-                <p className="text-[0.7rem] text-muted-foreground">
+              <CardContent className="pb-4 pt-0 space-y-2.5 relative z-10">
+                <Progress value={coberturaSemanal} className="h-3 bg-green-100 dark:bg-green-950/50 [&>div]:bg-gradient-to-r [&>div]:from-green-500 [&>div]:to-green-600" />
+                <p className="text-xs text-muted-foreground font-medium">
                   {resumenActualizaciones?.actualizados.length ?? 0} lecturas en la última ventana
                 </p>
               </CardContent>
             </Card>
-            <Card className={`group overflow-hidden border-l-4 transition-all duration-300 hover:shadow-lg hover:scale-[1.02] ${
+
+            <Card className={`group relative overflow-hidden border-2 transition-all duration-500 hover:shadow-2xl hover:scale-[1.03] ${
               pendientesCriticos.length > 0 
-                ? 'border-l-red-500 bg-gradient-to-br from-red-50/40 to-transparent dark:from-red-950/20' 
-                : 'border-l-gray-300 bg-gradient-to-br from-gray-50/40 to-transparent dark:from-gray-950/20'
+                ? 'border-red-200 bg-gradient-to-br from-red-50/60 via-red-50/30 to-transparent dark:from-red-950/30 dark:via-red-950/15 hover:border-red-300' 
+                : 'border-gray-200 bg-gradient-to-br from-gray-50/60 via-gray-50/30 to-transparent dark:from-gray-950/30 hover:border-gray-300'
             }`}>
-              <CardHeader className="space-y-1.5 pb-3">
-                <CardTitle className="text-[0.7rem] font-bold uppercase tracking-wider text-muted-foreground flex items-center gap-2">
-                  <AlertTriangle className={`h-4 w-4 ${pendientesCriticos.length > 0 ? 'text-red-500' : 'text-gray-400'}`} />
+              <div className={`absolute top-0 right-0 w-40 h-40 rounded-full blur-3xl -mr-20 -mt-20 group-hover:scale-150 transition-transform duration-700 ${
+                pendientesCriticos.length > 0 ? 'bg-red-500/10' : 'bg-gray-500/10'
+              }`} />
+              <CardHeader className="space-y-2 pb-4 relative z-10">
+                <div className="flex items-center justify-between">
+                  <div className={`p-2.5 rounded-xl transition-colors duration-300 ${
+                    pendientesCriticos.length > 0 
+                      ? 'bg-red-500/15 group-hover:bg-red-500/25' 
+                      : 'bg-gray-500/15 group-hover:bg-gray-500/25'
+                  }`}>
+                    <AlertTriangle className={`h-6 w-6 ${pendientesCriticos.length > 0 ? 'text-red-600 dark:text-red-400 animate-pulse' : 'text-gray-400'}`} />
+                  </div>
+                  {pendientesCriticos.length > 0 && (
+                    <Badge variant="destructive" className="text-[0.65rem] px-2 py-0.5 animate-pulse">¡Urgente!</Badge>
+                  )}
+                </div>
+                <CardTitle className="text-[0.7rem] font-bold uppercase tracking-wider text-muted-foreground">
                   Críticos
                 </CardTitle>
-                <CardDescription className="text-3xl font-black text-foreground">
+                <CardDescription className={`text-4xl font-black tabular-nums ${
+                  pendientesCriticos.length > 0 ? 'text-red-600 dark:text-red-400' : 'text-gray-400'
+                }`}>
                   {pendientesCriticos.length}
                 </CardDescription>
               </CardHeader>
-              <CardContent className="text-[0.7rem] text-muted-foreground pb-3 pt-0">
+              <CardContent className="text-xs text-muted-foreground pb-4 pt-0 relative z-10 font-medium">
                 Con menos de 25 h/km disponibles
               </CardContent>
             </Card>
-            <Card className="group overflow-hidden border-l-4 border-l-purple-500 bg-gradient-to-br from-purple-50/40 to-transparent dark:from-purple-950/20 hover:shadow-lg hover:scale-[1.02] transition-all duration-300">
-              <CardHeader className="space-y-1.5 pb-3">
-                <CardTitle className="text-[0.7rem] font-bold uppercase tracking-wider text-muted-foreground flex items-center gap-2">
-                  <Route className="h-4 w-4 text-purple-500" />
-                  Ruta inteligente
+
+            <Card className="group relative overflow-hidden border-2 border-purple-200 bg-gradient-to-br from-purple-50/60 via-purple-50/30 to-transparent dark:from-purple-950/30 dark:via-purple-950/15 hover:shadow-2xl hover:scale-[1.03] hover:border-purple-300 transition-all duration-500">
+              <div className="absolute top-0 right-0 w-40 h-40 bg-purple-500/10 rounded-full blur-3xl -mr-20 -mt-20 group-hover:scale-150 transition-transform duration-700" />
+              <CardHeader className="space-y-2 pb-4 relative z-10">
+                <div className="flex items-center justify-between">
+                  <div className="p-2.5 bg-purple-500/15 rounded-xl group-hover:bg-purple-500/25 transition-colors duration-300">
+                    <Route className="h-6 w-6 text-purple-600 dark:text-purple-400" />
+                  </div>
+                  <Badge variant="secondary" className="text-[0.65rem] px-2 py-0.5 bg-purple-500/10 text-purple-700 border-purple-200">Ruta</Badge>
+                </div>
+                <CardTitle className="text-[0.7rem] font-bold uppercase tracking-wider text-muted-foreground">
+                  Ruta Inteligente
                 </CardTitle>
-                <CardDescription className="text-3xl font-black text-foreground">
-                  {rutaSeleccionadaCount}/{planRutaFiltrada.length || planRuta.length}
+                <CardDescription className="text-4xl font-black text-purple-600 dark:text-purple-400 tabular-nums">
+                  {rutaSeleccionadaCount}<span className="text-2xl text-muted-foreground">/{planRutaFiltrada.length || planRuta.length}</span>
                 </CardDescription>
               </CardHeader>
-              <CardContent className="text-[0.7rem] text-muted-foreground pb-3 pt-0">
+              <CardContent className="text-xs text-muted-foreground pb-4 pt-0 relative z-10 font-medium">
                 Marcados para recorrido preventivo
               </CardContent>
             </Card>
@@ -848,38 +888,47 @@ export default function ControlMantenimiento() {
           <div className="grid gap-6 xl:grid-cols-[1.35fr,1fr]">
             <div className="space-y-6">
 
-            <Card className="overflow-hidden border-2 border-primary/30 shadow-lg hover:shadow-xl transition-all duration-300 bg-gradient-to-br from-primary/5 to-transparent">
-              <CardHeader className="bg-gradient-to-r from-primary/10 to-transparent pb-4">
-                <CardTitle className="flex items-center gap-2.5 text-lg">
-                  <Gauge className="h-5 w-5 text-primary" /> Actualiza y registra
+            <Card className="relative overflow-hidden border-2 border-primary/40 shadow-2xl hover:shadow-3xl transition-all duration-500 bg-gradient-to-br from-primary/5 via-background to-muted/20">
+              <div className="absolute top-0 left-0 w-full h-1.5 bg-gradient-to-r from-primary via-primary/60 to-transparent" />
+              <CardHeader className="pb-6 border-b bg-gradient-to-r from-primary/5 via-primary/3 to-transparent backdrop-blur-sm">
+                <CardTitle className="flex items-center gap-3 text-xl">
+                  <div className="p-2 bg-primary/15 rounded-xl">
+                    <Gauge className="h-6 w-6 text-primary" />
+                  </div>
+                  <span className="font-black">Actualiza y registra</span>
                 </CardTitle>
-                <CardDescription className="text-sm">Gestiona lecturas y mantenimientos desde un mismo panel</CardDescription>
+                <CardDescription className="text-sm mt-2 font-medium">Gestiona lecturas y mantenimientos desde un mismo panel</CardDescription>
               </CardHeader>
-              <CardContent>
+              <CardContent className="pt-6">
                 <div className="mb-5 space-y-4">
                   <div className="flex items-center justify-between">
-                    <Label className="text-sm font-bold">Seleccionar equipo</Label>
+                    <Label className="text-sm font-bold flex items-center gap-2">
+                      <ClipboardList className="h-4 w-4 text-primary" />
+                      Seleccionar equipo
+                    </Label>
                     <Button
                       type="button"
                       variant="outline"
                       size="sm"
                       onClick={() => setMostrarListaEquipos(!mostrarListaEquipos)}
-                      className="gap-2 h-8 text-xs rounded-lg"
+                      className="gap-2 h-9 text-xs rounded-xl hover:bg-primary/10 hover:border-primary/50 transition-all duration-300 font-semibold"
                     >
-                      <ClipboardList className="h-3.5 w-3.5" />
-                      {mostrarListaEquipos ? 'Ocultar' : 'Ver todos'}
+                      <ClipboardList className="h-4 w-4" />
+                      {mostrarListaEquipos ? 'Ocultar lista' : 'Ver todos'}
                     </Button>
                   </div>
                   
                   {mostrarListaEquipos && (
-                    <div className="rounded-xl border bg-muted/20 p-3.5 space-y-3 animate-in fade-in slide-in-from-top-2 duration-300">
-                      <Input
-                        placeholder="Buscar por ficha o nombre..."
-                        value={busquedaEquipo}
-                        onChange={(e) => setBusquedaEquipo(e.target.value)}
-                        className="bg-background h-9 text-sm"
-                      />
-                      <div className="max-h-60 overflow-y-auto space-y-2">
+                    <div className="rounded-xl border-2 border-primary/20 bg-gradient-to-br from-muted/40 to-muted/20 p-4 space-y-3 animate-in fade-in slide-in-from-top-2 duration-500 shadow-lg">
+                      <div className="relative">
+                        <Input
+                          placeholder="🔍 Buscar por ficha o nombre..."
+                          value={busquedaEquipo}
+                          onChange={(e) => setBusquedaEquipo(e.target.value)}
+                          className="bg-background border-2 h-10 text-sm font-medium pl-4 focus:border-primary/50 transition-colors"
+                        />
+                      </div>
+                      <div className="max-h-72 overflow-y-auto space-y-2.5 pr-2 custom-scrollbar">
                         {data.mantenimientosProgramados
                           .filter(mp => {
                             const search = busquedaEquipo.toLowerCase();
@@ -896,23 +945,30 @@ export default function ControlMantenimiento() {
                                 setMostrarListaEquipos(false);
                                 setBusquedaEquipo('');
                               }}
-                              className={`w-full text-left p-2.5 rounded-lg border transition-all hover:shadow-sm ${
+                              className={`w-full text-left p-3.5 rounded-xl border-2 transition-all duration-300 ${
                                 selectedId === mp.id 
-                                  ? 'bg-primary/10 border-primary/50 shadow-sm' 
-                                  : 'bg-background hover:bg-accent/50'
+                                  ? 'bg-primary/15 border-primary/60 shadow-lg scale-[1.02] ring-2 ring-primary/20' 
+                                  : 'bg-background hover:bg-accent/50 hover:shadow-md hover:scale-[1.01] hover:border-primary/30'
                               }`}
                             >
                               <div className="flex items-center justify-between gap-3">
                                 <div className="flex-1 min-w-0">
-                                  <div className="flex items-center gap-2">
-                                    <Badge variant="outline" className="font-mono text-[0.65rem] px-1.5 py-0.5">{mp.ficha}</Badge>
-                                    <span className="font-semibold text-sm truncate">{mp.nombreEquipo}</span>
+                                  <div className="flex items-center gap-2.5 mb-1.5">
+                                    <Badge variant="outline" className="font-mono text-[0.7rem] px-2 py-0.5 font-bold border-2">{mp.ficha}</Badge>
+                                    <span className="font-bold text-sm truncate">{mp.nombreEquipo}</span>
                                   </div>
-                                  <p className="text-[0.7rem] text-muted-foreground mt-1">
-                                    {mp.tipoMantenimiento} • {mp.horasKmActuales} {mp.tipoMantenimiento.toLowerCase().includes('km') ? 'km' : 'h'}
-                                  </p>
+                                  <div className="flex items-center gap-3 text-[0.7rem] text-muted-foreground font-medium">
+                                    <span className="flex items-center gap-1">
+                                      <Wrench className="h-3 w-3" />
+                                      {mp.tipoMantenimiento}
+                                    </span>
+                                    <span className="flex items-center gap-1">
+                                      <Gauge className="h-3 w-3" />
+                                      {mp.horasKmActuales} {mp.tipoMantenimiento.toLowerCase().includes('km') ? 'km' : 'h'}
+                                    </span>
+                                  </div>
                                 </div>
-                                <Badge variant={getRemainingVariant(mp.horasKmRestante)} className="flex-shrink-0 text-sm font-bold px-2">
+                                <Badge variant={getRemainingVariant(mp.horasKmRestante)} className="flex-shrink-0 text-sm font-black px-3 py-1.5 shadow-sm">
                                   {mp.horasKmRestante}
                                 </Badge>
                               </div>
@@ -938,39 +994,42 @@ export default function ControlMantenimiento() {
                   />
                   
                   {selected && (
-                    <Card className="border-l-4 border-l-primary bg-gradient-to-r from-primary/5 to-transparent shadow-sm">
-                      <CardContent className="p-3.5">
-                        <div className="space-y-3">
-                          <div className="flex items-start justify-between gap-3">
-                            <div>
-                              <h3 className="font-bold text-base">{selected.nombreEquipo}</h3>
-                              <p className="text-xs text-muted-foreground mt-0.5">Ficha: {selected.ficha}</p>
+                    <Card className="relative overflow-hidden border-2 border-l-4 border-l-primary bg-gradient-to-r from-primary/10 via-primary/5 to-transparent shadow-xl animate-in fade-in slide-in-from-left duration-500">
+                      <div className="absolute top-0 right-0 w-32 h-32 bg-primary/5 rounded-full blur-2xl -mr-16 -mt-16" />
+                      <CardContent className="p-4 relative z-10">
+                        <div className="space-y-4">
+                          <div className="flex items-start justify-between gap-4">
+                            <div className="flex-1 min-w-0">
+                              <div className="flex items-center gap-2.5 mb-2">
+                                <Badge variant="secondary" className="font-mono text-xs px-2.5 py-1 font-bold border-2">{selected.ficha}</Badge>
+                                <Badge variant="outline" className="text-xs px-2.5 py-1">
+                                  {selected.tipoMantenimiento}
+                                </Badge>
+                              </div>
+                              <h3 className="font-black text-lg mb-1 leading-tight">{selected.nombreEquipo}</h3>
                             </div>
-                            <Badge variant="secondary" className="text-sm px-2.5 py-0.5">
-                              {selected.tipoMantenimiento}
-                            </Badge>
                           </div>
-                          <div className="grid grid-cols-2 gap-2.5">
-                            <div className="rounded-lg bg-background/60 p-3 border border-border/40">
-                              <p className="text-[0.65rem] text-muted-foreground uppercase font-bold">Lectura actual</p>
-                              <p className="text-2xl font-black mt-1">{selected.horasKmActuales}</p>
-                              <p className="text-[0.65rem] text-muted-foreground mt-0.5">{selected.tipoMantenimiento.toLowerCase().includes('km') ? 'kilómetros' : 'horas'}</p>
+                          <div className="grid grid-cols-2 gap-3">
+                            <div className="rounded-xl bg-gradient-to-br from-blue-50/50 to-transparent dark:from-blue-950/20 p-3.5 border border-blue-200/50 dark:border-blue-800/30">
+                              <p className="text-[0.65rem] text-muted-foreground uppercase font-bold tracking-wider mb-1">Lectura actual</p>
+                              <p className="text-2xl font-black mt-1.5 text-blue-600 dark:text-blue-400 tabular-nums">{selected.horasKmActuales}</p>
+                              <p className="text-[0.65rem] text-muted-foreground mt-1.5 font-medium">{selected.tipoMantenimiento.toLowerCase().includes('km') ? 'kilómetros' : 'horas'}</p>
                             </div>
-                            <div className="rounded-lg bg-background/60 p-3 border border-border/40">
-                              <p className="text-[0.65rem] text-muted-foreground uppercase font-bold">Restante</p>
-                              <div className="mt-1">
-                                <Badge variant={getRemainingVariant(selected.horasKmRestante)} className="text-lg font-black px-2.5 py-1">
+                            <div className="rounded-xl bg-gradient-to-br from-orange-50/50 to-transparent dark:from-orange-950/20 p-3.5 border border-orange-200/50 dark:border-orange-800/30">
+                              <p className="text-[0.65rem] text-muted-foreground uppercase font-bold tracking-wider mb-1">Restante</p>
+                              <div className="mt-1.5">
+                                <Badge variant={getRemainingVariant(selected.horasKmRestante)} className="text-xl font-black px-3 py-1.5 shadow-sm">
                                   {selected.horasKmRestante}
                                 </Badge>
                               </div>
-                              <p className="text-[0.65rem] text-muted-foreground mt-1">hasta próximo MP</p>
+                              <p className="text-[0.65rem] text-muted-foreground mt-1.5 font-medium">hasta próximo MP</p>
                             </div>
                           </div>
-                          <div className="rounded-lg bg-background/60 p-3 border border-border/40">
-                            <p className="text-[0.65rem] text-muted-foreground uppercase font-bold mb-2">Próximo mantenimiento</p>
-                            <div className="flex flex-col gap-1">
-                              <span className="font-bold text-sm">En {selected.proximoMantenimiento} {selected.tipoMantenimiento.toLowerCase().includes('km') ? 'km' : 'h'}</span>
-                              <span className="text-[0.7rem] text-muted-foreground">Última actualización: {formatDate(selected.fechaUltimaActualizacion)}</span>
+                          <div className="rounded-xl bg-gradient-to-br from-green-50/50 to-transparent dark:from-green-950/20 p-3.5 border border-green-200/50 dark:border-green-800/30">
+                            <p className="text-[0.65rem] text-muted-foreground uppercase font-bold tracking-wider mb-2">Próximo mantenimiento</p>
+                            <div className="flex flex-col gap-1.5">
+                              <span className="font-black text-base text-green-600 dark:text-green-400">En {selected.proximoMantenimiento} {selected.tipoMantenimiento.toLowerCase().includes('km') ? 'km' : 'h'}</span>
+                              <span className="text-[0.7rem] text-muted-foreground font-medium">Última actualización: {formatDate(selected.fechaUltimaActualizacion)}</span>
                             </div>
                           </div>
                         </div>
@@ -979,32 +1038,40 @@ export default function ControlMantenimiento() {
                   )}
                 </div>
                 <Tabs defaultValue="lecturas" className="space-y-6">
-                  <TabsList className="grid w-full grid-cols-2">
-                    <TabsTrigger value="lecturas">Actualizar lectura</TabsTrigger>
-                    <TabsTrigger value="mantenimientos">Registrar mantenimiento</TabsTrigger>
+                  <TabsList className="grid w-full grid-cols-2 h-auto p-1.5 bg-muted/50 rounded-xl gap-1.5">
+                    <TabsTrigger value="lecturas" className="data-[state=active]:bg-primary data-[state=active]:text-primary-foreground rounded-lg h-10 font-bold transition-all duration-300 data-[state=active]:shadow-lg data-[state=active]:scale-[1.02]">
+                      <Gauge className="w-4 h-4 mr-2" />
+                      Actualizar lectura
+                    </TabsTrigger>
+                    <TabsTrigger value="mantenimientos" className="data-[state=active]:bg-primary data-[state=active]:text-primary-foreground rounded-lg h-10 font-bold transition-all duration-300 data-[state=active]:shadow-lg data-[state=active]:scale-[1.02]">
+                      <Wrench className="w-4 h-4 mr-2" />
+                      Registrar mantenimiento
+                    </TabsTrigger>
                   </TabsList>
                   <TabsContent value="lecturas" className="space-y-4">
                     {!selected ? (
-                      <Alert>
-                        <AlertTriangle className="h-4 w-4" />
-                        <AlertTitle>Selecciona un equipo</AlertTitle>
-                        <AlertDescription>
+                      <Alert className="border-2 border-yellow-300/50 bg-gradient-to-r from-yellow-50/60 to-transparent dark:from-yellow-950/30 shadow-lg">
+                        <AlertTriangle className="h-5 w-5 text-yellow-600 dark:text-yellow-400" />
+                        <AlertTitle className="font-black text-base">Selecciona un equipo</AlertTitle>
+                        <AlertDescription className="font-medium">
                           Debes seleccionar un equipo antes de actualizar su lectura.
                         </AlertDescription>
                       </Alert>
                     ) : (
                       <form className="grid gap-5" onSubmit={handleActualizarHoras}>
-                        <div className="rounded-lg border bg-accent/50 p-4">
-                          <p className="text-sm font-semibold mb-2">Información actual</p>
-                          <div className="flex items-center justify-between text-sm">
-                            <span className="text-muted-foreground">Última lectura registrada:</span>
-                            <Badge variant="secondary" className="text-base font-bold">{selected.horasKmActuales} {selected.tipoMantenimiento.toLowerCase().includes('km') ? 'km' : 'h'}</Badge>
+                        <div className="relative overflow-hidden rounded-xl border-2 border-blue-200/50 dark:border-blue-800/30 bg-gradient-to-br from-blue-50/60 via-blue-50/30 to-transparent dark:from-blue-950/30 p-4 shadow-md">
+                          <div className="absolute top-0 right-0 w-24 h-24 bg-blue-400/10 rounded-full blur-2xl -mr-12 -mt-12" />
+                          <p className="text-sm font-black uppercase tracking-wider mb-3 text-blue-700 dark:text-blue-400 relative z-10">📊 Información actual</p>
+                          <div className="flex items-center justify-between text-sm relative z-10">
+                            <span className="text-muted-foreground font-bold">Última lectura registrada:</span>
+                            <Badge variant="secondary" className="text-base font-black px-3 py-1.5 border-2 shadow-sm">{selected.horasKmActuales} {selected.tipoMantenimiento.toLowerCase().includes('km') ? 'km' : 'h'}</Badge>
                           </div>
                         </div>
                         
                         <div className="grid gap-4 sm:grid-cols-2">
-                          <div className="grid gap-2">
-                            <Label htmlFor="horasLectura" className="text-base font-semibold">
+                          <div className="grid gap-2.5">
+                            <Label htmlFor="horasLectura" className="text-base font-black flex items-center gap-2">
+                              <Gauge className="w-4 h-4" />
                               Nueva lectura *
                             </Label>
                             <Input
@@ -1016,29 +1083,32 @@ export default function ControlMantenimiento() {
                               value={horasLectura}
                               onChange={(event) => setHorasLectura(event.target.value)}
                               placeholder={`Ej: ${Number(selected.horasKmActuales) + 10}`}
-                              className="text-lg font-semibold h-12"
+                              className="text-lg font-bold h-12 border-2 focus-visible:ring-2 focus-visible:ring-primary/50"
                             />
-                            <p className="text-xs text-muted-foreground">
+                            <p className="text-xs text-muted-foreground font-medium">
                               Ingresa la nueva lectura del hodómetro/cuenta horas
                             </p>
                           </div>
-                          <div className="grid gap-2">
-                            <Label htmlFor="unidadLectura" className="text-base font-semibold">Unidad de medición *</Label>
+                          <div className="grid gap-2.5">
+                            <Label htmlFor="unidadLectura" className="text-base font-black">Unidad de medición *</Label>
                             <Select value={unidadLectura} onValueChange={(value) => setUnidadLectura(value as 'horas' | 'km')}>
-                              <SelectTrigger id="unidadLectura" className="h-12">
+                              <SelectTrigger id="unidadLectura" className="h-12 border-2 font-bold">
                                 <SelectValue placeholder="Selecciona unidad" />
                               </SelectTrigger>
                               <SelectContent>
-                                <SelectItem value="horas">⏱️ Horas de uso</SelectItem>
-                                <SelectItem value="km">🛣️ Kilómetros</SelectItem>
+                                <SelectItem value="horas" className="font-bold">⏱️ Horas de uso</SelectItem>
+                                <SelectItem value="km" className="font-bold">🛣️ Kilómetros</SelectItem>
                               </SelectContent>
                             </Select>
                           </div>
                         </div>
                         
                         <div className="grid gap-4 sm:grid-cols-2">
-                          <div className="grid gap-2">
-                            <Label htmlFor="fechaLectura" className="font-semibold">Fecha de la lectura *</Label>
+                          <div className="grid gap-2.5">
+                            <Label htmlFor="fechaLectura" className="font-black flex items-center gap-2">
+                              <Calendar className="w-4 h-4" />
+                              Fecha de la lectura *
+                            </Label>
                             <Input
                               id="fechaLectura"
                               type="date"
@@ -1046,31 +1116,40 @@ export default function ControlMantenimiento() {
                               value={fechaLectura}
                               onChange={(event) => setFechaLectura(event.target.value)}
                               max={new Date().toISOString().slice(0, 10)}
+                              className="h-11 border-2 font-semibold"
                             />
                           </div>
-                          <div className="grid gap-2">
-                            <Label htmlFor="responsableLectura" className="font-semibold">Responsable</Label>
+                          <div className="grid gap-2.5">
+                            <Label htmlFor="responsableLectura" className="font-black flex items-center gap-2">
+                              <Users className="w-4 h-4" />
+                              Responsable
+                            </Label>
                             <Input
                               id="responsableLectura"
                               placeholder="Operador o técnico"
                               value={responsableLectura}
                               onChange={(event) => setResponsableLectura(event.target.value)}
+                              className="h-11 border-2"
                             />
                           </div>
                         </div>
                         
-                        <div className="grid gap-2">
-                          <Label htmlFor="notasLectura" className="font-semibold">Observaciones</Label>
+                        <div className="grid gap-2.5">
+                          <Label htmlFor="notasLectura" className="font-black flex items-center gap-2">
+                            <FileText className="w-4 h-4" />
+                            Observaciones
+                          </Label>
                           <Textarea
                             id="notasLectura"
                             placeholder="Condición del equipo, anomalías detectadas, etc."
                             value={notasLectura}
                             onChange={(event) => setNotasLectura(event.target.value)}
                             rows={3}
+                            className="border-2 resize-none"
                           />
                         </div>
                         
-                        <Button type="submit" disabled={updating || !selected} size="lg" className="w-full gap-2">
+                        <Button type="submit" disabled={updating || !selected} size="lg" className="w-full gap-2.5 h-12 font-black text-base shadow-lg hover:shadow-xl transition-all duration-300 hover:scale-[1.02]">
                           {updating ? (
                             <>
                               <Loader2 className="h-5 w-5 animate-spin" /> Guardando...
@@ -1087,25 +1166,26 @@ export default function ControlMantenimiento() {
                   </TabsContent>
                   <TabsContent value="mantenimientos" className="space-y-4">
                     {!selected ? (
-                      <Alert>
-                        <AlertTriangle className="h-4 w-4" />
-                        <AlertTitle>Selecciona un equipo</AlertTitle>
-                        <AlertDescription>
+                      <Alert className="border-2 border-yellow-300/50 bg-gradient-to-r from-yellow-50/60 to-transparent dark:from-yellow-950/30 shadow-lg">
+                        <AlertTriangle className="h-5 w-5 text-yellow-600 dark:text-yellow-400" />
+                        <AlertTitle className="font-black text-base">Selecciona un equipo</AlertTitle>
+                        <AlertDescription className="font-medium">
                           Debes seleccionar un equipo antes de registrar un mantenimiento.
                         </AlertDescription>
                       </Alert>
                     ) : (
                       <form className="grid gap-5" onSubmit={handleRegistrarMantenimiento}>
-                        <div className="rounded-lg border bg-accent/50 p-4">
-                          <p className="text-sm font-semibold mb-2">Información del equipo</p>
-                          <div className="space-y-1 text-sm">
-                            <div className="flex justify-between">
-                              <span className="text-muted-foreground">Próximo mantenimiento:</span>
-                              <span className="font-semibold">{selected.proximoMantenimiento} {selected.tipoMantenimiento.toLowerCase().includes('km') ? 'km' : 'h'}</span>
+                        <div className="relative overflow-hidden rounded-xl border-2 border-green-200/50 dark:border-green-800/30 bg-gradient-to-br from-green-50/60 via-green-50/30 to-transparent dark:from-green-950/30 p-4 shadow-md">
+                          <div className="absolute top-0 right-0 w-24 h-24 bg-green-400/10 rounded-full blur-2xl -mr-12 -mt-12" />
+                          <p className="text-sm font-black uppercase tracking-wider mb-3 text-green-700 dark:text-green-400 relative z-10">⚙️ Información del equipo</p>
+                          <div className="space-y-2 text-sm relative z-10">
+                            <div className="flex justify-between items-center">
+                              <span className="text-muted-foreground font-bold">Próximo mantenimiento:</span>
+                              <span className="font-black text-base">{selected.proximoMantenimiento} {selected.tipoMantenimiento.toLowerCase().includes('km') ? 'km' : 'h'}</span>
                             </div>
-                            <div className="flex justify-between">
-                              <span className="text-muted-foreground">Restante:</span>
-                              <Badge variant={getRemainingVariant(selected.horasKmRestante)}>
+                            <div className="flex justify-between items-center">
+                              <span className="text-muted-foreground font-bold">Restante:</span>
+                              <Badge variant={getRemainingVariant(selected.horasKmRestante)} className="font-black px-3 py-1.5 shadow-sm">
                                 {selected.horasKmRestante} {selected.tipoMantenimiento.toLowerCase().includes('km') ? 'km' : 'h'}
                               </Badge>
                             </div>
@@ -1113,8 +1193,11 @@ export default function ControlMantenimiento() {
                         </div>
                         
                         <div className="grid gap-4 sm:grid-cols-3">
-                          <div className="grid gap-2">
-                            <Label htmlFor="registroFecha" className="font-semibold">Fecha del mantenimiento *</Label>
+                          <div className="grid gap-2.5">
+                            <Label htmlFor="registroFecha" className="font-black flex items-center gap-2">
+                              <Calendar className="w-4 h-4" />
+                              Fecha del mantenimiento *
+                            </Label>
                             <Input
                               id="registroFecha"
                               type="date"
@@ -1122,10 +1205,14 @@ export default function ControlMantenimiento() {
                               value={registroFecha}
                               onChange={(event) => setRegistroFecha(event.target.value)}
                               max={new Date().toISOString().slice(0, 10)}
+                              className="h-11 border-2 font-semibold"
                             />
                           </div>
-                          <div className="grid gap-2">
-                            <Label htmlFor="registroHoras" className="font-semibold">Lectura al momento *</Label>
+                          <div className="grid gap-2.5">
+                            <Label htmlFor="registroHoras" className="font-black flex items-center gap-2">
+                              <Gauge className="w-4 h-4" />
+                              Lectura al momento *
+                            </Label>
                             <Input
                               id="registroHoras"
                               type="number"
@@ -1135,38 +1222,42 @@ export default function ControlMantenimiento() {
                               value={registroHoras}
                               onChange={(event) => setRegistroHoras(event.target.value)}
                               placeholder={selected.horasKmActuales.toString()}
-                              className="font-semibold"
+                              className="font-bold h-11 border-2"
                             />
                           </div>
-                          <div className="grid gap-2">
-                            <Label htmlFor="registroUnidad" className="font-semibold">Unidad *</Label>
+                          <div className="grid gap-2.5">
+                            <Label htmlFor="registroUnidad" className="font-black">Unidad *</Label>
                             <Select
                               value={unidadRegistro}
                               onValueChange={(value) => setUnidadRegistro(value as 'horas' | 'km')}
                             >
-                              <SelectTrigger id="registroUnidad">
+                              <SelectTrigger id="registroUnidad" className="h-11 border-2 font-bold">
                                 <SelectValue placeholder="Selecciona" />
                               </SelectTrigger>
                               <SelectContent>
-                                <SelectItem value="horas">⏱️ Horas</SelectItem>
-                                <SelectItem value="km">🛣️ Km</SelectItem>
+                                <SelectItem value="horas" className="font-bold">⏱️ Horas</SelectItem>
+                                <SelectItem value="km" className="font-bold">🛣️ Km</SelectItem>
                               </SelectContent>
                             </Select>
                           </div>
                         </div>
                         
-                        <div className="grid gap-2">
-                          <Label htmlFor="registroResponsable" className="font-semibold">Responsable / Técnico</Label>
+                        <div className="grid gap-2.5">
+                          <Label htmlFor="registroResponsable" className="font-black flex items-center gap-2">
+                            <Users className="w-4 h-4" />
+                            Responsable / Técnico
+                          </Label>
                           <Input
                             id="registroResponsable"
                             placeholder="Nombre del técnico o cuadrilla responsable"
                             value={registroResponsable}
                             onChange={(event) => setRegistroResponsable(event.target.value)}
+                            className="h-11 border-2"
                           />
                         </div>
                         
-                        <div className="grid gap-2">
-                          <Label htmlFor="registroFiltros" className="font-semibold flex items-center gap-2">
+                        <div className="grid gap-2.5">
+                          <Label htmlFor="registroFiltros" className="font-black flex items-center gap-2">
                             <Wrench className="h-4 w-4" />
                             Filtros o repuestos utilizados
                           </Label>
@@ -1176,24 +1267,29 @@ export default function ControlMantenimiento() {
                             value={registroFiltros}
                             onChange={(event) => setRegistroFiltros(event.target.value)}
                             rows={2}
+                            className="border-2 resize-none"
                           />
-                          <p className="text-xs text-muted-foreground">
+                          <p className="text-xs text-muted-foreground font-medium">
                             Lista los repuestos utilizados separados por coma
                           </p>
                         </div>
                         
-                        <div className="grid gap-2">
-                          <Label htmlFor="registroObservaciones" className="font-semibold">Observaciones del trabajo realizado</Label>
+                        <div className="grid gap-2.5">
+                          <Label htmlFor="registroObservaciones" className="font-black flex items-center gap-2">
+                            <FileText className="w-4 h-4" />
+                            Observaciones del trabajo realizado
+                          </Label>
                           <Textarea
                             id="registroObservaciones"
                             placeholder="Detalla el trabajo realizado, hallazgos, recomendaciones, etc."
                             value={registroObservaciones}
                             onChange={(event) => setRegistroObservaciones(event.target.value)}
                             rows={4}
+                            className="border-2 resize-none"
                           />
                         </div>
                         
-                        <Button type="submit" disabled={registering || !selected} size="lg" className="w-full gap-2">
+                        <Button type="submit" disabled={registering || !selected} size="lg" className="w-full gap-2.5 h-12 font-black text-base shadow-lg hover:shadow-xl transition-all duration-300 hover:scale-[1.02]">
                           {registering ? (
                             <>
                               <Loader2 className="h-5 w-5 animate-spin" /> Guardando...
@@ -1212,45 +1308,52 @@ export default function ControlMantenimiento() {
               </CardContent>
             </Card>
 
-              <Card className="flex flex-col overflow-hidden shadow-lg hover:shadow-xl transition-all duration-300 border-t-4 border-t-primary">
-                <CardHeader className="bg-gradient-to-r from-primary/5 to-transparent pb-4">
-                  <CardTitle className="flex items-center gap-2 text-lg">
-                    <ClipboardList className="h-5 w-5 text-primary" /> Próximas intervenciones
-                  </CardTitle>
-                  <CardDescription className="text-xs">Calendario dinámico con los siguientes equipos a intervenir</CardDescription>
+              <Card className="relative overflow-hidden flex flex-col shadow-xl hover:shadow-2xl transition-all duration-500 border-2 border-t-4 border-t-primary animate-in fade-in slide-in-from-bottom">
+                <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-primary via-primary/60 to-transparent" />
+                <CardHeader className="relative bg-gradient-to-r from-primary/10 via-primary/5 to-transparent pb-4 border-b-2 border-primary/20">
+                  <div className="absolute -top-4 -right-4 w-32 h-32 bg-primary/10 rounded-full blur-3xl" />
+                  <div className="relative z-10">
+                    <div className="flex items-center gap-2.5 mb-1.5">
+                      <div className="p-2 bg-primary/15 rounded-xl">
+                        <ClipboardList className="h-5 w-5 text-primary" />
+                      </div>
+                      <CardTitle className="text-xl font-black">Próximas intervenciones</CardTitle>
+                    </div>
+                    <CardDescription className="text-xs font-medium">Calendario dinámico con los siguientes equipos a intervenir</CardDescription>
+                  </div>
                 </CardHeader>
-                <CardContent className="flex-1 px-0 pb-5 sm:px-6 pt-0">
+                <CardContent className="flex-1 px-0 pb-5 sm:px-6 pt-4">
                 <div className="-mx-4 overflow-x-auto sm:mx-0">
-                  <div className="min-w-full rounded-lg border shadow-sm">
+                  <div className="min-w-full rounded-xl border-2 shadow-lg">
                     <Table className="w-full min-w-[640px]">
                       <TableHeader>
-                        <TableRow className="bg-muted/50">
-                          <TableHead className="font-bold text-xs">Equipo</TableHead>
-                          <TableHead className="font-bold text-xs">Ficha</TableHead>
-                          <TableHead className="font-bold text-xs">Tipo</TableHead>
-                          <TableHead className="text-right font-bold text-xs">Restante</TableHead>
-                          <TableHead className="font-bold text-xs">Próximo</TableHead>
+                        <TableRow className="bg-gradient-to-r from-muted/80 to-muted/40 border-b-2">
+                          <TableHead className="font-black text-xs uppercase tracking-wider">Equipo</TableHead>
+                          <TableHead className="font-black text-xs uppercase tracking-wider">Ficha</TableHead>
+                          <TableHead className="font-black text-xs uppercase tracking-wider">Tipo</TableHead>
+                          <TableHead className="text-right font-black text-xs uppercase tracking-wider">Restante</TableHead>
+                          <TableHead className="font-black text-xs uppercase tracking-wider">Próximo</TableHead>
                         </TableRow>
                       </TableHeader>
                       <TableBody>
                         {proximos.map((mantenimiento) => (
-                          <TableRow key={mantenimiento.id} className="hover:bg-accent/30 transition-colors cursor-pointer">
-                            <TableCell className="font-semibold text-sm">{mantenimiento.nombreEquipo}</TableCell>
+                          <TableRow key={mantenimiento.id} className="hover:bg-accent/50 transition-all duration-300 cursor-pointer hover:scale-[1.01] border-b hover:shadow-md">
+                            <TableCell className="font-black text-sm">{mantenimiento.nombreEquipo}</TableCell>
                             <TableCell>
-                              <Badge variant="outline" className="font-mono text-[0.65rem] px-1.5">
+                              <Badge variant="outline" className="font-mono text-[0.65rem] px-2 py-1 font-bold border-2">
                                 {mantenimiento.ficha}
                               </Badge>
                             </TableCell>
-                            <TableCell className="text-xs text-muted-foreground">{mantenimiento.tipoMantenimiento}</TableCell>
+                            <TableCell className="text-xs text-muted-foreground font-bold">{mantenimiento.tipoMantenimiento}</TableCell>
                             <TableCell className="text-right">
                               <Badge 
                                 variant={mantenimiento.horasKmRestante <= 15 ? 'destructive' : mantenimiento.horasKmRestante <= 50 ? 'default' : 'secondary'}
-                                className="font-bold text-sm"
+                                className="font-black text-sm px-3 py-1.5 shadow-sm"
                               >
                                 {mantenimiento.horasKmRestante}
                               </Badge>
                             </TableCell>
-                            <TableCell className="font-semibold text-sm">{mantenimiento.proximoMantenimiento}</TableCell>
+                            <TableCell className="font-black text-sm">{mantenimiento.proximoMantenimiento}</TableCell>
                           </TableRow>
                         ))}
                       </TableBody>
@@ -1262,78 +1365,89 @@ export default function ControlMantenimiento() {
           </div>
 
           <div className="space-y-6">
-<Card className="overflow-hidden shadow-lg hover:shadow-xl transition-all duration-300 border-t-4 border-t-blue-500">
-              <CardHeader className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between bg-gradient-to-r from-blue-50/40 to-transparent dark:from-blue-950/20 pb-4">
-                <div className="space-y-1">
-                  <CardTitle className="flex items-center gap-2 text-lg">
-                    <CalendarRange className="h-5 w-5 text-blue-500" /> Reportes de actualizaciones
-                  </CardTitle>
-                  <CardDescription className="text-xs">
+<Card className="relative overflow-hidden shadow-xl hover:shadow-2xl transition-all duration-500 border-2 border-t-4 border-t-blue-500">
+              <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-blue-500 via-blue-500/60 to-transparent" />
+              <CardHeader className="relative flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between bg-gradient-to-r from-blue-50/60 via-blue-50/30 to-transparent dark:from-blue-950/30 pb-4 border-b-2 border-blue-200/50 dark:border-blue-800/30">
+                <div className="absolute -top-4 -right-4 w-32 h-32 bg-blue-400/10 rounded-full blur-3xl" />
+                <div className="space-y-1.5 relative z-10">
+                  <div className="flex items-center gap-2.5">
+                    <div className="p-2 bg-blue-500/15 rounded-xl">
+                      <CalendarRange className="h-5 w-5 text-blue-500" />
+                    </div>
+                    <CardTitle className="text-xl font-black">Reportes de actualizaciones</CardTitle>
+                  </div>
+                  <CardDescription className="text-xs font-medium">
                     Lecturas registradas esta semana y equipos pendientes
                   </CardDescription>
                 </div>
-                <div className="flex flex-wrap items-center gap-2 text-[0.7rem] text-muted-foreground lg:justify-end">
+                <div className="flex flex-wrap items-center gap-2 text-[0.7rem] text-muted-foreground lg:justify-end relative z-10">
                   {resumenActualizaciones ? (
                     <>
-                      <Badge variant="secondary" className="text-xs">
+                      <Badge variant="secondary" className="text-xs font-black px-3 py-1.5 shadow-sm border-2">
                         Actualizados: {resumenActualizaciones.actualizados.length}
                       </Badge>
-                      <Badge variant={resumenActualizaciones.pendientes.length > 0 ? 'destructive' : 'outline'} className="text-xs">
+                      <Badge variant={resumenActualizaciones.pendientes.length > 0 ? 'destructive' : 'outline'} className="text-xs font-black px-3 py-1.5 shadow-sm border-2">
                         Pendientes: {resumenActualizaciones.pendientes.length}
                       </Badge>
-                      <Badge variant="outline" className="text-xs">
+                      <Badge variant="outline" className="text-xs font-bold px-3 py-1.5 border-2">
                         {new Date(resumenActualizaciones.desde).toLocaleDateString()} -{' '}
                         {new Date(resumenActualizaciones.hasta).toLocaleDateString()}
                       </Badge>
                     </>
                   ) : (
-                    <p className="text-xs">Configura rango para activar panel</p>
+                    <p className="text-xs font-medium">Configura rango para activar panel</p>
                   )}
                 </div>
               </CardHeader>
-              <CardContent className="space-y-5 pt-4">
-                <div className="grid gap-3 md:grid-cols-2 lg:grid-cols-4">
-                  <div className="grid gap-2">
-                    <Label htmlFor="reporteDesdeInline" className="text-xs font-semibold">Desde</Label>
+              <CardContent className="space-y-5 pt-6">
+                <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+                  <div className="grid gap-2.5">
+                    <Label htmlFor="reporteDesdeInline" className="text-xs font-black uppercase tracking-wider flex items-center gap-2">
+                      <Calendar className="w-3.5 h-3.5" />
+                      Desde
+                    </Label>
                     <Input
                       id="reporteDesdeInline"
                       type="date"
                       value={reporteDesde}
                       onChange={(event) => setReporteDesde(event.target.value)}
-                      className="h-9 text-sm"
+                      className="h-10 text-sm border-2 font-semibold"
                     />
                   </div>
-                  <div className="grid gap-2">
-                    <Label htmlFor="reporteHastaInline" className="text-xs font-semibold">Hasta</Label>
+                  <div className="grid gap-2.5">
+                    <Label htmlFor="reporteHastaInline" className="text-xs font-black uppercase tracking-wider flex items-center gap-2">
+                      <Calendar className="w-3.5 h-3.5" />
+                      Hasta
+                    </Label>
                     <Input
                       id="reporteHastaInline"
                       type="date"
                       value={reporteHasta}
                       onChange={(event) => setReporteHasta(event.target.value)}
-                      className="h-9 text-sm"
+                      className="h-10 text-sm border-2 font-semibold"
                     />
                   </div>
-                  <div className="grid gap-2">
-                    <Label className="text-xs font-semibold text-muted-foreground">Atajo rápido</Label>
-                    <Button type="button" variant="secondary" onClick={handleSemanaActual} className="h-9 text-sm">
-                      Semana en curso
+                  <div className="grid gap-2.5">
+                    <Label className="text-xs font-black uppercase tracking-wider text-muted-foreground">Atajo rápido</Label>
+                    <Button type="button" variant="secondary" onClick={handleSemanaActual} className="h-10 text-sm font-bold border-2 hover:scale-[1.02] transition-transform">
+                      📅 Semana en curso
                     </Button>
                   </div>
-                  <div className="grid gap-2">
-                    <Label className="text-xs font-semibold text-muted-foreground">Vista extendida</Label>
-                    <Button type="button" variant="outline" className="gap-2 h-9 text-sm" onClick={() => setIsResumenOpen(true)}>
-                      <CalendarRange className="h-3.5 w-3.5" /> Panel flotante
+                  <div className="grid gap-2.5">
+                    <Label className="text-xs font-black uppercase tracking-wider text-muted-foreground">Vista extendida</Label>
+                    <Button type="button" variant="outline" className="gap-2 h-10 text-sm font-bold border-2 hover:scale-[1.02] transition-transform" onClick={() => setIsResumenOpen(true)}>
+                      <CalendarRange className="h-3.5 w-3.5" /> 📊 Panel flotante
                     </Button>
                   </div>
                 </div>
 
-                <div className="flex flex-wrap gap-2">
-                  <Button type="button" onClick={() => handleGenerarReporte({ abrirResumenFlotante: false })} size="sm" className="gap-2">
-                    <CalendarCheck className="h-3.5 w-3.5" />
+                <div className="flex flex-wrap gap-3">
+                  <Button type="button" onClick={() => handleGenerarReporte({ abrirResumenFlotante: false })} size="sm" className="gap-2 font-bold shadow-md hover:shadow-lg transition-all hover:scale-[1.02]">
+                    <CalendarCheck className="h-4 w-4" />
                     Actualizar vista
                   </Button>
-                  <Button type="button" variant="ghost" onClick={handleLimpiarReporte} size="sm">
-                    Limpiar
+                  <Button type="button" variant="ghost" onClick={handleLimpiarReporte} size="sm" className="font-bold hover:scale-[1.02] transition-transform">
+                    ✖️ Limpiar
                   </Button>
                 </div>
 
@@ -1343,69 +1457,72 @@ export default function ControlMantenimiento() {
                     onValueChange={(value) => setReporteSegmento(value as 'resumen' | 'actualizados' | 'pendientes')}
                     className="space-y-4"
                   >
-                    <TabsList className="flex w-full flex-col gap-2 sm:flex-row">
-                      <TabsTrigger value="resumen" className="flex-1 text-sm">
-                        Panorama semanal
+                    <TabsList className="flex w-full flex-col gap-2 sm:flex-row h-auto p-1.5 bg-muted/50 rounded-xl">
+                      <TabsTrigger value="resumen" className="flex-1 text-sm font-bold data-[state=active]:bg-primary data-[state=active]:text-primary-foreground rounded-lg h-10 transition-all duration-300 data-[state=active]:shadow-lg data-[state=active]:scale-[1.02]">
+                        📊 Panorama semanal
                       </TabsTrigger>
-                      <TabsTrigger value="actualizados" className="flex-1 text-sm">
-                        Actualizados
+                      <TabsTrigger value="actualizados" className="flex-1 text-sm font-bold data-[state=active]:bg-primary data-[state=active]:text-primary-foreground rounded-lg h-10 transition-all duration-300 data-[state=active]:shadow-lg data-[state=active]:scale-[1.02]">
+                        ✅ Actualizados
                       </TabsTrigger>
-                      <TabsTrigger value="pendientes" className="flex-1 text-sm">
-                        Pendientes
+                      <TabsTrigger value="pendientes" className="flex-1 text-sm font-bold data-[state=active]:bg-primary data-[state=active]:text-primary-foreground rounded-lg h-10 transition-all duration-300 data-[state=active]:shadow-lg data-[state=active]:scale-[1.02]">
+                        ⏳ Pendientes
                       </TabsTrigger>
                     </TabsList>
 
                     <TabsContent value="resumen" className="space-y-4">
-                      <div className="grid gap-3 lg:grid-cols-3">
-                        <div className="rounded-lg border bg-gradient-to-br from-green-50/30 to-transparent dark:from-green-950/10 p-3.5">
-                          <p className="text-[0.65rem] font-bold uppercase tracking-wider text-muted-foreground">
+                      <div className="grid gap-4 lg:grid-cols-3">
+                        <div className="relative overflow-hidden rounded-xl border-2 border-green-200/50 dark:border-green-800/30 bg-gradient-to-br from-green-50/60 via-green-50/30 to-transparent dark:from-green-950/30 p-4 shadow-md hover:shadow-lg transition-shadow">
+                          <div className="absolute top-0 right-0 w-20 h-20 bg-green-400/10 rounded-full blur-2xl -mr-10 -mt-10" />
+                          <p className="text-[0.65rem] font-black uppercase tracking-wider text-green-700 dark:text-green-400 relative z-10">
                             Lecturas registradas
                           </p>
-                          <p className="mt-2 text-3xl font-black">
+                          <p className="mt-2 text-4xl font-black tabular-nums relative z-10">
                             {resumenActualizaciones.actualizados.length}
                           </p>
-                          <p className="text-xs text-muted-foreground mt-1">
+                          <p className="text-xs text-muted-foreground mt-2 font-medium relative z-10">
                             Cobertura {coberturaSemanal}% sobre {totalEquiposPlanificados} monitoreos
                           </p>
                         </div>
-                        <div className="rounded-lg border bg-gradient-to-br from-amber-50/30 to-transparent dark:from-amber-950/10 p-3.5">
-                          <p className="text-[0.65rem] font-bold uppercase tracking-wider text-muted-foreground">
+                        <div className="relative overflow-hidden rounded-xl border-2 border-amber-200/50 dark:border-amber-800/30 bg-gradient-to-br from-amber-50/60 via-amber-50/30 to-transparent dark:from-amber-950/30 p-4 shadow-md hover:shadow-lg transition-shadow">
+                          <div className="absolute top-0 right-0 w-20 h-20 bg-amber-400/10 rounded-full blur-2xl -mr-10 -mt-10" />
+                          <p className="text-[0.65rem] font-black uppercase tracking-wider text-amber-700 dark:text-amber-400 relative z-10">
                             Pendientes
                           </p>
-                          <p className="mt-2 text-3xl font-black">
+                          <p className="mt-2 text-4xl font-black tabular-nums relative z-10">
                             {resumenActualizaciones.pendientes.length}
                           </p>
-                          <p className="text-xs text-muted-foreground mt-1">
+                          <p className="text-xs text-muted-foreground mt-2 font-medium relative z-10">
                             {pendientesCriticos.length} con menos de 25 h/km disponibles
                           </p>
                         </div>
-                        <div className="rounded-lg border bg-gradient-to-br from-blue-50/30 to-transparent dark:from-blue-950/10 p-3.5">
-                          <p className="text-[0.65rem] font-bold uppercase tracking-wider text-muted-foreground">
+                        <div className="relative overflow-hidden rounded-xl border-2 border-blue-200/50 dark:border-blue-800/30 bg-gradient-to-br from-blue-50/60 via-blue-50/30 to-transparent dark:from-blue-950/30 p-4 shadow-md hover:shadow-lg transition-shadow">
+                          <div className="absolute top-0 right-0 w-20 h-20 bg-blue-400/10 rounded-full blur-2xl -mr-10 -mt-10" />
+                          <p className="text-[0.65rem] font-black uppercase tracking-wider text-blue-700 dark:text-blue-400 relative z-10">
                             Rango analizado
                           </p>
-                          <p className="mt-2 text-base font-bold leading-tight">
+                          <p className="mt-2 text-base font-black leading-tight relative z-10">
                             {new Date(resumenActualizaciones.desde).toLocaleDateString()} -{' '}
                             {new Date(resumenActualizaciones.hasta).toLocaleDateString()}
                           </p>
-                          <p className="text-xs text-muted-foreground mt-1">
+                          <p className="text-xs text-muted-foreground mt-2 font-medium relative z-10">
                             Ajusta el rango para otra semana
                           </p>
                         </div>
                       </div>
 
                       <div className="grid gap-4 lg:grid-cols-2">
-                        <div className="rounded-lg border p-4">
-                          <p className="text-sm font-semibold">Actualizaciones de la semana</p>
+                        <div className="rounded-xl border-2 p-4 bg-gradient-to-br from-muted/40 to-transparent shadow-sm">
+                          <p className="text-sm font-black mb-1">Actualizaciones de la semana</p>
                           <div className="mt-3 space-y-3">
                             {ultimasLecturasSemana.length === 0 ? (
-                              <p className="text-sm text-muted-foreground">
+                              <p className="text-sm text-muted-foreground font-medium">
                                 Aún no se registran lecturas en este rango.
                               </p>
                             ) : (
                               ultimasLecturasSemana.map(({ mantenimiento, evento }) => (
                                 <div
                                   key={mantenimiento.id}
-                                  className="flex items-center justify-between gap-3 rounded-md border p-3"
+                                  className="flex items-center justify-between gap-3 rounded-lg border-2 p-3 hover:bg-accent/50 transition-colors"
                                 >
                                   <div>
                                     <p className="font-medium">{mantenimiento.nombreEquipo ?? 'Equipo sin nombre'}</p>

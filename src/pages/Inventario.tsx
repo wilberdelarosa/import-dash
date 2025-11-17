@@ -36,7 +36,7 @@ import {
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Package, Search, Filter, AlertTriangle, Plus, Pencil, Trash2 } from 'lucide-react';
+import { Package, Search, Filter, AlertTriangle, Plus, Pencil, Trash2, PackageX, Box } from 'lucide-react';
 import type { Inventario as InventarioItem } from '@/types/equipment';
 
 type InventoryFormState = {
@@ -242,51 +242,80 @@ export default function Inventario() {
 
   return (
     <Layout title="Inventario de Repuestos">
-      <Navigation />
 
       <div className="space-y-6 lg:space-y-8">
         <section className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-          <Card>
-            <CardHeader className="pb-2">
-              <CardDescription>Total Items</CardDescription>
-              <CardTitle className="text-3xl">{totalItems}</CardTitle>
+          <Card className="group relative overflow-hidden transition-all duration-300 hover:scale-105 hover:shadow-xl border-l-4 border-l-primary">
+            <div className="absolute right-0 top-0 h-full w-24 bg-primary/5 transform skew-x-12 translate-x-8" />
+            <CardHeader className="relative pb-3">
+              <div className="flex items-center justify-between">
+                <CardDescription className="text-sm font-medium">Total Items</CardDescription>
+                <div className="rounded-full bg-primary/10 p-2 transition-transform group-hover:scale-110">
+                  <Package className="h-5 w-5 text-primary" />
+                </div>
+              </div>
+              <CardTitle className="text-4xl font-bold tracking-tight text-primary">{totalItems}</CardTitle>
+              <p className="text-xs text-muted-foreground mt-1">Piezas en catálogo</p>
             </CardHeader>
           </Card>
-          <Card>
-            <CardHeader className="pb-2">
-              <CardDescription>Stock &lt;= umbral</CardDescription>
-              <CardTitle className="text-3xl text-warning">{stockBajo}</CardTitle>
+          <Card className="group relative overflow-hidden transition-all duration-300 hover:scale-105 hover:shadow-xl border-l-4 border-l-amber-500">
+            <div className="absolute right-0 top-0 h-full w-24 bg-amber-500/5 transform skew-x-12 translate-x-8" />
+            <CardHeader className="relative pb-3">
+              <div className="flex items-center justify-between">
+                <CardDescription className="text-sm font-medium">Stock ≤ umbral</CardDescription>
+                <div className="rounded-full bg-amber-500/10 p-2 transition-transform group-hover:scale-110">
+                  <AlertTriangle className="h-5 w-5 text-amber-600" />
+                </div>
+              </div>
+              <CardTitle className="text-4xl font-bold tracking-tight text-amber-600">{stockBajo}</CardTitle>
+              <p className="text-xs text-muted-foreground mt-1">Requieren atención</p>
             </CardHeader>
           </Card>
-          <Card>
-            <CardHeader className="pb-2">
-              <CardDescription>Sin stock</CardDescription>
-              <CardTitle className="text-3xl text-destructive">{sinStock}</CardTitle>
+          <Card className="group relative overflow-hidden transition-all duration-300 hover:scale-105 hover:shadow-xl border-l-4 border-l-destructive">
+            <div className="absolute right-0 top-0 h-full w-24 bg-destructive/5 transform skew-x-12 translate-x-8" />
+            <CardHeader className="relative pb-3">
+              <div className="flex items-center justify-between">
+                <CardDescription className="text-sm font-medium">Sin stock</CardDescription>
+                <div className="rounded-full bg-destructive/10 p-2 transition-transform group-hover:scale-110">
+                  <PackageX className="h-5 w-5 text-destructive" />
+                </div>
+              </div>
+              <CardTitle className="text-4xl font-bold tracking-tight text-destructive">{sinStock}</CardTitle>
+              <p className="text-xs text-muted-foreground mt-1">Necesitan reabastecimiento</p>
             </CardHeader>
           </Card>
-          <Card>
-            <CardHeader className="pb-2">
-              <CardDescription>Modelos cubiertos</CardDescription>
-              <CardTitle className="text-3xl">
+          <Card className="group relative overflow-hidden transition-all duration-300 hover:scale-105 hover:shadow-xl border-l-4 border-l-emerald-500">
+            <div className="absolute right-0 top-0 h-full w-24 bg-emerald-500/5 transform skew-x-12 translate-x-8" />
+            <CardHeader className="relative pb-3">
+              <div className="flex items-center justify-between">
+                <CardDescription className="text-sm font-medium">Modelos cubiertos</CardDescription>
+                <div className="rounded-full bg-emerald-500/10 p-2 transition-transform group-hover:scale-110">
+                  <Box className="h-5 w-5 text-emerald-600" />
+                </div>
+              </div>
+              <CardTitle className="text-4xl font-bold tracking-tight text-emerald-600">
                 {new Set(inventarios.flatMap((item) => item.modelosCompatibles)).size}
               </CardTitle>
+              <p className="text-xs text-muted-foreground mt-1">Equipos compatibles</p>
             </CardHeader>
           </Card>
         </section>
 
-        <Card className="overflow-hidden">
-          <CardHeader className="space-y-4">
+        <Card className="overflow-hidden shadow-lg border-t-4 border-t-primary/30">
+          <CardHeader className="space-y-4 bg-gradient-to-r from-primary/5 via-transparent to-transparent">
             <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
-              <div>
-                <CardTitle className="flex items-center gap-2 text-lg">
-                  <Package className="h-5 w-5" />
+              <div className="space-y-1.5">
+                <CardTitle className="flex items-center gap-2.5 text-xl font-bold tracking-tight">
+                  <div className="rounded-lg bg-primary/10 p-2">
+                    <Package className="h-5 w-5 text-primary" />
+                  </div>
                   Inventario de repuestos y filtros
                 </CardTitle>
-                <CardDescription>
-                  Gestiona numeros de parte, compatibilidades y existencias para cada equipo
+                <CardDescription className="text-sm">
+                  Gestiona números de parte, compatibilidades y existencias para cada equipo
                 </CardDescription>
               </div>
-              <Button onClick={handleOpenCreate}>
+              <Button onClick={handleOpenCreate} className="shadow-md hover:shadow-lg transition-all duration-300">
                 <Plus className="mr-2 h-4 w-4" />
                 Nuevo item
               </Button>
@@ -339,7 +368,7 @@ export default function Inventario() {
                       const isLow = !isCritical && item.cantidad <= item.stockMinimo;
 
                       return (
-                        <TableRow key={item.id}>
+                        <TableRow key={item.id} className="group hover:bg-muted/50 transition-colors duration-200">
                           <TableCell>
                             <div className="font-semibold">{item.codigoIdentificacion}</div>
                             <div className="text-xs text-muted-foreground">{item.numeroParte}</div>
@@ -380,25 +409,25 @@ export default function Inventario() {
                             )}
                           </TableCell>
                           <TableCell>
-                            <div className="flex items-center gap-2">
-                              {(isCritical || isLow) && (
-                                <AlertTriangle
-                                  className={`h-4 w-4 ${isCritical ? 'text-destructive' : 'text-warning'}`}
-                                />
-                              )}
-                              <span
-                                className={
-                                  isCritical
-                                    ? 'font-semibold text-destructive'
-                                    : isLow
-                                    ? 'font-semibold text-warning'
-                                    : 'font-semibold text-foreground'
-                                }
-                              >
-                                {item.cantidad}
-                              </span>
-                              <span className="text-xs text-muted-foreground">/ min {item.stockMinimo}</span>
-                            </div>
+                            {isCritical ? (
+                              <div className="inline-flex items-center gap-2 rounded-full bg-destructive/10 px-3 py-1.5 border border-destructive/20">
+                                <PackageX className="h-4 w-4 text-destructive" />
+                                <span className="font-bold text-destructive">{item.cantidad}</span>
+                                <span className="text-xs text-muted-foreground">/ {item.stockMinimo}</span>
+                              </div>
+                            ) : isLow ? (
+                              <div className="inline-flex items-center gap-2 rounded-full bg-amber-500/10 px-3 py-1.5 border border-amber-500/20">
+                                <AlertTriangle className="h-4 w-4 text-amber-600" />
+                                <span className="font-bold text-amber-600">{item.cantidad}</span>
+                                <span className="text-xs text-muted-foreground">/ {item.stockMinimo}</span>
+                              </div>
+                            ) : (
+                              <div className="inline-flex items-center gap-2 rounded-full bg-emerald-500/10 px-3 py-1.5 border border-emerald-500/20">
+                                <Package className="h-4 w-4 text-emerald-600" />
+                                <span className="font-bold text-emerald-600">{item.cantidad}</span>
+                                <span className="text-xs text-muted-foreground">/ {item.stockMinimo}</span>
+                              </div>
+                            )}
                           </TableCell>
                           <TableCell>
                             <div className="flex flex-col gap-1">
@@ -416,12 +445,14 @@ export default function Inventario() {
                             </div>
                           </TableCell>
                           <TableCell className="text-right">
-                            <div className="flex justify-end gap-2">
+                            <div className="flex justify-end gap-2 opacity-0 group-hover:opacity-100 transition-opacity duration-200">
                               <Button
                                 size="sm"
                                 variant="ghost"
                                 onClick={() => handleOpenEdit(item)}
-                                aria-label="Editar item"
+                                aria-label={`Editar ${item.nombre}`}
+                                title={`Editar ${item.nombre}`}
+                                className="hover:bg-primary/10 hover:text-primary"
                               >
                                 <Pencil className="h-4 w-4" />
                               </Button>
@@ -429,7 +460,9 @@ export default function Inventario() {
                                 size="sm"
                                 variant="ghost"
                                 onClick={() => setDeleteTarget(item)}
-                                aria-label="Eliminar item"
+                                aria-label={`Eliminar ${item.nombre}`}
+                                title={`Eliminar ${item.nombre}`}
+                                className="hover:bg-destructive/10 hover:text-destructive"
                               >
                                 <Trash2 className="h-4 w-4" />
                               </Button>

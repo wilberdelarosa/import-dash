@@ -426,6 +426,7 @@ export type Database = {
           descripcion: string | null
           id: number
           marca: string
+          marcas_asociadas: string[] | null
           modelo: string | null
           nombre: string
         }
@@ -436,6 +437,7 @@ export type Database = {
           descripcion?: string | null
           id?: number
           marca: string
+          marcas_asociadas?: string[] | null
           modelo?: string | null
           nombre: string
         }
@@ -446,10 +448,54 @@ export type Database = {
           descripcion?: string | null
           id?: number
           marca?: string
+          marcas_asociadas?: string[] | null
           modelo?: string | null
           nombre?: string
         }
         Relationships: []
+      }
+      plan_equipos_manuales: {
+        Row: {
+          agregado_manualmente: boolean
+          created_at: string | null
+          equipo_ficha: string
+          excluido: boolean
+          id: number
+          plan_id: number
+          updated_at: string | null
+        }
+        Insert: {
+          agregado_manualmente?: boolean
+          created_at?: string | null
+          equipo_ficha: string
+          excluido?: boolean
+          id?: number
+          plan_id: number
+          updated_at?: string | null
+        }
+        Update: {
+          agregado_manualmente?: boolean
+          created_at?: string | null
+          equipo_ficha?: string
+          excluido?: boolean
+          id?: number
+          plan_id?: number
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "plan_equipos_manuales_plan_id_fkey"
+            columns: ["plan_id"]
+            referencedRelation: "planes_mantenimiento"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "plan_equipos_manuales_equipo_ficha_fkey"
+            columns: ["equipo_ficha"]
+            referencedRelation: "equipos"
+            referencedColumns: ["ficha"]
+          }
+        ]
       }
       plan_intervalos: {
         Row: {
