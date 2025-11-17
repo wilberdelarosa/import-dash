@@ -212,6 +212,13 @@ export default function ControlMantenimientoProfesional() {
     }
   }, [caterpillarEquipos]);
 
+  // Solicitar permisos de notificaciones del navegador al cargar
+  useEffect(() => {
+    if ('Notification' in window && Notification.permission === 'default') {
+      Notification.requestPermission();
+    }
+  }, []);
+
   // Buscar equipo por ficha en actualización rápida
   useEffect(() => {
     if (fichaRapida.trim()) {
@@ -661,6 +668,19 @@ export default function ControlMantenimientoProfesional() {
       };
       
       setAlertasActualizacion(prev => [nuevaAlerta, ...prev].slice(0, 50)); // Mantener últimas 50 alertas
+      
+      // Mostrar notificación del navegador
+      if ('Notification' in window && Notification.permission === 'granted') {
+        const unidad = unidadInferida === 'km' ? 'km' : 'horas';
+        new Notification('🔔 Lectura Actualizada', {
+          body: `${equipoRapido.ficha} - ${equipoRapido.nombreEquipo}\nAnterior: ${lecturaAnterior} ${unidad}\nActual: ${lecturaNueva} ${unidad}\nIncremento: +${incremento} ${unidad}`,
+          icon: '/favicon.ico',
+          badge: '/favicon.ico',
+          tag: equipoRapido.id,
+          requireInteraction: false,
+          silent: false
+        });
+      }
       
       toast({
         title: '✅ Lectura actualizada',
