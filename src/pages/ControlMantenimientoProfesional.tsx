@@ -78,22 +78,20 @@ const obtenerSemanaActual = () => {
 };
 
 const normalizarRangoFechas = (desde: string, hasta: string) => {
-  const inicio = new Date(desde);
-  const fin = new Date(hasta);
+  // Parsear fechas en tiempo local (YYYY-MM-DD)
+  const [yInicio, mInicio, dInicio] = desde.split('-').map(Number);
+  const [yFin, mFin, dFin] = hasta.split('-').map(Number);
+  
+  const inicio = new Date(yInicio, mInicio - 1, dInicio, 0, 0, 0, 0);
+  const fin = new Date(yFin, mFin - 1, dFin, 23, 59, 59, 999);
 
   if (Number.isNaN(inicio.getTime()) || Number.isNaN(fin.getTime()) || inicio > fin) {
     return null;
   }
 
-  const inicioAjustado = new Date(inicio);
-  inicioAjustado.setHours(0, 0, 0, 0);
-
-  const finAjustado = new Date(fin);
-  finAjustado.setHours(23, 59, 59, 999);
-
   return {
-    desde: inicioAjustado.toISOString(),
-    hasta: finAjustado.toISOString(),
+    desde: inicio.toISOString(),
+    hasta: fin.toISOString(),
   };
 };
 
@@ -157,9 +155,18 @@ export default function ControlMantenimientoProfesional() {
   const [registering, setRegistering] = useState(false);
   
   const [reportesOpen, setReportesOpen] = useState(false);
-  const [reporteDesde, setReporteDesde] = useState('');
-  const [reporteHasta, setReporteHasta] = useState('');
-  const [reporteRango, setReporteRango] = useState<{ desde: string; hasta: string } | null>(null);
+  const [reporteDesde, setReporteDesde] = useState(() => {
+    const saved = localStorage.getItem('reporteDesde');
+    return saved || '';
+  });
+  const [reporteHasta, setReporteHasta] = useState(() => {
+    const saved = localStorage.getItem('reporteHasta');
+    return saved || '';
+  });
+  const [reporteRango, setReporteRango] = useState<{ desde: string; hasta: string } | null>(() => {
+    const saved = localStorage.getItem('reporteRango');
+    return saved ? JSON.parse(saved) : null;
+  });
   
   const [panelOpen, setPanelOpen] = useState(false);
   
@@ -218,6 +225,25 @@ export default function ControlMantenimientoProfesional() {
       Notification.requestPermission();
     }
   }, []);
+
+  // Persistir fechas de reporte en localStorage
+  useEffect(() => {
+    if (reporteDesde) {
+      localStorage.setItem('reporteDesde', reporteDesde);
+    }
+  }, [reporteDesde]);
+
+  useEffect(() => {
+    if (reporteHasta) {
+      localStorage.setItem('reporteHasta', reporteHasta);
+    }
+  }, [reporteHasta]);
+
+  useEffect(() => {
+    if (reporteRango) {
+      localStorage.setItem('reporteRango', JSON.stringify(reporteRango));
+    }
+  }, [reporteRango]);
 
   // Buscar equipo por ficha en actualización rápida
   useEffect(() => {
@@ -635,6 +661,20 @@ export default function ControlMantenimientoProfesional() {
     setPanelOpen(true);
   };
 
+  const handleLimpiarReporte = () => {
+    setReporteRango(null);
+    setReporteDesde('');
+    setReporteHasta('');
+    setFiltroEstado('all');
+    localStorage.removeItem('reporteRango');
+    localStorage.removeItem('reporteDesde');
+    localStorage.removeItem('reporteHasta');
+    toast({
+      title: 'Reporte limpiado',
+      description: 'Se eliminó el rango de fechas y filtros',
+    });
+  };
+
   const handleActualizarRapido = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
     if (!equipoRapido) return;
@@ -676,7 +716,7 @@ export default function ControlMantenimientoProfesional() {
           body: `${equipoRapido.ficha} - ${equipoRapido.nombreEquipo}\nAnterior: ${lecturaAnterior} ${unidad}\nActual: ${lecturaNueva} ${unidad}\nIncremento: +${incremento} ${unidad}`,
           icon: '/favicon.ico',
           badge: '/favicon.ico',
-          tag: equipoRapido.id,
+          tag: equipoRapido.id.toString(),
           requireInteraction: false,
           silent: false
         });
@@ -1105,6 +1145,11 @@ export default function ControlMantenimientoProfesional() {
                   <Button onClick={handleGenerarReporte} size="sm" className="h-9">
                     Generar
                   </Button>
+                  {reporteRango && (
+                    <Button onClick={handleLimpiarReporte} size="sm" variant="outline" className="h-9">
+                      Limpiar
+                    </Button>
+                  )}
                 </div>
               </CardContent>
             </CollapsibleContent>
@@ -1474,10 +1519,18 @@ export default function ControlMantenimientoProfesional() {
                       </Button>
                     </div>
 
-                    <Button type="button" onClick={handleGenerarReporte} className="w-full gap-2">
-                      <CalendarCheck className="h-4 w-4" />
-                      Generar reporte
-                    </Button>
+                    <div className="flex gap-2">
+                      <Button type="button" onClick={handleGenerarReporte} className="flex-1 gap-2">
+                        <CalendarCheck className="h-4 w-4" />
+                        Generar reporte
+                      </Button>
+                      {reporteRango && (
+                        <Button type="button" onClick={handleLimpiarReporte} variant="outline" className="gap-2">
+                          <X className="h-4 w-4" />
+                          Limpiar
+                        </Button>
+                      )}
+                    </div>
                   </div>
 
                   {resumenActualizaciones ? (
