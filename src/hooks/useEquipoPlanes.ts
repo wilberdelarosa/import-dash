@@ -45,10 +45,26 @@ export function useEquipoPlanes(equipoId?: number) {
 
       if (planesError) throw planesError;
 
-      // Cargar intervalos
+      // Cargar intervalos con kits
       const { data: intervalosData, error: intervalosError } = await supabase
         .from('plan_intervalos')
-        .select('*')
+        .select(`
+          *,
+          plan_intervalo_kits (
+            id,
+            kit_id,
+            kits_mantenimiento (
+              id,
+              nombre,
+              codigo,
+              descripcion,
+              marca,
+              modelo_aplicable,
+              categoria,
+              activo
+            )
+          )
+        `)
         .in('plan_id', planIds)
         .order('orden');
 
@@ -57,16 +73,30 @@ export function useEquipoPlanes(equipoId?: number) {
       // Combinar datos
       const planesConIntervalos = (planesData || []).map(plan => ({
         ...plan,
-        intervalos: (intervalosData || []).map(intervalo => ({
-          ...intervalo,
-          tareas: Array.isArray(intervalo.tareas) ? intervalo.tareas as string[] : []
-        })).filter(intervalo => intervalo.plan_id === plan.id)
+        intervalos: (intervalosData || [])
+          .filter(intervalo => intervalo.plan_id === plan.id)
+          .map(intervalo => ({
+            ...intervalo,
+            tareas: Array.isArray(intervalo.tareas) ? intervalo.tareas as string[] : [],
+            kits: (intervalo.plan_intervalo_kits || []).map((pik: any) => ({
+              id: pik.id,
+              kit_id: pik.kit_id,
+              plan_intervalo_id: intervalo.id,
+              created_at: pik.created_at || new Date().toISOString(),
+              kit: pik.kits_mantenimiento
+            })),
+            plan_intervalo_kits: undefined
+          }))
+          .filter((intervalo: any) => {
+            delete intervalo.plan_intervalo_kits;
+            return true;
+          })
       }));
 
       const resultado: EquipoPlanConDetalles[] = equipoPlanesData.map(ep => ({
         ...ep,
         plan: planesConIntervalos.find(p => p.id === ep.plan_id)!
-      })).filter(item => item.plan) as EquipoPlanConDetalles[];
+      })).filter(item => item.plan);
 
       setEquipoPlanes(resultado);
     } catch (error: any) {

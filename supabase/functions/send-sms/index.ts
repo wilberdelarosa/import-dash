@@ -60,8 +60,10 @@ serve(async (req) => {
     // Use Messaging Service SID if available (more reliable), otherwise use From number
     if (messagingServiceSid) {
       formData.append("MessagingServiceSid", messagingServiceSid);
-    } else {
+    } else if (fromNumber) {
       formData.append("From", fromNumber);
+    } else {
+      throw new Error("Either TWILIO_MESSAGING_SERVICE_SID or TWILIO_PHONE_NUMBER must be set");
     }
     
     formData.append("To", phoneNumber);

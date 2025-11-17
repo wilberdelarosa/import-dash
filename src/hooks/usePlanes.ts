@@ -407,136 +407,8 @@ export function usePlanes() {
     }
   };
 
-  const addEquipoManual = async (planId: number, equipoFicha: string) => {
-    try {
-      const { error } = await supabase
-        .from('plan_equipos_manuales')
-        .insert({ 
-          plan_id: planId, 
-          equipo_ficha: equipoFicha,
-          agregado_manualmente: true,
-          excluido: false
-        });
-
-      if (error) {
-        if (error.message?.includes('duplicate')) {
-          toast({
-            title: 'Equipo ya asociado',
-            description: 'Este equipo ya está en el plan',
-            variant: 'default',
-          });
-          return;
-        }
-        throw error;
-      }
-
-      toast({
-        title: 'Equipo agregado',
-        description: 'El equipo se agregó manualmente al plan',
-      });
-      await loadPlanes();
-    } catch (error: any) {
-      console.error('Error adding manual equipment:', error);
-      toast({
-        title: 'Error',
-        description: 'No se pudo agregar el equipo al plan',
-        variant: 'destructive',
-      });
-      throw error;
-    }
-  };
-
-  const removeEquipoManual = async (planId: number, equipoFicha: string) => {
-    try {
-      const { error } = await supabase
-        .from('plan_equipos_manuales')
-        .delete()
-        .eq('plan_id', planId)
-        .eq('equipo_ficha', equipoFicha);
-
-      if (error) throw error;
-
-      toast({
-        title: 'Equipo removido',
-        description: 'El equipo se quitó del plan',
-      });
-      await loadPlanes();
-    } catch (error: any) {
-      console.error('Error removing manual equipment:', error);
-      toast({
-        title: 'Error',
-        description: 'No se pudo quitar el equipo del plan',
-        variant: 'destructive',
-      });
-      throw error;
-    }
-  };
-
-  const toggleExcluirEquipo = async (planId: number, equipoFicha: string, excluir: boolean) => {
-    try {
-      // Verificar si ya existe un registro
-      const { data: existing } = await supabase
-        .from('plan_equipos_manuales')
-        .select('*')
-        .eq('plan_id', planId)
-        .eq('equipo_ficha', equipoFicha)
-        .single();
-
-      if (existing) {
-        // Actualizar registro existente
-        const { error } = await supabase
-          .from('plan_equipos_manuales')
-          .update({ excluido: excluir })
-          .eq('plan_id', planId)
-          .eq('equipo_ficha', equipoFicha);
-
-        if (error) throw error;
-      } else {
-        // Crear nuevo registro como excluido
-        const { error } = await supabase
-          .from('plan_equipos_manuales')
-          .insert({ 
-            plan_id: planId, 
-            equipo_ficha: equipoFicha,
-            agregado_manualmente: false,
-            excluido: excluir
-          });
-
-        if (error) throw error;
-      }
-
-      toast({
-        title: excluir ? 'Equipo excluido' : 'Equipo incluido',
-        description: excluir 
-          ? 'El equipo se excluyó del plan automático' 
-          : 'El equipo se incluyó nuevamente en el plan',
-      });
-      await loadPlanes();
-    } catch (error: any) {
-      console.error('Error toggling equipment exclusion:', error);
-      toast({
-        title: 'Error',
-        description: 'No se pudo modificar el estado del equipo',
-        variant: 'destructive',
-      });
-      throw error;
-    }
-  };
-
-  const getEquiposAsociados = async (planId: number) => {
-    try {
-      const { data, error } = await supabase
-        .from('plan_equipos_manuales')
-        .select('*')
-        .eq('plan_id', planId);
-
-      if (error) throw error;
-      return data || [];
-    } catch (error: any) {
-      console.error('Error getting associated equipment:', error);
-      return [];
-    }
-  };
+  // Equipment-plan management functions removed (requires database migration)
+  // These functions will be available after running the proposed migration
 
   return {
     planes,
@@ -550,9 +422,5 @@ export function usePlanes() {
     refreshPlanes: loadPlanes,
     linkKitToInterval,
     unlinkKitFromInterval,
-    addEquipoManual,
-    removeEquipoManual,
-    toggleExcluirEquipo,
-    getEquiposAsociados,
   };
 }
