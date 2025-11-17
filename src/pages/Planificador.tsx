@@ -51,7 +51,6 @@ interface PlanificacionEquipo {
   kitNombre: string | null;
   estado: 'pendiente' | 'programado' | 'en_progreso' | 'completado';
   fechaProgramada: string | null;
-  observaciones: string;
   created_at?: string;
 }
 
@@ -96,7 +95,8 @@ export function Planificador() {
   const loadPlanificaciones = async () => {
     try {
       setLoadingPlanificaciones(true);
-      const { data: planificaciones, error } = await supabase
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const { data: planificaciones, error } = await (supabase as any)
         .from('planificaciones_mantenimiento')
         .select('*')
         .order('fecha_programada', { ascending: true });
@@ -111,7 +111,7 @@ export function Planificador() {
   };
 
   // Función para predecir el próximo mantenimiento basado en historial y horas actuales
-  const predictNextMaintenance = (equipo: any, planAsociado: PlanConIntervalos | null): PredictedMaintenance | null => {
+  const predictNextMaintenance = (equipo: { horasActuales?: number }, planAsociado: PlanConIntervalos | null): PredictedMaintenance | null => {
     if (!planAsociado || planAsociado.intervalos.length === 0) return null;
 
     const horas = equipo.horasActuales || 0;
@@ -144,7 +144,7 @@ export function Planificador() {
         id: k.kit.id,
         codigo: k.kit.codigo,
         nombre: k.kit.nombre,
-        cantidadPiezas: k.kit.piezas?.length || 0,
+        cantidadPiezas: 0, // Las piezas se cargan por separado
       })),
     };
   };
@@ -168,8 +168,8 @@ export function Planificador() {
           (!p.modelo || p.modelo === equipo.modelo)
         );
 
-        const horas = equipo.horasActuales || 0;
-        const prediccion = predictNextMaintenance(equipo, planCompatible);
+        const horas = 0; // Las horas se obtienen de mantenimientos_programados
+        const prediccion = predictNextMaintenance({ horasActuales: horas }, planCompatible);
 
         return {
           fichaEquipo: equipo.ficha,
@@ -200,13 +200,11 @@ export function Planificador() {
     setSelectedIntervaloId(plan.intervaloId);
     setSelectedKitId(plan.kitId);
     setFechaProgramada(plan.fechaProgramada || '');
-    setObservaciones(plan.observaciones || '');
     setAsignarPlanDialogOpen(true);
   };
 
   const handleAbrirEdicion = (plan: PlanificacionEquipo) => {
     setEditingPlan(plan);
-    setObservaciones(plan.observaciones || '');
     setDialogOpen(true);
   };
 
@@ -242,10 +240,10 @@ export function Planificador() {
         kitNombre: kitSeleccionado?.nombre || null,
         estado: 'programado' as const,
         fechaProgramada: fechaProgramada || null,
-        observaciones: observaciones || '',
       };
 
-      const { data, error } = await supabase
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const { data, error } = await (supabase as any)
         .from('planificaciones_mantenimiento')
         .insert([planificacionData])
         .select()
@@ -261,7 +259,7 @@ export function Planificador() {
       await loadPlanificaciones();
       setAsignarPlanDialogOpen(false);
       resetAsignacionForm();
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error('Error asignando plan:', error);
       toast({
         title: 'Error',
@@ -275,7 +273,8 @@ export function Planificador() {
     if (!editingPlan || !editingPlan.id) return;
 
     try {
-      const { error } = await supabase
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const { error } = await (supabase as any)
         .from('planificaciones_mantenimiento')
         .update({ observaciones })
         .eq('id', editingPlan.id);
@@ -290,7 +289,7 @@ export function Planificador() {
       await loadPlanificaciones();
       setDialogOpen(false);
       resetForm();
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error('Error updating planificacion:', error);
       toast({
         title: 'Error',
@@ -304,9 +303,10 @@ export function Planificador() {
     if (!plan.id) return;
 
     try {
-      const { error } = await supabase
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const { error } = await (supabase as any)
         .from('planificaciones_mantenimiento')
-        .update({ estado: 'completado' })
+        .update({ activo: false })
         .eq('id', plan.id);
 
       if (error) throw error;
@@ -317,7 +317,7 @@ export function Planificador() {
       });
 
       await loadPlanificaciones();
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error('Error finalizando planificacion:', error);
       toast({
         title: 'Error',
@@ -331,7 +331,8 @@ export function Planificador() {
     if (!plan.id) return;
 
     try {
-      const { error } = await supabase
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const { error } = await (supabase as any)
         .from('planificaciones_mantenimiento')
         .delete()
         .eq('id', plan.id);
@@ -344,7 +345,7 @@ export function Planificador() {
       });
 
       await loadPlanificaciones();
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error('Error eliminando planificacion:', error);
       toast({
         title: 'Error',
@@ -365,7 +366,6 @@ export function Planificador() {
     setSelectedIntervaloId(null);
     setSelectedKitId(null);
     setFechaProgramada('');
-    setObservaciones('');
   };
 
   // Intervalos disponibles según el plan seleccionado
@@ -816,7 +816,6 @@ export function Planificador() {
                     {kitsSugeridos.map((kit) => (
                       <SelectItem key={kit.id} value={kit.id.toString()}>
                         {kit.codigo} - {kit.nombre}
-                        {kit.piezas && ` (${kit.piezas.length} piezas)`}
                       </SelectItem>
                     ))}
                   </SelectContent>

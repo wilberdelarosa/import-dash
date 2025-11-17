@@ -306,12 +306,11 @@ export default function ControlMantenimiento() {
             <div className="grid gap-2">
               <Label htmlFor="planIntervaloFloating">Intervalo oficial</Label>
               <Select
-                id="planIntervaloFloating"
                 value={planIntervalo}
                 onValueChange={(value) => setPlanIntervalo(value)}
                 disabled={intervalosDisponibles.length === 0}
               >
-                <SelectTrigger>
+                <SelectTrigger id="planIntervaloFloating">
                   <SelectValue placeholder="MP disponible" />
                 </SelectTrigger>
                 <SelectContent>
