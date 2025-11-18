@@ -351,7 +351,7 @@ export function PlanesAsignadosTable() {
                                 'text-orange-600'
                             )}
                           >
-                            {plan.horas_restantes > 0 ? `${plan.horas_restantes}h` : 'Vencido'}
+                            {plan.horas_restantes}h
                           </span>
                         ) : (
                           <span className="text-xs text-muted-foreground">-</span>

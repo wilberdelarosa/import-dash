@@ -13,10 +13,12 @@ export function BrandLogo({ showTagline = true, compact = false, className }: Br
   return (
     <div className={cn("group flex items-center", gap, className)}>
       <div className={cn("relative transition-transform duration-300 group-hover:scale-105", size)}>
+        <div className="pointer-events-none absolute inset-0 rounded-3xl bg-gradient-to-br from-primary/35 via-emerald-400/30 to-transparent opacity-0 blur-xl transition-opacity duration-500 group-hover:opacity-100" />
         <img
           src="/favicon.ico"
           alt="Logo de ALITO Group"
-          className="relative h-full w-full object-contain transition-transform duration-500 group-hover:-translate-y-0.5"
+          loading="eager"
+          className="relative h-full w-full object-contain drop-shadow-[0_12px_25px_rgba(16,185,129,0.55)] transition-transform duration-500 group-hover:-translate-y-0.5"
         />
       </div>
       <div className="leading-tight">

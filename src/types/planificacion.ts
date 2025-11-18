@@ -106,3 +106,79 @@ export interface CrearAlertaInput {
   tecnico_responsable?: string;
   activa?: boolean;
 }
+
+// =====================================================
+// Tipos para Sistema de Overrides
+// =====================================================
+
+export interface OverridePlan {
+  id: number;
+  ficha_equipo: string;
+  plan_original_id: number | null;
+  plan_forzado_id: number;
+  motivo: string;
+  usuario_email: string;
+  created_at: string;
+  updated_at: string;
+  activo: boolean;
+}
+
+export interface EquipoConOverride {
+  ficha_equipo: string;
+  plan_original_id: number | null;
+  plan_forzado_id: number;
+  motivo: string;
+  usuario_email: string;
+  override_fecha: string;
+  plan_original_nombre: string | null;
+  plan_forzado_nombre: string;
+  plan_marca: string;
+  plan_modelo: string | null;
+}
+
+export interface CrearOverrideInput {
+  ficha_equipo: string;
+  plan_original_id?: number | null;
+  plan_forzado_id: number;
+  motivo: string;
+  usuario_email: string;
+}
+
+export interface ActualizarOverrideInput {
+  motivo?: string;
+  activo?: boolean;
+}
+
+// =====================================================
+// Tipos para Rutas Predictivas
+// =====================================================
+
+export interface RutaPredictiva {
+  orden: number; // 1-8
+  mp: string; // MP1, MP2, MP3, MP4
+  nombre: string; // Descripción del intervalo
+  horasObjetivo: number;
+  horasActuales: number;
+  horasRestantes: number;
+  ciclo: number; // Número de ciclo (1, 2, 3...)
+  intervaloId: number;
+  kitId: number | null;
+  kitNombre: string | null;
+  tareas: string[];
+}
+
+export interface CicloMantenimiento {
+  numero: number; // Número del ciclo
+  inicio: number; // Horas de inicio del ciclo
+  fin: number; // Horas de fin del ciclo
+  intervalos: RutaPredictiva[];
+  completo: boolean; // Si todos los MPs del ciclo están completados
+}
+
+// Planificación extendida con info de ruta
+export interface PlanificacionConRuta extends PlanificacionMantenimiento {
+  numero_ruta: number | null; // 1-8
+  ciclo_numero: number | null;
+  es_override: boolean;
+  plan_id: number | null;
+}

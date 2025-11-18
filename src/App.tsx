@@ -10,6 +10,7 @@ import Inventario from "./pages/Inventario";
 import Mantenimiento from "./pages/Mantenimiento";
 import PlanesMantenimiento from "./pages/PlanesMantenimiento";
 import KitsMantenimiento from "./pages/KitsMantenimiento";
+import PlanificadorInteligente from "./pages/PlanificadorInteligente";
 import Historial from "./pages/Historial";
 import Reportes from "./pages/Reportes";
 import Configuraciones from "./pages/Configuraciones";
@@ -43,6 +44,7 @@ const App = () => (
                 <Route path="/mantenimiento" element={<ProtectedRoute><Mantenimiento /></ProtectedRoute>} />
                 <Route path="/planes-mantenimiento" element={<ProtectedRoute><PlanesMantenimiento /></ProtectedRoute>} />
                 <Route path="/kits-mantenimiento" element={<ProtectedRoute><KitsMantenimiento /></ProtectedRoute>} />
+                <Route path="/planificador-inteligente" element={<ProtectedRoute><PlanificadorInteligente /></ProtectedRoute>} />
                 <Route path="/historial" element={<ProtectedRoute><Historial /></ProtectedRoute>} />
                 <Route path="/reportes" element={<ProtectedRoute><Reportes /></ProtectedRoute>} />
                 <Route path="/configuraciones" element={<ProtectedRoute><Configuraciones /></ProtectedRoute>} />

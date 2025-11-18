@@ -16,6 +16,7 @@ import {
   ClipboardList,
   PackageOpen,
   Download,
+  Route,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { NotificacionesCentro } from '@/components/NotificacionesCentro';
@@ -27,6 +28,7 @@ const navItems = [
   { path: '/', label: 'Dashboard', icon: LayoutDashboard },
   { path: '/equipos', label: 'Equipos', icon: Truck },
   { path: '/control-mantenimiento', label: 'Control Mantenimiento', icon: Wrench },
+  { path: '/planificador-inteligente', label: 'Planificador Inteligente', icon: Route },
   { path: '/inventario', label: 'Inventario', icon: Package },
   { path: '/mantenimiento', label: 'Mantenimiento', icon: Calendar },
   { path: '/planes-mantenimiento', label: 'Planes Mant.', icon: ClipboardList },

@@ -34,7 +34,7 @@ import {
   AccordionItem,
   AccordionTrigger,
 } from '@/components/ui/accordion';
-import { Plus, Pencil, Trash2, ClipboardList, Package, Clock, Sparkles, X, ChevronRight, Factory, Layers } from 'lucide-react';
+import { Plus, Pencil, Trash2, ClipboardList, Package, Clock, Sparkles, X, ChevronRight, Factory, Layers, Search, BarChart3 } from 'lucide-react';
 import { useMemo, useState } from 'react';
 import type { PlanMantenimiento, PlanIntervalo, IntervaloConKits } from '@/types/maintenance-plans';
 import { getStaticModelAliases, getStaticCaterpillarData } from '@/data/caterpillarMaintenance';
@@ -74,6 +74,12 @@ export default function PlanesMantenimiento() {
   // Estados para control de vista: 'index' muestra resumen, 'details' muestra planes
   const [view, setView] = useState<'index' | 'details'>('index');
   const [selectedMarca, setSelectedMarca] = useState<string | null>(null);
+  
+  // 🎯 NUEVOS ESTADOS PARA MEJORAS
+  const [searchTerm, setSearchTerm] = useState('');
+  const [filtroMarca, setFiltroMarca] = useState<string>('todos');
+  const [filtroCategoria, setFiltroCategoria] = useState<string>('todos');
+  const [mostrarInactivos, setMostrarInactivos] = useState(false);
 
   const compatibleKits = useMemo(() => {
     const base = kits.filter((kit) => kit.activo);
@@ -122,6 +128,76 @@ export default function PlanesMantenimiento() {
     });
     return grupos;
   }, [kits]);
+
+  // 🎯 NUEVO: Planes filtrados por búsqueda y filtros
+  const planesFiltrados = useMemo(() => {
+    let resultado = planes;
+
+    // Filtrar por término de búsqueda
+    if (searchTerm) {
+      const term = searchTerm.toLowerCase();
+      resultado = resultado.filter(plan =>
+        plan.nombre.toLowerCase().includes(term) ||
+        plan.marca.toLowerCase().includes(term) ||
+        plan.modelo?.toLowerCase().includes(term) ||
+        plan.categoria.toLowerCase().includes(term)
+      );
+    }
+
+    // Filtrar por marca
+    if (filtroMarca !== 'todos') {
+      resultado = resultado.filter(plan => plan.marca === filtroMarca);
+    }
+
+    // Filtrar por categoría
+    if (filtroCategoria !== 'todos') {
+      resultado = resultado.filter(plan => plan.categoria === filtroCategoria);
+    }
+
+    // Filtrar por estado activo
+    if (!mostrarInactivos) {
+      resultado = resultado.filter(plan => plan.activo);
+    }
+
+    return resultado;
+  }, [planes, searchTerm, filtroMarca, filtroCategoria, mostrarInactivos]);
+
+  // 🎯 NUEVO: Agrupar planes filtrados por marca
+  const planesPorMarcaFiltrados = useMemo(() => {
+    const grupos: Record<string, typeof planes> = {};
+    planesFiltrados.forEach(plan => {
+      if (!grupos[plan.marca]) {
+        grupos[plan.marca] = [];
+      }
+      grupos[plan.marca].push(plan);
+    });
+    return grupos;
+  }, [planesFiltrados]);
+
+  // 🎯 NUEVO: Obtener marcas únicas
+  const marcasUnicas = useMemo(() => {
+    const marcas = new Set(planes.map(p => p.marca));
+    return Array.from(marcas).sort();
+  }, [planes]);
+
+  // 🎯 NUEVO: Obtener categorías únicas
+  const categoriasUnicas = useMemo(() => {
+    const categorias = new Set(planes.map(p => p.categoria));
+    return Array.from(categorias).sort();
+  }, [planes]);
+
+  // 🎯 NUEVO: Estadísticas rápidas
+  const estadisticas = useMemo(() => {
+    return {
+      total: planes.length,
+      activos: planes.filter(p => p.activo).length,
+      inactivos: planes.filter(p => !p.activo).length,
+      porMarca: Object.entries(planesPorMarca).map(([marca, ps]) => ({
+        marca,
+        cantidad: ps.length
+      })).sort((a, b) => b.cantidad - a.cantidad),
+    };
+  }, [planes, planesPorMarca]);
 
   const [planForm, setPlanForm] = useState({
     nombre: '',
@@ -548,6 +624,142 @@ export default function PlanesMantenimiento() {
         ) : view === 'index' ? (
           // Vista de Índice/Resumen
           <div className="grid gap-6">
+            {/* 🎯 PANEL DE FILTROS Y BÚSQUEDA */}
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <Search className="w-5 h-5" />
+                  Búsqueda y Filtros
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+                  {/* Búsqueda */}
+                  <div className="lg:col-span-2">
+                    <Label htmlFor="search">Buscar planes</Label>
+                    <div className="relative">
+                      <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
+                      <Input
+                        id="search"
+                        type="search"
+                        placeholder="Buscar por nombre, marca, modelo..."
+                        className="pl-8"
+                        value={searchTerm}
+                        onChange={(e) => setSearchTerm(e.target.value)}
+                      />
+                    </div>
+                  </div>
+
+                  {/* Filtro por Marca */}
+                  <div>
+                    <Label htmlFor="filtro-marca">Marca</Label>
+                    <Select value={filtroMarca} onValueChange={setFiltroMarca}>
+                      <SelectTrigger id="filtro-marca">
+                        <SelectValue placeholder="Todas las marcas" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="todos">Todas las marcas</SelectItem>
+                        {marcasUnicas.map(marca => (
+                          <SelectItem key={marca} value={marca}>{marca}</SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+
+                  {/* Filtro por Categoría */}
+                  <div>
+                    <Label htmlFor="filtro-categoria">Categoría</Label>
+                    <Select value={filtroCategoria} onValueChange={setFiltroCategoria}>
+                      <SelectTrigger id="filtro-categoria">
+                        <SelectValue placeholder="Todas las categorías" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="todos">Todas las categorías</SelectItem>
+                        {categoriasUnicas.map(cat => (
+                          <SelectItem key={cat} value={cat}>{cat}</SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                </div>
+
+                {/* Toggle mostrar inactivos */}
+                <div className="flex items-center gap-2 mt-4 pt-4 border-t">
+                  <Switch
+                    id="mostrar-inactivos"
+                    checked={mostrarInactivos}
+                    onCheckedChange={setMostrarInactivos}
+                  />
+                  <Label htmlFor="mostrar-inactivos" className="cursor-pointer">
+                    Mostrar planes inactivos
+                  </Label>
+                </div>
+              </CardContent>
+            </Card>
+
+            {/* 🎯 ESTADÍSTICAS */}
+            <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+              <Card>
+                <CardHeader className="pb-3">
+                  <CardTitle className="text-sm font-medium flex items-center gap-2">
+                    <BarChart3 className="w-4 h-4 text-blue-500" />
+                    Total Planes
+                  </CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <div className="text-2xl font-bold">{estadisticas.total}</div>
+                  <p className="text-xs text-muted-foreground mt-1">
+                    {planesFiltrados.length !== estadisticas.total && `${planesFiltrados.length} filtrados`}
+                  </p>
+                </CardContent>
+              </Card>
+
+              <Card>
+                <CardHeader className="pb-3">
+                  <CardTitle className="text-sm font-medium flex items-center gap-2">
+                    <Clock className="w-4 h-4 text-green-500" />
+                    Activos
+                  </CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <div className="text-2xl font-bold text-green-600">{estadisticas.activos}</div>
+                  <p className="text-xs text-muted-foreground mt-1">
+                    {((estadisticas.activos / estadisticas.total) * 100).toFixed(0)}% del total
+                  </p>
+                </CardContent>
+              </Card>
+
+              <Card>
+                <CardHeader className="pb-3">
+                  <CardTitle className="text-sm font-medium flex items-center gap-2">
+                    <X className="w-4 h-4 text-gray-500" />
+                    Inactivos
+                  </CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <div className="text-2xl font-bold text-gray-600">{estadisticas.inactivos}</div>
+                  <p className="text-xs text-muted-foreground mt-1">
+                    {((estadisticas.inactivos / estadisticas.total) * 100).toFixed(0)}% del total
+                  </p>
+                </CardContent>
+              </Card>
+
+              <Card>
+                <CardHeader className="pb-3">
+                  <CardTitle className="text-sm font-medium flex items-center gap-2">
+                    <Factory className="w-4 h-4 text-purple-500" />
+                    Marcas
+                  </CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <div className="text-2xl font-bold">{marcasUnicas.length}</div>
+                  <p className="text-xs text-muted-foreground mt-1">
+                    {categoriasUnicas.length} categorías
+                  </p>
+                </CardContent>
+              </Card>
+            </div>
+
             <Card>
               <CardHeader>
                 <CardTitle className="flex items-center gap-2">
@@ -560,7 +772,7 @@ export default function PlanesMantenimiento() {
               </CardHeader>
               <CardContent>
                 <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-                  {Object.entries(planesPorMarca).map(([marca, planesGrupo]) => {
+                  {Object.entries(planesPorMarcaFiltrados).map(([marca, planesGrupo]) => {
                     const totalIntervalos = planesGrupo.reduce((sum, p) => sum + p.intervalos.length, 0);
                     const totalKits = planesGrupo.reduce((sum, p) => 
                       sum + p.intervalos.reduce((s, i) => s + i.kits.length, 0), 0
@@ -663,7 +875,7 @@ export default function PlanesMantenimiento() {
         ) : (
           // Vista de Detalles (planes filtrados por marca)
           <div className="grid gap-6">
-            {planes
+            {planesFiltrados
               .filter(plan => !selectedMarca || plan.marca === selectedMarca)
               .map((plan) => (
               <Card key={plan.id}>

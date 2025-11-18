@@ -69,20 +69,19 @@ export function NotificacionesCentro() {
   return (
     <Popover>
       <PopoverTrigger asChild>
-        <Button 
-          variant="outline" 
-          size="icon" 
-          className="relative"
+        <Button
+          variant="ghost"
+          size="icon"
+          className="relative h-12 w-12 rounded-2xl border-2 border-slate-700/50 bg-gradient-to-br from-slate-800 via-slate-900 to-slate-950 shadow-[0_8px_24px_rgba(0,0,0,0.4)] text-slate-100 transition-all duration-300 hover:border-slate-600 hover:shadow-[0_12px_32px_rgba(0,0,0,0.6)] hover:scale-105 active:scale-95"
           title="Centro de Notificaciones"
         >
-          <Bell className="h-5 w-5" />
+          <div className="flex h-full w-full items-center justify-center rounded-xl border border-white/10 bg-gradient-to-b from-slate-800/50 to-transparent">
+            <Bell className="h-6 w-6 text-slate-100 drop-shadow-lg" />
+          </div>
           {noLeidas > 0 && (
-            <Badge 
-              variant="destructive" 
-              className="absolute -top-1 -right-1 h-5 w-5 flex items-center justify-center p-0 text-xs"
-            >
-              {noLeidas > 9 ? '9+' : noLeidas}
-            </Badge>
+            <span className="absolute -top-2 -right-2 flex h-7 min-w-[28px] items-center justify-center rounded-full bg-gradient-to-br from-red-600 via-red-500 to-red-600 px-2 py-1 text-[11px] font-bold tracking-wide text-white shadow-[0_4px_12px_rgba(220,38,38,0.6)] ring-2 ring-slate-950 animate-pulse">
+              {noLeidas > 99 ? '99+' : noLeidas}
+            </span>
           )}
         </Button>
       </PopoverTrigger>

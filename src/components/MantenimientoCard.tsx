@@ -75,10 +75,7 @@ export function MantenimientoCard({ mantenimiento, onUpdate, onRealize, onHistor
           <div className="space-y-1 col-span-2">
             <p className="text-muted-foreground">Restante</p>
             <p className={`font-bold text-lg ${estado.color}`}>
-              {restanteCalculado <= 0 ? 
-                `${Math.abs(restanteCalculado).toFixed(0)} ${unidad} vencido` :
-                `${restanteCalculado.toFixed(0)} ${unidad}`
-              }
+              {restanteCalculado.toFixed(0)} {unidad}
             </p>
           </div>
         </div>

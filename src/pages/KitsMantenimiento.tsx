@@ -8,6 +8,7 @@ import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Badge } from '@/components/ui/badge';
 import { Switch } from '@/components/ui/switch';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { ConfirmDialog } from '@/components/ConfirmDialog';
 import {
   Dialog,
@@ -26,7 +27,7 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table';
-import { Plus, Pencil, Trash2, Package, Wrench, ChevronRight, Factory, Layers } from 'lucide-react';
+import { Plus, Pencil, Trash2, Package, Wrench, ChevronRight, Factory, Layers, Search, BarChart3, X } from 'lucide-react';
 import { useState, useMemo } from 'react';
 import type { KitMantenimiento, KitPieza } from '@/types/maintenance-plans';
 
@@ -43,6 +44,12 @@ export default function KitsMantenimiento() {
   // Estados para control de vista
   const [view, setView] = useState<'index' | 'details'>('index');
   const [selectedMarca, setSelectedMarca] = useState<string | null>(null);
+  
+  // 🎯 NUEVOS ESTADOS PARA MEJORAS
+  const [searchTerm, setSearchTerm] = useState('');
+  const [filtroCategoria, setFiltroCategoria] = useState<string>('todos');
+  const [filtroMarca, setFiltroMarca] = useState<string>('todos');
+  const [mostrarInactivos, setMostrarInactivos] = useState(false);
 
   // Agrupar kits por marca
   const kitsPorMarca = useMemo(() => {
@@ -56,6 +63,94 @@ export default function KitsMantenimiento() {
     });
     return grupos;
   }, [kits]);
+
+  // 🎯 NUEVO: Agrupar kits por categoría
+  const kitsPorCategoria = useMemo(() => {
+    const grupos: Record<string, typeof kits> = {};
+    kits.forEach(kit => {
+      const categoria = kit.categoria || 'Sin categoría';
+      if (!grupos[categoria]) {
+        grupos[categoria] = [];
+      }
+      grupos[categoria].push(kit);
+    });
+    return grupos;
+  }, [kits]);
+
+  // 🎯 NUEVO: Kits filtrados por búsqueda y filtros
+  const kitsFiltrados = useMemo(() => {
+    let resultado = kits;
+
+    // Filtrar por término de búsqueda (nombre, código, piezas)
+    if (searchTerm) {
+      const term = searchTerm.toLowerCase();
+      resultado = resultado.filter(kit => {
+        const nombreMatch = kit.nombre.toLowerCase().includes(term);
+        const codigoMatch = kit.codigo.toLowerCase().includes(term);
+        const piezasMatch = kit.piezas?.some(pieza => 
+          pieza.numero_parte.toLowerCase().includes(term) ||
+          pieza.descripcion.toLowerCase().includes(term)
+        );
+        return nombreMatch || codigoMatch || piezasMatch;
+      });
+    }
+
+    // Filtrar por categoría
+    if (filtroCategoria !== 'todos') {
+      resultado = resultado.filter(kit => (kit.categoria || 'Sin categoría') === filtroCategoria);
+    }
+
+    // Filtrar por marca
+    if (filtroMarca !== 'todos') {
+      resultado = resultado.filter(kit => (kit.marca || 'Sin marca') === filtroMarca);
+    }
+
+    // Filtrar por estado activo
+    if (!mostrarInactivos) {
+      resultado = resultado.filter(kit => kit.activo);
+    }
+
+    return resultado;
+  }, [kits, searchTerm, filtroCategoria, filtroMarca, mostrarInactivos]);
+
+  // 🎯 NUEVO: Agrupar kits filtrados por marca
+  const kitsPorMarcaFiltrados = useMemo(() => {
+    const grupos: Record<string, typeof kits> = {};
+    kitsFiltrados.forEach(kit => {
+      const marca = kit.marca || 'Sin marca';
+      if (!grupos[marca]) {
+        grupos[marca] = [];
+      }
+      grupos[marca].push(kit);
+    });
+    return grupos;
+  }, [kitsFiltrados]);
+
+  // 🎯 NUEVO: Categorías únicas
+  const categoriasUnicas = useMemo(() => {
+    const categorias = new Set(kits.map(k => k.categoria || 'Sin categoría'));
+    return Array.from(categorias).sort();
+  }, [kits]);
+
+  // 🎯 NUEVO: Marcas únicas
+  const marcasUnicas = useMemo(() => {
+    const marcas = new Set(kits.map(k => k.marca || 'Sin marca'));
+    return Array.from(marcas).sort();
+  }, [kits]);
+
+  // 🎯 NUEVO: Estadísticas
+  const estadisticas = useMemo(() => {
+    return {
+      total: kits.length,
+      activos: kits.filter(k => k.activo).length,
+      inactivos: kits.filter(k => !k.activo).length,
+      totalPiezas: kits.reduce((acc, kit) => acc + (kit.piezas?.length || 0), 0),
+      porCategoria: Object.entries(kitsPorCategoria).map(([cat, ks]) => ({
+        categoria: cat,
+        cantidad: ks.length
+      })).sort((a, b) => b.cantidad - a.cantidad),
+    };
+  }, [kits, kitsPorCategoria]);
 
   const [kitForm, setKitForm] = useState({
     nombre: '',
@@ -333,6 +428,158 @@ export default function KitsMantenimiento() {
           </Card>
         ) : view === 'index' ? (
           // Vista de Índice/Resumen
+          <div className="grid gap-6">
+            {/* 🎯 PANEL DE FILTROS Y BÚSQUEDA */}
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <Search className="w-5 h-5" />
+                  Búsqueda y Filtros
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+                  {/* Búsqueda */}
+                  <div className="lg:col-span-2">
+                    <Label htmlFor="search-kits">Buscar kits</Label>
+                    <div className="relative">
+                      <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
+                      <Input
+                        id="search-kits"
+                        type="search"
+                        placeholder="Buscar por nombre, código, piezas..."
+                        className="pl-8"
+                        value={searchTerm}
+                        onChange={(e) => setSearchTerm(e.target.value)}
+                      />
+                    </div>
+                  </div>
+
+                  {/* Filtro por Categoría */}
+                  <div>
+                    <Label htmlFor="filtro-categoria-kit">Categoría</Label>
+                    <Select value={filtroCategoria} onValueChange={setFiltroCategoria}>
+                      <SelectTrigger id="filtro-categoria-kit">
+                        <SelectValue placeholder="Todas las categorías" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="todos">Todas las categorías</SelectItem>
+                        {categoriasUnicas.map(cat => (
+                          <SelectItem key={cat} value={cat}>{cat}</SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+
+                  {/* Filtro por Marca */}
+                  <div>
+                    <Label htmlFor="filtro-marca-kit">Marca</Label>
+                    <Select value={filtroMarca} onValueChange={setFiltroMarca}>
+                      <SelectTrigger id="filtro-marca-kit">
+                        <SelectValue placeholder="Todas las marcas" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="todos">Todas las marcas</SelectItem>
+                        {marcasUnicas.map(marca => (
+                          <SelectItem key={marca} value={marca}>{marca}</SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                </div>
+
+                {/* Toggle mostrar inactivos */}
+                <div className="flex items-center gap-2 mt-4 pt-4 border-t">
+                  <Switch
+                    id="mostrar-inactivos-kits"
+                    checked={mostrarInactivos}
+                    onCheckedChange={setMostrarInactivos}
+                  />
+                  <Label htmlFor="mostrar-inactivos-kits" className="cursor-pointer">
+                    Mostrar kits inactivos
+                  </Label>
+                </div>
+              </CardContent>
+            </Card>
+
+            {/* 🎯 ESTADÍSTICAS */}
+            <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-5">
+              <Card>
+                <CardHeader className="pb-3">
+                  <CardTitle className="text-sm font-medium flex items-center gap-2">
+                    <BarChart3 className="w-4 h-4 text-blue-500" />
+                    Total Kits
+                  </CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <div className="text-2xl font-bold">{estadisticas.total}</div>
+                  <p className="text-xs text-muted-foreground mt-1">
+                    {kitsFiltrados.length !== estadisticas.total && `${kitsFiltrados.length} filtrados`}
+                  </p>
+                </CardContent>
+              </Card>
+
+              <Card>
+                <CardHeader className="pb-3">
+                  <CardTitle className="text-sm font-medium flex items-center gap-2">
+                    <Package className="w-4 h-4 text-green-500" />
+                    Activos
+                  </CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <div className="text-2xl font-bold text-green-600">{estadisticas.activos}</div>
+                  <p className="text-xs text-muted-foreground mt-1">
+                    {((estadisticas.activos / estadisticas.total) * 100).toFixed(0)}% del total
+                  </p>
+                </CardContent>
+              </Card>
+
+              <Card>
+                <CardHeader className="pb-3">
+                  <CardTitle className="text-sm font-medium flex items-center gap-2">
+                    <X className="w-4 h-4 text-gray-500" />
+                    Inactivos
+                  </CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <div className="text-2xl font-bold text-gray-600">{estadisticas.inactivos}</div>
+                  <p className="text-xs text-muted-foreground mt-1">
+                    {((estadisticas.inactivos / estadisticas.total) * 100).toFixed(0)}% del total
+                  </p>
+                </CardContent>
+              </Card>
+
+              <Card>
+                <CardHeader className="pb-3">
+                  <CardTitle className="text-sm font-medium flex items-center gap-2">
+                    <Wrench className="w-4 h-4 text-orange-500" />
+                    Total Piezas
+                  </CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <div className="text-2xl font-bold">{estadisticas.totalPiezas}</div>
+                  <p className="text-xs text-muted-foreground mt-1">
+                    En {estadisticas.total} kits
+                  </p>
+                </CardContent>
+              </Card>
+
+              <Card>
+                <CardHeader className="pb-3">
+                  <CardTitle className="text-sm font-medium flex items-center gap-2">
+                    <Layers className="w-4 h-4 text-purple-500" />
+                    Categorías
+                  </CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <div className="text-2xl font-bold">{categoriasUnicas.length}</div>
+                  <p className="text-xs text-muted-foreground mt-1">
+                    {marcasUnicas.length} marcas
+                  </p>
+                </CardContent>
+              </Card>
+            </div>
+
           <Card>
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
@@ -345,7 +592,7 @@ export default function KitsMantenimiento() {
             </CardHeader>
             <CardContent>
               <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-                {Object.entries(kitsPorMarca).map(([marca, kitsGrupo]) => {
+                {Object.entries(kitsPorMarcaFiltrados).map(([marca, kitsGrupo]) => {
                   const kitsActivos = kitsGrupo.filter(k => k.activo).length;
                   const totalPiezas = kitsGrupo.reduce((sum, k) => sum + (k.piezas?.length || 0), 0);
                   
@@ -395,10 +642,11 @@ export default function KitsMantenimiento() {
               </div>
             </CardContent>
           </Card>
+          </div>
         ) : (
           // Vista de Detalles (kits filtrados por marca)
           <div className="grid gap-6">
-            {kits
+            {kitsFiltrados
               .filter(kit => !selectedMarca || (kit.marca || 'Sin marca') === selectedMarca)
               .map((kit) => (
               <Card key={kit.id}>
