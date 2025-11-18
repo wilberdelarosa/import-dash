@@ -61,6 +61,7 @@ import {
   Pencil,
   Loader2,
   Printer,
+  CheckCircle2,
 } from 'lucide-react';
 import { useState } from 'react';
 import type { jsPDF } from 'jspdf';
@@ -371,30 +372,98 @@ export default function Mantenimiento() {
     // Configurar fuente
     doc.setFont('helvetica');
     
+    // Encabezado corporativo con borde verde
+    doc.setFillColor(36, 99, 56); // Verde corporativo oscuro
+    doc.rect(0, 0, doc.internal.pageSize.width, 15, 'F');
+    
+    // Logo/Nombre de empresa
+    doc.setFontSize(16);
+    doc.setTextColor(255, 255, 255);
+    doc.setFont('helvetica', 'bold');
+    doc.text('ALITO MANTENIMIENTO', 20, 10);
+    
     // Título del documento
-    doc.setFontSize(18);
-    doc.setTextColor(40, 40, 40);
-    doc.text('Reporte de Mantenimientos Programados', 20, 25);
+    doc.setFontSize(20);
+    doc.setTextColor(36, 99, 56); // Verde corporativo
+    doc.setFont('helvetica', 'bold');
+    doc.text('Reporte de Mantenimientos Programados', 20, 28);
+    
+    // Línea decorativa
+    doc.setDrawColor(36, 99, 56);
+    doc.setLineWidth(0.5);
+    doc.line(20, 32, doc.internal.pageSize.width - 20, 32);
     
     // Fecha de generación
     doc.setFontSize(10);
     doc.setTextColor(100, 100, 100);
-    doc.text(`Generado el: ${new Date().toLocaleDateString('es-ES')} a las ${new Date().toLocaleTimeString('es-ES')}`, 20, 35);
+    doc.setFont('helvetica', 'normal');
+    const fechaActual = new Date();
+    const fechaFormateada = fechaActual.toLocaleDateString('es-ES', { 
+      weekday: 'long', 
+      year: 'numeric', 
+      month: 'long', 
+      day: 'numeric' 
+    });
+    const horaFormateada = fechaActual.toLocaleTimeString('es-ES');
+    doc.text(`Fecha: ${fechaFormateada} | Hora: ${horaFormateada}`, 20, 40);
     
-    // Resumen estadístico
+    // Resumen estadístico con cajas de colores
     const totalMant = mantenimientos.length;
     const venc = mantenimientos.filter(m => m.horasKmRestante <= 0).length;
     const prox = mantenimientos.filter(m => m.horasKmRestante > 0 && m.horasKmRestante <= 100).length;
     const norm = mantenimientos.filter(m => m.horasKmRestante > 100).length;
     
-    doc.setFontSize(12);
+    doc.setFontSize(14);
     doc.setTextColor(40, 40, 40);
-    doc.text('Resumen:', 20, 50);
+    doc.setFont('helvetica', 'bold');
+    doc.text('Resumen Ejecutivo', 20, 52);
+    
+    // Cajas de resumen con colores
+    const boxY = 58;
+    const boxWidth = 60;
+    const boxHeight = 18;
+    const boxSpacing = 65;
+    
+    // Caja Total - Azul
+    doc.setFillColor(59, 130, 246);
+    doc.roundedRect(20, boxY, boxWidth, boxHeight, 3, 3, 'F');
+    doc.setTextColor(255, 255, 255);
     doc.setFontSize(10);
-    doc.text(`Total de mantenimientos: ${totalMant}`, 20, 60);
-    doc.text(`Vencidos: ${venc}`, 20, 68);
-    doc.text(`Próximos (≤100): ${prox}`, 20, 76);
-    doc.text(`Normales: ${norm}`, 20, 84);
+    doc.setFont('helvetica', 'normal');
+    doc.text('Total Programados', 25, boxY + 6);
+    doc.setFontSize(18);
+    doc.setFont('helvetica', 'bold');
+    doc.text(totalMant.toString(), 25, boxY + 14);
+    
+    // Caja Vencidos - Rojo
+    doc.setFillColor(239, 68, 68);
+    doc.roundedRect(20 + boxSpacing, boxY, boxWidth, boxHeight, 3, 3, 'F');
+    doc.setFontSize(10);
+    doc.setFont('helvetica', 'normal');
+    doc.text('Vencidos', 25 + boxSpacing, boxY + 6);
+    doc.setFontSize(18);
+    doc.setFont('helvetica', 'bold');
+    doc.text(venc.toString(), 25 + boxSpacing, boxY + 14);
+    
+    // Caja Próximos - Amarillo
+    doc.setFillColor(251, 191, 36);
+    doc.roundedRect(20 + boxSpacing * 2, boxY, boxWidth, boxHeight, 3, 3, 'F');
+    doc.setFontSize(10);
+    doc.setFont('helvetica', 'normal');
+    doc.text('Próximos (≤100)', 25 + boxSpacing * 2, boxY + 6);
+    doc.setFontSize(18);
+    doc.setFont('helvetica', 'bold');
+    doc.text(prox.toString(), 25 + boxSpacing * 2, boxY + 14);
+    
+    // Caja Normales - Verde
+    doc.setFillColor(34, 197, 94);
+    doc.roundedRect(20 + boxSpacing * 3, boxY, boxWidth, boxHeight, 3, 3, 'F');
+    doc.setFontSize(10);
+    doc.setFont('helvetica', 'normal');
+    doc.text('Normales', 25 + boxSpacing * 3, boxY + 6);
+    doc.setFontSize(18);
+    doc.setFont('helvetica', 'bold');
+    doc.text(norm.toString(), 25 + boxSpacing * 3, boxY + 14);
     
     // Preparar datos para la tabla
     const tableData = mantenimientos.map(mant => {
@@ -417,64 +486,116 @@ export default function Mantenimiento() {
       ];
     });
     
-    // Configurar tabla
+    // Configurar tabla con estilos profesionales
       autoTable(doc, {
-        startY: 95,
+        startY: 82,
         head: [['Ficha', 'Equipo', 'Categoría', 'Tipo', 'Actual', 'Frecuencia', 'Últ. Mant.', 'Próximo', 'Restante', 'Fecha Últ.', 'Estado']],
         body: tableData,
-        theme: 'grid',
+        theme: 'striped',
         styles: {
           fontSize: 8,
-          cellPadding: 2.5,
+          cellPadding: 3,
           overflow: 'linebreak',
+          lineColor: [200, 200, 200],
+          lineWidth: 0.1,
+          font: 'helvetica',
         },
         headStyles: {
-          fillColor: [34, 197, 94],
-          textColor: 255,
+          fillColor: [36, 99, 56], // Verde corporativo
+          textColor: [255, 255, 255],
           fontStyle: 'bold',
-
-        fontSize: 9,
-      },
-      columnStyles: {
-        0: { cellWidth: 15 },
-        1: { cellWidth: 25 },
-        2: { cellWidth: 20 },
-        3: { cellWidth: 15 },
-        4: { cellWidth: 20 },
-        5: { cellWidth: 20 },
-        6: { cellWidth: 20 },
-        7: { cellWidth: 20 },
-        8: { cellWidth: 25 },
-        9: { cellWidth: 20 },
-        10: { cellWidth: 15 },
-      },
-      didParseCell: (data: any) => {
-        if (data.section === 'body') {
-          const estado = data.row.raw[10];
-          if (estado === 'Vencido') {
-            data.cell.styles.fillColor = [254, 242, 242];
-            data.cell.styles.textColor = [220, 38, 38];
-          } else if (estado === 'Próximo') {
-            data.cell.styles.fillColor = [255, 251, 235];
-            data.cell.styles.textColor = [180, 83, 9];
-          } else {
-            data.cell.styles.fillColor = [240, 253, 244];
-            data.cell.styles.textColor = [22, 163, 74];
+          fontSize: 9,
+          halign: 'center',
+          valign: 'middle',
+          cellPadding: 4,
+        },
+        alternateRowStyles: {
+          fillColor: [245, 247, 250],
+        },
+        columnStyles: {
+          0: { cellWidth: 15, halign: 'center', fontStyle: 'bold' },
+          1: { cellWidth: 30 },
+          2: { cellWidth: 22, halign: 'center' },
+          3: { cellWidth: 15, halign: 'center' },
+          4: { cellWidth: 20, halign: 'right' },
+          5: { cellWidth: 20, halign: 'right' },
+          6: { cellWidth: 20, halign: 'right', fontStyle: 'bold', textColor: [37, 99, 235] },
+          7: { cellWidth: 20, halign: 'right', fontStyle: 'bold', textColor: [147, 51, 234] },
+          8: { cellWidth: 25, halign: 'center', fontStyle: 'bold' },
+          9: { cellWidth: 20, halign: 'center' },
+          10: { cellWidth: 18, halign: 'center', fontStyle: 'bold' },
+        },
+        didParseCell: (data: any) => {
+          if (data.section === 'body') {
+            const estado = data.row.raw[10];
+            
+            // Estilo para la columna de Estado
+            if (data.column.index === 10) {
+              if (estado === 'Vencido') {
+                data.cell.styles.fillColor = [254, 226, 226];
+                data.cell.styles.textColor = [185, 28, 28];
+              } else if (estado === 'Próximo') {
+                data.cell.styles.fillColor = [254, 243, 199];
+                data.cell.styles.textColor = [146, 64, 14];
+              } else {
+                data.cell.styles.fillColor = [220, 252, 231];
+                data.cell.styles.textColor = [21, 128, 61];
+              }
+            }
+            
+            // Estilo para columna Restante
+            if (data.column.index === 8) {
+              if (estado === 'Vencido') {
+                data.cell.styles.textColor = [220, 38, 38];
+              } else if (estado === 'Próximo') {
+                data.cell.styles.textColor = [217, 119, 6];
+              } else {
+                data.cell.styles.textColor = [22, 163, 74];
+              }
+            }
           }
-        }
-      },
-      margin: { top: 20, right: 15, bottom: 20, left: 15 },
-      pageBreak: 'auto',
-      showHead: 'everyPage',
-    });
+        },
+        margin: { top: 20, right: 15, bottom: 25, left: 15 },
+        pageBreak: 'auto',
+        showHead: 'everyPage',
+      });
     
-    // Pie de página
+    // Pie de página profesional
     const pageCount = (doc as any).internal.getNumberOfPages();
     for (let i = 1; i <= pageCount; i++) {
       doc.setPage(i);
+      
+      // Línea superior del footer
+      const footerY = doc.internal.pageSize.height - 15;
+      doc.setDrawColor(36, 99, 56);
+      doc.setLineWidth(0.3);
+      doc.line(15, footerY, doc.internal.pageSize.width - 15, footerY);
+      
+      // Información del footer
       doc.setFontSize(8);
       doc.setTextColor(100, 100, 100);
-      doc.text(`Página ${i} de ${pageCount}`, doc.internal.pageSize.width - 30, doc.internal.pageSize.height - 10);
+      doc.setFont('helvetica', 'normal');
+      doc.text('ALITO Mantenimiento - Sistema de Gestión', 15, footerY + 5);
+      
+      // Número de página
+      doc.setFont('helvetica', 'bold');
+      doc.text(
+        `Página ${i} de ${pageCount}`, 
+        doc.internal.pageSize.width - 15, 
+        footerY + 5, 
+        { align: 'right' }
+      );
+      
+      // Nota de confidencialidad
+      doc.setFontSize(7);
+      doc.setFont('helvetica', 'italic');
+      doc.setTextColor(120, 120, 120);
+      doc.text(
+        'Documento confidencial - Uso interno exclusivo',
+        doc.internal.pageSize.width / 2,
+        footerY + 9,
+        { align: 'center' }
+      );
     }
   };
 
@@ -502,30 +623,91 @@ export default function Mantenimiento() {
       // Configurar fuente
       doc.setFont('helvetica');
       
+      // Encabezado corporativo
+      doc.setFillColor(36, 99, 56);
+      doc.rect(0, 0, doc.internal.pageSize.width, 15, 'F');
+      doc.setFontSize(16);
+      doc.setTextColor(255, 255, 255);
+      doc.setFont('helvetica', 'bold');
+      doc.text('ALITO MANTENIMIENTO', 20, 10);
+      
       // Título de la categoría
-      doc.setFontSize(18);
-      doc.setTextColor(40, 40, 40);
-      doc.text(`Mantenimientos - ${categoria}`, 20, 25);
+      doc.setFontSize(20);
+      doc.setTextColor(36, 99, 56);
+      doc.text(`Mantenimientos - ${categoria}`, 20, 28);
+      
+      // Línea decorativa
+      doc.setDrawColor(36, 99, 56);
+      doc.setLineWidth(0.5);
+      doc.line(20, 32, doc.internal.pageSize.width - 20, 32);
       
       // Fecha de generación
       doc.setFontSize(10);
       doc.setTextColor(100, 100, 100);
-      doc.text(`Generado el: ${new Date().toLocaleDateString('es-ES')} a las ${new Date().toLocaleTimeString('es-ES')}`, 20, 35);
+      doc.setFont('helvetica', 'normal');
+      const fechaActual = new Date();
+      const fechaFormateada = fechaActual.toLocaleDateString('es-ES', { 
+        weekday: 'long', 
+        year: 'numeric', 
+        month: 'long', 
+        day: 'numeric' 
+      });
+      const horaFormateada = fechaActual.toLocaleTimeString('es-ES');
+      doc.text(`Fecha: ${fechaFormateada} | Hora: ${horaFormateada}`, 20, 40);
       
-      // Resumen de la categoría
+      // Resumen de la categoría con cajas
       const totalCat = mantenimientosCategoria.length;
       const vencCat = mantenimientosCategoria.filter(m => m.horasKmRestante <= 0).length;
       const proxCat = mantenimientosCategoria.filter(m => m.horasKmRestante > 0 && m.horasKmRestante <= 100).length;
       const normCat = mantenimientosCategoria.filter(m => m.horasKmRestante > 100).length;
       
-      doc.setFontSize(12);
+      doc.setFontSize(14);
       doc.setTextColor(40, 40, 40);
-      doc.text('Resumen:', 20, 50);
+      doc.setFont('helvetica', 'bold');
+      doc.text('Resumen de Categoría', 20, 52);
+      
+      const boxY = 58;
+      const boxWidth = 60;
+      const boxHeight = 18;
+      const boxSpacing = 65;
+      
+      // Cajas de resumen
+      doc.setFillColor(59, 130, 246);
+      doc.roundedRect(20, boxY, boxWidth, boxHeight, 3, 3, 'F');
+      doc.setTextColor(255, 255, 255);
       doc.setFontSize(10);
-      doc.text(`Total: ${totalCat}`, 20, 60);
-      doc.text(`Vencidos: ${vencCat}`, 20, 68);
-      doc.text(`Próximos (≤100): ${proxCat}`, 20, 76);
-      doc.text(`Normales: ${normCat}`, 20, 84);
+      doc.setFont('helvetica', 'normal');
+      doc.text('Total', 25, boxY + 6);
+      doc.setFontSize(18);
+      doc.setFont('helvetica', 'bold');
+      doc.text(totalCat.toString(), 25, boxY + 14);
+      
+      doc.setFillColor(239, 68, 68);
+      doc.roundedRect(20 + boxSpacing, boxY, boxWidth, boxHeight, 3, 3, 'F');
+      doc.setFontSize(10);
+      doc.setFont('helvetica', 'normal');
+      doc.text('Vencidos', 25 + boxSpacing, boxY + 6);
+      doc.setFontSize(18);
+      doc.setFont('helvetica', 'bold');
+      doc.text(vencCat.toString(), 25 + boxSpacing, boxY + 14);
+      
+      doc.setFillColor(251, 191, 36);
+      doc.roundedRect(20 + boxSpacing * 2, boxY, boxWidth, boxHeight, 3, 3, 'F');
+      doc.setFontSize(10);
+      doc.setFont('helvetica', 'normal');
+      doc.text('Próximos', 25 + boxSpacing * 2, boxY + 6);
+      doc.setFontSize(18);
+      doc.setFont('helvetica', 'bold');
+      doc.text(proxCat.toString(), 25 + boxSpacing * 2, boxY + 14);
+      
+      doc.setFillColor(34, 197, 94);
+      doc.roundedRect(20 + boxSpacing * 3, boxY, boxWidth, boxHeight, 3, 3, 'F');
+      doc.setFontSize(10);
+      doc.setFont('helvetica', 'normal');
+      doc.text('Normales', 25 + boxSpacing * 3, boxY + 6);
+      doc.setFontSize(18);
+      doc.setFont('helvetica', 'bold');
+      doc.text(normCat.toString(), 25 + boxSpacing * 3, boxY + 14);
       
       // Preparar datos para la tabla
       const tableData = mantenimientosCategoria.map(mant => {
@@ -546,34 +728,43 @@ export default function Mantenimiento() {
         ];
       });
       
-      // Configurar tabla
+      // Configurar tabla con estilos profesionales
       autoTable(doc, {
-        startY: 95,
+        startY: 82,
         head: [['Ficha', 'Equipo', 'Tipo', 'Actual', 'Frecuencia', 'Últ. Mant.', 'Próximo', 'Restante', 'Fecha Últ.', 'Estado']],
         body: tableData,
-        theme: 'grid',
+        theme: 'striped',
         styles: {
           fontSize: 8,
-          cellPadding: 2.5,
+          cellPadding: 3,
           overflow: 'linebreak',
+          lineColor: [200, 200, 200],
+          lineWidth: 0.1,
+          font: 'helvetica',
         },
         headStyles: {
-          fillColor: [34, 197, 94],
-          textColor: 255,
+          fillColor: [36, 99, 56],
+          textColor: [255, 255, 255],
           fontStyle: 'bold',
           fontSize: 9,
+          halign: 'center',
+          valign: 'middle',
+          cellPadding: 4,
+        },
+        alternateRowStyles: {
+          fillColor: [245, 247, 250],
         },
         columnStyles: {
-          0: { cellWidth: 18 },
-          1: { cellWidth: 28 },
-          2: { cellWidth: 18 },
-          3: { cellWidth: 22 },
-          4: { cellWidth: 22 },
-          5: { cellWidth: 22 },
-          6: { cellWidth: 22 },
-          7: { cellWidth: 28 },
-          8: { cellWidth: 22 },
-          9: { cellWidth: 18 },
+          0: { cellWidth: 18, halign: 'center', fontStyle: 'bold' },
+          1: { cellWidth: 32 },
+          2: { cellWidth: 18, halign: 'center' },
+          3: { cellWidth: 25, halign: 'right' },
+          4: { cellWidth: 25, halign: 'right' },
+          5: { cellWidth: 25, halign: 'right', fontStyle: 'bold', textColor: [37, 99, 235] },
+          6: { cellWidth: 25, halign: 'right', fontStyle: 'bold', textColor: [147, 51, 234] },
+          7: { cellWidth: 28, halign: 'center', fontStyle: 'bold' },
+          8: { cellWidth: 22, halign: 'center' },
+          9: { cellWidth: 20, halign: 'center', fontStyle: 'bold' },
         },
         didParseCell: (data: any) => {
           if (data.section === 'body') {
@@ -596,13 +787,42 @@ export default function Mantenimiento() {
       });
     });
     
-    // Pie de página
+    // Pie de página profesional
     const pageCount = (doc as any).internal.getNumberOfPages();
     for (let i = 1; i <= pageCount; i++) {
       doc.setPage(i);
+      
+      // Línea superior del footer
+      const footerY = doc.internal.pageSize.height - 15;
+      doc.setDrawColor(36, 99, 56);
+      doc.setLineWidth(0.3);
+      doc.line(15, footerY, doc.internal.pageSize.width - 15, footerY);
+      
+      // Información del footer
       doc.setFontSize(8);
       doc.setTextColor(100, 100, 100);
-      doc.text(`Página ${i} de ${pageCount}`, doc.internal.pageSize.width - 30, doc.internal.pageSize.height - 10);
+      doc.setFont('helvetica', 'normal');
+      doc.text('ALITO Mantenimiento - Sistema de Gestión', 15, footerY + 5);
+      
+      // Número de página
+      doc.setFont('helvetica', 'bold');
+      doc.text(
+        `Página ${i} de ${pageCount}`, 
+        doc.internal.pageSize.width - 15, 
+        footerY + 5, 
+        { align: 'right' }
+      );
+      
+      // Nota de confidencialidad
+      doc.setFontSize(7);
+      doc.setFont('helvetica', 'italic');
+      doc.setTextColor(120, 120, 120);
+      doc.text(
+        'Documento confidencial - Uso interno exclusivo',
+        doc.internal.pageSize.width / 2,
+        footerY + 9,
+        { align: 'center' }
+      );
     }
   };
 
@@ -725,31 +945,35 @@ export default function Mantenimiento() {
     Boolean(searchTerm);
 
   const renderSimpleFilters = () => (
-    <div className="space-y-4">
+    <div className="space-y-4 rounded-lg bg-slate-50 dark:bg-slate-900/50 p-4 border border-slate-200 dark:border-slate-800">
       <div className="relative">
         <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
         <Input
           placeholder="Buscar mantenimientos..."
           value={searchTerm}
           onChange={(e) => setSearchTerm(e.target.value)}
-          className="pl-10"
+          className="pl-10 bg-white dark:bg-slate-950 border-slate-300 dark:border-slate-700 focus:ring-primary"
         />
       </div>
       <div className="grid grid-cols-1 gap-4 md:grid-cols-4">
         <div>
-          <Label className="mb-2 block">Tipos</Label>
+          <Label className="mb-2 flex items-center gap-2 text-sm font-semibold">
+            <div className="w-1 h-4 bg-blue-500 rounded-full"></div>
+            Tipos
+          </Label>
           <div className="space-y-2">
             {tipos.map(tipo => (
               <div
                 key={tipo}
-                className="flex items-center space-x-2 rounded-md px-2 py-1 transition-colors hover:bg-muted/40"
+                className="flex items-center space-x-2 rounded-md px-2 py-1.5 transition-colors hover:bg-white dark:hover:bg-slate-800/50"
               >
                 <Checkbox
                   id={`tipo-${tipo}`}
                   checked={filtros.tipos.includes(tipo)}
                   onCheckedChange={() => toggleTipo(tipo)}
+                  className="data-[state=checked]:bg-blue-500 data-[state=checked]:border-blue-500"
                 />
-                <label htmlFor={`tipo-${tipo}`} className="cursor-pointer text-sm">
+                <label htmlFor={`tipo-${tipo}`} className="cursor-pointer text-sm flex-1">
                   {tipo}
                 </label>
               </div>
@@ -757,19 +981,23 @@ export default function Mantenimiento() {
           </div>
         </div>
         <div>
-          <Label className="mb-2 block">Categorías</Label>
-          <div className="max-h-32 space-y-2 overflow-y-auto rounded-md border p-2">
+          <Label className="mb-2 flex items-center gap-2 text-sm font-semibold">
+            <div className="w-1 h-4 bg-purple-500 rounded-full"></div>
+            Categorías
+          </Label>
+          <div className="max-h-32 space-y-2 overflow-y-auto rounded-md border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-950 p-2">
             {categorias.map(cat => (
               <div
                 key={cat}
-                className="flex items-center space-x-2 rounded-md px-2 py-1 transition-colors hover:bg-muted/40"
+                className="flex items-center space-x-2 rounded-md px-2 py-1.5 transition-colors hover:bg-slate-50 dark:hover:bg-slate-800/50"
               >
                 <Checkbox
                   id={`cat-simple-${cat}`}
                   checked={filtros.categorias.includes(cat)}
                   onCheckedChange={() => toggleCategoria(cat)}
+                  className="data-[state=checked]:bg-purple-500 data-[state=checked]:border-purple-500"
                 />
-                <label htmlFor={`cat-simple-${cat}`} className="cursor-pointer text-sm">
+                <label htmlFor={`cat-simple-${cat}`} className="cursor-pointer text-sm flex-1">
                   {cat}
                 </label>
               </div>
@@ -777,32 +1005,62 @@ export default function Mantenimiento() {
           </div>
         </div>
         <div>
-          <Label className="mb-2 block">Estados</Label>
+          <Label className="mb-2 flex items-center gap-2 text-sm font-semibold">
+            <div className="w-1 h-4 bg-emerald-500 rounded-full"></div>
+            Estados
+          </Label>
           <div className="space-y-2">
-            {['vencido', 'proximo', 'normal'].map(estado => (
-              <div
-                key={estado}
-                className="flex items-center space-x-2 rounded-md px-2 py-1 transition-colors hover:bg-muted/40"
-              >
-                <Checkbox
-                  id={`estado-simple-${estado}`}
-                  checked={filtros.estados.includes(estado)}
-                  onCheckedChange={() => toggleEstado(estado)}
-                />
-                <label htmlFor={`estado-simple-${estado}`} className="cursor-pointer text-sm capitalize">
-                  {estado === 'proximo' ? 'Próximos' : estado === 'vencido' ? 'Vencidos' : 'Normales'}
-                </label>
-              </div>
-            ))}
+            {['vencido', 'proximo', 'normal'].map(estado => {
+              const estadoConfig = {
+                vencido: { 
+                  color: 'red', 
+                  label: 'Vencidos', 
+                  Icon: AlertCircle,
+                  iconColor: 'text-red-600 dark:text-red-500'
+                },
+                proximo: { 
+                  color: 'amber', 
+                  label: 'Próximos', 
+                  Icon: Clock,
+                  iconColor: 'text-amber-600 dark:text-amber-500'
+                },
+                normal: { 
+                  color: 'emerald', 
+                  label: 'Normales', 
+                  Icon: CheckCircle2,
+                  iconColor: 'text-emerald-600 dark:text-emerald-500'
+                }
+              }[estado];
+              
+              const Icon = estadoConfig?.Icon || CheckCircle2;
+              
+              return (
+                <div
+                  key={estado}
+                  className="flex items-center space-x-2 rounded-md px-2 py-1.5 transition-colors hover:bg-white dark:hover:bg-slate-800/50"
+                >
+                  <Checkbox
+                    id={`estado-simple-${estado}`}
+                    checked={filtros.estados.includes(estado)}
+                    onCheckedChange={() => toggleEstado(estado)}
+                    className={`data-[state=checked]:bg-${estadoConfig?.color}-500 data-[state=checked]:border-${estadoConfig?.color}-500`}
+                  />
+                  <label htmlFor={`estado-simple-${estado}`} className="cursor-pointer text-sm flex-1 flex items-center gap-1.5">
+                    <Icon className={`h-4 w-4 ${estadoConfig?.iconColor}`} />
+                    {estadoConfig?.label}
+                  </label>
+                </div>
+              );
+            })}
           </div>
         </div>
-        <div className="flex items-start">
+        <div className="flex items-end">
           {filtrosAplicados && (
             <Button
               variant="outline"
               size="sm"
               onClick={limpiarFiltros}
-              className="w-full transition-colors hover:bg-primary/10 focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2"
+              className="w-full transition-all hover:bg-red-50 hover:text-red-600 hover:border-red-300 dark:hover:bg-red-950 dark:hover:text-red-400 focus-visible:ring-2 focus-visible:ring-red-500"
             >
               <X className="mr-2 h-4 w-4" />
               Limpiar Filtros
@@ -1368,42 +1626,72 @@ export default function Mantenimiento() {
       </Dialog>
 
       <div className="space-y-6 lg:space-y-8">
+      {/* KPIs Mejorados */}
       <section className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
-        <Card>
-          <CardHeader className="pb-2">
-            <CardDescription>Total Programados</CardDescription>
-            <CardTitle className="text-3xl">{totalMantenimientos}</CardTitle>
+        <Card className="overflow-hidden border-l-4 border-l-slate-500 bg-gradient-to-br from-slate-50 to-white dark:from-slate-900 dark:to-slate-800 hover:shadow-lg transition-all duration-300">
+          <CardHeader className="pb-3">
+            <div className="flex items-center justify-between">
+              <CardDescription className="text-xs font-medium uppercase tracking-wide">Total Programados</CardDescription>
+              <div className="rounded-full bg-slate-100 dark:bg-slate-800 p-2">
+                <Calendar className="h-4 w-4 text-slate-600 dark:text-slate-400" />
+              </div>
+            </div>
+            <CardTitle className="text-4xl font-bold tracking-tight">{totalMantenimientos}</CardTitle>
+            <p className="text-xs text-muted-foreground mt-1">Equipos monitoreados</p>
           </CardHeader>
         </Card>
-        <Card>
-          <CardHeader className="pb-2">
-            <CardDescription>Vencidos</CardDescription>
-            <CardTitle className="text-3xl text-destructive">{vencidos}</CardTitle>
+        
+        <Card className="overflow-hidden border-l-4 border-l-red-500 bg-gradient-to-br from-red-50 to-white dark:from-red-950/20 dark:to-slate-800 hover:shadow-lg transition-all duration-300">
+          <CardHeader className="pb-3">
+            <div className="flex items-center justify-between">
+              <CardDescription className="text-xs font-medium uppercase tracking-wide">Vencidos</CardDescription>
+              <div className="rounded-full bg-red-100 dark:bg-red-900/30 p-2">
+                <AlertCircle className="h-4 w-4 text-red-600 dark:text-red-500" />
+              </div>
+            </div>
+            <CardTitle className="text-4xl font-bold tracking-tight text-red-600 dark:text-red-500">{vencidos}</CardTitle>
+            <p className="text-xs text-muted-foreground mt-1">Requieren atención inmediata</p>
           </CardHeader>
         </Card>
-        <Card>
-          <CardHeader className="pb-2">
-            <CardDescription>Próximos (≤100)</CardDescription>
-            <CardTitle className="text-3xl text-warning">{proximos}</CardTitle>
+        
+        <Card className="overflow-hidden border-l-4 border-l-amber-500 bg-gradient-to-br from-amber-50 to-white dark:from-amber-950/20 dark:to-slate-800 hover:shadow-lg transition-all duration-300">
+          <CardHeader className="pb-3">
+            <div className="flex items-center justify-between">
+              <CardDescription className="text-xs font-medium uppercase tracking-wide">Próximos (≤100)</CardDescription>
+              <div className="rounded-full bg-amber-100 dark:bg-amber-900/30 p-2">
+                <Clock className="h-4 w-4 text-amber-600 dark:text-amber-500" />
+              </div>
+            </div>
+            <CardTitle className="text-4xl font-bold tracking-tight text-amber-600 dark:text-amber-500">{proximos}</CardTitle>
+            <p className="text-xs text-muted-foreground mt-1">Programar pronto</p>
           </CardHeader>
         </Card>
-        <Card>
-          <CardHeader className="pb-2">
-            <CardDescription>Normales</CardDescription>
-            <CardTitle className="text-3xl text-emerald-500">{normales}</CardTitle>
+        
+        <Card className="overflow-hidden border-l-4 border-l-emerald-500 bg-gradient-to-br from-emerald-50 to-white dark:from-emerald-950/20 dark:to-slate-800 hover:shadow-lg transition-all duration-300">
+          <CardHeader className="pb-3">
+            <div className="flex items-center justify-between">
+              <CardDescription className="text-xs font-medium uppercase tracking-wide">Normales</CardDescription>
+              <div className="rounded-full bg-emerald-100 dark:bg-emerald-900/30 p-2">
+                <Calendar className="h-4 w-4 text-emerald-600 dark:text-emerald-500" />
+              </div>
+            </div>
+            <CardTitle className="text-4xl font-bold tracking-tight text-emerald-600 dark:text-emerald-500">{normales}</CardTitle>
+            <p className="text-xs text-muted-foreground mt-1">Estado óptimo</p>
           </CardHeader>
         </Card>
       </section>
 
-      <Card className="flex flex-col overflow-hidden">
-        <CardHeader className="space-y-4">
+      <Card className="flex flex-col overflow-hidden border-slate-200 dark:border-slate-800 shadow-sm">
+        <CardHeader className="space-y-4 bg-gradient-to-r from-slate-50 to-white dark:from-slate-900 dark:to-slate-800 border-b">
           <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
             <div>
-              <CardTitle className="flex items-center">
-                <Calendar className="w-5 h-5 mr-2" />
+              <CardTitle className="flex items-center gap-2 text-xl">
+                <div className="rounded-lg bg-primary/10 p-2">
+                  <Calendar className="w-5 h-5 text-primary" />
+                </div>
                 Mantenimientos Programados
               </CardTitle>
-              <CardDescription>
+              <CardDescription className="mt-2">
                 Control y seguimiento de mantenimientos preventivos
               </CardDescription>
             </div>
@@ -1412,7 +1700,7 @@ export default function Mantenimiento() {
                 type="button"
                 onClick={handleOpenCreateForm}
                 size="sm"
-                className="flex w-full items-center justify-center gap-2 sm:w-auto"
+                className="flex w-full items-center justify-center gap-2 sm:w-auto shadow-sm hover:shadow transition-all"
               >
                 <Plus className="h-4 w-4" />
                 Nuevo mantenimiento
@@ -1421,7 +1709,7 @@ export default function Mantenimiento() {
                 onClick={handlePrintClick}
                 variant="outline"
                 size="sm"
-                className="flex w-full items-center justify-center gap-2 transition-colors hover:bg-primary/10 focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-primary sm:w-auto"
+                className="flex w-full items-center justify-center gap-2 transition-all hover:bg-primary/5 hover:border-primary sm:w-auto"
                 title="Descargar PDF de mantenimientos"
               >
                 <Download className="w-4 h-4" />
@@ -1431,8 +1719,9 @@ export default function Mantenimiento() {
                 variant={modoAvanzado ? "default" : "outline"}
                 size="sm"
                 onClick={() => setModoAvanzado(!modoAvanzado)}
-                className="w-full justify-center transition-colors focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-primary sm:w-auto"
+                className="w-full justify-center transition-all sm:w-auto"
               >
+                <Filter className="w-4 h-4 mr-2" />
                 {modoAvanzado ? "Modo Simple" : "Modo Avanzado"}
               </Button>
             </div>
@@ -1497,7 +1786,7 @@ export default function Mantenimiento() {
         </CardHeader>
         <CardContent className="flex-1 px-0 pb-6 sm:px-6">
           <div className="-mx-4 overflow-x-auto sm:mx-0">
-            <div className="min-w-full rounded-md border bg-card">
+            <div className="min-w-full rounded-lg border border-slate-200 dark:border-slate-800 bg-card shadow-sm">
               <div
                 className={cn('overflow-x-auto', tableScale > 1 ? 'pb-4' : undefined)}
                 style={{ touchAction: 'pan-y pinch-zoom' }}
@@ -1512,19 +1801,19 @@ export default function Mantenimiento() {
                 >
                   <Table className="w-full min-w-[1000px]">
                     <TableHeader>
-                      <TableRow>
-                        <TableHead>Ficha</TableHead>
-                        <TableHead>Equipo</TableHead>
-                        <TableHead>Categoría</TableHead>
-                        <TableHead>Tipo</TableHead>
-                        <TableHead>Actual</TableHead>
-                        <TableHead>Frecuencia</TableHead>
-                        <TableHead>Últ. Mant.</TableHead>
-                        <TableHead>Próximo</TableHead>
-                        <TableHead>Restante</TableHead>
-                        <TableHead>Fecha Últ.</TableHead>
-                        <TableHead>Estado</TableHead>
-                        <TableHead className="text-right">Acciones</TableHead>
+                      <TableRow className="bg-slate-50 dark:bg-slate-900/50 border-b-2 border-slate-200 dark:border-slate-700">
+                        <TableHead className="font-semibold text-slate-900 dark:text-slate-100">Ficha</TableHead>
+                        <TableHead className="font-semibold text-slate-900 dark:text-slate-100">Equipo</TableHead>
+                        <TableHead className="font-semibold text-slate-900 dark:text-slate-100">Categoría</TableHead>
+                        <TableHead className="font-semibold text-slate-900 dark:text-slate-100">Tipo</TableHead>
+                        <TableHead className="font-semibold text-slate-900 dark:text-slate-100">Actual</TableHead>
+                        <TableHead className="font-semibold text-slate-900 dark:text-slate-100">Frecuencia</TableHead>
+                        <TableHead className="font-semibold text-slate-900 dark:text-slate-100">Últ. Mant.</TableHead>
+                        <TableHead className="font-semibold text-slate-900 dark:text-slate-100">Próximo</TableHead>
+                        <TableHead className="font-semibold text-slate-900 dark:text-slate-100">Restante</TableHead>
+                        <TableHead className="font-semibold text-slate-900 dark:text-slate-100">Fecha Últ.</TableHead>
+                        <TableHead className="font-semibold text-slate-900 dark:text-slate-100">Estado</TableHead>
+                        <TableHead className="text-right font-semibold text-slate-900 dark:text-slate-100">Acciones</TableHead>
                       </TableRow>
                     </TableHeader>
                     <TableBody>
@@ -1534,43 +1823,47 @@ export default function Mantenimiento() {
                         const equipo = equiposPorFicha[mant.ficha];
 
                         return (
-                          <TableRow key={mant.id}>
-                            <TableCell className="font-medium">{mant.ficha}</TableCell>
+                          <TableRow key={mant.id} className="hover:bg-slate-50 dark:hover:bg-slate-900/30 transition-colors border-b border-slate-100 dark:border-slate-800">
+                            <TableCell className="font-mono font-medium text-slate-700 dark:text-slate-300">{mant.ficha}</TableCell>
                             <TableCell>
-                              <EquipoLink ficha={mant.ficha} variant="link" className="p-0 h-auto font-normal hover:underline">
+                              <EquipoLink ficha={mant.ficha} variant="link" className="p-0 h-auto font-medium text-blue-600 dark:text-blue-400 hover:underline hover:text-blue-700 dark:hover:text-blue-300">
                                 {mant.nombreEquipo}
                               </EquipoLink>
                             </TableCell>
-                            <TableCell>{equipo?.categoria || 'N/A'}</TableCell>
-                            <TableCell>{mant.tipoMantenimiento}</TableCell>
-                            <TableCell>{mant.horasKmActuales.toLocaleString()} {unidad}</TableCell>
-                            <TableCell>{mant.frecuencia.toLocaleString()} {unidad}</TableCell>
-                            <TableCell className="font-medium text-blue-600">
-                              {mant.horasKmUltimoMantenimiento.toLocaleString()} {unidad}
-                            </TableCell>
-                            <TableCell>{mant.proximoMantenimiento.toLocaleString()} {unidad}</TableCell>
+                            <TableCell className="text-slate-600 dark:text-slate-400">{equipo?.categoria || 'N/A'}</TableCell>
                             <TableCell>
-                              <div className="flex items-center">
+                              <Badge variant="outline" className="font-normal">
+                                {mant.tipoMantenimiento}
+                              </Badge>
+                            </TableCell>
+                            <TableCell className="font-semibold text-slate-900 dark:text-slate-100">{mant.horasKmActuales.toLocaleString()} <span className="text-xs text-muted-foreground">{unidad}</span></TableCell>
+                            <TableCell className="text-slate-600 dark:text-slate-400">{mant.frecuencia.toLocaleString()} <span className="text-xs text-muted-foreground">{unidad}</span></TableCell>
+                            <TableCell className="font-medium text-blue-600 dark:text-blue-400">
+                              {mant.horasKmUltimoMantenimiento.toLocaleString()} <span className="text-xs text-muted-foreground">{unidad}</span>
+                            </TableCell>
+                            <TableCell className="font-medium text-purple-600 dark:text-purple-400">{mant.proximoMantenimiento.toLocaleString()} <span className="text-xs text-muted-foreground">{unidad}</span></TableCell>
+                            <TableCell>
+                              <div className="flex items-center gap-2">
                                 {mant.horasKmRestante <= 0 && (
-                                  <AlertCircle className="mr-2 h-4 w-4 text-red-500" />
+                                  <AlertCircle className="h-4 w-4 text-red-500 animate-pulse" />
                                 )}
                                 {mant.horasKmRestante > 0 && mant.horasKmRestante <= 100 && (
-                                  <Clock className="mr-2 h-4 w-4 text-amber-500" />
+                                  <Clock className="h-4 w-4 text-amber-500" />
                                 )}
                                 <span
                                   className={
                                     mant.horasKmRestante <= 0
-                                      ? 'font-medium text-red-600'
+                                      ? 'font-bold text-red-600 dark:text-red-500'
                                       : mant.horasKmRestante <= 100
-                                      ? 'font-medium text-amber-600'
-                                      : 'font-medium text-emerald-600'
+                                      ? 'font-bold text-amber-600 dark:text-amber-500'
+                                      : 'font-semibold text-emerald-600 dark:text-emerald-500'
                                   }
                                 >
                                   {formatRemainingLabel(mant.horasKmRestante, unidad)}
                                 </span>
                               </div>
                             </TableCell>
-                            <TableCell>{formatearFecha(mant.fechaUltimoMantenimiento)}</TableCell>
+                            <TableCell className="text-slate-600 dark:text-slate-400">{formatearFecha(mant.fechaUltimoMantenimiento)}</TableCell>
                             <TableCell>
                               <Badge
                                 variant={estado.variant}

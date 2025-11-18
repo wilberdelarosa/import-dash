@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
 import { Button } from '@/components/ui/button';
@@ -30,6 +30,16 @@ export default function Auth() {
   const { toast } = useToast();
   const { sendSMS } = useSMSService();
   const { theme, toggleTheme } = useTheme();
+  
+  const [currentVehicle, setCurrentVehicle] = useState(0);
+  const vehicleIntervalRef = useRef<NodeJS.Timeout | null>(null);
+  
+  const vehicles = [
+    { name: 'Excavadora', id: 'excavator' },
+    { name: 'Camión Volteo', id: 'dumptruck' },
+    { name: 'Montacargas', id: 'forklift' },
+    { name: 'Compactadora', id: 'steamroller' }
+  ];
 
   useEffect(() => {
     // Check if user is already logged in
@@ -40,7 +50,18 @@ export default function Auth() {
       }
     };
     checkUser();
-  }, [navigate]);
+    
+    // Auto-rotate vehicles every 4 seconds
+    vehicleIntervalRef.current = setInterval(() => {
+      setCurrentVehicle((prev) => (prev + 1) % vehicles.length);
+    }, 4000);
+    
+    return () => {
+      if (vehicleIntervalRef.current) {
+        clearInterval(vehicleIntervalRef.current);
+      }
+    };
+  }, [navigate, vehicles.length]);
 
   const handleSignIn = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -234,7 +255,7 @@ export default function Auth() {
               </div>
             </div>
 
-            {/* Excavator Illustration - Blueprint Style */}
+            {/* Vehicle Carousel - Blueprint Style */}
             <div className={`relative w-full max-w-md aspect-video rounded-2xl p-8 ${
               theme === 'dark' 
                 ? 'bg-slate-800/50 border border-slate-700' 
@@ -250,78 +271,221 @@ export default function Auth() {
                 backgroundSize: '20px 20px'
               }}></div>
               
-              {/* Animated excavator SVG */}
-              <svg viewBox="0 0 400 200" className="w-full h-full relative z-10">
-                {/* Ground line */}
-                <line 
-                  x1="0" y1="160" x2="400" y2="160" 
-                  stroke={theme === 'dark' ? '#fbbf24' : '#2563eb'} 
-                  strokeWidth="2" 
-                  strokeDasharray="5,5"
-                  className="animate-dash"
-                />
+              {/* Vehicle SVGs Container */}
+              <div className="relative w-full h-full z-10">
+                {/* Excavator */}
+                {currentVehicle === 0 && (
+                  <svg viewBox="0 0 512 512" className="w-full h-full animate-fade-in">
+                    <defs>
+                      <linearGradient id="excavatorGradient" x1="0%" y1="0%" x2="100%" y2="100%">
+                        <stop offset="0%" style={{stopColor: '#F8E99B', stopOpacity: 1}} />
+                        <stop offset="100%" style={{stopColor: '#F6E27D', stopOpacity: 1}} />
+                      </linearGradient>
+                      <filter id="shadow">
+                        <feDropShadow dx="2" dy="2" stdDeviation="3" floodOpacity="0.3"/>
+                      </filter>
+                    </defs>
+                    <g className="vehicle-float" filter="url(#shadow)">
+                      <polygon style={{fill:'#DBDBDB'}} points="391.694,246.208 425.268,246.208 425.268,179.06 391.694,167.869"/>
+                      <polygon style={{fill:'url(#excavatorGradient)'}} points="235.016,179.06 210.233,112.178 268.59,89.53 324.546,156.678"/>
+                      <polygon style={{fill:'#EFC27B'}} points="268.59,89.53 246.208,98.217 246.208,176.262 324.546,156.678"/>
+                      <path style={{fill:'#797781'}} d="M229.421,380.503h223.825c27.811,0,50.361,22.549,50.361,50.361s-22.549,50.361-50.361,50.361 H229.421c-27.811,0-50.361-22.549-50.361-50.361S201.609,380.503,229.421,380.503z"/>
+                      <path style={{fill:'#58575D'}} d="M453.246,380.503H246.208v100.721h207.038c27.811,0,50.361-22.549,50.361-50.361 S481.057,380.503,453.246,380.503z"/>
+                      <rect x="235.016" y="324.546" style={{fill:'url(#excavatorGradient)'}} width="212.634" height="55.956"/>
+                      <rect x="246.208" y="324.546" style={{fill:'#EFC27B'}} width="201.443" height="55.956"/>
+                      <polygon style={{fill:'#EFC27B'}} points="78.339,22.383 11.191,22.383 11.191,346.929 55.956,346.929"/>
+                      <polygon style={{fill:'url(#excavatorGradient)'}} points="44.765,111.913 235.016,123.104 235.016,55.956 44.765,67.148"/>
+                      <g className="excavator-boom">
+                        <circle style={{fill:'#F8E99B'}} cx="235.016" cy="89.53" r="33.574"/>
+                        <circle style={{fill:'#fbbf24'}} cx="235.016" cy="89.53" r="15"/>
+                      </g>
+                      <circle style={{fill:'#F8E99B'}} cx="44.765" cy="89.53" r="22.383"/>
+                      <path style={{fill:'url(#excavatorGradient)'}} d="M100.721,436.459H50.361C22.547,436.459,0,413.912,0,386.098v-50.361h50.361 c27.814,0,50.361,22.547,50.361,50.361V436.459z"/>
+                      <path style={{fill:'#F8E99B'}} d="M481.224,246.208v89.53H201.443v-89.53c0-49.446,40.084-89.53,89.53-89.53h44.765v89.53H481.224z"/>
+                      <path style={{fill:'url(#excavatorGradient)'}} d="M481.224,246.208H335.738v-89.53h-44.765c-16.313,0-31.593,4.385-44.765,12.008v167.052h235.016 V246.208z"/>
+                      <rect x="369.311" y="223.825" style={{fill:'#797781'}} width="78.339" height="44.765"/>
+                      <path style={{fill:'#88888F'}} d="M453.246,489.617H229.421c-32.398,0-58.754-26.357-58.754-58.754s26.357-58.754,58.754-58.754 h223.825c32.398,0,58.754,26.357,58.754,58.754S485.643,489.617,453.246,489.617z M229.421,388.896 c-23.141,0-41.967,18.826-41.967,41.967s18.826,41.967,41.967,41.967h223.825c23.141,0,41.967-18.826,41.967-41.967 s-18.826-41.967-41.967-41.967H229.421z"/>
+                      <circle style={{fill:'#DBDBDB'}} cx="453.246" cy="444.852" r="13.989"/>
+                      <circle style={{fill:'#EDEDED'}} cx="229.421" cy="444.852" r="13.989"/>
+                      <path style={{fill:'#D1E5F5'}} d="M246.208,246.208c0-24.723,20.042-44.765,44.765-44.765v44.765H246.208z"/>
+                      {/* Detalles adicionales */}
+                      <circle style={{fill:'#fbbf24', opacity: 0.3}} cx="300" cy="200" r="5" className="vehicle-glow"/>
+                      <line x1="260" y1="350" x2="420" y2="350" stroke="#fbbf24" strokeWidth="2" opacity="0.5"/>
+                    </g>
+                  </svg>
+                )}
                 
-                {/* Excavator body */}
-                <g className="animate-excavator-body">
-                  {/* Tracks */}
-                  <rect 
-                    x="80" y="140" width="100" height="20" 
-                    fill="none" 
-                    stroke={theme === 'dark' ? '#fbbf24' : '#2563eb'} 
-                    strokeWidth="2"
-                    rx="3"
-                  />
-                  <circle cx="95" cy="150" r="8" fill="none" stroke={theme === 'dark' ? '#fbbf24' : '#2563eb'} strokeWidth="2"/>
-                  <circle cx="165" cy="150" r="8" fill="none" stroke={theme === 'dark' ? '#fbbf24' : '#2563eb'} strokeWidth="2"/>
-                  
-                  {/* Cabin */}
-                  <rect 
-                    x="100" y="100" width="60" height="40" 
-                    fill="none" 
-                    stroke={theme === 'dark' ? '#fbbf24' : '#2563eb'} 
-                    strokeWidth="2.5"
-                    rx="4"
-                  />
-                  <line x1="130" y1="100" x2="130" y2="140" stroke={theme === 'dark' ? '#fbbf24' : '#2563eb'} strokeWidth="1.5"/>
-                  
-                  {/* Boom (animated) */}
-                  <g className="animate-excavator-boom origin-[160-120]">
-                    <line 
-                      x1="160" y1="120" x2="240" y2="80" 
-                      stroke={theme === 'dark' ? '#fbbf24' : '#2563eb'} 
-                      strokeWidth="3"
-                      strokeLinecap="round"
-                    />
-                    <circle cx="160" cy="120" r="5" fill={theme === 'dark' ? '#fbbf24' : '#2563eb'}/>
-                  </g>
-                  
-                  {/* Arm (animated) */}
-                  <g className="animate-excavator-arm">
-                    <line 
-                      x1="240" y1="80" x2="280" y2="100" 
-                      stroke={theme === 'dark' ? '#fbbf24' : '#2563eb'} 
-                      strokeWidth="2.5"
-                      strokeLinecap="round"
-                    />
-                    <circle cx="240" cy="80" r="4" fill={theme === 'dark' ? '#fbbf24' : '#2563eb'}/>
-                  </g>
-                  
-                  {/* Bucket (animated) */}
-                  <g className="animate-excavator-bucket">
-                    <path 
-                      d="M 280 100 L 295 115 L 285 120 L 275 110 Z" 
-                      fill="none" 
-                      stroke={theme === 'dark' ? '#fbbf24' : '#2563eb'} 
-                      strokeWidth="2"
-                    />
-                    <circle cx="280" cy="100" r="3" fill={theme === 'dark' ? '#fbbf24' : '#2563eb'}/>
-                  </g>
-                </g>
+                {/* Dump Truck */}
+                {currentVehicle === 1 && (
+                  <svg viewBox="0 0 512 512" className="w-full h-full animate-fade-in">
+                    <defs>
+                      <linearGradient id="truckGradient" x1="0%" y1="0%" x2="100%" y2="100%">
+                        <stop offset="0%" style={{stopColor: '#F8E99B', stopOpacity: 1}} />
+                        <stop offset="100%" style={{stopColor: '#F6E27D', stopOpacity: 1}} />
+                      </linearGradient>
+                      <filter id="truckShadow">
+                        <feDropShadow dx="3" dy="3" stdDeviation="4" floodOpacity="0.3"/>
+                      </filter>
+                    </defs>
+                    <g filter="url(#truckShadow)">
+                      <path style={{fill:'#88888F'}} d="M429.861,430.956H76.663c-4.536,0-8.214-3.678-8.214-8.214s3.678-8.214,8.214-8.214h353.198 c4.537,0,8.214,3.678,8.214,8.214S434.398,430.956,429.861,430.956z"/>
+                      <g className="truck-body">
+                        <polygon style={{fill:'#EFC27B'}} points="62.973,203.705 62.973,159.897 139.636,159.897 205.349,203.705 369.626,203.705 369.626,357.031 62.973,357.031"/>
+                        <rect x="251.893" y="203.705" style={{fill:'#ECB45C'}} width="117.733" height="153.326"/>
+                        <polygon style={{fill:'url(#truckGradient)'}} points="183.939,307.834 170.594,192.753 501.048,192.753 501.048,252.567 303.914,313.224"/>
+                        <polygon style={{fill:'#EFC27B'}} points="251.893,192.753 251.893,310.886 303.914,313.224 501.048,252.567 501.048,192.753"/>
+                        {/* Ventanas con brillo */}
+                        <rect x="100" y="180" width="40" height="35" fill="#D1E5F5" opacity="0.6"/>
+                        <rect x="280" y="210" width="60" height="40" fill="#D1E5F5" opacity="0.6"/>
+                      </g>
+                      <path style={{fill:'#797781'}} d="M493.782,180.252c-13.078-12.086-13.677-6.454-30.603-19.737 c-8.254-6.479-15.093-17.242-25.957-24.736c-9.435-6.51-22.366-9.531-33.112-15.817c-10.355-6.055-18.865-15.61-29.884-20.617 c-11.329-5.147-24.586-5.46-36.029-8.616c-12.362-3.41-23.942-9.686-35.718-9.686c-9.076,0-16.499,5.83-24.077,8.63 c-7.998,2.955-17.619,3.548-24.066,8.684c-6.44,5.131-8.672,14.058-13.678,20.404c-5.131,6.504-13.565,11.106-17.315,17.867 c-4.225,7.621-3.282,16.84-5.919,23.392c-5.262,13.072-9.303,9.775-12.076,21.306"/>
+                      <path style={{fill:'#88888F'}} d="M320.044,98.832c-6.439,5.131-8.669,14.058-13.677,20.404c-5.132,6.504-13.566,11.106-17.316,17.867 c-4.224,7.621-3.281,16.841-5.918,23.392c-5.223,12.976-9.242,9.83-12.013,21.06l-65.773,0.245 c2.773-11.531,6.813-8.234,12.076-21.306c2.637-6.551,1.693-15.771,5.919-23.392c3.75-6.761,12.184-11.363,17.315-17.867 c5.007-6.347,7.238-15.273,13.678-20.404c6.446-5.135,16.067-5.728,24.066-8.684c7.579-2.8,15.001-8.63,24.077-8.63 c11.778,0,23.356,6.275,35.717,9.686c0.467,0.128,0.939,0.245,1.409,0.366C332.712,93.47,325.318,94.633,320.044,98.832z"/>
+                      <path style={{fill:'url(#truckGradient)'}} d="M52.021,137.994h98.567l32.856,32.856h317.604c6.049,0,10.952,4.903,10.952,10.952v10.952 c0,6.049-4.903,10.952-10.952,10.952H172.492l-32.856-32.856H52.021c-6.049,0-10.952-4.903-10.952-10.952v-10.952 C41.07,142.897,45.973,137.994,52.021,137.994z"/>
+                      <circle style={{fill:'#797781'}} cx="369.626" cy="357.031" r="65.711"/>
+                      <circle style={{fill:'#DBDBDB'}} cx="369.626" cy="357.031" r="21.904"/>
+                      <circle style={{fill:'#88888F'}} cx="139.636" cy="357.031" r="65.711"/>
+                      <circle style={{fill:'#EDEDED'}} cx="139.636" cy="357.031" r="21.904"/>
+                      {/* Detalles de llantas */}
+                      <circle style={{fill:'#58575D'}} cx="369.626" cy="357.031" r="8"/>
+                      <circle style={{fill:'#58575D'}} cx="139.636" cy="357.031" r="8"/>
+                      <path style={{fill:'#88888F'}} d="M216.299,302.272h76.663c6.049,0,10.952,4.903,10.952,10.952v43.807 c0,6.049-4.903,10.952-10.952,10.952h-76.663c-6.049,0-10.952-4.903-10.952-10.952v-43.807 C205.348,307.175,210.251,302.272,216.299,302.272z"/>
+                      <rect x="19.166" y="170.849" style={{fill:'#D1E5F5'}} width="98.567" height="43.807"/>
+                      <path style={{fill:'url(#truckGradient)'}} d="M19.166,203.705h120.471l10.952,87.615H73.925v65.711H8.214V214.657 C8.214,208.608,13.117,203.705,19.166,203.705z"/>
+                      <polygon style={{fill:'#F8F8F9'}} points="146.481,258.464 8.214,258.464 8.214,225.609 142.374,225.609"/>
+                      {/* Luces */}
+                      <circle style={{fill:'#fbbf24', opacity: 0.6}} cx="160" cy="190" r="8" className="vehicle-glow"/>
+                      <circle style={{fill:'#ef4444', opacity: 0.6}} cx="65" cy="340" r="6"/>
+                    </g>
+                  </svg>
+                )}
                 
-                {/* Dimension lines */}
-                <line x1="80" y1="170" x2="180" y2="170" stroke={theme === 'dark' ? '#64748b' : '#94a3b8'} strokeWidth="1" strokeDasharray="2,2"/>
-                <text x="130" y="185" fill={theme === 'dark' ? '#94a3b8' : '#64748b'} fontSize="10" textAnchor="middle">100mm</text>
-              </svg>
+                {/* Forklift */}
+                {currentVehicle === 2 && (
+                  <svg viewBox="0 0 512 512" className="w-full h-full animate-fade-in">
+                    <defs>
+                      <linearGradient id="forkliftGradient" x1="0%" y1="0%" x2="100%" y2="100%">
+                        <stop offset="0%" style={{stopColor: '#F8E99B', stopOpacity: 1}} />
+                        <stop offset="100%" style={{stopColor: '#F6E27D', stopOpacity: 1}} />
+                      </linearGradient>
+                      <filter id="forkliftShadow">
+                        <feDropShadow dx="2" dy="3" stdDeviation="3" floodOpacity="0.3"/>
+                      </filter>
+                    </defs>
+                    <g filter="url(#forkliftShadow)">
+                      <g className="forklift-mast">
+                        <path style={{fill:'#797781'}} d="M422.831,245.933c0-9.531-7.727-17.258-17.258-17.258h-57.528c-9.531,0-17.258,7.727-17.258,17.258 c0,7.511,4.807,13.884,11.506,16.255v12.509h69.034v-12.509C418.024,259.816,422.831,253.443,422.831,245.933z"/>
+                        <rect x="342.292" y="263.191" style={{fill:'#58575D'}} width="69.034" height="57.528"/>
+                        {/* Detalles del mástil */}
+                        <rect x="348" y="100" width="8" height="160" fill="#797781" opacity="0.7"/>
+                        <rect x="395" y="100" width="8" height="160" fill="#797781" opacity="0.7"/>
+                      </g>
+                      <path style={{fill:'#88888F'}} d="M238.742,84.279c-32.944,0-39.694,62.324-39.694,155.901c0,4.766,3.864,8.629,8.629,8.629 s8.629-3.864,8.629-8.629c0-47.231,1.867-80.004,5.874-103.141c3.851-22.23,10.042-35.502,16.562-35.502V84.279z"/>
+                      <path style={{fill:'#58575D'}} d="M441.482,144.478c-2.975-14.889-12.03-60.2-41.662-60.2v17.258c9.838,0,18.855,16.884,24.738,46.324 c6.107,30.559,9.203,75.169,9.203,132.588c0,4.766,3.864,8.629,8.629,8.629s8.629-3.864,8.629-8.629 C451.02,221.896,447.811,176.149,441.482,144.478z"/>
+                      <path style={{fill:'#797781'}} d="M399.82,176.899c0-9.531,7.727-17.258,17.258-17.258l0,0c9.531,0,17.258,7.727,17.258,17.258v34.517 c0,9.531-7.727,17.258-17.258,17.258l0,0c-9.531,0-17.258-7.727-17.258-17.258V176.899z"/>
+                      <path style={{fill:'url(#forkliftGradient)'}} d="M238.742,67.596h195.596v34.517H204.225C204.225,83.05,219.679,67.596,238.742,67.596z"/>
+                      <rect x="250.247" y="67.596" style={{fill:'#F6E27D'}} width="184.09" height="34.517"/>
+                      <path style={{fill:'#797781'}} d="M89.169,412.764H8.629C3.864,412.764,0,408.9,0,404.135s3.864-8.629,8.629-8.629h80.539 c4.766,0,8.629,3.864,8.629,8.629S93.934,412.764,89.169,412.764z"/>
+                      <rect x="89.169" y="274.697" style={{fill:'#EDEDED'}} width="34.517" height="138.067"/>
+                      <rect x="112.18" y="113.618" style={{fill:'#797781'}} width="46.022" height="299.146"/>
+                      <polygon style={{fill:'#58575D'}} points="457.348,384 388.315,384 388.315,314.966 457.348,320.719"/>
+                      <rect x="192.719" y="240.18" style={{fill:'url(#forkliftGradient)'}} width="103.551" height="161.079"/>
+                      <rect x="250.247" y="240.18" style={{fill:'#F6E27D'}} width="46.022" height="161.079"/>
+                      <circle style={{fill:'#797781'}} cx="451.596" cy="384" r="51.775"/>
+                      <circle style={{fill:'#DBDBDB'}} cx="451.596" cy="384" r="14.382"/>
+                      <circle style={{fill:'#88888F'}} cx="198.472" cy="384" r="51.775"/>
+                      <circle style={{fill:'#EDEDED'}} cx="198.472" cy="384" r="14.382"/>
+                      <path style={{fill:'#88888F'}} d="M503.371,444.405H146.697c-4.766,0-8.629-3.864-8.629-8.629s3.864-8.629,8.629-8.629h356.674 c4.766,0,8.629,3.864,8.629,8.629S508.136,444.405,503.371,444.405z"/>
+                      <polygon style={{fill:'#EFC27B'}} points="457.348,332.225 399.82,332.225 399.82,401.258 250.247,401.258 250.247,320.719 457.348,274.697"/>
+                      {/* Ventanas cabina */}
+                      <rect x="210" y="260" width="35" height="40" fill="#D1E5F5" opacity="0.5"/>
+                      {/* Luz de advertencia */}
+                      <circle style={{fill:'#f97316', opacity: 0.7}} cx="240" cy="230" r="6" className="vehicle-glow"/>
+                    </g>
+                  </svg>
+                )}
+                
+                {/* Steamroller */}
+                {currentVehicle === 3 && (
+                  <svg viewBox="0 0 512 512" className="w-full h-full animate-fade-in">
+                    <defs>
+                      <linearGradient id="rollerGradient" x1="0%" y1="0%" x2="100%" y2="100%">
+                        <stop offset="0%" style={{stopColor: '#F8E99B', stopOpacity: 1}} />
+                        <stop offset="100%" style={{stopColor: '#F6E27D', stopOpacity: 1}} />
+                      </linearGradient>
+                      <filter id="rollerShadow">
+                        <feDropShadow dx="2" dy="4" stdDeviation="4" floodOpacity="0.3"/>
+                      </filter>
+                    </defs>
+                    <g filter="url(#rollerShadow)">
+                      <path style={{fill:'#D1E5F5'}} d="M249.155,98.567c36.291,0,43.807,7.516,43.807,43.807v98.567H150.588V98.567 C150.588,98.567,205.348,98.567,249.155,98.567z"/>
+                      <path style={{fill:'#B4D8F1'}} d="M150.588,240.941l142.374,10.952V142.374c0-18.145-1.879-29.097-8.295-35.513L150.588,240.941z"/>
+                      <path style={{fill:'#88888F'}} d="M249.155,76.663c-43.807,0-98.567,0-98.567,0v43.807h98.567c12.097,0,21.904,9.806,21.904,21.904 v98.567h43.807v-98.567C314.866,106.083,285.446,76.663,249.155,76.663z"/>
+                      <path style={{fill:'#797781'}} d="M260.107,77.589v45.836c6.542,3.789,10.952,10.847,10.952,18.95v109.519h43.807V142.374 C314.866,109.816,291.182,82.805,260.107,77.589z"/>
+                      <rect x="282.011" y="262.845" style={{fill:'#EFC27B'}} width="109.519" height="131.422"/>
+                      {/* Ventana cabina */}
+                      <rect x="295" y="280" width="40" height="35" fill="#D1E5F5" opacity="0.6"/>
+                      <path style={{fill:'#88888F'}} d="M446.289,435.337H8.214c-4.537,0-8.214-3.678-8.214-8.214c0-4.536,3.677-8.214,8.214-8.214h438.075 c4.537,0,8.214,3.678,8.214,8.214C454.503,431.659,450.826,435.337,446.289,435.337z"/>
+                      <path style={{fill:'#797781'}} d="M205.348,353.198h-32.856c-4.537,0-8.214-3.678-8.214-8.214c0-4.536,3.677-8.214,8.214-8.214h32.856 c4.537,0,8.214,3.678,8.214,8.214C213.562,349.52,209.885,353.198,205.348,353.198z"/>
+                      <polygon style={{fill:'url(#rollerGradient)'}} points="150.588,240.941 205.348,306.652 205.348,394.267 314.866,394.267 314.866,295.701 380.578,295.701 446.289,372.364 479.144,372.364 512,306.652 479.144,240.941"/>
+                      <g className="roller-drum">
+                        <circle style={{fill:'#88888F'}} cx="90.353" cy="344.984" r="82.139"/>
+                        <circle style={{fill:'#58575D'}} cx="90.353" cy="344.984" r="60"/>
+                        <circle style={{fill:'#797781'}} cx="90.353" cy="344.984" r="40"/>
+                        {/* Líneas del rodillo */}
+                        <line x1="90.353" y1="262.845" x2="90.353" y2="427.123" stroke="#DBDBDB" strokeWidth="2" opacity="0.3"/>
+                        <line x1="8.214" y1="344.984" x2="172.492" y2="344.984" stroke="#DBDBDB" strokeWidth="2" opacity="0.3"/>
+                      </g>
+                      <rect x="8.214" y="317.604" style={{fill:'#EDEDED'}} width="164.278" height="54.759"/>
+                      <polygon style={{fill:'#DBDBDB'}} points="380.578,240.941 413.433,240.941 413.433,175.23 380.578,164.278"/>
+                      <rect x="358.674" y="219.037" style={{fill:'#797781'}} width="76.663" height="43.807"/>
+                      <polygon style={{fill:'url(#rollerGradient)'}} points="479.144,240.941 260.107,240.941 260.107,394.267 314.866,394.267 314.866,295.701 380.578,295.701 446.289,372.364 479.144,372.364 512,306.652"/>
+                      <circle style={{fill:'#797781'}} cx="380.578" cy="361.412" r="65.711"/>
+                      <circle style={{fill:'#DBDBDB'}} cx="380.578" cy="361.412" r="21.904"/>
+                      <circle style={{fill:'#58575D'}} cx="380.578" cy="361.412" r="8"/>
+                      <path style={{fill:'url(#rollerGradient)'}} d="M501.048,170.849H251.893v32.856h249.155c6.049,0,10.952-4.903,10.952-10.952v-10.952 C512,175.752,507.097,170.849,501.048,170.849z"/>
+                      {/* Luz de advertencia */}
+                      <circle style={{fill:'#f97316', opacity: 0.7}} cx="300" cy="250" r="7" className="vehicle-glow"/>
+                    </g>
+                  </svg>
+                )}
+              </div>
+              
+              {/* Vehicle Name Label */}
+              <div className="absolute bottom-4 left-1/2 transform -translate-x-1/2">
+                <div className={`px-4 py-1.5 rounded-full backdrop-blur-sm ${
+                  theme === 'dark' ? 'bg-slate-800/80' : 'bg-white/80'
+                }`}>
+                  <span className={`text-sm font-medium ${
+                    theme === 'dark' ? 'text-amber-400' : 'text-blue-600'
+                  }`}>
+                    {vehicles[currentVehicle].name}
+                  </span>
+                </div>
+              </div>
+              
+              {/* Navigation Dots */}
+              <div className="absolute bottom-16 left-1/2 transform -translate-x-1/2 flex gap-2">
+                {vehicles.map((_, index) => (
+                  <button
+                    key={index}
+                    onClick={() => {
+                      setCurrentVehicle(index);
+                      // Reset interval
+                      if (vehicleIntervalRef.current) {
+                        clearInterval(vehicleIntervalRef.current);
+                      }
+                      vehicleIntervalRef.current = setInterval(() => {
+                        setCurrentVehicle((prev) => (prev + 1) % vehicles.length);
+                      }, 4000);
+                    }}
+                    className={`w-2 h-2 rounded-full transition-all duration-300 ${
+                      currentVehicle === index
+                        ? theme === 'dark' ? 'bg-amber-400 w-8' : 'bg-blue-600 w-8'
+                        : theme === 'dark' ? 'bg-slate-600' : 'bg-slate-300'
+                    }`}
+                  />
+                ))}
+              </div>
               
               {/* Blueprint corners */}
               <div className="absolute top-4 left-4 w-4 h-4 border-t-2 border-l-2 border-amber-500/50"></div>

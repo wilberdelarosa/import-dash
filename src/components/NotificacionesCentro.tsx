@@ -16,7 +16,9 @@ import {
   AlertCircle, 
   AlertTriangle, 
   Info,
-  ExternalLink 
+  ExternalLink,
+  Wrench,
+  Package
 } from 'lucide-react';
 import { formatDistanceToNow } from 'date-fns';
 import { es } from 'date-fns/locale';
@@ -56,11 +58,11 @@ export function NotificacionesCentro() {
   const getBgNivel = (nivel: string) => {
     switch (nivel) {
       case 'critical':
-        return 'bg-destructive/10 hover:bg-destructive/20 border-destructive/20';
+        return 'bg-red-50 hover:bg-red-100 border-red-200 dark:bg-red-950/20 dark:hover:bg-red-950/30 dark:border-red-900/50';
       case 'warning':
-        return 'bg-amber-50 hover:bg-amber-100 border-amber-200';
+        return 'bg-amber-50 hover:bg-amber-100 border-amber-200 dark:bg-amber-950/20 dark:hover:bg-amber-950/30 dark:border-amber-900/50';
       default:
-        return 'bg-blue-50 hover:bg-blue-100 border-blue-200';
+        return 'bg-blue-50 hover:bg-blue-100 border-blue-200 dark:bg-blue-950/20 dark:hover:bg-blue-950/30 dark:border-blue-900/50';
     }
   };
 
@@ -84,8 +86,8 @@ export function NotificacionesCentro() {
           )}
         </Button>
       </PopoverTrigger>
-      <PopoverContent className="w-96 p-0" align="end">
-        <div className="flex items-center justify-between p-4 border-b">
+      <PopoverContent className="w-96 p-0 dark:bg-slate-900 dark:border-slate-800" align="end">
+        <div className="flex items-center justify-between p-4 border-b dark:border-slate-800">
           <h3 className="font-semibold text-lg">Notificaciones</h3>
           <div className="flex gap-2">
             <Button
@@ -116,8 +118,8 @@ export function NotificacionesCentro() {
                 <div
                   key={notif.id}
                   className={`p-3 transition-colors cursor-pointer ${
-                    !notif.leida ? getBgNivel(notif.nivel) : 'hover:bg-muted'
-                  } border-l-4 ${!notif.leida ? 'border-l-primary' : 'border-l-transparent'}`}
+                    !notif.leida ? getBgNivel(notif.nivel) : 'hover:bg-muted dark:hover:bg-slate-800'
+                  } border-l-4 ${!notif.leida ? 'border-l-primary dark:border-l-primary' : 'border-l-transparent'}`}
                   onClick={() => handleNotificacionClick(notif)}
                 >
                   <div className="flex items-start gap-3">
@@ -165,23 +167,25 @@ export function NotificacionesCentro() {
 
         <Separator />
         
-        <div className="p-2 bg-muted/50">
+        <div className="p-2 bg-muted/50 dark:bg-slate-900/50">
           <div className="flex gap-2">
             <Button
               variant="outline"
               size="sm"
-              className="flex-1"
+              className="flex-1 gap-2"
               onClick={generarNotificacionesMantenimiento}
             >
-              🔧 Generar Mantenimientos
+              <Wrench className="h-4 w-4" />
+              Generar Mantenimientos
             </Button>
             <Button
               variant="outline"
               size="sm"
-              className="flex-1"
+              className="flex-1 gap-2"
               onClick={generarNotificacionesStock}
             >
-              📦 Generar Stock
+              <Package className="h-4 w-4" />
+              Generar Stock
             </Button>
           </div>
         </div>
