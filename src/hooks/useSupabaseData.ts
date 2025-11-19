@@ -762,6 +762,19 @@ export function useSupabaseData() {
 
       if (error) throw error;
 
+      // SINCRONIZAR NOMBRE EN MANTENIMIENTOS (alternativa a trigger SQL)
+      const nombreCambio = existing.nombre !== equipo.nombre;
+      if (nombreCambio) {
+        const { error: syncError } = await supabase
+          .from('mantenimientos_programados')
+          .update({ nombre_equipo: equipo.nombre })
+          .eq('ficha', equipo.ficha);
+        
+        if (syncError) {
+          console.warn('⚠️ No se pudo sincronizar nombre en mantenimientos:', syncError);
+        }
+      }
+
       await recordHistorialEvent({
         tipo: 'equipo_actualizado',
         modulo: 'equipos',

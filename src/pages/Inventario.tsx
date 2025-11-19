@@ -38,6 +38,8 @@ import {
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Package, Search, Filter, AlertTriangle, Plus, Pencil, Trash2, PackageX, Box } from 'lucide-react';
 import type { Inventario as InventarioItem } from '@/types/equipment';
+import { useDeviceDetection } from '@/hooks/useDeviceDetection';
+import { InventarioMobile } from '@/components/mobile/InventarioMobile';
 
 type InventoryFormState = {
   nombre: string;
@@ -82,6 +84,7 @@ const parseList = (value: string) =>
 const formatList = (values: string[]) => values.join(', ');
 
 export default function Inventario() {
+  const { isMobile } = useDeviceDetection();
   const {
     data,
     loading,
@@ -229,6 +232,13 @@ export default function Inventario() {
   };
 
   if (loading) {
+    if (isMobile) {
+      return (
+        <div className="flex h-screen items-center justify-center bg-background">
+          <div className="text-base text-muted-foreground">Cargando inventario...</div>
+        </div>
+      );
+    }
     return (
       <Layout title="Inventario de Repuestos">
         <div className="flex h-64 items-center justify-center">
@@ -239,6 +249,198 @@ export default function Inventario() {
   }
 
   const isFormValid = Boolean(form.nombre.trim()) && Boolean(form.codigoIdentificacion.trim());
+
+  // Versión móvil
+  if (isMobile) {
+    return (
+      <>
+        <InventarioMobile
+          inventarios={inventarios}
+          onAdd={() => {
+            setEditingItem(null);
+            setForm(createEmptyFormState());
+            setOpenForm(true);
+          }}
+          onEdit={(item) => {
+            setEditingItem(item);
+            setForm({
+              nombre: item.nombre ?? '',
+              numeroParte: item.numeroParte ?? '',
+              tipo: item.tipo ?? '',
+              sistema: item.sistema ?? '',
+              categoriaEquipo: item.categoriaEquipo ?? '',
+              cantidad: String(item.cantidad ?? 0),
+              stockMinimo: String(item.stockMinimo ?? 0),
+              codigoIdentificacion: item.codigoIdentificacion ?? '',
+              empresaSuplidora: item.empresaSuplidora ?? '',
+              marcaFabricante: item.marcaFabricante ?? '',
+              marcasCompatibles: formatList(item.marcasCompatibles ?? []),
+              modelosCompatibles: formatList(item.modelosCompatibles ?? []),
+              ubicacion: item.ubicacion ?? '',
+              activo: item.activo ?? true,
+            });
+            setOpenForm(true);
+          }}
+          onDelete={(item) => setDeleteTarget(item)}
+        />
+
+        {/* Diálogos compartidos */}
+        <Dialog open={openForm} onOpenChange={setOpenForm}>
+          <DialogContent className="max-h-[85vh] overflow-y-auto">
+            <DialogHeader>
+              <DialogTitle>
+                {editingItem ? 'Editar Item' : 'Agregar Item'}
+              </DialogTitle>
+              <DialogDescription>
+                {editingItem
+                  ? 'Modifica la información del item'
+                  : 'Completa los datos del nuevo item'}
+              </DialogDescription>
+            </DialogHeader>
+            <form
+              onSubmit={(e) => {
+                e.preventDefault();
+                handleSubmit(e);
+              }}
+              className="space-y-3"
+            >
+              <div className="space-y-2">
+                <label htmlFor="nombre" className="text-sm font-medium">
+                  Nombre *
+                </label>
+                <Input
+                  id="nombre"
+                  value={form.nombre}
+                  onChange={(e) => setForm({ ...form, nombre: e.target.value })}
+                  required
+                />
+              </div>
+
+              <div className="space-y-2">
+                <label htmlFor="codigoIdentificacion" className="text-sm font-medium">
+                  Código de Identificación *
+                </label>
+                <Input
+                  id="codigoIdentificacion"
+                  value={form.codigoIdentificacion}
+                  onChange={(e) => setForm({ ...form, codigoIdentificacion: e.target.value })}
+                  required
+                />
+              </div>
+
+              <div className="grid grid-cols-2 gap-3">
+                <div className="space-y-2">
+                  <label htmlFor="numeroParte" className="text-sm font-medium">
+                    Número de Parte
+                  </label>
+                  <Input
+                    id="numeroParte"
+                    value={form.numeroParte}
+                    onChange={(e) => setForm({ ...form, numeroParte: e.target.value })}
+                  />
+                </div>
+
+                <div className="space-y-2">
+                  <label htmlFor="tipo" className="text-sm font-medium">
+                    Tipo
+                  </label>
+                  <Select value={form.tipo} onValueChange={(v) => setForm({ ...form, tipo: v })}>
+                    <SelectTrigger id="tipo">
+                      <SelectValue placeholder="Seleccionar" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="Filtro">Filtro</SelectItem>
+                      <SelectItem value="Aceite">Aceite</SelectItem>
+                      <SelectItem value="Repuesto">Repuesto</SelectItem>
+                      <SelectItem value="Herramienta">Herramienta</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+              </div>
+
+              <div className="grid grid-cols-2 gap-3">
+                <div className="space-y-2">
+                  <label htmlFor="cantidad" className="text-sm font-medium">
+                    Cantidad
+                  </label>
+                  <Input
+                    id="cantidad"
+                    type="number"
+                    min="0"
+                    value={form.cantidad}
+                    onChange={(e) => setForm({ ...form, cantidad: e.target.value })}
+                  />
+                </div>
+
+                <div className="space-y-2">
+                  <label htmlFor="stockMinimo" className="text-sm font-medium">
+                    Stock Mínimo
+                  </label>
+                  <Input
+                    id="stockMinimo"
+                    type="number"
+                    min="0"
+                    value={form.stockMinimo}
+                    onChange={(e) => setForm({ ...form, stockMinimo: e.target.value })}
+                  />
+                </div>
+              </div>
+
+              <div className="space-y-2">
+                <label htmlFor="empresaSuplidora" className="text-sm font-medium">
+                  Empresa Suplidora
+                </label>
+                <Input
+                  id="empresaSuplidora"
+                  value={form.empresaSuplidora}
+                  onChange={(e) => setForm({ ...form, empresaSuplidora: e.target.value })}
+                />
+              </div>
+
+              <div className="space-y-2">
+                <label htmlFor="ubicacion" className="text-sm font-medium">
+                  Ubicación
+                </label>
+                <Input
+                  id="ubicacion"
+                  value={form.ubicacion}
+                  onChange={(e) => setForm({ ...form, ubicacion: e.target.value })}
+                />
+              </div>
+
+              <DialogFooter>
+                <Button type="submit" disabled={submitting || !isFormValid}>
+                  {submitting ? 'Guardando...' : editingItem ? 'Actualizar' : 'Crear'}
+                </Button>
+              </DialogFooter>
+            </form>
+          </DialogContent>
+        </Dialog>
+
+        <AlertDialog open={Boolean(deleteTarget)} onOpenChange={() => setDeleteTarget(null)}>
+          <AlertDialogContent>
+            <AlertDialogHeader>
+              <AlertDialogTitle>Confirmar eliminación</AlertDialogTitle>
+              <AlertDialogDescription>
+                ¿Eliminar "{deleteTarget?.nombre}"? Esta acción no se puede deshacer.
+              </AlertDialogDescription>
+            </AlertDialogHeader>
+            <AlertDialogFooter>
+              <AlertDialogCancel>Cancelar</AlertDialogCancel>
+              <AlertDialogAction
+                onClick={() => {
+                  if (deleteTarget) handleDelete(deleteTarget);
+                }}
+                className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+              >
+                Eliminar
+              </AlertDialogAction>
+            </AlertDialogFooter>
+          </AlertDialogContent>
+        </AlertDialog>
+      </>
+    );
+  }
 
   return (
     <Layout title="Inventario de Repuestos">

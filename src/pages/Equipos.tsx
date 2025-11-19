@@ -5,6 +5,8 @@ import { EquiposTable } from '@/components/equipos/EquiposTable';
 import { EquipoDialog } from '@/components/equipos/EquipoDialog';
 import { EquipoDetalleUnificado } from '@/components/EquipoDetalleUnificado';
 import { useSupabaseDataContext } from '@/context/SupabaseDataContext';
+import { useDeviceDetection } from '@/hooks/useDeviceDetection';
+import { EquiposMobile } from '@/components/mobile/EquiposMobile';
 import { Equipo } from '@/types/equipment';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { ConfirmDialog } from '@/components/ConfirmDialog';
@@ -13,10 +15,13 @@ import { Truck, TrendingUp, AlertTriangle } from 'lucide-react';
 
 export default function Equipos() {
   const { data, loading, createEquipo, updateEquipo, deleteEquipo } = useSupabaseDataContext();
+  const { isMobile } = useDeviceDetection();
   const [fichaSeleccionada, setFichaSeleccionada] = useState<string | null>(null);
   const [detalleAbierto, setDetalleAbierto] = useState(false);
   const [confirmOpen, setConfirmOpen] = useState(false);
   const [equipoToDelete, setEquipoToDelete] = useState<number | null>(null);
+  const [dialogOpen, setDialogOpen] = useState(false);
+  const [equipoToEdit, setEquipoToEdit] = useState<Equipo | null>(null);
 
   const handleVerDetalle = (ficha: string) => {
     setFichaSeleccionada(ficha);
@@ -30,11 +35,23 @@ export default function Equipos() {
   const handleEditEquipo = async (equipo: Equipo) => {
     const { id, ...payload } = equipo;
     await updateEquipo(id, payload);
+    setEquipoToEdit(null);
+    setDialogOpen(false);
   };
 
   const handleDeleteEquipo = async (id: number) => {
     setEquipoToDelete(id);
     setConfirmOpen(true);
+  };
+
+  const handleOpenAddDialog = () => {
+    setEquipoToEdit(null);
+    setDialogOpen(true);
+  };
+
+  const handleOpenEditDialog = (equipo: Equipo) => {
+    setEquipoToEdit(equipo);
+    setDialogOpen(true);
   };
 
   const confirmDelete = async () => {
@@ -46,6 +63,27 @@ export default function Equipos() {
   };
 
   if (loading) {
+    // Skeleton apropiado según dispositivo
+    if (isMobile) {
+      return (
+        <div className="flex h-screen flex-col bg-background p-4">
+          <div className="space-y-2">
+            {Array.from({ length: 6 }).map((_, i) => (
+              <Card key={i} className="p-3">
+                <div className="flex items-center gap-3">
+                  <Skeleton className="h-10 w-10 rounded-lg" />
+                  <div className="flex-1 space-y-2">
+                    <Skeleton className="h-4 w-24" />
+                    <Skeleton className="h-3 w-32" />
+                  </div>
+                </div>
+              </Card>
+            ))}
+          </div>
+        </div>
+      );
+    }
+
     return (
       <Layout title="Gestión de Equipos">
         <div className="space-y-6 lg:space-y-8">
@@ -80,6 +118,47 @@ export default function Equipos() {
   const equiposActivos = data.equipos.filter(e => e.activo).length;
   const equiposInactivos = data.equipos.filter(e => !e.activo).length;
 
+  // Renderizar versión móvil
+  if (isMobile) {
+    return (
+      <>
+        <EquiposMobile
+          equipos={data.equipos}
+          onVerDetalle={handleVerDetalle}
+          onEdit={handleOpenEditDialog}
+          onDelete={handleDeleteEquipo}
+          onAdd={handleOpenAddDialog}
+        />
+
+        {/* Dialogs compartidos */}
+        <EquipoDetalleUnificado
+          ficha={fichaSeleccionada || ''}
+          open={detalleAbierto}
+          onOpenChange={setDetalleAbierto}
+        />
+
+        <EquipoDialog
+          open={dialogOpen}
+          onOpenChange={(open) => {
+            setDialogOpen(open);
+            if (!open) setEquipoToEdit(null);
+          }}
+          onSubmit={equipoToEdit ? handleEditEquipo : handleAddEquipo}
+          initialData={equipoToEdit || undefined}
+        />
+
+        <ConfirmDialog
+          open={confirmOpen}
+          onOpenChange={setConfirmOpen}
+          onConfirm={confirmDelete}
+          title="¿Eliminar equipo?"
+          description="Esta acción no se puede deshacer. El equipo será eliminado permanentemente."
+        />
+      </>
+    );
+  }
+
+  // Versión desktop (código original)
   return (
     <Layout title="Gestión de Equipos">
 

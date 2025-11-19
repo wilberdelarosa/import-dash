@@ -1,5 +1,7 @@
 import { useState, useMemo } from 'react';
 import { usePlanesAsignados, type PlanAsignadoDetallado } from '@/hooks/usePlanesAsignados';
+import { useDeviceDetection } from '@/hooks/useDeviceDetection';
+import { PlanesAsignadosMobile } from '@/components/mobile/PlanesAsignadosMobile';
 import {
   Table,
   TableBody,
@@ -18,6 +20,7 @@ import { Loader2, Search, X, Edit, Check, AlertTriangle, Calendar, User } from '
 import { cn } from '@/lib/utils';
 
 export function PlanesAsignadosTable() {
+  const { isMobile } = useDeviceDetection();
   const { planes, loading, actualizarPlanAsignado, eliminarPlanAsignado } = usePlanesAsignados();
   
   const [busqueda, setBusqueda] = useState('');
@@ -163,11 +166,23 @@ export function PlanesAsignadosTable() {
   };
 
   if (loading) {
+    if (isMobile) {
+      return (
+        <div className="flex h-screen items-center justify-center bg-background">
+          <Loader2 className="h-8 w-8 animate-spin text-primary" />
+        </div>
+      );
+    }
     return (
       <div className="flex items-center justify-center h-96">
         <Loader2 className="h-8 w-8 animate-spin text-slate-400" />
       </div>
     );
+  }
+
+  // Versión móvil
+  if (isMobile) {
+    return <PlanesAsignadosMobile />;
   }
 
   return (

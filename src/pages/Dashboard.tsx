@@ -2,6 +2,9 @@ import { useState, useMemo } from 'react';
 import { Layout } from '@/components/Layout';
 import { Navigation } from '@/components/Navigation';
 import { useSupabaseDataContext } from '@/context/SupabaseDataContext';
+import { useDeviceDetection } from '@/hooks/useDeviceDetection';
+import { ResponsiveWrapper } from '@/components/mobile/ResponsiveWrapper';
+import { DashboardMobile } from '@/components/mobile/DashboardMobile';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
@@ -39,6 +42,7 @@ const formatEquipoReferencia = (nombre?: string | null, ficha?: string | null) =
 export default function Dashboard() {
   const { data, loading } = useSupabaseDataContext();
   const navigate = useNavigate();
+  const { isMobile } = useDeviceDetection();
   const [fichaSeleccionada, setFichaSeleccionada] = useState<string | null>(null);
   const [dialogOpen, setDialogOpen] = useState(false);
   const [novedadesExpanded, setNovedadesExpanded] = useState(false);
@@ -103,6 +107,24 @@ export default function Dashboard() {
   };
 
   if (loading) {
+    // Mostrar skeleton apropiado según dispositivo
+    if (isMobile) {
+      return (
+        <div className="flex h-screen flex-col bg-background p-4">
+          <div className="space-y-4">
+            {Array.from({ length: 4 }).map((_, index) => (
+              <Card key={index}>
+                <CardHeader>
+                  <Skeleton className="h-4 w-32" />
+                  <Skeleton className="h-6 w-16 mt-2" />
+                </CardHeader>
+              </Card>
+            ))}
+          </div>
+        </div>
+      );
+    }
+
     return (
       <Layout title="Resumen ejecutivo">
         <div className="grid gap-6 md:grid-cols-2 xl:grid-cols-4">
@@ -122,6 +144,19 @@ export default function Dashboard() {
     );
   }
 
+  // Renderizar versión móvil o desktop según dispositivo
+  if (isMobile) {
+    return (
+      <DashboardMobile
+        equiposActivos={estadisticas.equiposActivos}
+        mantenimientosVencidos={estadisticas.mantenimientosVencidos}
+        mantenimientosProgramados={estadisticas.mantenimientosProgramados}
+        inventarioBajo={estadisticas.inventarioBajo}
+      />
+    );
+  }
+
+  // Versión desktop (código original)
   return (
     <Layout title="Resumen ejecutivo">
 
