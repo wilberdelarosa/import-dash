@@ -253,7 +253,7 @@ export default function ListasPersonalizadas() {
             : 'Sin detalle disponible para el modelo registrado.',
         kitRecomendado: piezas.length
           ? piezas
-              .map((pieza) => `${pieza.pieza.numero_parte} �� ${pieza.pieza.descripcion}`)
+              .map((pieza) => `${pieza.pieza.numero_parte} — ${pieza.pieza.descripcion}`)
               .join(' \n')
           : 'No hay kit sugerido para este modelo.',
         tareasClave: tareas.length ? tareas.join(' \n') : 'Sin tareas recomendadas en el catalogo.',

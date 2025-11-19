@@ -860,7 +860,7 @@ export function useSupabaseData() {
       await recordHistorialEvent({
         tipo: 'inventario_creado',
         modulo: 'inventarios',
-        descripcion: `Se registr�� el repuesto ${inventario.nombre}`,
+        descripcion: `Se registró el repuesto ${inventario.nombre}`,
         nombre: inventario.nombre,
         datosDespues: { id: inserted?.id, ...inventario },
         metadata: {
@@ -872,7 +872,7 @@ export function useSupabaseData() {
 
       toast({
         title: 'Inventario registrado',
-        description: `Se agreg�� ${inventario.nombre} al cat��logo.`,
+        description: `Se agregó ${inventario.nombre} al catálogo.`,
       });
 
       await loadData(true);
@@ -897,8 +897,8 @@ export function useSupabaseData() {
       const existing = data.inventarios.find((item) => item.id === id);
       if (!existing) {
         toast({
-          title: '�?O Error',
-          description: 'No se encontr�� el item seleccionado',
+          title: '❌ Error',
+          description: 'No se encontró el item seleccionado',
           variant: 'destructive',
         });
         throw new Error('Inventario no encontrado');
@@ -924,7 +924,7 @@ export function useSupabaseData() {
       await recordHistorialEvent({
         tipo: 'inventario_actualizado',
         modulo: 'inventarios',
-        descripcion: `Se actualiz�� ${inventario.nombre}`,
+        descripcion: `Se actualizó ${inventario.nombre}`,
         nombre: inventario.nombre,
         datosAntes: existing,
         datosDespues: { id, ...inventario },
@@ -958,8 +958,8 @@ export function useSupabaseData() {
       const existing = data.inventarios.find((item) => item.id === id);
       if (!existing) {
         toast({
-          title: '�?O Error',
-          description: 'No se encontr�� el item de inventario a eliminar',
+          title: '❌ Error',
+          description: 'No se encontró el item de inventario a eliminar',
           variant: 'destructive',
         });
         throw new Error('Inventario no encontrado');
@@ -975,7 +975,7 @@ export function useSupabaseData() {
       await recordHistorialEvent({
         tipo: 'inventario_eliminado',
         modulo: 'inventarios',
-        descripcion: `Se elimin�� ${existing.nombre} del inventario`,
+        descripcion: `Se eliminó ${existing.nombre} del inventario`,
         nombre: existing.nombre,
         datosAntes: existing,
         metadata: {
@@ -986,7 +986,7 @@ export function useSupabaseData() {
 
       toast({
         title: 'Inventario eliminado',
-        description: 'El registro se elimin�� correctamente.',
+        description: 'El registro se eliminó correctamente.',
       });
 
       await loadData(true);

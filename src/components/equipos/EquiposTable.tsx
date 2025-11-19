@@ -235,11 +235,11 @@ export function EquiposTable({ equipos, onEdit, onDelete, onVerDetalle }: Equipo
         <div className="relative">
           <Sparkles className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-primary" />
           <Input
-            placeholder={'BÃºsqueda inteligente (ej. "equipos que no son Caterpillar y camiones con ficha > AC-44")'}
+            placeholder={'Búsqueda inteligente (ej. "equipos que no son Caterpillar y camiones con ficha > AC-44")'}
             value={smartQuery}
             onChange={(e) => setSmartQuery(e.target.value)}
             className="pl-10 text-sm"
-            aria-label="BÃºsqueda inteligente con IA"
+            aria-label="Búsqueda inteligente con IA"
           />
         </div>
         {smartFilters.tags.length > 0 && (
@@ -263,7 +263,7 @@ export function EquiposTable({ equipos, onEdit, onDelete, onVerDetalle }: Equipo
             <SelectValue placeholder="CategorÃ­a" />
           </SelectTrigger>
           <SelectContent>
-            <SelectItem value="all">Todas las categorÃ­as</SelectItem>
+            <SelectItem value="all">Todas las categorías</SelectItem>
             {categorias.map(cat => (
               <SelectItem key={cat} value={cat}>{cat}</SelectItem>
             ))}
@@ -300,7 +300,7 @@ export function EquiposTable({ equipos, onEdit, onDelete, onVerDetalle }: Equipo
             <div className="hidden w-full sm:block">{renderFilterControls()}</div>
             <SheetContent side="bottom" className="sm:hidden">
               <SheetHeader className="text-left">
-                <SheetTitle>Filtros y bÃºsqueda</SheetTitle>
+                <SheetTitle>Filtros y búsqueda</SheetTitle>
                 <SheetDescription>Refina la tabla para encontrar el equipo que necesitas.</SheetDescription>
               </SheetHeader>
               <div className="mt-6 space-y-4">
@@ -368,8 +368,8 @@ export function EquiposTable({ equipos, onEdit, onDelete, onVerDetalle }: Equipo
                   <TableHead>Nombre</TableHead>
                   <TableHead>Marca</TableHead>
                   <TableHead>Modelo</TableHead>
-                  <TableHead>NÂ° Serie</TableHead>
-                  <TableHead>CategorÃ­a</TableHead>
+                  <TableHead>N° Serie</TableHead>
+                  <TableHead>Categoría</TableHead>
                   <TableHead>Placa</TableHead>
                   <TableHead>Estado</TableHead>
                   <TableHead>Acciones</TableHead>
