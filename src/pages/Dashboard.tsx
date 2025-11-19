@@ -8,7 +8,7 @@ import { Badge } from '@/components/ui/badge';
 import { Separator } from '@/components/ui/separator';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { Button } from '@/components/ui/button';
-import { Activity, AlertTriangle, CalendarClock, Clock, Users, ExternalLink, Sparkles, ListChecks } from 'lucide-react';
+import { Activity, AlertTriangle, CalendarClock, Clock, Users, ExternalLink, Sparkles, ListChecks, ChevronDown, ChevronUp } from 'lucide-react';
 import { Skeleton } from '@/components/ui/skeleton';
 import { EquipoDetalleUnificado } from '@/components/EquipoDetalleUnificado';
 import { EquipoLink } from '@/components/EquipoLink';
@@ -41,6 +41,7 @@ export default function Dashboard() {
   const navigate = useNavigate();
   const [fichaSeleccionada, setFichaSeleccionada] = useState<string | null>(null);
   const [dialogOpen, setDialogOpen] = useState(false);
+  const [novedadesExpanded, setNovedadesExpanded] = useState(false);
 
   // Memoizar estadísticas para evitar recálculos en cada render
   const estadisticas = useMemo(() => {
@@ -126,47 +127,67 @@ export default function Dashboard() {
 
       <div className="space-y-6 lg:space-y-8">
         <Card className="border-primary/30 bg-primary/5">
-          <CardHeader className="pb-3 space-y-3">
-            <CardTitle className="flex items-center gap-2 text-primary text-lg sm:text-xl">
-              <Sparkles className="h-5 w-5 sm:h-6 sm:w-6" /> Novedades del módulo de mantenimiento inteligente
+          <CardHeader 
+            className="pb-3 cursor-pointer hover:bg-primary/5 transition-colors rounded-t-lg"
+            onClick={() => setNovedadesExpanded(!novedadesExpanded)}
+          >
+            <CardTitle className="flex items-center justify-between gap-2 text-primary text-lg sm:text-xl">
+              <div className="flex items-center gap-2">
+                <Sparkles className="h-5 w-5 sm:h-6 sm:w-6" /> 
+                Novedades del módulo de mantenimiento inteligente
+              </div>
+              {novedadesExpanded ? (
+                <ChevronUp className="h-5 w-5 shrink-0" />
+              ) : (
+                <ChevronDown className="h-5 w-5 shrink-0" />
+              )}
             </CardTitle>
-            <CardDescription className="text-sm">
-              Accede rápidamente a los kits Caterpillar sugeridos, crea listas personalizadas y abre la ficha del equipo desde el tablero.
-            </CardDescription>
+            {!novedadesExpanded && (
+              <CardDescription className="text-sm">
+                Clic para ver las nuevas funcionalidades disponibles
+              </CardDescription>
+            )}
           </CardHeader>
-          <CardContent className="space-y-3 text-sm">
-            <div className="flex flex-col gap-2.5">
-              <div className="flex items-start gap-2">
-                <ListChecks className="mt-0.5 h-4 w-4 text-primary shrink-0" />
-                <span className="text-sm">
-                  Consulta los kits recomendados y tareas clave desde la ficha del equipo en <strong>Equipos &gt; Ver detalle</strong>.
-                </span>
-              </div>
-              <div className="flex items-start gap-2">
-                <ListChecks className="mt-0.5 h-4 w-4 text-primary shrink-0" />
-                <span className="text-sm">
-                  Utiliza el nuevo <strong>constructor de listas personalizadas</strong> para elegir columnas, filtros y exportar reportes en PDF/Excel.
-                </span>
-              </div>
-              <div className="flex items-start gap-2">
-                <ListChecks className="mt-0.5 h-4 w-4 text-primary shrink-0" />
-                <span className="text-sm">
-                  Desde este dashboard, haz clic en los indicadores para abrir listas filtradas y revisar los equipos con alerta.
-                </span>
-              </div>
-            </div>
-            <div className="flex flex-col sm:flex-row sm:flex-wrap items-stretch sm:items-center gap-2 sm:gap-3 pt-2">
-              <Button variant="default" size="sm" asChild className="w-full sm:w-auto">
-                <Link to="/equipos">Abrir gestión de equipos</Link>
-              </Button>
-              <Button variant="outline" size="sm" asChild className="w-full sm:w-auto">
-                <Link to="/listas-personalizadas">Listas personalizadas</Link>
-              </Button>
-              <Button variant="ghost" size="sm" onClick={() => navigate('/asistente')} className="text-primary w-full sm:w-auto">
-                Asistente IA
-              </Button>
-            </div>
-          </CardContent>
+          {novedadesExpanded && (
+            <>
+              <CardContent className="space-y-3 text-sm pt-0">
+                <CardDescription className="text-sm">
+                  Accede rápidamente a los kits Caterpillar sugeridos, crea listas personalizadas y abre la ficha del equipo desde el tablero.
+                </CardDescription>
+                <div className="flex flex-col gap-2.5">
+                  <div className="flex items-start gap-2">
+                    <ListChecks className="mt-0.5 h-4 w-4 text-primary shrink-0" />
+                    <span className="text-sm">
+                      Consulta los kits recomendados y tareas clave desde la ficha del equipo en <strong>Equipos &gt; Ver detalle</strong>.
+                    </span>
+                  </div>
+                  <div className="flex items-start gap-2">
+                    <ListChecks className="mt-0.5 h-4 w-4 text-primary shrink-0" />
+                    <span className="text-sm">
+                      Utiliza el nuevo <strong>constructor de listas personalizadas</strong> para elegir columnas, filtros y exportar reportes en PDF/Excel.
+                    </span>
+                  </div>
+                  <div className="flex items-start gap-2">
+                    <ListChecks className="mt-0.5 h-4 w-4 text-primary shrink-0" />
+                    <span className="text-sm">
+                      Desde este dashboard, haz clic en los indicadores para abrir listas filtradas y revisar los equipos con alerta.
+                    </span>
+                  </div>
+                </div>
+                <div className="flex flex-col sm:flex-row sm:flex-wrap items-stretch sm:items-center gap-2 sm:gap-3 pt-2">
+                  <Button variant="default" size="sm" asChild className="w-full sm:w-auto">
+                    <Link to="/equipos">Abrir gestión de equipos</Link>
+                  </Button>
+                  <Button variant="outline" size="sm" asChild className="w-full sm:w-auto">
+                    <Link to="/listas-personalizadas">Listas personalizadas</Link>
+                  </Button>
+                  <Button variant="ghost" size="sm" onClick={() => navigate('/asistente')} className="text-primary w-full sm:w-auto">
+                    Asistente IA
+                  </Button>
+                </div>
+              </CardContent>
+            </>
+          )}
         </Card>
 
       {estadisticas.mantenimientosVencidos > 0 && (
@@ -254,7 +275,11 @@ export default function Dashboard() {
           </CardHeader>
           <CardContent>
             <p className="text-sm text-muted-foreground flex items-center gap-1.5 group-hover:text-foreground transition-colors">
-              Con menos de 50 horas/km restantes
+              {estadisticas.mantenimientosVencidos > 0 ? (
+                <span>Vencidos: <span className="font-semibold text-destructive">{estadisticas.mantenimientosVencidos}</span> ({Math.abs(data.mantenimientosProgramados.filter(m => m.horasKmRestante < 0).reduce((min, m) => Math.min(min, m.horasKmRestante), 0))}h)</span>
+              ) : (
+                <span>Con menos de 50 horas/km restantes</span>
+              )}
               <ExternalLink className="h-3.5 w-3.5 opacity-0 group-hover:opacity-100 transition-opacity" />
             </p>
           </CardContent>

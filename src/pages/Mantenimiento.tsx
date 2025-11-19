@@ -1037,7 +1037,12 @@ export default function Mantenimiento() {
               return (
                 <div
                   key={estado}
-                  className="flex items-center space-x-2 rounded-md px-2 py-1.5 transition-colors hover:bg-white dark:hover:bg-slate-800/50"
+                  className={cn(
+                    "flex items-center space-x-2 rounded-md px-2 py-1.5 transition-all duration-200",
+                    filtros.estados.includes(estado)
+                      ? "bg-primary/10 dark:bg-primary/20 border-2 border-primary/50 shadow-sm"
+                      : "hover:bg-white dark:hover:bg-slate-800/50 border-2 border-transparent"
+                  )}
                 >
                   <Checkbox
                     id={`estado-simple-${estado}`}

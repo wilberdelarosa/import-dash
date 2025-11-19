@@ -865,7 +865,47 @@ export default function PlanificadorInteligente() {
                 )}
 
                 {/* Kits de Mantenimiento */}
-                {kitsDelPlanActual.length > 0 && (
+                {!planActual && (
+                  <Card className="border-2 border-amber-200 dark:border-amber-800 bg-amber-50/50 dark:bg-amber-950/20">
+                    <CardHeader>
+                      <CardTitle className="text-lg flex items-center gap-2 text-amber-900 dark:text-amber-100">
+                        <Info className="h-5 w-5 text-amber-600" />
+                        Sin Plan Asignado
+                      </CardTitle>
+                      <CardDescription>
+                        Este equipo no tiene un plan de mantenimiento asignado
+                      </CardDescription>
+                    </CardHeader>
+                    <CardContent>
+                      <div className="space-y-3">
+                        <p className="text-sm text-muted-foreground">
+                          Los equipos que no son Caterpillar o no tienen planes específicos asignados no cuentan con:
+                        </p>
+                        <ul className="space-y-2 text-sm">
+                          <li className="flex items-start gap-2">
+                            <span className="text-amber-600 mt-0.5">•</span>
+                            <span>Rutas predictivas de mantenimiento</span>
+                          </li>
+                          <li className="flex items-start gap-2">
+                            <span className="text-amber-600 mt-0.5">•</span>
+                            <span>Kits de repuestos asociados</span>
+                          </li>
+                          <li className="flex items-start gap-2">
+                            <span className="text-amber-600 mt-0.5">•</span>
+                            <span>Intervalos de mantenimiento predefinidos</span>
+                          </li>
+                        </ul>
+                        <div className="mt-4 p-3 bg-white dark:bg-slate-900 rounded-lg border border-amber-200 dark:border-amber-800">
+                          <p className="text-xs text-muted-foreground">
+                            <strong>Sugerencia:</strong> Puedes asignar un plan manualmente desde el módulo de Planes de Mantenimiento
+                          </p>
+                        </div>
+                      </div>
+                    </CardContent>
+                  </Card>
+                )}
+                
+                {planActual && kitsDelPlanActual.length > 0 && (
                   <Card className="border-2 border-purple-200 dark:border-purple-800">
                     <CardHeader>
                       <CardTitle className="text-lg flex items-center gap-2">

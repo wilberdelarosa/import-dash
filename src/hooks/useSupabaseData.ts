@@ -1203,7 +1203,7 @@ export function useSupabaseData() {
     const unidadLectura = unidad ?? (mantenimiento.tipoMantenimiento.toLowerCase().includes('km') ? 'km' : 'horas');
     const incremento = horasActuales - horasPrevias;
     const fechaIso = normalizeDateInputToIso(fecha);
-    const restanteCalculado = Math.max(mantenimiento.proximoMantenimiento - horasActuales, 0);
+    const restanteCalculado = mantenimiento.proximoMantenimiento - horasActuales;
 
     try {
       const { error: updateError } = await supabase
@@ -1306,7 +1306,7 @@ export function useSupabaseData() {
     const horasPrevias = Number(mantenimiento.horasKmUltimoMantenimiento ?? 0);
     const incremento = lectura - horasPrevias;
     const proximo = lectura + Number(mantenimiento.frecuencia ?? 0);
-    const restante = Math.max(proximo - lectura, 0);
+    const restante = proximo - lectura;
 
     try {
       const { error: updateError } = await supabase

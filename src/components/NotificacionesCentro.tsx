@@ -72,12 +72,10 @@ export function NotificacionesCentro() {
         <Button
           variant="ghost"
           size="icon"
-          className="relative h-12 w-12 rounded-2xl border-2 border-slate-700/50 bg-gradient-to-br from-slate-800 via-slate-900 to-slate-950 shadow-[0_8px_24px_rgba(0,0,0,0.4)] text-slate-100 transition-all duration-300 hover:border-slate-600 hover:shadow-[0_12px_32px_rgba(0,0,0,0.6)] hover:scale-105 active:scale-95"
+          className="relative h-12 w-12 rounded-2xl bg-background hover:bg-accent transition-all duration-300 hover:scale-105 active:scale-95"
           title="Centro de Notificaciones"
         >
-          <div className="flex h-full w-full items-center justify-center rounded-xl border border-white/10 bg-gradient-to-b from-slate-800/50 to-transparent">
-            <Bell className="h-6 w-6 text-slate-100 drop-shadow-lg" />
-          </div>
+          <Bell className="h-6 w-6 text-amber-500 dark:text-amber-400" />
           {noLeidas > 0 && (
             <span className="absolute -top-2 -right-2 flex h-7 min-w-[28px] items-center justify-center rounded-full bg-gradient-to-br from-red-600 via-red-500 to-red-600 px-2 py-1 text-[11px] font-bold tracking-wide text-white shadow-[0_4px_12px_rgba(220,38,38,0.6)] ring-2 ring-slate-950 animate-pulse">
               {noLeidas > 99 ? '99+' : noLeidas}
