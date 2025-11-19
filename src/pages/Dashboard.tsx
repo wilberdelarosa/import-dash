@@ -70,8 +70,8 @@ export default function Dashboard() {
   const mantenimientosVencidosList = useMemo(() => {
     return data.mantenimientosProgramados
       .filter((mantenimiento) => mantenimiento.horasKmRestante <= 0)
-      .sort((a, b) => a.horasKmRestante - b.horasKmRestante)
-      .slice(0, LIMITE_MANTENIMIENTOS_DASHBOARD);
+      .sort((a, b) => a.horasKmRestante - b.horasKmRestante);
+      // NO aplicar límite aquí - mostrar TODOS los vencidos
   }, [data.mantenimientosProgramados]);
 
   const mantenimientosProximosList = useMemo(() => {
@@ -336,7 +336,12 @@ export default function Dashboard() {
                       </TableCell>
                       <TableCell>{mantenimiento.tipoMantenimiento}</TableCell>
                       <TableCell className="text-right">
-                        <Badge variant="destructive">{formatRemainingLabel(mantenimiento.horasKmRestante)}</Badge>
+                        <Badge variant="destructive">
+                          {formatRemainingLabel(
+                            mantenimiento.horasKmRestante,
+                            mantenimiento.tipoMantenimiento === 'Kilómetros' ? 'km' : 'horas'
+                          )}
+                        </Badge>
                       </TableCell>
                       <TableCell>{formatDate(mantenimiento.fechaUltimaActualizacion)}</TableCell>
                     </TableRow>
@@ -385,7 +390,10 @@ export default function Dashboard() {
                       <TableCell>{mantenimiento.tipoMantenimiento}</TableCell>
                       <TableCell className="text-right">
                         <Badge variant={getRemainingVariant(mantenimiento.horasKmRestante)}>
-                          {formatRemainingLabel(mantenimiento.horasKmRestante)}
+                          {formatRemainingLabel(
+                            mantenimiento.horasKmRestante,
+                            mantenimiento.tipoMantenimiento === 'Kilómetros' ? 'km' : 'horas'
+                          )}
                         </Badge>
                       </TableCell>
                       <TableCell>{formatDate(mantenimiento.fechaUltimaActualizacion)}</TableCell>

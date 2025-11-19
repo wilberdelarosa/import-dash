@@ -251,6 +251,24 @@ export function Planificador() {
 
       if (error) throw error;
 
+      // Registrar en historial
+      await supabase.from('historial_eventos').insert({
+        tipo_evento: 'planificacion_creada',
+        modulo: 'mantenimientos',
+        descripcion: `Se asignó el intervalo ${intervaloSeleccionado?.codigo} al equipo ${equipoParaAsignar.nombreEquipo}`,
+        ficha_equipo: equipoParaAsignar.fichaEquipo,
+        nombre_equipo: equipoParaAsignar.nombreEquipo,
+        usuario_responsable: 'Sistema',
+        nivel_importancia: 'info',
+        datos_despues: JSON.parse(JSON.stringify(data)),
+        metadata: JSON.parse(JSON.stringify({
+          planId: selectedPlanId,
+          intervaloId: selectedIntervaloId,
+          kitId: selectedKitId,
+          fechaProgramada: fechaProgramada,
+        })),
+      });
+
       toast({
         title: 'Plan asignado',
         description: `Se asignó ${intervaloSeleccionado?.codigo} a ${equipoParaAsignar.nombreEquipo}`,
@@ -280,6 +298,20 @@ export function Planificador() {
         .eq('id', editingPlan.id);
 
       if (error) throw error;
+
+      // Registrar en historial
+      await supabase.from('historial_eventos').insert({
+        tipo_evento: 'planificacion_actualizada',
+        modulo: 'mantenimientos',
+        descripcion: `Se actualizaron las observaciones de la planificación de ${editingPlan.nombreEquipo}`,
+        ficha_equipo: editingPlan.fichaEquipo,
+        nombre_equipo: editingPlan.nombreEquipo,
+        usuario_responsable: 'Sistema',
+        nivel_importancia: 'info',
+        datos_antes: JSON.parse(JSON.stringify({ planificacionId: editingPlan.id })),
+        datos_despues: JSON.parse(JSON.stringify({ observaciones })),
+        metadata: JSON.parse(JSON.stringify({ planificacionId: editingPlan.id })),
+      });
 
       toast({
         title: 'Planificación actualizada',
@@ -311,6 +343,20 @@ export function Planificador() {
 
       if (error) throw error;
 
+      // Registrar en historial
+      await supabase.from('historial_eventos').insert({
+        tipo_evento: 'planificacion_completada',
+        modulo: 'mantenimientos',
+        descripcion: `Se completó la planificación de mantenimiento para ${plan.nombreEquipo}`,
+        ficha_equipo: plan.fichaEquipo,
+        nombre_equipo: plan.nombreEquipo,
+        usuario_responsable: 'Sistema',
+        nivel_importancia: 'info',
+        datos_antes: JSON.parse(JSON.stringify({ estado: plan.estado })),
+        datos_despues: JSON.parse(JSON.stringify({ estado: 'completado' })),
+        metadata: JSON.parse(JSON.stringify({ planificacionId: plan.id, intervaloId: plan.intervaloId })),
+      });
+
       toast({
         title: 'Mantenimiento completado',
         description: `Se marcó como completado el mantenimiento de ${plan.nombreEquipo}`,
@@ -338,6 +384,23 @@ export function Planificador() {
         .eq('id', plan.id);
 
       if (error) throw error;
+
+      // Registrar en historial
+      await supabase.from('historial_eventos').insert({
+        tipo_evento: 'planificacion_eliminada',
+        modulo: 'mantenimientos',
+        descripcion: `Se eliminó la planificación de mantenimiento de ${plan.nombreEquipo}`,
+        ficha_equipo: plan.fichaEquipo,
+        nombre_equipo: plan.nombreEquipo,
+        usuario_responsable: 'Sistema',
+        nivel_importancia: 'warning',
+        datos_antes: JSON.parse(JSON.stringify({
+          planId: plan.planId,
+          intervaloId: plan.intervaloId,
+          estado: plan.estado,
+        })),
+        metadata: JSON.parse(JSON.stringify({ planificacionId: plan.id, intervaloId: plan.intervaloId })),
+      });
 
       toast({
         title: 'Planificación eliminada',

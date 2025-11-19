@@ -172,15 +172,14 @@ export function useHistorial() {
     try {
       setLoading(true);
 
+      // Cargar TODOS los eventos y aplicar filtros en memoria
+      // No filtrar por tipo_evento en la query porque se filtra por categoría (base) no por tipo detallado
       let query = supabase
         .from('historial_eventos')
         .select('*')
         .order('created_at', { ascending: false });
 
-      if (filtros.tipoEvento.length > 0) {
-        query = query.in('tipo_evento', filtros.tipoEvento);
-      }
-
+      // Aplicar solo filtros que coinciden directamente con columnas de la BD
       if (filtros.modulo.length > 0) {
         query = query.in('modulo', filtros.modulo);
       }

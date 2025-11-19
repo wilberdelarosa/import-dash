@@ -289,7 +289,10 @@ export function EquipoDetalleUnificado({ ficha, open, onOpenChange }: Props) {
                       )}
                       {proximoMantenimiento && (
                         <Badge variant={getRemainingVariant(proximoMantenimiento.horasKmRestante)}>
-                          {formatRemainingLabel(proximoMantenimiento.horasKmRestante)}
+                          {formatRemainingLabel(
+                            proximoMantenimiento.horasKmRestante,
+                            proximoMantenimiento.tipoMantenimiento === 'Kilómetros' ? 'km' : 'horas'
+                          )}
                         </Badge>
                       )}
                     </div>
@@ -349,19 +352,61 @@ export function EquipoDetalleUnificado({ ficha, open, onOpenChange }: Props) {
                       )}
                     </div>
                     <div className="rounded-md border border-primary/20 bg-white/70 p-3 text-xs text-muted-foreground dark:bg-background">
-                      <p className="font-semibold text-primary">Estado del equipo</p>
-                      <div className="mt-2 space-y-1">
-                        <p className="text-sm text-foreground">
-                          Horas actuales: <span className="font-medium">{horasActuales}</span>
-                        </p>
-                        <p className="text-sm text-foreground">
-                          Último mant.: <span className="font-medium">{horasUltimoMantenimiento || 'N/A'}</span>
-                        </p>
-                        {ultimaLectura && (
-                          <p className="text-[11px] text-muted-foreground">
-                            Actualizado {formatDistanceToNow(new Date(ultimaLectura.fecha), { addSuffix: true, locale: es })}
+                      <p className="font-semibold text-primary mb-3">Estado del equipo</p>
+                      <div className="space-y-3">
+                        <div className="bg-primary/5 rounded p-2.5 border border-primary/10">
+                          <p className="text-xs text-muted-foreground uppercase tracking-wide mb-1">Lectura actual</p>
+                          <p className="text-xl font-bold text-foreground">
+                            {horasActuales.toLocaleString()}
+                            <span className="text-sm font-normal text-muted-foreground ml-1">
+                              {proximoMantenimiento?.tipoMantenimiento === 'Kilómetros' ? 'km' : 'h'}
+                            </span>
                           </p>
+                          {ultimaLectura && (
+                            <p className="text-[11px] text-muted-foreground mt-1">
+                              Actualizado {formatDistanceToNow(new Date(ultimaLectura.fecha), { addSuffix: true, locale: es })}
+                            </p>
+                          )}
+                        </div>
+                        {proximoMantenimiento && (
+                          <div className={`rounded p-2.5 border ${
+                            proximoMantenimiento.horasKmRestante <= 0 
+                              ? 'bg-destructive/5 border-destructive/20' 
+                              : proximoMantenimiento.horasKmRestante <= 50
+                              ? 'bg-amber-50 dark:bg-amber-950/20 border-amber-200 dark:border-amber-900'
+                              : 'bg-emerald-50 dark:bg-emerald-950/20 border-emerald-200 dark:border-emerald-900'
+                          }`}>
+                            <p className="text-xs text-muted-foreground uppercase tracking-wide mb-1">
+                              {proximoMantenimiento.horasKmRestante <= 0 ? 'Vencido por' : 'Restante'}
+                            </p>
+                            <p className={`text-xl font-bold ${
+                              proximoMantenimiento.horasKmRestante <= 0
+                                ? 'text-destructive'
+                                : proximoMantenimiento.horasKmRestante <= 50
+                                ? 'text-amber-600 dark:text-amber-400'
+                                : 'text-emerald-600 dark:text-emerald-400'
+                            }`}>
+                              {Math.abs(proximoMantenimiento.horasKmRestante).toLocaleString()}
+                              <span className="text-sm font-normal ml-1">
+                                {proximoMantenimiento.tipoMantenimiento === 'Kilómetros' ? 'km' : 'h'}
+                              </span>
+                            </p>
+                            <p className="text-xs text-muted-foreground mt-1">
+                              Próximo en: {proximoMantenimiento.proximoMantenimiento.toLocaleString()}{' '}
+                              {proximoMantenimiento.tipoMantenimiento === 'Kilómetros' ? 'km' : 'h'}
+                            </p>
+                          </div>
                         )}
+                        <div className="pt-2 border-t border-primary/10">
+                          <p className="text-xs text-muted-foreground">
+                            Último mant.: <span className="font-medium text-foreground">{horasUltimoMantenimiento.toLocaleString() || 'N/A'}</span>
+                            {horasUltimoMantenimiento > 0 && proximoMantenimiento && (
+                              <span className="ml-1">
+                                {proximoMantenimiento.tipoMantenimiento === 'Kilómetros' ? 'km' : 'h'}
+                              </span>
+                            )}
+                          </p>
+                        </div>
                       </div>
                     </div>
                   </div>
@@ -526,9 +571,12 @@ export function EquipoDetalleUnificado({ ficha, open, onOpenChange }: Props) {
                   <CardHeader>
                     <div className="flex items-center justify-between">
                       <CardTitle className="text-lg">{mant.tipoMantenimiento}</CardTitle>
-                      <Badge variant={getRemainingVariant(mant.horasKmRestante)}>
-                        {formatRemainingLabel(mant.horasKmRestante)}
-                      </Badge>
+                        <Badge variant={getRemainingVariant(mant.horasKmRestante)}>
+                          {formatRemainingLabel(
+                            mant.horasKmRestante,
+                            mant.tipoMantenimiento === 'Kilómetros' ? 'km' : 'horas'
+                          )}
+                        </Badge>
                     </div>
                   </CardHeader>
                   <CardContent className="grid gap-3 sm:grid-cols-2">
