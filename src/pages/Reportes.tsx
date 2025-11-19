@@ -219,7 +219,7 @@ export default function Reportes() {
         equipo.categoria,
         equipo.marca,
         equipo.modelo,
-        `${horasKm.toLocaleString()} ${unidad}`,
+        `${horasKm.toFixed(1)} ${unidad}`,
         equipo.activo ? 'Activo' : 'Inactivo'
       ];
     });
@@ -754,7 +754,7 @@ export default function Reportes() {
                     <p className="text-sm text-muted-foreground">{mant.ficha}</p>
                   </div>
                   <Badge variant="destructive">
-                    Vencido: {Math.abs(mant.horasKmRestante).toFixed(0)} {mant.tipoMantenimiento === 'Horas' ? 'hrs' : 'km'}
+                    Vencido: {Math.abs(mant.horasKmRestante).toFixed(1)} {mant.tipoMantenimiento === 'Horas' ? 'hrs' : 'km'}
                   </Badge>
                 </div>
               ))}
@@ -765,7 +765,7 @@ export default function Reportes() {
                     <p className="text-sm text-muted-foreground">{mant.ficha}</p>
                   </div>
                   <Badge variant="secondary">
-                    Resta: {mant.horasKmRestante.toFixed(0)} {mant.tipoMantenimiento === 'Horas' ? 'hrs' : 'km'}
+                    Resta: {mant.horasKmRestante.toFixed(1)} {mant.tipoMantenimiento === 'Horas' ? 'hrs' : 'km'}
                   </Badge>
                 </div>
               ))}

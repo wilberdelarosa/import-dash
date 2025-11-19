@@ -724,7 +724,7 @@ export default function PlanesMantenimiento() {
                 <CardContent>
                   <div className="text-2xl font-bold text-green-600">{estadisticas.activos}</div>
                   <p className="text-xs text-muted-foreground mt-1">
-                    {((estadisticas.activos / estadisticas.total) * 100).toFixed(0)}% del total
+                    {((estadisticas.activos / estadisticas.total) * 100).toFixed(1)}% del total
                   </p>
                 </CardContent>
               </Card>
@@ -739,7 +739,7 @@ export default function PlanesMantenimiento() {
                 <CardContent>
                   <div className="text-2xl font-bold text-gray-600">{estadisticas.inactivos}</div>
                   <p className="text-xs text-muted-foreground mt-1">
-                    {((estadisticas.inactivos / estadisticas.total) * 100).toFixed(0)}% del total
+                    {((estadisticas.inactivos / estadisticas.total) * 100).toFixed(1)}% del total
                   </p>
                 </CardContent>
               </Card>

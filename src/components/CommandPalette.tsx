@@ -181,7 +181,7 @@ export function CommandPalette() {
                     <div className="flex flex-col">
                       <span className="font-medium">{mant.nombreEquipo}</span>
                       <span className="text-xs text-muted-foreground">
-                        {mant.tipoMantenimiento} • Faltan {Math.round(mant.horasKmRestante)} hrs
+                        {mant.tipoMantenimiento} • Faltan {mant.horasKmRestante.toFixed(1)} hrs
                       </span>
                     </div>
                   </CommandItem>

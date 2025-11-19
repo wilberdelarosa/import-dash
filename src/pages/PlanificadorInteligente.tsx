@@ -203,7 +203,7 @@ export default function PlanificadorInteligente() {
         horasTranscurridas,
         horasActuales,
         horasUltimoMant,
-        razon: `MP asignado manualmente (${horasTranscurridas.toLocaleString()}h desde último)`,
+        razon: `MP asignado manualmente (${horasTranscurridas.toFixed(1)}h desde último)`,
         esManual: true,
       };
     }
@@ -215,7 +215,7 @@ export default function PlanificadorInteligente() {
     if (horasTranscurridas >= 2000) {
       mp = 'PM4';
       horasObjetivo = 2000;
-      razon = `Han transcurrido ${horasTranscurridas.toLocaleString()}h desde el último mantenimiento mayor`;
+      razon = `Han transcurrido ${horasTranscurridas.toFixed(1)}h desde el último mantenimiento mayor`;
     } else if (horasTranscurridas >= 1000) {
       mp = 'PM3';
       horasObjetivo = 1000;
@@ -225,7 +225,7 @@ export default function PlanificadorInteligente() {
       horasObjetivo = 500;
       razon = `Han transcurrido ${horasTranscurridas.toLocaleString()}h desde el último mantenimiento`;
     } else {
-      razon = `Mantenimiento regular cada 250h (${horasTranscurridas.toLocaleString()}h desde último)`;
+      razon = `Mantenimiento regular cada 250h (${horasTranscurridas.toFixed(1)}h desde último)`;
     }
 
     return {
@@ -600,7 +600,7 @@ export default function PlanificadorInteligente() {
                                     ? "text-orange-600" 
                                     : "text-red-600"
                                 )}>
-                                  {mantenimientoProgramado?.horasKmRestante.toLocaleString()}h
+                                  {mantenimientoProgramado?.horasKmRestante.toFixed(1)}h
                                 </p>
                               </div>
                             </div>
@@ -742,7 +742,7 @@ export default function PlanificadorInteligente() {
                             )}
                           </CardTitle>
                           <CardDescription className="mt-1">
-                            Basado en {mpSugerido.horasTranscurridas.toLocaleString()}h desde el último mantenimiento
+                            Basado en {mpSugerido.horasTranscurridas.toFixed(1)}h desde el último mantenimiento
                           </CardDescription>
                         </div>
                         <div className="flex gap-2">
@@ -802,15 +802,15 @@ export default function PlanificadorInteligente() {
                       <div className="grid grid-cols-2 gap-4">
                         <div className="p-3 bg-muted/50 rounded-lg">
                           <p className="text-xs text-muted-foreground">Horas Actuales</p>
-                          <p className="text-xl font-bold">{mpSugerido.horasActuales.toLocaleString()}h</p>
+                          <p className="text-xl font-bold">{mpSugerido.horasActuales.toFixed(1)}h</p>
                         </div>
                         <div className="p-3 bg-muted/50 rounded-lg">
                           <p className="text-xs text-muted-foreground">Último Mantenimiento</p>
-                          <p className="text-xl font-bold">{mpSugerido.horasUltimoMant.toLocaleString()}h</p>
+                          <p className="text-xl font-bold">{mpSugerido.horasUltimoMant.toFixed(1)}h</p>
                         </div>
                         <div className="p-3 bg-muted/50 rounded-lg">
                           <p className="text-xs text-muted-foreground">Horas Transcurridas</p>
-                          <p className="text-xl font-bold text-green-600">{mpSugerido.horasTranscurridas.toLocaleString()}h</p>
+                          <p className="text-xl font-bold text-green-600">{mpSugerido.horasTranscurridas.toFixed(1)}h</p>
                         </div>
                         <div className="p-3 bg-muted/50 rounded-lg">
                           <p className="text-xs text-muted-foreground">Próximo MP en</p>
@@ -821,8 +821,8 @@ export default function PlanificadorInteligente() {
                               : "text-red-600"
                           )}>
                             {mantenimientoProgramado.horasKmRestante > 0 
-                              ? `${mantenimientoProgramado.horasKmRestante.toLocaleString()}h` 
-                              : `${mantenimientoProgramado.horasKmRestante.toLocaleString()}h`}
+                              ? `${mantenimientoProgramado.horasKmRestante.toFixed(1)}h` 
+                              : `${mantenimientoProgramado.horasKmRestante.toFixed(1)}h`}
                           </p>
                         </div>
                       </div>
@@ -846,7 +846,7 @@ export default function PlanificadorInteligente() {
                                 <div>
                                   <span className="text-muted-foreground">Horas:</span>{' '}
                                   <span className="font-medium">
-                                    {ultimoMantenimientoRealizado.horasKmAlMomento.toLocaleString()}h
+                                    {ultimoMantenimientoRealizado.horasKmAlMomento.toFixed(1)}h
                                   </span>
                                 </div>
                                 <div className="col-span-2">
@@ -1073,7 +1073,7 @@ export default function PlanificadorInteligente() {
                                         Ruta #{ruta.orden} • Ciclo {ruta.ciclo}
                                       </p>
                                       <p className="text-xs text-muted-foreground">
-                                        {ruta.horasObjetivo.toLocaleString()}h objetivo
+                                        {ruta.horasObjetivo.toFixed(1)}h objetivo
                                       </p>
                                     </div>
                                   </div>
@@ -1148,7 +1148,7 @@ export default function PlanificadorInteligente() {
                           <div>
                             <p className="text-xs text-muted-foreground">Horas Totales</p>
                             <p className="text-2xl font-bold">
-                              {estadisticas.horasTotal.toLocaleString()}h
+                              {estadisticas.horasTotal.toFixed(1)}h
                             </p>
                           </div>
                         </div>
@@ -1225,7 +1225,7 @@ export default function PlanificadorInteligente() {
                 <div className="flex items-center gap-2 mt-1">
                   <Badge className="bg-green-600">{mpSugerido.mp}</Badge>
                   <span className="text-xs text-muted-foreground">
-                    Basado en {mpSugerido.horasTranscurridas.toLocaleString()}h transcurridas
+                    Basado en {mpSugerido.horasTranscurridas.toFixed(1)}h transcurridas
                   </span>
                 </div>
               </div>
