@@ -31,12 +31,12 @@ export default function Reportes() {
   const [estadoMantenimiento, setEstadoMantenimiento] = useState<'todos' | 'normal' | 'proximo' | 'vencido'>('todos');
 
 
-  const categorias = [...new Set(data.equipos.map(e => e.categoria))];
-  const marcas = [...new Set(data.equipos.map(e => e.marca))];
-  const fichas = [...new Set(data.equipos.map(e => e.ficha))].sort();
+  const categorias = [...new Set((activeEquipos || data.equipos).map(e => e.categoria))];
+  const marcas = [...new Set((activeEquipos || data.equipos).map(e => e.marca))];
+  const fichas = [...new Set((activeEquipos || data.equipos).map(e => e.ficha))].sort();
 
   const equiposConEstado = useMemo(() => (
-    data.equipos.map(equipo => {
+    (activeEquipos || data.equipos).map(equipo => {
       const mantenimiento = data.mantenimientosProgramados.find(m => m.ficha === equipo.ficha);
       const horasRestante = mantenimiento?.horasKmRestante;
 

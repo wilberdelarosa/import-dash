@@ -1,6 +1,7 @@
 import { ReactNode, useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { RefreshCw, FileDown, FileUp, Trash2, ListChecks } from 'lucide-react';
+import DataActionsToggle from '@/components/DataActionsToggle';
 import { useSupabaseDataContext } from '@/context/SupabaseDataContext';
 import { useLocalStorage } from '@/hooks/useLocalStorage';
 import { useToast } from '@/hooks/use-toast';
@@ -11,6 +12,7 @@ import { useSystemConfig } from '@/context/SystemConfigContext';
 import { BrandLogo } from '@/components/BrandLogo';
 import { Navigation } from '@/components/Navigation';
 import { ConfirmDialog } from '@/components/ConfirmDialog';
+import BottomNav from '@/components/BottomNav';
 import { CommandPalette } from '@/components/CommandPalette';
 
 interface LayoutProps {
@@ -192,60 +194,19 @@ export function Layout({ children, title }: LayoutProps) {
                 </div>
               </div>
               <Badge variant="outline" className="text-xs uppercase tracking-[0.35em] px-3 py-1">
-                v1.0.0
+                V3.0.0
               </Badge>
             </div>
             <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
-              <div className="flex flex-wrap gap-3">
-                <Button
-                  variant="outline"
-                  onClick={handleImport}
-                  size="sm"
-                  className="gap-2 transition-all duration-300 hover:bg-primary/10 hover:text-primary hover:border-primary/50 hover:shadow-md"
-                  disabled={importDisabled}
-                  title={importDisabled ? 'Importaciones manuales deshabilitadas' : undefined}
-                >
-                  <FileUp className="h-4 w-4" />
-                  Importar JSON
-                </Button>
-                <Button
-                  variant="outline"
-                  onClick={handleMigrate}
-                  size="sm"
-                  className="gap-2 transition-all duration-300 hover:bg-primary/10 hover:text-primary hover:border-primary/50 hover:shadow-md"
-                >
-                  <RefreshCw className="h-4 w-4" />
-                  Migrar a DB
-                </Button>
-                <Button
-                  variant="outline"
-                  onClick={handleExport}
-                  size="sm"
-                  className="gap-2 transition-all duration-300 hover:bg-emerald-500/10 hover:text-emerald-600 hover:border-emerald-500/50 hover:shadow-md"
-                >
-                  <FileDown className="h-4 w-4" />
-                  Exportar JSON
-                </Button>
-                <Button
-                  variant="outline"
-                  onClick={handleSmartImport}
-                  size="sm"
-                  className="gap-2 transition-all duration-300 hover:bg-blue-500/10 hover:text-blue-600 hover:border-blue-500/50 hover:shadow-md"
-                  disabled={importDisabled}
-                  title={importDisabled ? 'Importaciones manuales deshabilitadas' : undefined}
-                >
-                  <ListChecks className="h-4 w-4" />
-                  Sincronizar cambios
-                </Button>
-                <Button
-                  variant="destructive"
-                  onClick={handleClear}
-                  size="sm"
-                  className="gap-2"
-                >
-                  <Trash2 className="h-4 w-4" />
-                  Vaciar datos
-                </Button>
+              <div className="flex items-center gap-2">
+                <DataActionsToggle
+                  onImport={handleImport}
+                  onExport={handleExport}
+                  onMigrate={handleMigrate}
+                  onSmartImport={handleSmartImport}
+                  onClear={handleClear}
+                  importDisabled={importDisabled}
+                />
               </div>
               <div className="flex items-center gap-2">
                 <CommandPalette />
@@ -257,6 +218,8 @@ export function Layout({ children, title }: LayoutProps) {
         </div>
         <Navigation hideBrand />
       </header>
+        {/* Global bottom navigation for mobile */}
+        <BottomNav />
       <main className="mx-auto w-full max-w-[1600px] px-4 py-8 sm:px-6 lg:px-8 bg-gradient-to-br from-background via-background to-muted/20">{children}</main>
 
       <ConfirmDialog

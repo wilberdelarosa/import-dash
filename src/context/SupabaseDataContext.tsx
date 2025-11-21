@@ -1,7 +1,9 @@
 import { createContext, useContext, ReactNode } from 'react';
 import { useSupabaseData } from '@/hooks/useSupabaseData';
 
-const SupabaseDataContext = createContext<ReturnType<typeof useSupabaseData> | undefined>(undefined);
+type SupabaseDataValue = ReturnType<typeof useSupabaseData>;
+
+const SupabaseDataContext = createContext<SupabaseDataValue | undefined>(undefined);
 
 interface SupabaseDataProviderProps {
   children: ReactNode;

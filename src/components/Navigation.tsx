@@ -1,5 +1,5 @@
 import { Link, useLocation } from 'react-router-dom';
-import { useMemo } from 'react';
+import { useMemo, useState } from 'react';
 import { cn } from '@/lib/utils';
 import {
   Truck,
@@ -19,6 +19,7 @@ import {
   Route,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import { Popover, PopoverTrigger, PopoverContent } from '@/components/ui/popover';
 import { NotificacionesCentro } from '@/components/NotificacionesCentro';
 import { LogoutButton } from '@/components/LogoutButton';
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetDescription, SheetTrigger, SheetClose } from '@/components/ui/sheet';
@@ -47,6 +48,7 @@ interface NavigationProps {
 
 export function Navigation({ hideBrand = false }: NavigationProps) {
   const location = useLocation();
+  const [sheetOpen, setSheetOpen] = useState(false);
 
   const navLinks = useMemo(
     () =>
@@ -71,9 +73,21 @@ export function Navigation({ hideBrand = false }: NavigationProps) {
     [location.pathname],
   );
 
+  // Primary items that should always be visible
+  const primaryPaths = new Set([
+    '/',
+    '/equipos',
+    '/mantenimiento',
+    '/control-mantenimiento',
+    '/asistente',
+  ]);
+
+  const primaryItems = navItems.filter((i) => primaryPaths.has(i.path));
+  const secondaryItems = navItems.filter((i) => !primaryPaths.has(i.path));
+
   return (
     <nav className="border-b border-border/60 bg-card/80 backdrop-blur supports-[backdrop-filter]:bg-card/60 dark:border-border/40 dark:bg-card/70 mb-6">
-      <Sheet>
+      <Sheet open={sheetOpen} onOpenChange={setSheetOpen}>
         <div className="mx-auto w-full max-w-[1600px] px-4 py-3 sm:px-6 lg:px-8">
           <div className="flex items-center justify-between sm:hidden">
             <BrandLogo compact showTagline={false} />
@@ -98,7 +112,56 @@ export function Navigation({ hideBrand = false }: NavigationProps) {
                   hideBrand ? 'justify-start sm:justify-center' : 'justify-center',
                 )}
               >
-                {navLinks}
+                {/* Render only primary items in main nav */}
+                {primaryItems.map(({ path, label, icon: Icon }) => (
+                  <Link
+                    key={path}
+                    to={path}
+                    className={cn(
+                      'group relative inline-flex items-center gap-2 overflow-hidden rounded-lg px-3 py-3 text-sm font-medium transition-all duration-300 sm:py-4',
+                      location.pathname === path
+                        ? 'bg-primary/10 text-primary shadow-lg shadow-primary/20'
+                        : 'text-muted-foreground hover:bg-gradient-to-r hover:from-muted hover:via-muted/90 hover:to-muted hover:text-foreground hover:shadow-md',
+                    )}
+                  >
+                    <Icon className={cn('h-4 w-4 relative z-10')} />
+                    <span className="relative z-10">{label}</span>
+                  </Link>
+                ))}
+
+                {/* Compact control for secondary items: popover (acoplado) + sheet (desacoplado) */}
+                <div className="ml-2">
+                  <Popover>
+                    <PopoverTrigger asChild>
+                      <Button variant="outline" size="sm" className="gap-2">
+                        <Menu className="h-4 w-4" />
+                        Más
+                      </Button>
+                    </PopoverTrigger>
+                    <PopoverContent className="min-w-[220px]">
+                      <div className="flex flex-col gap-1">
+                        {secondaryItems.map(({ path, label, icon: Icon }) => (
+                          <Link
+                            key={path}
+                            to={path}
+                            className={cn(
+                              'flex items-center gap-2 rounded-md px-3 py-2 text-sm',
+                              location.pathname === path ? 'bg-muted/10 font-semibold' : 'hover:bg-muted/5',
+                            )}
+                          >
+                            <Icon className="h-4 w-4" />
+                            <span>{label}</span>
+                          </Link>
+                        ))}
+                        <div className="pt-2 border-t mt-2">
+                          <Button size="sm" variant="ghost" onClick={() => setSheetOpen(true)} className="w-full">
+                            Desacoplar menú
+                          </Button>
+                        </div>
+                      </div>
+                    </PopoverContent>
+                  </Popover>
+                </div>
               </div>
               <div className="hidden shrink-0 items-center gap-2 lg:flex">
                 <NotificacionesCentro />

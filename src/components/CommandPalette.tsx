@@ -58,8 +58,8 @@ export function CommandPalette() {
       .filter(e => 
         e.nombre.toLowerCase().includes(searchLower) ||
         e.ficha.toLowerCase().includes(searchLower) ||
-        e.marca.toLowerCase().includes(searchLower) ||
-        e.modelo.toLowerCase().includes(searchLower)
+        (e.marca || '').toLowerCase().includes(searchLower) ||
+        (e.modelo || '').toLowerCase().includes(searchLower)
       )
       .slice(0, 5);
   }, [data.equipos, search]);

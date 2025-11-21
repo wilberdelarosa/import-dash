@@ -83,12 +83,10 @@ export default function Index() {
         categorias.set(equipo.categoria, count + 1);
       }
     });
-    return Array.from(categorias.entries())
+      return Array.from(categorias.entries())
       .sort((a, b) => b[1] - a[1])
       .slice(0, 5);
-  }, [data.equipos]);
-
-  return (
+  }, [data.equipos]);  return (
     <Layout title="Dashboard - Business Intelligence">
       <div className="space-y-6">
         {/* Header */}

@@ -1303,7 +1303,7 @@ export default function Mantenimiento() {
                           placeholder="Ej. EQ-001"
                           onBlur={(event) => {
                             field.onBlur();
-                            const equipo = data.equipos.find((eq) => eq.ficha === event.target.value);
+                                                    const equipo = (activeEquipos ?? data.equipos).find((eq) => eq.ficha === event.target.value);
                             if (equipo) {
                               form.setValue('nombreEquipo', equipo.nombre, { shouldValidate: true });
                             }
