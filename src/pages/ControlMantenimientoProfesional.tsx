@@ -483,6 +483,10 @@ export default function ControlMantenimientoProfesional() {
     return data.mantenimientosProgramados.filter((m) => {
       // Solo considerar mantenimientos de equipos activos
       const equipo = activeEquipos.find(eq => eq.ficha === m.ficha);
+      
+      // Si el equipo no existe o no está activo, excluir este mantenimiento
+      if (!equipo) return false;
+      
       const matchBusqueda = 
         m.ficha.toLowerCase().includes(busqueda.toLowerCase()) ||
         m.nombreEquipo.toLowerCase().includes(busqueda.toLowerCase()) ||
@@ -591,6 +595,7 @@ export default function ControlMantenimientoProfesional() {
     ? resumenActualizaciones.pendientes.filter((mantenimiento) => (mantenimiento.horasKmRestante ?? 0) <= 25)
     : [];
 
+  // Solo mostrar mantenimientos de equipos activos en lista de próximos
   const proximos = data.mantenimientosProgramados
     .filter((m) => activeEquipos.some((e) => e.ficha === m.ficha))
     .slice()

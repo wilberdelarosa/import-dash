@@ -149,7 +149,7 @@ export function Planificador() {
     };
   };
 
-  // Generar planificaciones automáticas basadas en equipos
+  // Generar planificaciones automáticas basadas en equipos activos
   const planificacionesEquipos = useMemo<PlanificacionEquipo[]>(() => {
     return data.equipos
       .filter(e => e.activo)

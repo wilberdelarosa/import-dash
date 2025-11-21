@@ -31,12 +31,15 @@ export default function Index() {
     const equiposActivos = data.equipos.filter(e => e.activo).length;
     const equiposInactivos = data.equipos.filter(e => !e.activo).length;
     
+    // Filtrar mantenimientos solo de equipos activos
+    const fichasEquiposActivos = new Set(data.equipos.filter(e => e.activo).map(e => e.ficha));
+    
     const mantenimientosVencidos = data.mantenimientosProgramados.filter(
-      m => m.activo && m.horasKmRestante < 0
+      m => m.activo && m.horasKmRestante < 0 && fichasEquiposActivos.has(m.ficha)
     ).length;
     
     const mantenimientosProximos = data.mantenimientosProgramados.filter(
-      m => m.activo && m.horasKmRestante >= 0 && m.horasKmRestante <= 50
+      m => m.activo && m.horasKmRestante >= 0 && m.horasKmRestante <= 50 && fichasEquiposActivos.has(m.ficha)
     ).length;
     
     const stockBajo = data.inventarios.filter(
@@ -53,8 +56,8 @@ export default function Index() {
       return fechaEvento.toDateString() === hoy.toDateString();
     }).length;
 
-    // Calcular eficiencia de mantenimiento
-    const totalMantenimientos = data.mantenimientosProgramados.filter(m => m.activo).length;
+    // Calcular eficiencia de mantenimiento (solo equipos activos)
+    const totalMantenimientos = data.mantenimientosProgramados.filter(m => m.activo && fichasEquiposActivos.has(m.ficha)).length;
     const mantenimientosAlDia = totalMantenimientos - mantenimientosVencidos;
     const eficienciaMantenimiento = totalMantenimientos > 0 
       ? Math.round((mantenimientosAlDia / totalMantenimientos) * 100)

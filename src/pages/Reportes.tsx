@@ -57,7 +57,7 @@ export default function Reportes() {
         mantenimientoHorasRestante: horasRestante,
       };
     })
-  ), [data.equipos, data.mantenimientosProgramados]);
+  ), [equiposActivos, data.mantenimientosProgramados]);
 
   const equiposFiltrados = equiposConEstado.filter(equipo => {
     // Filtro de categorías (multi-select)
