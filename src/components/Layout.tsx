@@ -174,53 +174,68 @@ export function Layout({ children, title }: LayoutProps) {
 
   return (
     <div className="min-h-screen bg-background text-foreground">
+      {/* Header: Compacto en móvil, completo en desktop */}
       <header className="border-b border-border/60 bg-card/80 shadow-sm backdrop-blur supports-[backdrop-filter]:bg-card/60 dark:border-border/40 dark:bg-card/70">
         <div className="mx-auto w-full max-w-[1600px] px-4 py-4 sm:px-6 lg:px-8">
-          <div className="flex flex-col gap-6">
-            <div className="flex flex-col gap-6 md:flex-row md:items-center md:justify-between">
-              <div className="flex flex-col gap-4 md:flex-row md:items-center md:gap-6">
+          {/* Desktop layout */}
+          <div className="hidden sm:flex flex-col gap-4">
+            {/* Fila 1: Logo, Título y Versión */}
+            <div className="flex items-start justify-between gap-6">
+              <div className="flex items-center gap-6">
                 <BrandLogo />
                 <div className="space-y-1">
-                  <div className="flex items-center gap-3">
-                    <div className="h-px w-8 bg-gradient-to-r from-transparent via-primary to-transparent" />
-                    <p className="text-xs font-semibold uppercase tracking-[0.35em] text-primary">Panel activo</p>
-                    <div className="h-px w-8 bg-gradient-to-r from-primary via-transparent to-transparent" />
+                  <div className="flex items-center gap-2">
+                    <p className="text-xs font-semibold uppercase tracking-wider text-primary">Panel activo</p>
                   </div>
-                  <p className="text-3xl font-bold bg-gradient-to-r from-foreground to-foreground/70 bg-clip-text text-transparent leading-tight">{title}</p>
+                  <h1 className="text-2xl font-bold text-foreground">{title}</h1>
                   <p className="text-sm text-muted-foreground max-w-2xl">
-                    En este panel puedes ver el estado global del sistema y administrar importaciones, sincronizaciones
-                    y respaldos desde una sola línea de comandos.
+                    Administra importaciones, sincronizaciones y respaldos del sistema.
                   </p>
                 </div>
               </div>
-              <Badge variant="outline" className="text-xs uppercase tracking-[0.35em] px-3 py-1">
-                V3.0.0
-              </Badge>
-            </div>
-            <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
-              <div className="flex items-center gap-2">
-                <DataActionsToggle
-                  onImport={handleImport}
-                  onExport={handleExport}
-                  onMigrate={handleMigrate}
-                  onSmartImport={handleSmartImport}
-                  onClear={handleClear}
-                  importDisabled={importDisabled}
-                />
-              </div>
-              <div className="flex items-center gap-2">
+              <div className="flex items-center gap-3">
                 <CommandPalette />
                 <NotificationButton />
                 <ThemeToggle />
+                <Badge variant="outline" className="text-xs uppercase tracking-wider px-3 py-1.5">
+                  V3.0.0
+                </Badge>
               </div>
+            </div>
+            
+            {/* Fila 2: Acciones de datos */}
+            <div className="flex items-center gap-2">
+              <DataActionsToggle
+                onImport={handleImport}
+                onExport={handleExport}
+                onMigrate={handleMigrate}
+                onSmartImport={handleSmartImport}
+                onClear={handleClear}
+                importDisabled={importDisabled}
+              />
+            </div>
+          </div>
+          
+          {/* Mobile layout - más simple */}
+          <div className="flex sm:hidden items-center justify-between">
+            <h1 className="text-lg font-bold truncate">{title}</h1>
+            <div className="flex items-center gap-2">
+              <CommandPalette />
+              <NotificationButton />
+              <ThemeToggle />
             </div>
           </div>
         </div>
         <Navigation hideBrand />
       </header>
-        {/* Global bottom navigation for mobile */}
-        <BottomNav />
-      <main className="mx-auto w-full max-w-[1600px] px-4 py-8 sm:px-6 lg:px-8 bg-gradient-to-br from-background via-background to-muted/20">{children}</main>
+      
+      {/* Main content */}
+      <main className="mx-auto w-full max-w-[1600px] px-4 py-6 sm:py-8 sm:px-6 lg:px-8 pb-20 sm:pb-8">
+        {children}
+      </main>
+      
+      {/* Bottom navigation: solo móvil */}
+      <BottomNav />
 
       <ConfirmDialog
         open={confirmClearOpen}

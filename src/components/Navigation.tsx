@@ -176,44 +176,75 @@ export function Navigation({ hideBrand = false }: NavigationProps) {
             </div>
           </div>
         </div>
-        <SheetContent side="left" className="w-[280px] bg-background text-foreground sm:hidden overflow-y-auto">
+        <SheetContent side="left" className="w-[320px] bg-background text-foreground sm:hidden overflow-y-auto">
           <SheetHeader className="space-y-3 text-left pb-4 border-b">
             <BrandLogo compact={false} showTagline={true} />
-            <SheetTitle className="text-lg">Navegación</SheetTitle>
-            <SheetDescription className="text-sm">Selecciona una sección para gestionar.</SheetDescription>
+            <SheetTitle className="text-lg font-bold">Navegación</SheetTitle>
+            <SheetDescription className="text-sm">Accede a todas las secciones del sistema</SheetDescription>
           </SheetHeader>
-          <div className="mt-6 grid gap-1.5">
-            {navItems.map(({ path, label, icon: Icon }) => (
-              <SheetClose asChild key={path}>
-                <Link
-                  to={path}
-                  className={cn(
-                    'group relative flex items-center gap-3 overflow-hidden rounded-xl px-4 py-3.5 text-sm font-semibold transition-all duration-300',
-                    location.pathname === path
-                      ? 'bg-gradient-to-r from-primary to-primary/90 text-primary-foreground shadow-lg'
-                      : 'text-foreground hover:bg-gradient-to-r hover:from-muted hover:to-muted/80 active:scale-95 hover:shadow-md',
-                  )}
-                >
-                  {location.pathname === path && (
-                    <div className="absolute inset-0 bg-gradient-to-r from-white/0 via-white/10 to-white/0 animate-pulse" />
-                  )}
-                  <div className={cn(
-                    "rounded-lg p-2 transition-all duration-300 relative z-10",
-                    location.pathname === path ? "bg-white/10" : "bg-transparent group-hover:bg-foreground/5"
-                  )}>
-                    <Icon className="h-5 w-5 shrink-0 transition-transform duration-300 group-hover:scale-110" />
-                  </div>
-                  <span className="flex-1 relative z-10">{label}</span>
-                  {location.pathname === path && (
-                    <div className="h-2 w-2 rounded-full bg-primary-foreground shadow-md relative z-10" />
-                  )}
-                </Link>
-              </SheetClose>
-            ))}
-            <div className="mt-6 border-t border-border pt-4 space-y-2">
-              <div className="px-4 py-2">
-                <NotificacionesCentro />
+          
+          {/* Secciones agrupadas */}
+          <div className="mt-6 space-y-6">
+            {/* Principal */}
+            <div className="space-y-2">
+              <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground px-2">Principal</p>
+              <div className="grid gap-1.5">
+                {primaryItems.map(({ path, label, icon: Icon }) => (
+                  <SheetClose asChild key={path}>
+                    <Link
+                      to={path}
+                      className={cn(
+                        'group relative flex items-center gap-3 overflow-hidden rounded-xl px-4 py-3.5 text-sm font-semibold transition-all duration-200 active:scale-[0.98]',
+                        location.pathname === path
+                          ? 'bg-primary text-primary-foreground shadow-lg shadow-primary/25'
+                          : 'text-foreground hover:bg-muted active:bg-muted/80',
+                      )}
+                    >
+                      <div className={cn(
+                        "rounded-lg p-2 transition-all duration-200 relative z-10",
+                        location.pathname === path ? "bg-white/15" : "bg-transparent group-hover:bg-foreground/5"
+                      )}>
+                        <Icon className="h-5 w-5 shrink-0" />
+                      </div>
+                      <span className="flex-1 relative z-10">{label}</span>
+                      {location.pathname === path && (
+                        <div className="h-2 w-2 rounded-full bg-primary-foreground shadow-md relative z-10 animate-pulse" />
+                      )}
+                    </Link>
+                  </SheetClose>
+                ))}
               </div>
+            </div>
+            
+            {/* Gestión y Reportes */}
+            <div className="space-y-2">
+              <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground px-2">Gestión y Reportes</p>
+              <div className="grid gap-1.5">
+                {secondaryItems.map(({ path, label, icon: Icon }) => (
+                  <SheetClose asChild key={path}>
+                    <Link
+                      to={path}
+                      className={cn(
+                        'group relative flex items-center gap-3 overflow-hidden rounded-xl px-4 py-3 text-sm font-medium transition-all duration-200 active:scale-[0.98]',
+                        location.pathname === path
+                          ? 'bg-primary text-primary-foreground shadow-md'
+                          : 'text-muted-foreground hover:text-foreground hover:bg-muted/50',
+                      )}
+                    >
+                      <Icon className="h-4 w-4 shrink-0" />
+                      <span className="flex-1">{label}</span>
+                      {location.pathname === path && (
+                        <div className="h-1.5 w-1.5 rounded-full bg-primary-foreground" />
+                      )}
+                    </Link>
+                  </SheetClose>
+                ))}
+              </div>
+            </div>
+            
+            {/* Configuración y Cuenta */}
+            <div className="pt-4 border-t border-border space-y-2">
+              <NotificacionesCentro />
               <LogoutButton className="w-full" />
             </div>
           </div>
