@@ -51,14 +51,18 @@ export default function Dashboard() {
   const estadisticas = useMemo(() => {
     const equiposActivos = data.equipos.filter((equipo) => equipo.activo).length;
     const equiposInactivos = data.equipos.length - equiposActivos;
+    
+    // Crear set de fichas de equipos activos
+    const fichasActivos = new Set(data.equipos.filter(e => e.activo).map(e => e.ficha));
+    
     const mantenimientosPendientes = data.mantenimientosProgramados.filter(
-      (m) => m.horasKmRestante <= 50
+      (m) => m.horasKmRestante <= 50 && fichasActivos.has(m.ficha)
     ).length;
     const mantenimientosVencidos = data.mantenimientosProgramados.filter(
-      (m) => m.horasKmRestante < 0
+      (m) => m.horasKmRestante < 0 && fichasActivos.has(m.ficha)
     ).length;
     const proximoMantenimiento = [...data.mantenimientosProgramados]
-      .filter((m) => m.activo)
+      .filter((m) => m.activo && fichasActivos.has(m.ficha))
       .sort((a, b) => a.horasKmRestante - b.horasKmRestante)[0];
 
     return {
@@ -72,22 +76,25 @@ export default function Dashboard() {
 
   // Memoizar listas de mantenimientos para evitar ordenamiento repetido
   const mantenimientosVencidosList = useMemo(() => {
+    const fichasActivos = new Set(data.equipos.filter(e => e.activo).map(e => e.ficha));
     return data.mantenimientosProgramados
-      .filter((mantenimiento) => mantenimiento.horasKmRestante <= 0)
+      .filter((mantenimiento) => mantenimiento.horasKmRestante <= 0 && fichasActivos.has(mantenimiento.ficha))
       .sort((a, b) => a.horasKmRestante - b.horasKmRestante);
       // NO aplicar límite aquí - mostrar TODOS los vencidos
-  }, [data.mantenimientosProgramados]);
+  }, [data.mantenimientosProgramados, data.equipos]);
 
   const mantenimientosProximosList = useMemo(() => {
+    const fichasActivos = new Set(data.equipos.filter(e => e.activo).map(e => e.ficha));
     return data.mantenimientosProgramados
       .filter(
         (mantenimiento) =>
           mantenimiento.horasKmRestante > 0 && 
-          mantenimiento.horasKmRestante <= UMBRAL_MANTENIMIENTO_PROXIMO_HRS
+          mantenimiento.horasKmRestante <= UMBRAL_MANTENIMIENTO_PROXIMO_HRS &&
+          fichasActivos.has(mantenimiento.ficha)
       )
       .sort((a, b) => a.horasKmRestante - b.horasKmRestante)
       .slice(0, LIMITE_MANTENIMIENTOS_DASHBOARD);
-  }, [data.mantenimientosProgramados]);
+  }, [data.mantenimientosProgramados, data.equipos]);
 
   const ultimasActualizaciones = useMemo(() => {
     return [...data.actualizacionesHorasKm]
