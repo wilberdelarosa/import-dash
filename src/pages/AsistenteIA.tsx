@@ -3,6 +3,7 @@ import { Link } from 'react-router-dom';
 import { jsPDF } from 'jspdf';
 import autoTable from 'jspdf-autotable';
 import { Layout } from '@/components/Layout';
+import FloatingPrompt from '@/components/FloatingPrompt';
 import { useSupabaseDataContext } from '@/context/SupabaseDataContext';
 import { useSystemConfig } from '@/context/SystemConfigContext';
 import { useChatbot } from '@/hooks/useChatbot';
@@ -414,11 +415,15 @@ Usa estos datos para responder consultas específicas y generar tablas filtradas
     adjustTextareaHeight();
   }, []);
 
-  const handleSubmit = async () => {
-    if (!input.trim()) return;
-    await sendMessage(input);
+  const handleSubmit = async (text?: string) => {
+    const payload = typeof text === 'string' ? text : input;
+    if (!payload.trim()) return;
+    await sendMessage(payload);
     setInput('');
     adjustTextareaHeight();
+    setChatExpanded(true);
+    // ensure response is visible after send
+    setTimeout(() => listEndRef.current?.scrollIntoView({ behavior: 'smooth', block: 'center' }), 120);
   };
 
   const handleDownloadTable = (messageId: string, parsedTable: ParsedTable, label: string) => {
@@ -604,6 +609,7 @@ Usa estos datos para responder consultas específicas y generar tablas filtradas
   };
 
   return (
+    <>
     <Layout title="Asistente inteligente con IA">
       {usingDemoData && (
         <Alert variant="warning" className="mb-6 border-warning/50 bg-warning/10 text-warning-foreground">
@@ -1166,7 +1172,14 @@ Usa estos datos para responder consultas específicas y generar tablas filtradas
           <div className="mt-4 space-y-3.5">{contextPanels}</div>
         </SheetContent>
       </Sheet>    </Layout>
-  );
+        {/* Floating prompt stays visible in the assistant page and sends via the chatbot */}
+        <FloatingPrompt
+          onSend={async (text) => {
+            await handleSubmit(text);
+          }}
+          />
+          </>
+        );
 }
 
 

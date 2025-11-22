@@ -26,14 +26,17 @@ export function EquipoSelectorDialog({
   const [open, setOpen] = useState(false);
   const [busqueda, setBusqueda] = useState('');
 
-  const equiposFiltrados = equipos.filter(equipo =>
+  // Mostrar únicamente equipos activos en el selector
+  const equiposActivos = equipos.filter(equipo => equipo.activo);
+
+  const equiposFiltrados = equiposActivos.filter(equipo =>
     equipo.nombre.toLowerCase().includes(busqueda.toLowerCase()) ||
     equipo.ficha.toLowerCase().includes(busqueda.toLowerCase()) ||
     equipo.marca?.toLowerCase().includes(busqueda.toLowerCase()) ||
     equipo.categoria?.toLowerCase().includes(busqueda.toLowerCase())
   );
 
-  const equipoActual = equipos.find(e => e.ficha === equipoSeleccionado);
+  const equipoActual = equiposActivos.find(e => e.ficha === equipoSeleccionado);
 
   const handleSeleccionar = (ficha: string) => {
     onSelect(ficha);
@@ -166,12 +169,7 @@ export function EquipoSelectorDialog({
                             Placa: {equipo.placa}
                           </div>
                         )}
-                        
-                        {!equipo.activo && (
-                          <Badge variant="destructive" className="mt-2 text-xs">
-                            Inactivo
-                          </Badge>
-                        )}
+                        {/* Inactivos no se muestran en este selector */}
                       </div>
                     </div>
                   </Card>
@@ -182,7 +180,7 @@ export function EquipoSelectorDialog({
           
           {equiposFiltrados.length > 0 && (
             <div className="text-sm text-muted-foreground pt-2 border-t">
-              Mostrando {equiposFiltrados.length} de {equipos.length} equipos
+              Mostrando {equiposFiltrados.length} de {equiposActivos.length} equipos
             </div>
           )}
         </div>

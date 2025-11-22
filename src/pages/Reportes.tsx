@@ -30,13 +30,14 @@ export default function Reportes() {
   });
   const [estadoMantenimiento, setEstadoMantenimiento] = useState<'todos' | 'normal' | 'proximo' | 'vencido'>('todos');
 
+  const equiposActivos = data.equipos.filter(e => e.activo);
 
-  const categorias = [...new Set(data.equipos.map(e => e.categoria))];
-  const marcas = [...new Set(data.equipos.map(e => e.marca))];
-  const fichas = [...new Set(data.equipos.map(e => e.ficha))].sort();
+  const categorias = [...new Set(equiposActivos.map(e => e.categoria))];
+  const marcas = [...new Set(equiposActivos.map(e => e.marca))];
+  const fichas = [...new Set(equiposActivos.map(e => e.ficha))].sort();
 
   const equiposConEstado = useMemo(() => (
-    data.equipos.map(equipo => {
+    equiposActivos.map(equipo => {
       const mantenimiento = data.mantenimientosProgramados.find(m => m.ficha === equipo.ficha);
       const horasRestante = mantenimiento?.horasKmRestante;
 
@@ -57,7 +58,7 @@ export default function Reportes() {
         mantenimientoHorasRestante: horasRestante,
       };
     })
-  ), [data.equipos, data.mantenimientosProgramados]);
+  ), [equiposActivos, data.mantenimientosProgramados]);
 
   const equiposFiltrados = equiposConEstado.filter(equipo => {
     // Filtro de categorías (multi-select)

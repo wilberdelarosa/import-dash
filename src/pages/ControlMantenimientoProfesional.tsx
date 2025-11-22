@@ -127,6 +127,9 @@ export default function ControlMantenimientoProfesional() {
   } = useSupabaseDataContext();
   const { toast } = useToast();
 
+  // Lista derivada: solo equipos activos (no deben mostrarse inactivos en la UI)
+  const activeEquipos = useMemo(() => data.equipos.filter((e) => e.activo), [data.equipos]);
+
   const [selectedFicha, setSelectedFicha] = useState<string | null>(null);
   const [busqueda, setBusqueda] = useState('');
   const [filtroCategoria, setFiltroCategoria] = useState('all');
@@ -193,18 +196,19 @@ export default function ControlMantenimientoProfesional() {
 
   // Equipos Caterpillar para planificador
   const caterpillarEquipos = useMemo(
-    () =>
-      data.equipos
-        .filter((equipo) => equipo.marca?.toLowerCase().includes('cat'))
-        .sort((a, b) => a.ficha.localeCompare(b.ficha)),
-    [data.equipos],
+    () => activeEquipos
+      .filter((equipo) => equipo.marca?.toLowerCase().includes('cat'))
+      .sort((a, b) => a.ficha.localeCompare(b.ficha)),
+    [activeEquipos],
   );
 
   useEffect(() => {
     if (!loading && data.mantenimientosProgramados.length > 0 && !selectedFicha) {
-      setSelectedFicha(data.mantenimientosProgramados[0].ficha);
+      // Seleccionar el primer mantenimiento que corresponda a un equipo activo
+      const primera = data.mantenimientosProgramados.find((m) => activeEquipos.some((e) => e.ficha === m.ficha));
+      if (primera) setSelectedFicha(primera.ficha);
     }
-  }, [loading, data.mantenimientosProgramados, selectedFicha]);
+  }, [loading, data.mantenimientosProgramados, selectedFicha, activeEquipos]);
 
   useEffect(() => {
     if (caterpillarEquipos.length > 0) {
@@ -307,14 +311,14 @@ export default function ControlMantenimientoProfesional() {
   }, [selectedFicha, selected]);
 
   const categorias = useMemo(() => {
-    const cats = new Set(data.equipos.map(eq => eq.categoria).filter(Boolean));
+    const cats = new Set(activeEquipos.map(eq => eq.categoria).filter(Boolean));
     return Array.from(cats).sort();
-  }, [data.equipos]);
+  }, [activeEquipos]);
 
   // Lógica del Planificador
   const planEquipo = useMemo(
-    () => (planFicha ? data.equipos.find((equipo) => equipo.ficha === planFicha) ?? null : null),
-    [data.equipos, planFicha],
+    () => (planFicha ? activeEquipos.find((equipo) => equipo.ficha === planFicha) ?? null : null),
+    [activeEquipos, planFicha],
   );
 
   const planMantenimientos = useMemo(
@@ -391,7 +395,8 @@ export default function ControlMantenimientoProfesional() {
     const cache = new Map<string, ReturnType<typeof getStaticCaterpillarData> | null>();
     return data.mantenimientosProgramados
       .map((mantenimiento) => {
-        const equipo = data.equipos.find((item) => item.ficha === mantenimiento.ficha);
+        // Omitir mantenimientos cuyo equipo esté inactivo
+        const equipo = activeEquipos.find((item) => item.ficha === mantenimiento.ficha);
         if (!equipo || !equipo.marca?.toLowerCase().includes('cat')) {
           return null;
         }
@@ -429,7 +434,7 @@ export default function ControlMantenimientoProfesional() {
       })
       .filter((item): item is RutaPlanItem => item !== null)
       .sort((a, b) => a.ficha.localeCompare(b.ficha));
-  }, [data.equipos, data.mantenimientosProgramados]);
+  }, [activeEquipos, data.mantenimientosProgramados]);
 
   useEffect(() => {
     setRutaMarcada((prev) => prev.filter((ficha) => planRuta.some((item) => item.ficha === ficha)));
@@ -476,7 +481,12 @@ export default function ControlMantenimientoProfesional() {
 
   const equiposFiltrados = useMemo(() => {
     return data.mantenimientosProgramados.filter((m) => {
-      const equipo = data.equipos.find(eq => eq.ficha === m.ficha);
+      // Solo considerar mantenimientos de equipos activos
+      const equipo = activeEquipos.find(eq => eq.ficha === m.ficha);
+      
+      // Si el equipo no existe o no está activo, excluir este mantenimiento
+      if (!equipo) return false;
+      
       const matchBusqueda = 
         m.ficha.toLowerCase().includes(busqueda.toLowerCase()) ||
         m.nombreEquipo.toLowerCase().includes(busqueda.toLowerCase()) ||
@@ -510,7 +520,7 @@ export default function ControlMantenimientoProfesional() {
       
       return matchBusqueda && matchCategoria && matchEstado;
     }).sort((a, b) => a.ficha.localeCompare(b.ficha));
-  }, [data.mantenimientosProgramados, data.equipos, busqueda, filtroCategoria, filtroEstado, reporteRango]);
+  }, [data.mantenimientosProgramados, activeEquipos, busqueda, filtroCategoria, filtroEstado, reporteRango]);
 
   const resumenActualizaciones = useMemo(() => {
     if (!reporteRango) return null;
@@ -575,7 +585,8 @@ export default function ControlMantenimientoProfesional() {
     } satisfies ResumenActualizaciones;
   }, [data.actualizacionesHorasKm, data.mantenimientosProgramados, reporteRango]);
 
-  const totalEquiposPlanificados = data.mantenimientosProgramados.length;
+  // Contar solo mantenimientos que correspondan a equipos activos
+  const totalEquiposPlanificados = data.mantenimientosProgramados.filter((m) => activeEquipos.some((e) => e.ficha === m.ficha)).length;
   const coberturaSemanal =
     resumenActualizaciones && totalEquiposPlanificados > 0
       ? Math.round((resumenActualizaciones.actualizados.length / totalEquiposPlanificados) * 100)
@@ -584,7 +595,9 @@ export default function ControlMantenimientoProfesional() {
     ? resumenActualizaciones.pendientes.filter((mantenimiento) => (mantenimiento.horasKmRestante ?? 0) <= 25)
     : [];
 
+  // Solo mostrar mantenimientos de equipos activos en lista de próximos
   const proximos = data.mantenimientosProgramados
+    .filter((m) => activeEquipos.some((e) => e.ficha === m.ficha))
     .slice()
     .sort((a, b) => a.horasKmRestante - b.horasKmRestante)
     .slice(0, 15);
@@ -896,7 +909,7 @@ export default function ControlMantenimientoProfesional() {
                         <div>
                           <div className="font-medium text-sm leading-tight">{m.nombreEquipo}</div>
                           <div className="text-xs text-slate-500">
-                            {data.equipos.find(eq => eq.ficha === m.ficha)?.categoria || 'Sin categoría'}
+                            {activeEquipos.find(eq => eq.ficha === m.ficha)?.categoria || 'Sin categoría'}
                           </div>
                         </div>
                       </TableCell>
