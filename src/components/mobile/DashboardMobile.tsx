@@ -85,14 +85,6 @@ export function DashboardMobile({
     },
   ];
 
-  // Accesos rápidos
-  const quickActions = [
-    { label: 'Nuevo mantenimiento', path: '/control-mantenimiento', icon: Wrench },
-    { label: 'Ver equipos', path: '/equipos', icon: Truck },
-    { label: 'Inventario', path: '/inventario', icon: Package },
-    { label: 'Planificador', path: '/planificador', icon: Clock },
-  ];
-
   return (
     <MobileLayout
       title="Dashboard"
@@ -167,54 +159,6 @@ export function DashboardMobile({
             </div>
           ))}
         </div>
-
-        {/* Accesos rápidos */}
-        <MobileCard title="Accesos rápidos" variant="compact">
-          <div className="grid grid-cols-2 gap-2">
-            {quickActions.map((action, index) => (
-              <Button
-                key={index}
-                variant="outline"
-                className="h-auto flex-col gap-2 py-3"
-                onClick={() => navigate(action.path)}
-              >
-                <action.icon className="h-5 w-5" />
-                <span className="text-xs">{action.label}</span>
-              </Button>
-            ))}
-          </div>
-        </MobileCard>
-
-        {/* Lista de equipos críticos (ejemplo) */}
-        <MobileCard title="Equipos críticos" description="Requieren atención">
-          <div className="space-y-2">
-            <MobileListCard
-              title="AC-003 GRUA BLANCA JAC"
-              subtitle="913 hrs vencido"
-              meta="Último mant: 15/Oct/2024"
-              icon={<AlertTriangle className="h-5 w-5" />}
-              badge={<Badge variant="destructive" className="text-[0.65rem]">Urgente</Badge>}
-              onClick={() => navigate('/control-mantenimiento')}
-            />
-            <MobileListCard
-              title="AC-044 CAMION SINOTRUCK"
-              subtitle="901 hrs vencido"
-              meta="Último mant: 20/Oct/2024"
-              icon={<AlertTriangle className="h-5 w-5" />}
-              badge={<Badge variant="destructive" className="text-[0.65rem]">Urgente</Badge>}
-              onClick={() => navigate('/control-mantenimiento')}
-            />
-          </div>
-          <Button
-            variant="ghost"
-            size="sm"
-            className="mt-3 w-full gap-2"
-            onClick={() => navigate('/control-mantenimiento')}
-          >
-            Ver todos
-            <ChevronRight className="h-4 w-4" />
-          </Button>
-        </MobileCard>
 
         {/* Estado del sistema */}
         <MobileCard variant="compact">

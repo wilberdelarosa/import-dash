@@ -340,7 +340,8 @@ export default function Dashboard() {
         </Card>
       </section>
 
-      <section className="grid gap-6 xl:grid-cols-2">
+      {/* Sección de tablas - Solo visible en desktop */}
+      <section className="hidden sm:grid gap-6 xl:grid-cols-2">
         <Card className="flex flex-col">
           <CardHeader>
             <CardTitle className="flex items-center gap-2 text-destructive">
