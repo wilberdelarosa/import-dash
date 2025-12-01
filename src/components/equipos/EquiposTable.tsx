@@ -205,20 +205,25 @@ export function EquiposTable({ equipos, onEdit, onDelete, onVerDetalle }: Equipo
     setTableScale((prev) => clampScale(prev + delta));
   };
 
-  const filteredEquipos = equipos.filter(equipo => {
-    const matchesSearch = Object.values(equipo)
-      .join(' ')
-      .toLowerCase()
-      .includes(searchTerm.toLowerCase());
+  const filteredEquipos = equipos
+    .filter(equipo => {
+      const matchesSearch = Object.values(equipo)
+        .join(' ')
+        .toLowerCase()
+        .includes(searchTerm.toLowerCase());
 
-    const matchesCategoria = filterCategoria === 'all' || equipo.categoria === filterCategoria;
-    const matchesActivo = filterActivo === 'all' ||
-      (filterActivo === 'activo' && equipo.activo) ||
-      (filterActivo === 'inactivo' && !equipo.activo);
-    const matchesSmart = smartFilters.predicate ? smartFilters.predicate(equipo) : true;
+      const matchesCategoria = filterCategoria === 'all' || equipo.categoria === filterCategoria;
+      const matchesActivo = filterActivo === 'all' ||
+        (filterActivo === 'activo' && equipo.activo) ||
+        (filterActivo === 'inactivo' && !equipo.activo);
+      const matchesSmart = smartFilters.predicate ? smartFilters.predicate(equipo) : true;
 
-    return matchesSearch && matchesCategoria && matchesActivo && matchesSmart;
-  });
+      return matchesSearch && matchesCategoria && matchesActivo && matchesSmart;
+    })
+    .sort((a, b) => {
+      // Ordenar por ficha de menor a mayor
+      return a.ficha.localeCompare(b.ficha, 'es', { numeric: true, sensitivity: 'base' });
+    });
 
   const renderFilterControls = () => (
     <div className="flex w-full flex-col gap-4 sm:flex-row sm:flex-wrap sm:items-start">
