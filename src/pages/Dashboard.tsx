@@ -157,8 +157,7 @@ export default function Dashboard() {
       <DashboardMobile
         equiposActivos={estadisticas.equiposActivos}
         mantenimientosVencidos={estadisticas.mantenimientosVencidos}
-        mantenimientosProgramados={estadisticas.mantenimientosProgramados}
-        inventarioBajo={estadisticas.inventarioBajo}
+        mantenimientosPendientes={estadisticas.mantenimientosPendientes}
       />
     );
   }

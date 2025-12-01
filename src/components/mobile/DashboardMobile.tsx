@@ -30,15 +30,13 @@ import { useNavigate } from 'react-router-dom';
 interface DashboardMobileProps {
   equiposActivos: number;
   mantenimientosVencidos: number;
-  mantenimientosProgramados: number;
-  inventarioBajo: number;
+  mantenimientosPendientes: number;
 }
 
 export function DashboardMobile({
   equiposActivos,
   mantenimientosVencidos,
-  mantenimientosProgramados,
-  inventarioBajo,
+  mantenimientosPendientes,
 }: DashboardMobileProps) {
   const navigate = useNavigate();
   const [refreshing, setRefreshing] = useState(false);
@@ -70,18 +68,11 @@ export function DashboardMobile({
       urgent: mantenimientosVencidos > 0,
     },
     {
-      label: 'Programados',
-      value: mantenimientosProgramados,
+      label: 'Próximos',
+      value: mantenimientosPendientes,
       icon: Clock,
       color: 'text-amber-500',
       bgColor: 'bg-amber-500/10',
-    },
-    {
-      label: 'Stock bajo',
-      value: inventarioBajo,
-      icon: Package,
-      color: 'text-orange-500',
-      bgColor: 'bg-orange-500/10',
     },
   ];
 

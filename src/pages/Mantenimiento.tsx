@@ -276,33 +276,38 @@ export default function Mantenimiento() {
 
   const fichas = [...new Set(data.mantenimientosProgramados.map(m => m.ficha))].sort();
 
-  const mantenimientosFiltrados = mantenimientosConCalculos.filter(mant => {
-    const equipo = equiposPorFicha[mant.ficha];
-    
-    const matchesSearch = Object.values(mant)
-      .join(' ')
-      .toLowerCase()
-      .includes(searchTerm.toLowerCase());
-    
-    // Filtros multi-select
-    const matchesTipo = filtros.tipos.length === 0 || filtros.tipos.includes(mant.tipoMantenimiento);
-    
-    const matchesCategoria = filtros.categorias.length === 0 || (equipo && filtros.categorias.includes(equipo.categoria));
-    
-    const matchesFicha = filtros.fichas.length === 0 || filtros.fichas.includes(mant.ficha);
-    
-    const matchesEstado = filtros.estados.length === 0 || 
-      (filtros.estados.includes('vencido') && mant.horasKmRestante <= 0) ||
-      (filtros.estados.includes('proximo') && mant.horasKmRestante > 0 && mant.horasKmRestante <= 100) ||
-      (filtros.estados.includes('normal') && mant.horasKmRestante > 100);
+  const mantenimientosFiltrados = mantenimientosConCalculos
+    .filter(mant => {
+      const equipo = equiposPorFicha[mant.ficha];
+      
+      const matchesSearch = Object.values(mant)
+        .join(' ')
+        .toLowerCase()
+        .includes(searchTerm.toLowerCase());
+      
+      // Filtros multi-select
+      const matchesTipo = filtros.tipos.length === 0 || filtros.tipos.includes(mant.tipoMantenimiento);
+      
+      const matchesCategoria = filtros.categorias.length === 0 || (equipo && filtros.categorias.includes(equipo.categoria));
+      
+      const matchesFicha = filtros.fichas.length === 0 || filtros.fichas.includes(mant.ficha);
+      
+      const matchesEstado = filtros.estados.length === 0 || 
+        (filtros.estados.includes('vencido') && mant.horasKmRestante <= 0) ||
+        (filtros.estados.includes('proximo') && mant.horasKmRestante > 0 && mant.horasKmRestante <= 100) ||
+        (filtros.estados.includes('normal') && mant.horasKmRestante > 100);
 
-    // Filtro de rango de restante
-    const restante = Math.abs(mant.horasKmRestante);
-    const matchesRestanteMin = !filtros.restanteMin || restante >= parseFloat(filtros.restanteMin);
-    const matchesRestanteMax = !filtros.restanteMax || restante <= parseFloat(filtros.restanteMax);
+      // Filtro de rango de restante
+      const restante = Math.abs(mant.horasKmRestante);
+      const matchesRestanteMin = !filtros.restanteMin || restante >= parseFloat(filtros.restanteMin);
+      const matchesRestanteMax = !filtros.restanteMax || restante <= parseFloat(filtros.restanteMax);
 
-    return matchesSearch && matchesTipo && matchesCategoria && matchesFicha && matchesEstado && matchesRestanteMin && matchesRestanteMax && mant.activo;
-  });
+      return matchesSearch && matchesTipo && matchesCategoria && matchesFicha && matchesEstado && matchesRestanteMin && matchesRestanteMax && mant.activo;
+    })
+    .sort((a, b) => {
+      // Ordenar por ficha de menor a mayor
+      return a.ficha.localeCompare(b.ficha, 'es', { numeric: true, sensitivity: 'base' });
+    });
 
   const totalMantenimientos = mantenimientosFiltrados.length;
   const vencidos = mantenimientosFiltrados.filter(m => m.horasKmRestante <= 0).length;

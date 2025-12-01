@@ -428,9 +428,7 @@ export default function Inventario() {
             <AlertDialogFooter>
               <AlertDialogCancel>Cancelar</AlertDialogCancel>
               <AlertDialogAction
-                onClick={() => {
-                  if (deleteTarget) handleDelete(deleteTarget);
-                }}
+                onClick={handleDelete}
                 className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
               >
                 Eliminar
