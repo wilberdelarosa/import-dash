@@ -14,6 +14,8 @@ import { Checkbox } from '@/components/ui/checkbox';
 import { Label } from '@/components/ui/label';
 import jsPDF from 'jspdf';
 import 'jspdf-autotable';
+import { useDeviceDetection } from '@/hooks/useDeviceDetection';
+import { ReportesMobile } from '@/pages/mobile/ReportesMobile';
 
 export default function Reportes() {
   const { data, loading } = useSupabaseDataContext();
@@ -66,21 +68,21 @@ export default function Reportes() {
 
     // Filtro de marcas (multi-select)
     const pasaMarca = filtros.marcas.length === 0 || filtros.marcas.includes(equipo.marca);
-    
+
     // Filtro de estados (multi-select)
-    const pasaEstado = filtros.estados.length === 0 || 
+    const pasaEstado = filtros.estados.length === 0 ||
       (filtros.estados.includes('activo') && equipo.activo) ||
       (filtros.estados.includes('inactivo') && !equipo.activo);
-    
+
     // Filtro de fichas (multi-select)
     const pasaFicha = filtros.fichas.length === 0 || filtros.fichas.includes(equipo.ficha);
-    
+
     // Filtro de horas/km - obtener del mantenimiento programado
     const mantenimiento = data.mantenimientosProgramados.find(m => m.ficha === equipo.ficha);
     const horasActuales = mantenimiento?.horasKmActuales || 0;
     const pasaHorasMin = !filtros.horasDesde || horasActuales >= parseFloat(filtros.horasDesde);
     const pasaHorasMax = !filtros.horasHasta || horasActuales <= parseFloat(filtros.horasHasta);
-    
+
     return pasaCategoria && pasaMarca && pasaEstado && pasaFicha && pasaHorasMin && pasaHorasMax;
   });
 
@@ -110,11 +112,11 @@ export default function Reportes() {
     };
   });
 
-  const mantenimientosVencidos = data.mantenimientosProgramados.filter(m => 
+  const mantenimientosVencidos = data.mantenimientosProgramados.filter(m =>
     m.activo && m.horasKmRestante <= 0
   );
 
-  const mantenimientosPorVencer = data.mantenimientosProgramados.filter(m => 
+  const mantenimientosPorVencer = data.mantenimientosProgramados.filter(m =>
     m.activo && m.horasKmRestante > 0 && m.horasKmRestante <= 100
   );
 
@@ -152,34 +154,34 @@ export default function Reportes() {
 
   const exportarPDF = () => {
     const doc = new jsPDF('landscape');
-    
+
     // Título del documento
     doc.setFontSize(20);
     doc.setTextColor(34, 197, 94);
     doc.text('Reporte de Equipos y Analytics', 20, 20);
-    
+
     // Fecha de generación
     doc.setFontSize(10);
     doc.setTextColor(100, 100, 100);
     doc.text(`Generado: ${new Date().toLocaleDateString('es-ES')} ${new Date().toLocaleTimeString('es-ES')}`, 20, 28);
-    
+
     // Resumen estadístico
     doc.setFontSize(14);
     doc.setTextColor(40, 40, 40);
     doc.text('Resumen General', 20, 40);
-    
+
     doc.setFontSize(10);
     doc.text(`Total de Equipos: ${equiposFiltrados.length}`, 20, 48);
     doc.text(`Activos: ${equiposFiltrados.filter(e => e.activo).length}`, 20, 55);
     doc.text(`Inactivos: ${equiposFiltrados.filter(e => !e.activo).length}`, 20, 62);
     doc.text(`Mantenimientos Vencidos: ${mantenimientosVencidos.length}`, 150, 48);
     doc.text(`Mantenimientos por Vencer: ${mantenimientosPorVencer.length}`, 150, 55);
-    
+
     // Tabla de resumen por categoría
     if (resumenPorCategoria.length > 0) {
       doc.setFontSize(12);
       doc.text('Resumen por Categoría', 20, 75);
-      
+
       (doc as any).autoTable({
         startY: 80,
         head: [['Categoría', 'Total', 'Activos', 'Inactivos']],
@@ -202,18 +204,18 @@ export default function Reportes() {
         margin: { left: 20, right: 150 }
       });
     }
-    
+
     // Tabla de equipos
     const finalY = (doc as any).lastAutoTable ? (doc as any).lastAutoTable.finalY + 15 : 120;
-    
+
     doc.setFontSize(12);
     doc.text('Detalle de Equipos', 20, finalY);
-    
+
     const tableData = equiposFiltrados.map(equipo => {
       const mantenimiento = data.mantenimientosProgramados.find(m => m.ficha === equipo.ficha);
       const horasKm = mantenimiento?.horasKmActuales || 0;
       const unidad = mantenimiento?.tipoMantenimiento === 'Horas' ? 'hrs' : 'km';
-      
+
       return [
         equipo.ficha,
         equipo.nombre,
@@ -224,7 +226,7 @@ export default function Reportes() {
         equipo.activo ? 'Activo' : 'Inactivo'
       ];
     });
-    
+
     (doc as any).autoTable({
       startY: finalY + 5,
       head: [['Ficha', 'Nombre', 'Categoría', 'Marca', 'Modelo', 'Horas/Km', 'Estado']],
@@ -262,7 +264,7 @@ export default function Reportes() {
         }
       }
     });
-    
+
     // Pie de página
     const pageCount = (doc as any).internal.getNumberOfPages();
     for (let i = 1; i <= pageCount; i++) {
@@ -275,7 +277,7 @@ export default function Reportes() {
         doc.internal.pageSize.height - 10
       );
     }
-    
+
     doc.save(`reporte-equipos-${new Date().toISOString().split('T')[0]}.pdf`);
   };
 
@@ -336,9 +338,27 @@ export default function Reportes() {
   };
 
 
+  const { isMobile } = useDeviceDetection();
+
+  if (isMobile) {
+    return (
+      <ReportesMobile
+        stats={{
+          total: equiposFiltrados.length,
+          activos: equiposFiltrados.filter(e => e.activo).length,
+          vencidos: mantenimientosVencidos.length,
+          porVencer: mantenimientosPorVencer.length
+        }}
+        resumenCategoria={resumenPorCategoria}
+        mantenimientosVencidos={mantenimientosVencidos}
+        onExportPDF={exportarPDF}
+      />
+    );
+  }
+
   return (
     <Layout title="Reportes y Analytics">
-      
+
       {/* Barra de filtros avanzados */}
       <Card className="mb-6">
         <CardHeader>
@@ -374,7 +394,7 @@ export default function Reportes() {
                 <div className="space-y-2 max-h-32 overflow-y-auto border rounded-md p-2">
                   {categorias.map(cat => (
                     <div key={cat} className="flex items-center space-x-2">
-                      <Checkbox 
+                      <Checkbox
                         id={`cat-${cat}`}
                         checked={filtros.categorias.includes(cat)}
                         onCheckedChange={() => toggleCategoria(cat)}
@@ -392,7 +412,7 @@ export default function Reportes() {
                 <div className="space-y-2 max-h-32 overflow-y-auto border rounded-md p-2">
                   {marcas.map(marca => (
                     <div key={marca} className="flex items-center space-x-2">
-                      <Checkbox 
+                      <Checkbox
                         id={`marca-${marca}`}
                         checked={filtros.marcas.includes(marca)}
                         onCheckedChange={() => toggleMarca(marca)}
@@ -409,7 +429,7 @@ export default function Reportes() {
                 <Label className="mb-2 block">Estados</Label>
                 <div className="space-y-2">
                   <div className="flex items-center space-x-2">
-                    <Checkbox 
+                    <Checkbox
                       id="estado-activo"
                       checked={filtros.estados.includes('activo')}
                       onCheckedChange={() => toggleEstado('activo')}
@@ -419,7 +439,7 @@ export default function Reportes() {
                     </label>
                   </div>
                   <div className="flex items-center space-x-2">
-                    <Checkbox 
+                    <Checkbox
                       id="estado-inactivo"
                       checked={filtros.estados.includes('inactivo')}
                       onCheckedChange={() => toggleEstado('inactivo')}
@@ -451,7 +471,7 @@ export default function Reportes() {
                   <div className="space-y-2 max-h-40 overflow-y-auto border rounded-md p-3 bg-muted/30">
                     {categorias.map(cat => (
                       <div key={cat} className="flex items-center space-x-2">
-                        <Checkbox 
+                        <Checkbox
                           id={`cat-adv-${cat}`}
                           checked={filtros.categorias.includes(cat)}
                           onCheckedChange={() => toggleCategoria(cat)}
@@ -474,7 +494,7 @@ export default function Reportes() {
                   <div className="space-y-2 max-h-40 overflow-y-auto border rounded-md p-3 bg-muted/30">
                     {marcas.map(marca => (
                       <div key={marca} className="flex items-center space-x-2">
-                        <Checkbox 
+                        <Checkbox
                           id={`marca-adv-${marca}`}
                           checked={filtros.marcas.includes(marca)}
                           onCheckedChange={() => toggleMarca(marca)}
@@ -497,7 +517,7 @@ export default function Reportes() {
                   <div className="space-y-2 max-h-40 overflow-y-auto border rounded-md p-3 bg-muted/30">
                     {fichas.slice(0, 20).map(ficha => (
                       <div key={ficha} className="flex items-center space-x-2">
-                        <Checkbox 
+                        <Checkbox
                           id={`ficha-${ficha}`}
                           checked={filtros.fichas.includes(ficha)}
                           onCheckedChange={() => toggleFicha(ficha)}
@@ -519,27 +539,27 @@ export default function Reportes() {
               <div className="grid grid-cols-1 md:grid-cols-4 gap-4 pt-4 border-t">
                 <div>
                   <Label className="mb-2 block">Horas/Km desde</Label>
-                  <Input 
+                  <Input
                     type="number"
                     placeholder="Mínimo"
                     value={filtros.horasDesde}
-                    onChange={(e) => setFiltros({...filtros, horasDesde: e.target.value})}
+                    onChange={(e) => setFiltros({ ...filtros, horasDesde: e.target.value })}
                   />
                 </div>
                 <div>
                   <Label className="mb-2 block">Horas/Km hasta</Label>
-                  <Input 
+                  <Input
                     type="number"
                     placeholder="Máximo"
                     value={filtros.horasHasta}
-                    onChange={(e) => setFiltros({...filtros, horasHasta: e.target.value})}
+                    onChange={(e) => setFiltros({ ...filtros, horasHasta: e.target.value })}
                   />
                 </div>
                 <div>
                   <Label className="mb-2 block">Estados</Label>
                   <div className="space-y-2">
                     <div className="flex items-center space-x-2">
-                      <Checkbox 
+                      <Checkbox
                         id="estado-activo-adv"
                         checked={filtros.estados.includes('activo')}
                         onCheckedChange={() => toggleEstado('activo')}
@@ -549,7 +569,7 @@ export default function Reportes() {
                       </label>
                     </div>
                     <div className="flex items-center space-x-2">
-                      <Checkbox 
+                      <Checkbox
                         id="estado-inactivo-adv"
                         checked={filtros.estados.includes('inactivo')}
                         onCheckedChange={() => toggleEstado('inactivo')}
@@ -580,8 +600,8 @@ export default function Reportes() {
                     {filtros.categorias.map(cat => (
                       <Badge key={cat} variant="secondary">
                         Cat: {cat}
-                        <X 
-                          className="w-3 h-3 ml-1 cursor-pointer" 
+                        <X
+                          className="w-3 h-3 ml-1 cursor-pointer"
                           onClick={() => toggleCategoria(cat)}
                         />
                       </Badge>
@@ -589,8 +609,8 @@ export default function Reportes() {
                     {filtros.marcas.map(marca => (
                       <Badge key={marca} variant="secondary">
                         Marca: {marca}
-                        <X 
-                          className="w-3 h-3 ml-1 cursor-pointer" 
+                        <X
+                          className="w-3 h-3 ml-1 cursor-pointer"
                           onClick={() => toggleMarca(marca)}
                         />
                       </Badge>
@@ -598,8 +618,8 @@ export default function Reportes() {
                     {filtros.fichas.map(ficha => (
                       <Badge key={ficha} variant="secondary" className="font-mono">
                         Ficha: {ficha}
-                        <X 
-                          className="w-3 h-3 ml-1 cursor-pointer" 
+                        <X
+                          className="w-3 h-3 ml-1 cursor-pointer"
                           onClick={() => toggleFicha(ficha)}
                         />
                       </Badge>
@@ -607,8 +627,8 @@ export default function Reportes() {
                     {filtros.estados.map(estado => (
                       <Badge key={estado} variant="secondary">
                         {estado === 'activo' ? 'Activo' : 'Inactivo'}
-                        <X 
-                          className="w-3 h-3 ml-1 cursor-pointer" 
+                        <X
+                          className="w-3 h-3 ml-1 cursor-pointer"
                           onClick={() => toggleEstado(estado)}
                         />
                       </Badge>
@@ -693,7 +713,7 @@ export default function Reportes() {
                   <div className="flex items-center gap-2">
                     <span className="font-medium">{equipo.nombre}</span>
                     {equipo.estadoMantenimiento !== 'sin-programar' && (
-                      <Badge className={`${estadoLabels[equipo.estadoMantenimiento].badgeClass} border-0`}> 
+                      <Badge className={`${estadoLabels[equipo.estadoMantenimiento].badgeClass} border-0`}>
                         {estadoLabels[equipo.estadoMantenimiento].label}
                       </Badge>
                     )}

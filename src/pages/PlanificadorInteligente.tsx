@@ -41,6 +41,8 @@ import { cn } from '@/lib/utils';
 import { format } from 'date-fns';
 import { es } from 'date-fns/locale';
 import { supabase } from '@/integrations/supabase/client';
+import { useDeviceDetection } from '@/hooks/useDeviceDetection';
+import { PlanificadorMobile } from '@/pages/mobile/PlanificadorMobile';
 
 export default function PlanificadorInteligente() {
   const { data, loading } = useSupabaseDataContext();
@@ -196,7 +198,7 @@ export default function PlanificadorInteligente() {
         'PM3': 1000,
         'PM4': 2000,
       };
-      
+
       return {
         mp: mpManualAsignado,
         horasObjetivo: horasObjetivoMap[mpManualAsignado] || 250,
@@ -245,7 +247,7 @@ export default function PlanificadorInteligente() {
   // Kits asociados al plan actual
   const kitsDelPlanActual = useMemo(() => {
     if (!planActual || !planActual.intervalos) return [];
-    
+
     interface KitConIntervalo {
       id: number;
       nombre: string;
@@ -260,7 +262,7 @@ export default function PlanificadorInteligente() {
       intervaloNombre: string;
       intervaloHoras: number;
     }
-    
+
     const todosLosKits: KitConIntervalo[] = [];
     planActual.intervalos.forEach((intervalo) => {
       if (intervalo.kits && intervalo.kits.length > 0) {
@@ -276,20 +278,20 @@ export default function PlanificadorInteligente() {
         });
       }
     });
-    
+
     return todosLosKits;
   }, [planActual]);
 
   // Kit sugerido para el MP actual
   const kitSugeridoParaMP = useMemo(() => {
     if (!mpSugerido || !kitsDelPlanActual.length) return null;
-    
+
     // Buscar kit que coincida con el MP sugerido
-    const kitEncontrado = kitsDelPlanActual.find((kit) => 
-      kit.intervaloMP === mpSugerido.mp || 
+    const kitEncontrado = kitsDelPlanActual.find((kit) =>
+      kit.intervaloMP === mpSugerido.mp ||
       kit.intervaloNombre?.toLowerCase().includes(mpSugerido.mp.toLowerCase())
     );
-    
+
     return kitEncontrado || kitsDelPlanActual[0];
   }, [mpSugerido, kitsDelPlanActual]);
 
@@ -379,6 +381,27 @@ export default function PlanificadorInteligente() {
       });
     }
   };
+
+  const { isMobile } = useDeviceDetection();
+
+  if (isMobile) {
+    return (
+      <PlanificadorMobile
+        equipos={equiposFiltrados}
+        equipoSeleccionado={equipo}
+        onSelectEquipo={setEquipoSeleccionado}
+        planActual={planActual}
+        mpSugerido={mpSugerido}
+        planesSugeridos={planesSugeridos}
+        onSeleccionarPlan={handleSeleccionarPlan}
+        onAsignarMPManual={(mp) => {
+          setMpManual(mp);
+          handleAsignarMPManual();
+        }}
+        planManualOverride={planManualOverride}
+      />
+    );
+  }
 
   return (
     <Layout title="Planificador Inteligente">
@@ -586,8 +609,8 @@ export default function PlanificadorInteligente() {
                             <div className="flex items-center gap-3">
                               <Badge className={cn(
                                 "text-3xl py-2 px-6",
-                                mpSugerido.esManual 
-                                  ? "bg-amber-600 hover:bg-amber-700" 
+                                mpSugerido.esManual
+                                  ? "bg-amber-600 hover:bg-amber-700"
                                   : "bg-green-600 hover:bg-green-700"
                               )}>
                                 {mpSugerido.mp}
@@ -596,8 +619,8 @@ export default function PlanificadorInteligente() {
                                 <p className="text-xs text-muted-foreground">Próximo en</p>
                                 <p className={cn(
                                   "text-xl font-bold",
-                                  (mantenimientoProgramado?.horasKmRestante || 0) > 0 
-                                    ? "text-orange-600" 
+                                  (mantenimientoProgramado?.horasKmRestante || 0) > 0
+                                    ? "text-orange-600"
                                     : "text-red-600"
                                 )}>
                                   {mantenimientoProgramado?.horasKmRestante.toFixed(1)}h
@@ -638,7 +661,7 @@ export default function PlanificadorInteligente() {
                         planesRecomendadosAbierto && "rotate-90"
                       )} />
                     </Button>
-                    
+
                     {planesRecomendadosAbierto && (
                       <Card className="border-2 border-blue-200 dark:border-blue-800">
                         <CardHeader>
@@ -647,71 +670,71 @@ export default function PlanificadorInteligente() {
                           </CardDescription>
                         </CardHeader>
                         <CardContent className="space-y-3">
-                      {planesSugeridos.slice(0, 3).map(({ plan, score, razon }) => (
-                        <div
-                          key={plan.id}
-                          className={cn(
-                            'p-4 rounded-lg border-2 cursor-pointer transition-all',
-                            planManualOverride[equipo!.ficha] === plan.id
-                              ? 'border-primary bg-primary/5'
-                              : 'border-border hover:border-primary/50 hover:bg-muted/50'
-                          )}
-                          onClick={() => handleSeleccionarPlan(plan.id)}
-                        >
-                          <div className="flex items-start justify-between gap-3">
-                            <div className="flex-1">
-                              <div className="flex items-center gap-2 mb-2">
-                                <Badge
-                                  variant={score >= 70 ? 'default' : 'secondary'}
-                                  className="text-xs font-bold"
-                                >
-                                  {score}% match
-                                </Badge>
-                                {planManualOverride[equipo!.ficha] === plan.id && (
-                                  <CheckCircle2 className="h-4 w-4 text-primary" />
-                                )}
-                              </div>
-                              <p className="font-semibold text-sm">{plan.nombre}</p>
-                              <p className="text-xs text-muted-foreground mt-1">
-                                {plan.marca} {plan.modelo && `• ${plan.modelo}`} • {razon}
-                              </p>
-                              <div className="flex gap-2 mt-2">
-                                <Badge variant="outline" className="text-xs">
-                                  {plan.intervalos?.length || 0} intervalos
-                                </Badge>
-                                {plan.categoria && (
-                                  <Badge variant="outline" className="text-xs">
-                                    {plan.categoria}
-                                  </Badge>
-                                )}
+                          {planesSugeridos.slice(0, 3).map(({ plan, score, razon }) => (
+                            <div
+                              key={plan.id}
+                              className={cn(
+                                'p-4 rounded-lg border-2 cursor-pointer transition-all',
+                                planManualOverride[equipo!.ficha] === plan.id
+                                  ? 'border-primary bg-primary/5'
+                                  : 'border-border hover:border-primary/50 hover:bg-muted/50'
+                              )}
+                              onClick={() => handleSeleccionarPlan(plan.id)}
+                            >
+                              <div className="flex items-start justify-between gap-3">
+                                <div className="flex-1">
+                                  <div className="flex items-center gap-2 mb-2">
+                                    <Badge
+                                      variant={score >= 70 ? 'default' : 'secondary'}
+                                      className="text-xs font-bold"
+                                    >
+                                      {score}% match
+                                    </Badge>
+                                    {planManualOverride[equipo!.ficha] === plan.id && (
+                                      <CheckCircle2 className="h-4 w-4 text-primary" />
+                                    )}
+                                  </div>
+                                  <p className="font-semibold text-sm">{plan.nombre}</p>
+                                  <p className="text-xs text-muted-foreground mt-1">
+                                    {plan.marca} {plan.modelo && `• ${plan.modelo}`} • {razon}
+                                  </p>
+                                  <div className="flex gap-2 mt-2">
+                                    <Badge variant="outline" className="text-xs">
+                                      {plan.intervalos?.length || 0} intervalos
+                                    </Badge>
+                                    {plan.categoria && (
+                                      <Badge variant="outline" className="text-xs">
+                                        {plan.categoria}
+                                      </Badge>
+                                    )}
+                                  </div>
+                                </div>
                               </div>
                             </div>
-                          </div>
-                        </div>
-                      ))}
+                          ))}
 
-                      {planManualOverride[equipo!.ficha] && (
-                        <div className="flex gap-2 pt-2">
-                          <Button
-                            size="sm"
-                            variant="outline"
-                            className="flex-1"
-                            onClick={() => {
-                              const newOverrides = { ...planManualOverride };
-                              delete newOverrides[equipo!.ficha];
-                              setPlanManualOverride(newOverrides);
-                            }}
-                          >
-                            Restaurar automático
-                          </Button>
-                          <Button
-                            size="sm"
-                            onClick={() => setDialogOverrideOpen(true)}
-                          >
-                            Guardar override
-                          </Button>
-                        </div>
-                      )}
+                          {planManualOverride[equipo!.ficha] && (
+                            <div className="flex gap-2 pt-2">
+                              <Button
+                                size="sm"
+                                variant="outline"
+                                className="flex-1"
+                                onClick={() => {
+                                  const newOverrides = { ...planManualOverride };
+                                  delete newOverrides[equipo!.ficha];
+                                  setPlanManualOverride(newOverrides);
+                                }}
+                              >
+                                Restaurar automático
+                              </Button>
+                              <Button
+                                size="sm"
+                                onClick={() => setDialogOverrideOpen(true)}
+                              >
+                                Guardar override
+                              </Button>
+                            </div>
+                          )}
                         </CardContent>
                       </Card>
                     )}
@@ -722,8 +745,8 @@ export default function PlanificadorInteligente() {
                 {mpSugerido && mantenimientoProgramado && (
                   <Card className={cn(
                     "border-2",
-                    mpSugerido.esManual 
-                      ? "border-amber-200 dark:border-amber-800" 
+                    mpSugerido.esManual
+                      ? "border-amber-200 dark:border-amber-800"
                       : "border-green-200 dark:border-green-800"
                   )}>
                     <CardHeader>
@@ -786,8 +809,8 @@ export default function PlanificadorInteligente() {
                         <div className="text-center">
                           <Badge className={cn(
                             "text-2xl py-2 px-6",
-                            mpSugerido.esManual 
-                              ? "bg-amber-600 hover:bg-amber-700" 
+                            mpSugerido.esManual
+                              ? "bg-amber-600 hover:bg-amber-700"
                               : "bg-green-600 hover:bg-green-700"
                           )}>
                             {mpSugerido.mp}
@@ -816,12 +839,12 @@ export default function PlanificadorInteligente() {
                           <p className="text-xs text-muted-foreground">Próximo MP en</p>
                           <p className={cn(
                             "text-xl font-bold",
-                            mantenimientoProgramado.horasKmRestante > 0 
-                              ? "text-orange-600" 
+                            mantenimientoProgramado.horasKmRestante > 0
+                              ? "text-orange-600"
                               : "text-red-600"
                           )}>
-                            {mantenimientoProgramado.horasKmRestante > 0 
-                              ? `${mantenimientoProgramado.horasKmRestante.toFixed(1)}h` 
+                            {mantenimientoProgramado.horasKmRestante > 0
+                              ? `${mantenimientoProgramado.horasKmRestante.toFixed(1)}h`
                               : `${mantenimientoProgramado.horasKmRestante.toFixed(1)}h`}
                           </p>
                         </div>
@@ -904,7 +927,7 @@ export default function PlanificadorInteligente() {
                     </CardContent>
                   </Card>
                 )}
-                
+
                 {planActual && kitsDelPlanActual.length > 0 && (
                   <Card className="border-2 border-purple-200 dark:border-purple-800">
                     <CardHeader>
@@ -1031,7 +1054,7 @@ export default function PlanificadorInteligente() {
                         )}
                       </CardTitle>
                       <CardDescription>
-                        {mpSugerido?.esManual 
+                        {mpSugerido?.esManual
                           ? `Rutas replanificadas automáticamente basadas en ${mpSugerido.mp} asignado manualmente`
                           : 'Generadas automáticamente basadas en el plan actual'}
                       </CardDescription>
@@ -1041,12 +1064,12 @@ export default function PlanificadorInteligente() {
                         <div className="flex items-start gap-2 p-3 bg-amber-50 dark:bg-amber-950/20 rounded-lg border border-amber-200 dark:border-amber-800 mb-4">
                           <Info className="h-4 w-4 text-amber-600 mt-0.5 flex-shrink-0" />
                           <p className="text-xs text-amber-800 dark:text-amber-200">
-                            Las rutas han sido recalculadas automáticamente considerando el MP {mpSugerido.mp} asignado manualmente. 
+                            Las rutas han sido recalculadas automáticamente considerando el MP {mpSugerido.mp} asignado manualmente.
                             Los siguientes mantenimientos están planificados en base a esta decisión.
                           </p>
                         </div>
                       )}
-                      
+
                       <ScrollArea className="h-[400px]">
                         <div className="space-y-3 pr-4">
                           {rutas.map((ruta, idx) => {
@@ -1054,7 +1077,7 @@ export default function PlanificadorInteligente() {
                             const intervalo = planActual?.intervalos?.find(
                               (int) => int.codigo === ruta.mp || int.nombre.includes(ruta.mp)
                             );
-                            
+
                             // Encontrar kits para este intervalo
                             const kitsDeRuta = intervalo?.kits?.map((k) => k.kit) || [];
 
@@ -1218,7 +1241,7 @@ export default function PlanificadorInteligente() {
               <Label>Equipo</Label>
               <p className="text-sm font-medium">{equipo?.nombre} ({equipo?.ficha})</p>
             </div>
-            
+
             {mpSugerido && (
               <div className="p-3 bg-muted/50 rounded-lg">
                 <Label className="text-xs text-muted-foreground">MP Sugerido Automático</Label>
@@ -1260,7 +1283,7 @@ export default function PlanificadorInteligente() {
             <div className="flex items-start gap-2 p-3 bg-amber-50 dark:bg-amber-950/20 rounded-lg border border-amber-200 dark:border-amber-800">
               <Info className="h-4 w-4 text-amber-600 mt-0.5 flex-shrink-0" />
               <p className="text-xs text-amber-800 dark:text-amber-200">
-                Esta asignación manual quedará registrada en el sistema para auditoría. 
+                Esta asignación manual quedará registrada en el sistema para auditoría.
                 El sistema volverá a sugerir automáticamente después del próximo mantenimiento.
               </p>
             </div>
@@ -1293,7 +1316,7 @@ export default function PlanificadorInteligente() {
               Componentes y piezas incluidas en este kit
             </DialogDescription>
           </DialogHeader>
-          
+
           {kitSeleccionado && (
             <div className="space-y-4 py-4">
               {/* Información del kit */}
@@ -1319,7 +1342,7 @@ export default function PlanificadorInteligente() {
                   <Wrench className="h-4 w-4" />
                   Piezas del Kit ({kitSeleccionado.piezas?.length || 0})
                 </Label>
-                
+
                 {kitSeleccionado.piezas && kitSeleccionado.piezas.length > 0 ? (
                   <ScrollArea className="h-[400px] pr-4">
                     <div className="space-y-2">
@@ -1341,7 +1364,7 @@ export default function PlanificadorInteligente() {
                                   x{pieza.cantidad} {pieza.unidad || 'unid'}
                                 </Badge>
                               </div>
-                              
+
                               <div className="space-y-1">
                                 <p className="font-semibold text-sm">
                                   {pieza.descripcion}

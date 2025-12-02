@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -11,15 +11,19 @@ import { Equipo } from '@/types/equipment';
 
 interface EquipoDialogProps {
   equipo?: Equipo;
-  onSave: (equipo: Omit<Equipo, 'id'> | Equipo) => void;
+  onSave?: (equipo: Omit<Equipo, 'id'> | Equipo) => void;
   trigger?: React.ReactNode;
+  open?: boolean;
+  onOpenChange?: (open: boolean) => void;
+  onSubmit?: (equipo: Omit<Equipo, 'id'> | Equipo) => Promise<void>;
+  initialData?: Equipo;
 }
 
 const categorias = [
   'Vehículo transporte',
   'Excavadora',
   'Minicargadores',
-  'Retropalas', 
+  'Retropalas',
   'Camiones',
   'Rodillos',
   'Telehandler',
@@ -27,52 +31,81 @@ const categorias = [
   'Vehículo personal'
 ];
 
-export function EquipoDialog({ equipo, onSave, trigger }: EquipoDialogProps) {
-  const [open, setOpen] = useState(false);
+export function EquipoDialog({
+  equipo,
+  onSave,
+  trigger,
+  open: controlledOpen,
+  onOpenChange,
+  onSubmit,
+  initialData
+}: EquipoDialogProps) {
+  const [internalOpen, setInternalOpen] = useState(false);
+
+  const open = controlledOpen !== undefined ? controlledOpen : internalOpen;
+  const setOpen = onOpenChange || setInternalOpen;
+  const equipoData = initialData || equipo;
+
   const [formData, setFormData] = useState({
-    ficha: equipo?.ficha || '',
-    nombre: equipo?.nombre || '',
-    marca: equipo?.marca || '',
-    modelo: equipo?.modelo || '',
-    numeroSerie: equipo?.numeroSerie || '',
-    placa: equipo?.placa || '',
-    categoria: equipo?.categoria || '',
-    activo: equipo?.activo ?? true,
-    motivoInactividad: equipo?.motivoInactividad || '',
+    ficha: equipoData?.ficha || '',
+    nombre: equipoData?.nombre || '',
+    marca: equipoData?.marca || '',
+    modelo: equipoData?.modelo || '',
+    numeroSerie: equipoData?.numeroSerie || '',
+    placa: equipoData?.placa || '',
+    categoria: equipoData?.categoria || '',
+    activo: equipoData?.activo ?? true,
+    motivoInactividad: equipoData?.motivoInactividad || '',
   });
 
-  const handleSave = () => {
+  useEffect(() => {
+    const data = initialData || equipo;
+    if (data) {
+      setFormData({
+        ficha: data.ficha || '',
+        nombre: data.nombre || '',
+        marca: data.marca || '',
+        modelo: data.modelo || '',
+        numeroSerie: data.numeroSerie || '',
+        placa: data.placa || '',
+        categoria: data.categoria || '',
+        activo: data.activo ?? true,
+        motivoInactividad: data.motivoInactividad || '',
+      });
+    }
+  }, [initialData, equipo]);
+
+  const handleSave = async () => {
     const payload = {
       ...formData,
-      motivoInactividad: formData.activo
-        ? null
-        : formData.motivoInactividad.trim() || null,
+      motivoInactividad: formData.activo ? null : formData.motivoInactividad.trim() || null,
     };
 
-    if (formData.activo) {
-      payload.motivoInactividad = null;
+    const equipoDataToSave = equipoData ? { ...payload, id: equipoData.id } : payload;
+
+    if (onSubmit) {
+      await onSubmit(equipoDataToSave);
+    } else if (onSave) {
+      onSave(equipoDataToSave);
     }
 
-    const equipoData = equipo
-      ? { ...payload, id: equipo.id }
-      : payload;
-    onSave(equipoData);
     setOpen(false);
   };
 
   return (
     <Dialog open={open} onOpenChange={setOpen}>
-      <DialogTrigger asChild>
-        {trigger || (
+      {trigger && <DialogTrigger asChild>{trigger}</DialogTrigger>}
+      {!trigger && (
+        <DialogTrigger asChild>
           <Button>
-            {equipo ? <Edit className="w-4 h-4 mr-2" /> : <Plus className="w-4 h-4 mr-2" />}
-            {equipo ? 'Editar' : 'Agregar Equipo'}
+            {equipoData ? <Edit className="w-4 h-4 mr-2" /> : <Plus className="w-4 h-4 mr-2" />}
+            {equipoData ? 'Editar' : 'Agregar Equipo'}
           </Button>
-        )}
-      </DialogTrigger>
+        </DialogTrigger>
+      )}
       <DialogContent className="w-full max-w-2xl">
         <DialogHeader>
-          <DialogTitle>{equipo ? 'Editar Equipo' : 'Agregar Nuevo Equipo'}</DialogTitle>
+          <DialogTitle>{equipoData ? 'Editar Equipo' : 'Agregar Nuevo Equipo'}</DialogTitle>
         </DialogHeader>
         <div className="grid grid-cols-1 gap-4 py-4 md:grid-cols-2">
           <div>

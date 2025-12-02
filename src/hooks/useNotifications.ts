@@ -1,14 +1,43 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useCallback } from 'react';
 import { useToast } from '@/hooks/use-toast';
 
 type NotificationPermission = 'default' | 'granted' | 'denied';
 
+export interface AppNotification {
+  id: string;
+  title: string;
+  body: string;
+  timestamp: number;
+  read: boolean;
+  type: 'info' | 'warning' | 'success' | 'error';
+  link?: string;
+}
+
+const NOTIFICATION_STORAGE_KEY = 'app-notifications-history';
 const NOTIFICATION_TEST_KEY = 'notifications-test-sent';
 
 export function useNotifications() {
   const [permission, setPermission] = useState<NotificationPermission>('default');
   const [supported, setSupported] = useState(false);
+  const [notifications, setNotifications] = useState<AppNotification[]>([]);
   const { toast } = useToast();
+
+  // Cargar notificaciones guardadas
+  useEffect(() => {
+    const saved = localStorage.getItem(NOTIFICATION_STORAGE_KEY);
+    if (saved) {
+      try {
+        setNotifications(JSON.parse(saved));
+      } catch (e) {
+        console.error('Error parsing notifications', e);
+      }
+    }
+  }, []);
+
+  // Guardar notificaciones al cambiar
+  useEffect(() => {
+    localStorage.setItem(NOTIFICATION_STORAGE_KEY, JSON.stringify(notifications));
+  }, [notifications]);
 
   useEffect(() => {
     if ('Notification' in window) {
@@ -17,22 +46,41 @@ export function useNotifications() {
     }
   }, []);
 
-  useEffect(() => {
-    if (!('Notification' in window)) {
-      return;
+  const addNotification = useCallback((notification: Omit<AppNotification, 'id' | 'timestamp' | 'read'>) => {
+    const newNotification: AppNotification = {
+      ...notification,
+      id: crypto.randomUUID(),
+      timestamp: Date.now(),
+      read: false,
+    };
+
+    setNotifications(prev => [newNotification, ...prev]);
+
+    // Si hay permiso nativo, enviar también push local
+    if (Notification.permission === 'granted') {
+      try {
+        new Notification(notification.title, {
+          body: notification.body,
+          icon: '/favicon.ico',
+        });
+      } catch (e) {
+        console.error('Error sending native notification', e);
+      }
     }
+  }, []);
 
-    const syncPermission = () => {
-      setPermission(Notification.permission as NotificationPermission);
-    };
+  const markAsRead = useCallback((id: string) => {
+    setNotifications(prev =>
+      prev.map(n => (n.id === id ? { ...n, read: true } : n))
+    );
+  }, []);
 
-    window.addEventListener('focus', syncPermission);
-    document.addEventListener('visibilitychange', syncPermission);
+  const markAllAsRead = useCallback(() => {
+    setNotifications(prev => prev.map(n => ({ ...n, read: true })));
+  }, []);
 
-    return () => {
-      window.removeEventListener('focus', syncPermission);
-      document.removeEventListener('visibilitychange', syncPermission);
-    };
+  const clearAll = useCallback(() => {
+    setNotifications([]);
   }, []);
 
   const requestPermission = async () => {
@@ -55,20 +103,15 @@ export function useNotifications() {
           description: "Recibirás alertas sobre mantenimientos",
         });
 
-        if (typeof window !== 'undefined') {
-          const yaEnvioPrueba = window.localStorage.getItem(NOTIFICATION_TEST_KEY);
-          if (!yaEnvioPrueba) {
-            try {
-              new Notification('Notificación de prueba', {
-                body: 'Ficha DEMO-001: Esta es una notificación de prueba para verificar que todo funciona correctamente.',
-                icon: '/favicon.ico',
-                badge: '/favicon.ico',
-              });
-              window.localStorage.setItem(NOTIFICATION_TEST_KEY, 'true');
-            } catch (error) {
-              console.error('Error sending test notification:', error);
-            }
-          }
+        // Enviar prueba si es la primera vez
+        const yaEnvioPrueba = localStorage.getItem(NOTIFICATION_TEST_KEY);
+        if (!yaEnvioPrueba) {
+          addNotification({
+            title: 'Notificaciones activadas',
+            body: 'Ahora recibirás alertas importantes en este dispositivo.',
+            type: 'success'
+          });
+          localStorage.setItem(NOTIFICATION_TEST_KEY, 'true');
         }
         return true;
       } else {
@@ -85,24 +128,17 @@ export function useNotifications() {
     }
   };
 
-  const sendNotification = (title: string, options?: NotificationOptions) => {
-    if (permission === 'granted' && supported) {
-      try {
-        new Notification(title, {
-          icon: '/favicon.ico',
-          badge: '/favicon.ico',
-          ...options,
-        });
-      } catch (error) {
-        console.error('Error sending notification:', error);
-      }
-    }
-  };
+  const unreadCount = notifications.filter(n => !n.read).length;
 
   return {
     permission,
     supported,
+    notifications,
+    unreadCount,
     requestPermission,
-    sendNotification,
+    addNotification,
+    markAsRead,
+    markAllAsRead,
+    clearAll
   };
 }

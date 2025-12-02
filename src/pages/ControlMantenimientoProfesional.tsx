@@ -42,6 +42,9 @@ import { formatRemainingLabel, getRemainingVariant } from '@/lib/maintenanceUtil
 import type { ActualizacionHorasKm, MantenimientoProgramado, MantenimientoRealizado } from '@/types/equipment';
 import { useToast } from '@/hooks/use-toast';
 import { cn } from '@/lib/utils';
+import { useDeviceDetection } from '@/hooks/useDeviceDetection';
+import { useNavigate } from 'react-router-dom';
+import { ControlMantenimientoMobile } from '@/pages/mobile/ControlMantenimientoMobile';
 
 const formatDate = (value: string | null | undefined) => {
   if (!value) return 'Sin registro';
@@ -81,7 +84,7 @@ const normalizarRangoFechas = (desde: string, hasta: string) => {
   // Parsear fechas en tiempo local (YYYY-MM-DD)
   const [yInicio, mInicio, dInicio] = desde.split('-').map(Number);
   const [yFin, mFin, dFin] = hasta.split('-').map(Number);
-  
+
   const inicio = new Date(yInicio, mInicio - 1, dInicio, 0, 0, 0, 0);
   const fin = new Date(yFin, mFin - 1, dFin, 23, 59, 59, 999);
 
@@ -119,6 +122,8 @@ interface ResumenActualizaciones {
 }
 
 export default function ControlMantenimientoProfesional() {
+  const { isMobile } = useDeviceDetection();
+  const navigate = useNavigate();
   const {
     data,
     loading,
@@ -127,6 +132,41 @@ export default function ControlMantenimientoProfesional() {
   } = useSupabaseDataContext();
   const { toast } = useToast();
 
+  // Redirigir a /mantenimiento en dispositivos móviles
+  // (esa página SÍ tiene versión móvil completa con MantenimientoMobile)
+  /* 
+  useEffect(() => {
+    if (isMobile) {
+      navigate('/mantenimiento', { replace: true });
+    }
+  }, [isMobile, navigate]);
+  */
+
+  if (isMobile) {
+    return (
+      <ControlMantenimientoMobile
+        equipos={data.mantenimientosProgramados}
+        catalogoEquipos={data.equipos}
+        onUpdateLectura={async (id, lectura, fecha, notas) => {
+          await updateHorasActuales({
+            mantenimientoId: id,
+            horasKm: lectura,
+            fecha,
+            observaciones: notas,
+            unidad: 'horas' // Esto debería inferirse del equipo, pero por simplificación inicial
+          });
+        }}
+        onRegistrarMantenimiento={async (id, datos) => {
+          await registrarMantenimientoRealizado({
+            mantenimientoId: id,
+            ...datos
+          });
+        }}
+        loading={loading}
+      />
+    );
+  }
+
   // Lista derivada: solo equipos activos (no deben mostrarse inactivos en la UI)
   const activeEquipos = useMemo(() => data.equipos.filter((e) => e.activo), [data.equipos]);
 
@@ -134,29 +174,29 @@ export default function ControlMantenimientoProfesional() {
   const [busqueda, setBusqueda] = useState('');
   const [filtroCategoria, setFiltroCategoria] = useState('all');
   const [filtroEstado, setFiltroEstado] = useState('all');
-  
+
   // Estados para planificador
   const [planFicha, setPlanFicha] = useState<string | null>(null);
   const [planIntervalo, setPlanIntervalo] = useState<string>('');
   const [rutaMarcada, setRutaMarcada] = useState<string[]>([]);
   const [tabActivo, setTabActivo] = useState<'mantenimiento' | 'planificador'>('mantenimiento');
-  
+
   const [horasLectura, setHorasLectura] = useState('');
   const [fechaLectura, setFechaLectura] = useState('');
   const [responsableLectura, setResponsableLectura] = useState('');
   const [notasLectura, setNotasLectura] = useState('');
   const [unidadLectura, setUnidadLectura] = useState<'horas' | 'km'>('horas');
-  
+
   const [registroFecha, setRegistroFecha] = useState('');
   const [registroHoras, setRegistroHoras] = useState('');
   const [registroResponsable, setRegistroResponsable] = useState('');
   const [registroObservaciones, setRegistroObservaciones] = useState('');
   const [registroFiltros, setRegistroFiltros] = useState('');
   const [unidadRegistro, setUnidadRegistro] = useState<'horas' | 'km'>('horas');
-  
+
   const [updating, setUpdating] = useState(false);
   const [registering, setRegistering] = useState(false);
-  
+
   const [reportesOpen, setReportesOpen] = useState(false);
   const [reporteDesde, setReporteDesde] = useState(() => {
     const saved = localStorage.getItem('reporteDesde');
@@ -170,9 +210,9 @@ export default function ControlMantenimientoProfesional() {
     const saved = localStorage.getItem('reporteRango');
     return saved ? JSON.parse(saved) : null;
   });
-  
+
   const [panelOpen, setPanelOpen] = useState(false);
-  
+
   // Estados para actualización rápida en panel flotante
   const [fichaRapida, setFichaRapida] = useState('');
   const [equipoRapido, setEquipoRapido] = useState<MantenimientoProgramado | null>(null);
@@ -181,7 +221,7 @@ export default function ControlMantenimientoProfesional() {
   const [responsableRapido, setResponsableRapido] = useState('');
   const [notasRapida, setNotasRapida] = useState('');
   const [updatingRapido, setUpdatingRapido] = useState(false);
-  
+
   // Alertas de actualización
   const [alertasActualizacion, setAlertasActualizacion] = useState<Array<{
     id: string;
@@ -253,21 +293,21 @@ export default function ControlMantenimientoProfesional() {
   useEffect(() => {
     if (fichaRapida.trim()) {
       const busqueda = fichaRapida.trim().toUpperCase();
-      
+
       // Buscar coincidencia exacta primero
       let mantenimiento = data.mantenimientosProgramados.find(
         (m) => m.ficha.toUpperCase() === busqueda
       );
-      
+
       // Si no encuentra, buscar por coincidencia parcial flexible
       if (!mantenimiento) {
         // Normalizar búsqueda: remover guiones y ceros a la izquierda
         const busquedaNormalizada = busqueda.replace(/-/g, '').replace(/^0+/, '');
-        
+
         mantenimiento = data.mantenimientosProgramados.find((m) => {
           const fichaOriginal = m.ficha.toUpperCase();
           const fichaNormalizada = fichaOriginal.replace(/-/g, '').replace(/^0+/, '');
-          
+
           // Buscar coincidencias flexibles
           return (
             fichaNormalizada === busquedaNormalizada || // Exacta normalizada (AC033 = AC33)
@@ -277,7 +317,7 @@ export default function ControlMantenimientoProfesional() {
           );
         });
       }
-      
+
       if (mantenimiento) {
         setEquipoRapido(mantenimiento);
         setLecturaRapida(mantenimiento.horasKmActuales.toString());
@@ -325,8 +365,8 @@ export default function ControlMantenimientoProfesional() {
     () =>
       planFicha
         ? data.mantenimientosProgramados
-            .filter((mantenimiento) => mantenimiento.ficha === planFicha)
-            .sort((a, b) => a.horasKmRestante - b.horasKmRestante)
+          .filter((mantenimiento) => mantenimiento.ficha === planFicha)
+          .sort((a, b) => a.horasKmRestante - b.horasKmRestante)
         : [],
     [data.mantenimientosProgramados, planFicha],
   );
@@ -387,7 +427,7 @@ export default function ControlMantenimientoProfesional() {
     [planCatData.mantenimientosEspeciales, planIntervalo],
   );
 
-  const planCapacitacion = 
+  const planCapacitacion =
     planEspeciales[0]?.responsableSugerido
     ?? 'Define el responsable certificado para este plan';
 
@@ -483,41 +523,41 @@ export default function ControlMantenimientoProfesional() {
     return data.mantenimientosProgramados.filter((m) => {
       // Solo considerar mantenimientos de equipos activos
       const equipo = activeEquipos.find(eq => eq.ficha === m.ficha);
-      
+
       // Si el equipo no existe o no está activo, excluir este mantenimiento
       if (!equipo) return false;
-      
-      const matchBusqueda = 
+
+      const matchBusqueda =
         m.ficha.toLowerCase().includes(busqueda.toLowerCase()) ||
         m.nombreEquipo.toLowerCase().includes(busqueda.toLowerCase()) ||
         (equipo?.marca || '').toLowerCase().includes(busqueda.toLowerCase());
-      
-      const matchCategoria = filtroCategoria === 'all' || 
+
+      const matchCategoria = filtroCategoria === 'all' ||
         (equipo?.categoria || '') === filtroCategoria;
-      
+
       let matchEstado = true;
-      
+
       // Si hay rango de reporte y el filtro es registrada/pendientes
       if (reporteRango && (filtroEstado === 'registrada' || filtroEstado === 'pendientes')) {
         const fechaUltima = new Date(m.fechaUltimaActualizacion);
         const inicioRango = new Date(reporteRango.desde);
         const finRango = new Date(reporteRango.hasta);
-        
+
         fechaUltima.setHours(0, 0, 0, 0);
         inicioRango.setHours(0, 0, 0, 0);
         finRango.setHours(23, 59, 59, 999);
-        
+
         const actualizadoEnRango = fechaUltima >= inicioRango && fechaUltima <= finRango;
-        
+
         matchEstado = (filtroEstado === 'registrada' && actualizadoEnRango) ||
-                      (filtroEstado === 'pendientes' && !actualizadoEnRango);
+          (filtroEstado === 'pendientes' && !actualizadoEnRango);
       } else if (filtroEstado !== 'all' && filtroEstado !== 'registrada' && filtroEstado !== 'pendientes') {
         // Filtros de criticidad (cuando no hay rango o no se usan registrada/pendientes)
         matchEstado = (filtroEstado === 'critico' && m.horasKmRestante <= 25) ||
-                      (filtroEstado === 'alerta' && m.horasKmRestante > 25 && m.horasKmRestante <= 50) ||
-                      (filtroEstado === 'normal' && m.horasKmRestante > 50);
+          (filtroEstado === 'alerta' && m.horasKmRestante > 25 && m.horasKmRestante <= 50) ||
+          (filtroEstado === 'normal' && m.horasKmRestante > 50);
       }
-      
+
       return matchBusqueda && matchCategoria && matchEstado;
     }).sort((a, b) => a.ficha.localeCompare(b.ficha));
   }, [data.mantenimientosProgramados, activeEquipos, busqueda, filtroCategoria, filtroEstado, reporteRango]);
@@ -691,11 +731,11 @@ export default function ControlMantenimientoProfesional() {
   const handleActualizarRapido = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
     if (!equipoRapido) return;
-    
+
     const lecturaAnterior = equipoRapido.horasKmActuales;
     const lecturaNueva = Number(lecturaRapida);
     const incremento = lecturaNueva - lecturaAnterior;
-    
+
     setUpdatingRapido(true);
     try {
       const unidadInferida = equipoRapido.tipoMantenimiento.toLowerCase().includes('km') ? 'km' : 'horas';
@@ -707,7 +747,7 @@ export default function ControlMantenimientoProfesional() {
         observaciones: notasRapida || undefined,
         unidad: unidadInferida as 'horas' | 'km',
       });
-      
+
       // Crear alerta de actualización
       const nuevaAlerta = {
         id: `${equipoRapido.id}-${Date.now()}`,
@@ -719,9 +759,9 @@ export default function ControlMantenimientoProfesional() {
         fecha: fechaRapida,
         timestamp: Date.now(),
       };
-      
+
       setAlertasActualizacion(prev => [nuevaAlerta, ...prev].slice(0, 50)); // Mantener últimas 50 alertas
-      
+
       // Mostrar notificación del navegador
       if ('Notification' in window && Notification.permission === 'granted') {
         const unidad = unidadInferida === 'km' ? 'km' : 'horas';
@@ -734,18 +774,18 @@ export default function ControlMantenimientoProfesional() {
           silent: false
         });
       }
-      
+
       toast({
         title: '✅ Lectura actualizada',
         description: `${equipoRapido.nombreEquipo} - ${lecturaRapida} ${unidadInferida}`,
       });
-      
+
       // Limpiar formulario
       setFichaRapida('');
       setEquipoRapido(null);
       setNotasRapida('');
       setResponsableRapido('');
-      
+
       // Regenerar reporte si existe
       if (reporteRango) {
         const rangoNormalizado = normalizarRangoFechas(reporteDesde, reporteHasta);
@@ -806,846 +846,846 @@ export default function ControlMantenimientoProfesional() {
         {/* Tab de Mantenimiento */}
         <TabsContent value="mantenimiento" className="space-y-4">
           <div className="space-y-4">
-        {/* Header Compacto con KPIs */}
-        <div className="flex items-center gap-4 border rounded-lg bg-slate-50 dark:bg-slate-900 px-4 py-3">
-          <div className="flex items-center gap-2">
-            <span className="text-xs font-medium text-slate-500">Equipos</span>
-            <span className="text-xl font-bold">{totalEquiposPlanificados}</span>
-          </div>
-          
-          <Separator orientation="vertical" className="h-6" />
-          
-          <div className="flex items-center gap-2">
-            <span className="text-xs font-medium text-slate-500">Cobertura</span>
-            <span className="text-xl font-bold text-green-600">{coberturaSemanal}%</span>
-          </div>
-          
-          <Separator orientation="vertical" className="h-6" />
-          
-          <div className="flex items-center gap-2">
-            <span className="text-xs font-medium text-slate-500">Críticos</span>
-            <span className={cn(
-              "text-xl font-bold",
-              pendientesCriticos.length > 0 ? "text-red-600" : "text-slate-400"
-            )}>
-              {pendientesCriticos.length}
-            </span>
-          </div>
-        </div>
-
-        {/* Layout de 2 Columnas */}
-        <div className="grid gap-4 lg:grid-cols-[400px,1fr]">
-          {/* Columna Izquierda: Selector de Equipos */}
-          <div className="space-y-3">
-            {/* Filtros compactos */}
-            <div className="flex items-center gap-2">
-              <div className="relative flex-1">
-                <Search className="absolute left-2 top-2.5 h-4 w-4 text-slate-400" />
-                <Input
-                  placeholder="Buscar equipo..."
-                  className="h-9 pl-8 text-sm"
-                  value={busqueda}
-                  onChange={(e) => setBusqueda(e.target.value)}
-                />
+            {/* Header Compacto con KPIs */}
+            <div className="flex items-center gap-4 border rounded-lg bg-slate-50 dark:bg-slate-900 px-4 py-3">
+              <div className="flex items-center gap-2">
+                <span className="text-xs font-medium text-slate-500">Equipos</span>
+                <span className="text-xl font-bold">{totalEquiposPlanificados}</span>
               </div>
-              
-              <Select value={filtroCategoria} onValueChange={setFiltroCategoria}>
-                <SelectTrigger className="w-32 h-9 text-xs">
-                  <SelectValue placeholder="Categoría" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">Todas</SelectItem>
-                  {categorias.map(cat => (
-                    <SelectItem key={cat} value={cat}>{cat}</SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-              
-              <Select value={filtroEstado} onValueChange={setFiltroEstado}>
-                <SelectTrigger className="w-32 h-9 text-xs">
-                  <SelectValue placeholder="Estado" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">Todos</SelectItem>
-                  {reporteRango ? (
-                    <>
-                      <SelectItem value="registrada">Lectura registrada</SelectItem>
-                      <SelectItem value="pendientes">Pendientes</SelectItem>
-                    </>
-                  ) : (
-                    <>
-                      <SelectItem value="critico">Crítico</SelectItem>
-                      <SelectItem value="alerta">Alerta</SelectItem>
-                      <SelectItem value="normal">Normal</SelectItem>
-                    </>
-                  )}
-                </SelectContent>
-              </Select>
+
+              <Separator orientation="vertical" className="h-6" />
+
+              <div className="flex items-center gap-2">
+                <span className="text-xs font-medium text-slate-500">Cobertura</span>
+                <span className="text-xl font-bold text-green-600">{coberturaSemanal}%</span>
+              </div>
+
+              <Separator orientation="vertical" className="h-6" />
+
+              <div className="flex items-center gap-2">
+                <span className="text-xs font-medium text-slate-500">Críticos</span>
+                <span className={cn(
+                  "text-xl font-bold",
+                  pendientesCriticos.length > 0 ? "text-red-600" : "text-slate-400"
+                )}>
+                  {pendientesCriticos.length}
+                </span>
+              </div>
             </div>
 
-            {/* Tabla compacta de equipos */}
-            <div className="rounded-md border bg-white dark:bg-slate-950 max-h-[600px] overflow-auto">
-              <Table>
-                <TableHeader className="sticky top-0 bg-slate-50 dark:bg-slate-900">
-                  <TableRow className="hover:bg-transparent">
-                    <TableHead className="h-8 text-xs">Ficha</TableHead>
-                    <TableHead className="h-8 text-xs">Equipo</TableHead>
-                    <TableHead className="h-8 text-xs text-right">Restante</TableHead>
-                    <TableHead className="h-8 w-8"></TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {equiposFiltrados.map((m) => (
-                    <TableRow
-                      key={m.id}
-                      className={cn(
-                        "cursor-pointer h-14 transition-colors",
-                        selectedFicha === m.ficha && "bg-slate-100 dark:bg-slate-800"
+            {/* Layout de 2 Columnas */}
+            <div className="grid gap-4 lg:grid-cols-[400px,1fr]">
+              {/* Columna Izquierda: Selector de Equipos */}
+              <div className="space-y-3">
+                {/* Filtros compactos */}
+                <div className="flex items-center gap-2">
+                  <div className="relative flex-1">
+                    <Search className="absolute left-2 top-2.5 h-4 w-4 text-slate-400" />
+                    <Input
+                      placeholder="Buscar equipo..."
+                      className="h-9 pl-8 text-sm"
+                      value={busqueda}
+                      onChange={(e) => setBusqueda(e.target.value)}
+                    />
+                  </div>
+
+                  <Select value={filtroCategoria} onValueChange={setFiltroCategoria}>
+                    <SelectTrigger className="w-32 h-9 text-xs">
+                      <SelectValue placeholder="Categoría" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="all">Todas</SelectItem>
+                      {categorias.map(cat => (
+                        <SelectItem key={cat} value={cat}>{cat}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+
+                  <Select value={filtroEstado} onValueChange={setFiltroEstado}>
+                    <SelectTrigger className="w-32 h-9 text-xs">
+                      <SelectValue placeholder="Estado" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="all">Todos</SelectItem>
+                      {reporteRango ? (
+                        <>
+                          <SelectItem value="registrada">Lectura registrada</SelectItem>
+                          <SelectItem value="pendientes">Pendientes</SelectItem>
+                        </>
+                      ) : (
+                        <>
+                          <SelectItem value="critico">Crítico</SelectItem>
+                          <SelectItem value="alerta">Alerta</SelectItem>
+                          <SelectItem value="normal">Normal</SelectItem>
+                        </>
                       )}
-                      onClick={() => setSelectedFicha(m.ficha)}
-                    >
-                      <TableCell className="font-mono text-xs py-2">{m.ficha}</TableCell>
-                      <TableCell className="py-2">
-                        <div>
-                          <div className="font-medium text-sm leading-tight">{m.nombreEquipo}</div>
-                          <div className="text-xs text-slate-500">
-                            {activeEquipos.find(eq => eq.ficha === m.ficha)?.categoria || 'Sin categoría'}
-                          </div>
-                        </div>
-                      </TableCell>
-                      <TableCell className="text-right py-2">
-                        <Badge 
-                          variant={getRemainingVariant(m.horasKmRestante)}
-                          className="text-xs px-1.5"
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                {/* Tabla compacta de equipos */}
+                <div className="rounded-md border bg-white dark:bg-slate-950 max-h-[600px] overflow-auto">
+                  <Table>
+                    <TableHeader className="sticky top-0 bg-slate-50 dark:bg-slate-900">
+                      <TableRow className="hover:bg-transparent">
+                        <TableHead className="h-8 text-xs">Ficha</TableHead>
+                        <TableHead className="h-8 text-xs">Equipo</TableHead>
+                        <TableHead className="h-8 text-xs text-right">Restante</TableHead>
+                        <TableHead className="h-8 w-8"></TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {equiposFiltrados.map((m) => (
+                        <TableRow
+                          key={m.id}
+                          className={cn(
+                            "cursor-pointer h-14 transition-colors",
+                            selectedFicha === m.ficha && "bg-slate-100 dark:bg-slate-800"
+                          )}
+                          onClick={() => setSelectedFicha(m.ficha)}
                         >
-                          {m.horasKmRestante}
-                        </Badge>
-                      </TableCell>
-                      <TableCell className="py-2">
-                        <ChevronRight className="h-4 w-4 text-slate-400" />
-                      </TableCell>
-                    </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
-            </div>
-          </div>
-
-          {/* Columna Derecha: Formularios */}
-          <div className="space-y-4">
-            {selected && (
-              <Card className="border-slate-200">
-                <CardHeader className="pb-3 px-4 py-3 border-b bg-slate-50 dark:bg-slate-900">
-                  <div className="flex items-center justify-between">
-                    <CardTitle className="text-base font-semibold">
-                      {selected.nombreEquipo}
-                    </CardTitle>
-                    <div className="flex items-center gap-2">
-                      <Badge variant="outline" className="font-mono text-xs">
-                        {selected.ficha}
-                      </Badge>
-                      <Badge 
-                        variant={getRemainingVariant(selected.horasKmRestante)}
-                        className="text-xs"
-                      >
-                        {selected.horasKmRestante} restante
-                      </Badge>
-                    </div>
-                  </div>
-                </CardHeader>
-                
-                <CardContent className="p-4">
-                  <Tabs defaultValue="actualizar" className="space-y-4">
-                    <TabsList className="grid w-full grid-cols-2 h-9">
-                      <TabsTrigger value="actualizar" className="text-sm">Actualizar</TabsTrigger>
-                      <TabsTrigger value="registrar" className="text-sm">Registrar</TabsTrigger>
-                    </TabsList>
-                    
-                    <TabsContent value="actualizar" className="space-y-3 mt-4">
-                      <form onSubmit={handleActualizarHoras} className="space-y-3">
-                        <div className="grid grid-cols-2 gap-3">
-                          <div className="space-y-1">
-                            <Label className="text-xs font-medium">Nueva lectura</Label>
-                            <Input 
-                              type="number" 
-                              className="h-9 text-sm"
-                              value={horasLectura}
-                              onChange={(e) => setHorasLectura(e.target.value)}
-                              required
-                            />
-                          </div>
-                          
-                          <div className="space-y-1">
-                            <Label className="text-xs font-medium">Unidad</Label>
-                            <Select value={unidadLectura} onValueChange={(v) => setUnidadLectura(v as 'horas' | 'km')}>
-                              <SelectTrigger className="h-9 text-sm">
-                                <SelectValue />
-                              </SelectTrigger>
-                              <SelectContent>
-                                <SelectItem value="horas">Horas</SelectItem>
-                                <SelectItem value="km">Kilómetros</SelectItem>
-                              </SelectContent>
-                            </Select>
-                          </div>
-                        </div>
-                        
-                        <div className="grid grid-cols-2 gap-3">
-                          <div className="space-y-1">
-                            <Label className="text-xs font-medium">Fecha</Label>
-                            <Input 
-                              type="date" 
-                              className="h-9 text-sm" 
-                              value={fechaLectura}
-                              onChange={(e) => setFechaLectura(e.target.value)}
-                              required
-                            />
-                          </div>
-                          
-                          <div className="space-y-1">
-                            <Label className="text-xs font-medium">Responsable</Label>
-                            <Input 
-                              className="h-9 text-sm" 
-                              value={responsableLectura}
-                              onChange={(e) => setResponsableLectura(e.target.value)}
-                              placeholder="Opcional"
-                            />
-                          </div>
-                        </div>
-                        
-                        <div className="space-y-1">
-                          <Label className="text-xs font-medium">Observaciones</Label>
-                          <Textarea 
-                            rows={2} 
-                            className="text-sm resize-none"
-                            value={notasLectura}
-                            onChange={(e) => setNotasLectura(e.target.value)}
-                            placeholder="Opcional"
-                          />
-                        </div>
-                        
-                        <Button type="submit" className="w-full h-9 text-sm" disabled={updating}>
-                          {updating ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : null}
-                          Guardar lectura
-                        </Button>
-                      </form>
-                    </TabsContent>
-                    
-                    <TabsContent value="registrar" className="space-y-3 mt-4">
-                      <form onSubmit={handleRegistrarMantenimiento} className="space-y-3">
-                        <div className="grid grid-cols-3 gap-3">
-                          <div className="space-y-1">
-                            <Label className="text-xs font-medium">Fecha</Label>
-                            <Input 
-                              type="date" 
-                              className="h-9 text-sm"
-                              value={registroFecha}
-                              onChange={(e) => setRegistroFecha(e.target.value)}
-                              required
-                            />
-                          </div>
-                          
-                          <div className="space-y-1">
-                            <Label className="text-xs font-medium">Lectura</Label>
-                            <Input 
-                              type="number" 
-                              className="h-9 text-sm"
-                              value={registroHoras}
-                              onChange={(e) => setRegistroHoras(e.target.value)}
-                              required
-                            />
-                          </div>
-                          
-                          <div className="space-y-1">
-                            <Label className="text-xs font-medium">Unidad</Label>
-                            <Select value={unidadRegistro} onValueChange={(v) => setUnidadRegistro(v as 'horas' | 'km')}>
-                              <SelectTrigger className="h-9 text-sm">
-                                <SelectValue />
-                              </SelectTrigger>
-                              <SelectContent>
-                                <SelectItem value="horas">Horas</SelectItem>
-                                <SelectItem value="km">Km</SelectItem>
-                              </SelectContent>
-                            </Select>
-                          </div>
-                        </div>
-                        
-                        <div className="space-y-1">
-                          <Label className="text-xs font-medium">Responsable</Label>
-                          <Input 
-                            className="h-9 text-sm"
-                            value={registroResponsable}
-                            onChange={(e) => setRegistroResponsable(e.target.value)}
-                            placeholder="Técnico responsable"
-                          />
-                        </div>
-                        
-                        <div className="space-y-1">
-                          <Label className="text-xs font-medium">Repuestos (separar por coma)</Label>
-                          <Textarea 
-                            rows={2} 
-                            className="text-sm resize-none"
-                            value={registroFiltros}
-                            onChange={(e) => setRegistroFiltros(e.target.value)}
-                            placeholder="Filtro aceite, Filtro aire, etc."
-                          />
-                        </div>
-                        
-                        <div className="space-y-1">
-                          <Label className="text-xs font-medium">Observaciones</Label>
-                          <Textarea 
-                            rows={3} 
-                            className="text-sm resize-none"
-                            value={registroObservaciones}
-                            onChange={(e) => setRegistroObservaciones(e.target.value)}
-                            placeholder="Detalle del trabajo realizado"
-                          />
-                        </div>
-                        
-                        <Button type="submit" className="w-full h-9 text-sm" disabled={registering}>
-                          {registering ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : <Wrench className="h-4 w-4 mr-2" />}
-                          Registrar mantenimiento
-                        </Button>
-                      </form>
-                    </TabsContent>
-                  </Tabs>
-                </CardContent>
-              </Card>
-            )}
-          </div>
-        </div>
-
-        {/* Reportes Colapsables */}
-        <Collapsible open={reportesOpen} onOpenChange={setReportesOpen}>
-          <Card className="border-slate-200">
-            <CollapsibleTrigger asChild>
-              <CardHeader className="cursor-pointer hover:bg-slate-50 dark:hover:bg-slate-900 transition-colors px-4 py-3">
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-3">
-                    <CardTitle className="text-base font-semibold">
-                      Reportes Semanales
-                    </CardTitle>
-                    {resumenActualizaciones && (
-                      <div className="flex items-center gap-2 text-xs">
-                        <Badge variant="secondary">{resumenActualizaciones.actualizados.length} actualizados</Badge>
-                        <Badge variant="destructive">{resumenActualizaciones.pendientes.length} pendientes</Badge>
-                      </div>
-                    )}
-                  </div>
-                  <ChevronDown className={cn(
-                    "h-4 w-4 transition-transform",
-                    reportesOpen && "rotate-180"
-                  )} />
-                </div>
-              </CardHeader>
-            </CollapsibleTrigger>
-            
-            <CollapsibleContent>
-              <CardContent className="p-4 pt-0 space-y-3">
-                <div className="flex items-center gap-2">
-                  <Input
-                    type="date"
-                    value={reporteDesde}
-                    onChange={(e) => setReporteDesde(e.target.value)}
-                    className="h-9 text-sm"
-                  />
-                  <span className="text-sm text-slate-500">a</span>
-                  <Input
-                    type="date"
-                    value={reporteHasta}
-                    onChange={(e) => setReporteHasta(e.target.value)}
-                    className="h-9 text-sm"
-                  />
-                  <Button onClick={handleGenerarReporte} size="sm" className="h-9">
-                    Generar
-                  </Button>
-                  {reporteRango && (
-                    <Button onClick={handleLimpiarReporte} size="sm" variant="outline" className="h-9">
-                      Limpiar
-                    </Button>
-                  )}
-                </div>
-              </CardContent>
-            </CollapsibleContent>
-          </Card>
-        </Collapsible>
-
-        {/* Próximos Mantenimientos */}
-        <Card className="border-slate-200">
-          <CardHeader className="px-4 py-3 border-b bg-slate-50 dark:bg-slate-900">
-            <CardTitle className="text-base font-semibold">
-              Próximos Mantenimientos
-            </CardTitle>
-          </CardHeader>
-          <CardContent className="p-0">
-            <div className="overflow-auto max-h-96">
-              <Table className="text-sm">
-                <TableHeader className="sticky top-0 bg-slate-50 dark:bg-slate-900">
-                  <TableRow className="hover:bg-transparent">
-                    <TableHead className="h-8 text-xs">Equipo</TableHead>
-                    <TableHead className="h-8 text-xs w-20">Ficha</TableHead>
-                    <TableHead className="h-8 text-xs w-24 text-right">Lectura</TableHead>
-                    <TableHead className="h-8 text-xs w-24 text-right">Restante</TableHead>
-                    <TableHead className="h-8 text-xs w-24 text-right">Próximo</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {proximos.map((m) => (
-                    <TableRow key={m.id} className="h-10">
-                      <TableCell className="py-1">
-                        <div className="font-medium text-sm">{m.nombreEquipo}</div>
-                        <div className="text-xs text-slate-500">{m.tipoMantenimiento}</div>
-                      </TableCell>
-                      <TableCell className="font-mono text-xs py-1">{m.ficha}</TableCell>
-                      <TableCell className="text-right py-1">
-                        <span className="text-sm">{m.horasKmActuales}</span>
-                      </TableCell>
-                      <TableCell className="text-right py-1">
-                        <Badge variant={getRemainingVariant(m.horasKmRestante)} className="text-xs px-1">
-                          {m.horasKmRestante}
-                        </Badge>
-                      </TableCell>
-                      <TableCell className="text-right py-1">
-                        <span className="text-sm font-medium">{m.proximoMantenimiento}</span>
-                      </TableCell>
-                    </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
-            </div>
-          </CardContent>
-        </Card>
-      </div>
-
-      {/* Botón Flotante y Panel Arrastrable */}
-      <div className="pointer-events-none fixed bottom-6 right-6 z-40 flex flex-col items-end gap-3">
-        {panelOpen && (
-          <Draggable
-            handle=".drag-handle"
-            defaultPosition={{ x: 0, y: 0 }}
-            position={undefined}
-          >
-            <div
-              role="dialog"
-              aria-modal="false"
-              className="pointer-events-auto w-[95vw] max-w-[1400px] overflow-hidden rounded-2xl border border-primary/20 bg-background/95 shadow-2xl backdrop-blur supports-[backdrop-filter]:backdrop-blur"
-            >
-              <div className="drag-handle cursor-move flex items-start justify-between gap-4 border-b px-6 py-4 bg-slate-50 dark:bg-slate-900">
-                <div className="flex items-center gap-2">
-                  <GripVertical className="h-5 w-5 text-slate-400" />
-                  <div>
-                    <h3 className="flex items-center gap-2 text-base font-semibold">
-                      <CalendarRange className="h-5 w-5 text-primary" /> Panel Flotante de Gestión
-                    </h3>
-                    <p className="mt-1 text-sm text-muted-foreground">
-                      Arrastra para mover libremente. Actualiza lecturas y genera reportes sin salir de esta vista.
-                    </p>
-                  </div>
-                </div>
-                <Button variant="ghost" size="icon" onClick={() => setPanelOpen(false)}>
-                  <X className="h-4 w-4" />
-                  <span className="sr-only">Cerrar panel</span>
-                </Button>
-              </div>
-              
-              <div className="grid gap-6 lg:grid-cols-[400px,1fr] max-h-[80vh] overflow-hidden">
-                {/* Columna Izquierda: Actualización Rápida */}
-                <div className="border-r overflow-y-auto px-6 py-6 space-y-4 bg-slate-50/50 dark:bg-slate-900/50">
-                  <div>
-                    <h4 className="text-sm font-semibold mb-1 flex items-center gap-2">
-                      <Gauge className="h-4 w-4 text-primary" />
-                      Actualización Rápida
-                    </h4>
-                    <p className="text-xs text-muted-foreground">Ingresa la ficha para actualizar la lectura</p>
-                  </div>
-
-                  <div className="space-y-3">
-                    <div className="space-y-2">
-                      <Label htmlFor="fichaRapida" className="text-xs font-semibold">Ficha del equipo</Label>
-                      <Input
-                        id="fichaRapida"
-                        placeholder="Ej: AC-003"
-                        value={fichaRapida}
-                        onChange={(e) => setFichaRapida(e.target.value.toUpperCase())}
-                        className="h-9 text-sm font-mono"
-                        autoComplete="off"
-                      />
-                    </div>
-
-                    {fichaRapida && !equipoRapido && (
-                      <Alert variant="destructive" className="py-2">
-                        <AlertTriangle className="h-4 w-4" />
-                        <AlertTitle className="text-sm">Equipo no encontrado</AlertTitle>
-                        <AlertDescription className="text-xs">
-                          No existe un equipo con la ficha "{fichaRapida}"
-                        </AlertDescription>
-                      </Alert>
-                    )}
-
-                    {equipoRapido && (
-                      <div className="space-y-4">
-                        <Card className="border-primary/30 bg-white dark:bg-slate-950">
-                          <CardContent className="p-3 space-y-2">
+                          <TableCell className="font-mono text-xs py-2">{m.ficha}</TableCell>
+                          <TableCell className="py-2">
                             <div>
-                              <p className="font-semibold text-sm">{equipoRapido.nombreEquipo}</p>
-                              <p className="text-xs text-muted-foreground">
-                                {equipoRapido.tipoMantenimiento}
-                              </p>
-                            </div>
-                            <div className="grid grid-cols-2 gap-2 text-xs">
-                              <div>
-                                <span className="text-muted-foreground">Actual:</span>
-                                <span className="font-semibold ml-1">{equipoRapido.horasKmActuales}</span>
-                              </div>
-                              <div>
-                                <span className="text-muted-foreground">Próximo:</span>
-                                <span className="font-semibold ml-1">{equipoRapido.proximoMantenimiento}</span>
-                              </div>
-                              <div className="col-span-2">
-                                <span className="text-muted-foreground">Restante:</span>
-                                <Badge 
-                                  variant={getRemainingVariant(equipoRapido.horasKmRestante)} 
-                                  className="ml-1 text-xs"
-                                >
-                                  {equipoRapido.horasKmRestante}
-                                </Badge>
+                              <div className="font-medium text-sm leading-tight">{m.nombreEquipo}</div>
+                              <div className="text-xs text-slate-500">
+                                {activeEquipos.find(eq => eq.ficha === m.ficha)?.categoria || 'Sin categoría'}
                               </div>
                             </div>
-                          </CardContent>
-                        </Card>
-
-                        <form onSubmit={handleActualizarRapido} className="space-y-3">
-                          <div className="space-y-2">
-                            <Label htmlFor="lecturaRapida" className="text-xs font-semibold">Nueva lectura *</Label>
-                            <Input
-                              id="lecturaRapida"
-                              type="number"
-                              value={lecturaRapida}
-                              onChange={(e) => setLecturaRapida(e.target.value)}
-                              className="h-9 text-sm"
-                              required
-                            />
-                          </div>
-
-                          <div className="space-y-2">
-                            <Label htmlFor="fechaRapida" className="text-xs font-semibold">Fecha *</Label>
-                            <Input
-                              id="fechaRapida"
-                              type="date"
-                              value={fechaRapida}
-                              onChange={(e) => setFechaRapida(e.target.value)}
-                              className="h-9 text-sm"
-                              required
-                            />
-                          </div>
-
-                          <div className="space-y-2">
-                            <Label htmlFor="responsableRapido" className="text-xs font-semibold">Responsable</Label>
-                            <Input
-                              id="responsableRapido"
-                              placeholder="Nombre del responsable"
-                              value={responsableRapido}
-                              onChange={(e) => setResponsableRapido(e.target.value)}
-                              className="h-9 text-sm"
-                            />
-                          </div>
-
-                          <div className="space-y-2">
-                            <Label htmlFor="notasRapida" className="text-xs font-semibold">Observaciones</Label>
-                            <Textarea
-                              id="notasRapida"
-                              placeholder="Notas adicionales..."
-                              value={notasRapida}
-                              onChange={(e) => setNotasRapida(e.target.value)}
-                              className="text-sm min-h-[60px]"
-                              rows={2}
-                            />
-                          </div>
-
-                          <Button 
-                            type="submit" 
-                            className="w-full gap-2" 
-                            disabled={updatingRapido}
-                          >
-                            {updatingRapido ? (
-                              <>
-                                <Loader2 className="h-4 w-4 animate-spin" />
-                                Actualizando...
-                              </>
-                            ) : (
-                              <>
-                                <CalendarCheck className="h-4 w-4" />
-                                Actualizar Lectura
-                              </>
-                            )}
-                          </Button>
-                        </form>
-                      </div>
-                    )}
-                  </div>
-                  
-                  {/* Sección de Alertas de Actualización */}
-                  {alertasActualizacion.length > 0 && (
-                    <div className="mt-6 space-y-3">
-                      <div className="flex items-center justify-between">
-                        <h5 className="text-xs font-semibold flex items-center gap-2">
-                          <Bell className="h-3.5 w-3.5 text-amber-500" />
-                          Alertas de Actualización
-                        </h5>
-                        <Button 
-                          variant="ghost" 
-                          size="sm" 
-                          className="h-6 text-xs"
-                          onClick={() => setAlertasActualizacion([])}
-                        >
-                          Limpiar
-                        </Button>
-                      </div>
-                      
-                      <div className="space-y-2 max-h-64 overflow-y-auto">
-                        {alertasActualizacion.map((alerta) => (
-                          <Alert key={alerta.id} className="py-2 bg-amber-50 dark:bg-amber-950/20 border-amber-200">
-                            <div className="flex items-start gap-2">
-                              <Bell className="h-4 w-4 text-amber-600 mt-0.5" />
-                              <div className="flex-1 space-y-1">
-                                <div className="flex items-start justify-between">
-                                  <div>
-                                    <p className="text-xs font-semibold">{alerta.ficha} - {alerta.nombreEquipo}</p>
-                                    <p className="text-xs text-muted-foreground">
-                                      {new Date(alerta.timestamp).toLocaleString('es-ES', { 
-                                        day: '2-digit', 
-                                        month: '2-digit', 
-                                        year: 'numeric',
-                                        hour: '2-digit',
-                                        minute: '2-digit'
-                                      })}
-                                    </p>
-                                  </div>
-                                </div>
-                                <div className="grid grid-cols-3 gap-2 text-xs">
-                                  <div>
-                                    <span className="text-muted-foreground">Anterior:</span>
-                                    <p className="font-semibold">{alerta.lecturaAnterior}</p>
-                                  </div>
-                                  <div>
-                                    <span className="text-muted-foreground">Actual:</span>
-                                    <p className="font-semibold text-green-600">{alerta.lecturaActual}</p>
-                                  </div>
-                                  <div>
-                                    <span className="text-muted-foreground">Incremento:</span>
-                                    <p className="font-semibold text-blue-600">+{alerta.incremento}</p>
-                                  </div>
-                                </div>
-                              </div>
-                            </div>
-                          </Alert>
-                        ))}
-                      </div>
-                    </div>
-                  )}
+                          </TableCell>
+                          <TableCell className="text-right py-2">
+                            <Badge
+                              variant={getRemainingVariant(m.horasKmRestante)}
+                              className="text-xs px-1.5"
+                            >
+                              {m.horasKmRestante}
+                            </Badge>
+                          </TableCell>
+                          <TableCell className="py-2">
+                            <ChevronRight className="h-4 w-4 text-slate-400" />
+                          </TableCell>
+                        </TableRow>
+                      ))}
+                    </TableBody>
+                  </Table>
                 </div>
+              </div>
 
-                {/* Columna Derecha: Reportes */}
-                <div className="overflow-y-auto px-6 py-6 space-y-6">
-                  <div>
-                    <h4 className="text-sm font-semibold mb-1 flex items-center gap-2">
-                      <CalendarRange className="h-4 w-4 text-primary" />
-                      Reportes por Rango
-                    </h4>
-                    <p className="text-xs text-muted-foreground">Genera reportes de actualizaciones por período</p>
-                  </div>
-
-                  <div className="space-y-4">
-                    <div className="grid gap-4 md:grid-cols-2">
-                      <div className="space-y-2">
-                        <Label htmlFor="reporteDesde" className="font-semibold text-sm">Desde</Label>
-                        <Input
-                          id="reporteDesde"
-                          type="date"
-                          value={reporteDesde}
-                          onChange={(event) => setReporteDesde(event.target.value)}
-                          className="h-9"
-                        />
+              {/* Columna Derecha: Formularios */}
+              <div className="space-y-4">
+                {selected && (
+                  <Card className="border-slate-200">
+                    <CardHeader className="pb-3 px-4 py-3 border-b bg-slate-50 dark:bg-slate-900">
+                      <div className="flex items-center justify-between">
+                        <CardTitle className="text-base font-semibold">
+                          {selected.nombreEquipo}
+                        </CardTitle>
+                        <div className="flex items-center gap-2">
+                          <Badge variant="outline" className="font-mono text-xs">
+                            {selected.ficha}
+                          </Badge>
+                          <Badge
+                            variant={getRemainingVariant(selected.horasKmRestante)}
+                            className="text-xs"
+                          >
+                            {selected.horasKmRestante} restante
+                          </Badge>
+                        </div>
                       </div>
-                      <div className="space-y-2">
-                        <Label htmlFor="reporteHasta" className="font-semibold text-sm">Hasta</Label>
-                        <Input
-                          id="reporteHasta"
-                          type="date"
-                          value={reporteHasta}
-                          onChange={(event) => setReporteHasta(event.target.value)}
-                          className="h-9"
-                        />
+                    </CardHeader>
+
+                    <CardContent className="p-4">
+                      <Tabs defaultValue="actualizar" className="space-y-4">
+                        <TabsList className="grid w-full grid-cols-2 h-9">
+                          <TabsTrigger value="actualizar" className="text-sm">Actualizar</TabsTrigger>
+                          <TabsTrigger value="registrar" className="text-sm">Registrar</TabsTrigger>
+                        </TabsList>
+
+                        <TabsContent value="actualizar" className="space-y-3 mt-4">
+                          <form onSubmit={handleActualizarHoras} className="space-y-3">
+                            <div className="grid grid-cols-2 gap-3">
+                              <div className="space-y-1">
+                                <Label className="text-xs font-medium">Nueva lectura</Label>
+                                <Input
+                                  type="number"
+                                  className="h-9 text-sm"
+                                  value={horasLectura}
+                                  onChange={(e) => setHorasLectura(e.target.value)}
+                                  required
+                                />
+                              </div>
+
+                              <div className="space-y-1">
+                                <Label className="text-xs font-medium">Unidad</Label>
+                                <Select value={unidadLectura} onValueChange={(v) => setUnidadLectura(v as 'horas' | 'km')}>
+                                  <SelectTrigger className="h-9 text-sm">
+                                    <SelectValue />
+                                  </SelectTrigger>
+                                  <SelectContent>
+                                    <SelectItem value="horas">Horas</SelectItem>
+                                    <SelectItem value="km">Kilómetros</SelectItem>
+                                  </SelectContent>
+                                </Select>
+                              </div>
+                            </div>
+
+                            <div className="grid grid-cols-2 gap-3">
+                              <div className="space-y-1">
+                                <Label className="text-xs font-medium">Fecha</Label>
+                                <Input
+                                  type="date"
+                                  className="h-9 text-sm"
+                                  value={fechaLectura}
+                                  onChange={(e) => setFechaLectura(e.target.value)}
+                                  required
+                                />
+                              </div>
+
+                              <div className="space-y-1">
+                                <Label className="text-xs font-medium">Responsable</Label>
+                                <Input
+                                  className="h-9 text-sm"
+                                  value={responsableLectura}
+                                  onChange={(e) => setResponsableLectura(e.target.value)}
+                                  placeholder="Opcional"
+                                />
+                              </div>
+                            </div>
+
+                            <div className="space-y-1">
+                              <Label className="text-xs font-medium">Observaciones</Label>
+                              <Textarea
+                                rows={2}
+                                className="text-sm resize-none"
+                                value={notasLectura}
+                                onChange={(e) => setNotasLectura(e.target.value)}
+                                placeholder="Opcional"
+                              />
+                            </div>
+
+                            <Button type="submit" className="w-full h-9 text-sm" disabled={updating}>
+                              {updating ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : null}
+                              Guardar lectura
+                            </Button>
+                          </form>
+                        </TabsContent>
+
+                        <TabsContent value="registrar" className="space-y-3 mt-4">
+                          <form onSubmit={handleRegistrarMantenimiento} className="space-y-3">
+                            <div className="grid grid-cols-3 gap-3">
+                              <div className="space-y-1">
+                                <Label className="text-xs font-medium">Fecha</Label>
+                                <Input
+                                  type="date"
+                                  className="h-9 text-sm"
+                                  value={registroFecha}
+                                  onChange={(e) => setRegistroFecha(e.target.value)}
+                                  required
+                                />
+                              </div>
+
+                              <div className="space-y-1">
+                                <Label className="text-xs font-medium">Lectura</Label>
+                                <Input
+                                  type="number"
+                                  className="h-9 text-sm"
+                                  value={registroHoras}
+                                  onChange={(e) => setRegistroHoras(e.target.value)}
+                                  required
+                                />
+                              </div>
+
+                              <div className="space-y-1">
+                                <Label className="text-xs font-medium">Unidad</Label>
+                                <Select value={unidadRegistro} onValueChange={(v) => setUnidadRegistro(v as 'horas' | 'km')}>
+                                  <SelectTrigger className="h-9 text-sm">
+                                    <SelectValue />
+                                  </SelectTrigger>
+                                  <SelectContent>
+                                    <SelectItem value="horas">Horas</SelectItem>
+                                    <SelectItem value="km">Km</SelectItem>
+                                  </SelectContent>
+                                </Select>
+                              </div>
+                            </div>
+
+                            <div className="space-y-1">
+                              <Label className="text-xs font-medium">Responsable</Label>
+                              <Input
+                                className="h-9 text-sm"
+                                value={registroResponsable}
+                                onChange={(e) => setRegistroResponsable(e.target.value)}
+                                placeholder="Técnico responsable"
+                              />
+                            </div>
+
+                            <div className="space-y-1">
+                              <Label className="text-xs font-medium">Repuestos (separar por coma)</Label>
+                              <Textarea
+                                rows={2}
+                                className="text-sm resize-none"
+                                value={registroFiltros}
+                                onChange={(e) => setRegistroFiltros(e.target.value)}
+                                placeholder="Filtro aceite, Filtro aire, etc."
+                              />
+                            </div>
+
+                            <div className="space-y-1">
+                              <Label className="text-xs font-medium">Observaciones</Label>
+                              <Textarea
+                                rows={3}
+                                className="text-sm resize-none"
+                                value={registroObservaciones}
+                                onChange={(e) => setRegistroObservaciones(e.target.value)}
+                                placeholder="Detalle del trabajo realizado"
+                              />
+                            </div>
+
+                            <Button type="submit" className="w-full h-9 text-sm" disabled={registering}>
+                              {registering ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : <Wrench className="h-4 w-4 mr-2" />}
+                              Registrar mantenimiento
+                            </Button>
+                          </form>
+                        </TabsContent>
+                      </Tabs>
+                    </CardContent>
+                  </Card>
+                )}
+              </div>
+            </div>
+
+            {/* Reportes Colapsables */}
+            <Collapsible open={reportesOpen} onOpenChange={setReportesOpen}>
+              <Card className="border-slate-200">
+                <CollapsibleTrigger asChild>
+                  <CardHeader className="cursor-pointer hover:bg-slate-50 dark:hover:bg-slate-900 transition-colors px-4 py-3">
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-3">
+                        <CardTitle className="text-base font-semibold">
+                          Reportes Semanales
+                        </CardTitle>
+                        {resumenActualizaciones && (
+                          <div className="flex items-center gap-2 text-xs">
+                            <Badge variant="secondary">{resumenActualizaciones.actualizados.length} actualizados</Badge>
+                            <Badge variant="destructive">{resumenActualizaciones.pendientes.length} pendientes</Badge>
+                          </div>
+                        )}
                       </div>
+                      <ChevronDown className={cn(
+                        "h-4 w-4 transition-transform",
+                        reportesOpen && "rotate-180"
+                      )} />
                     </div>
+                  </CardHeader>
+                </CollapsibleTrigger>
 
-                    <div className="flex flex-wrap gap-2">
-                      <Button
-                        type="button"
-                        size="sm"
-                        variant="secondary"
-                        onClick={() => {
-                          const semana = obtenerSemanaActual();
-                          setReporteDesde(semana.desde);
-                          setReporteHasta(semana.hasta);
-                          const rangoNormalizado = normalizarRangoFechas(semana.desde, semana.hasta);
-                          if (rangoNormalizado) setReporteRango(rangoNormalizado);
-                        }}
-                      >
-                        Última semana
-                      </Button>
-                      <Button
-                        type="button"
-                        size="sm"
-                        variant="secondary"
-                        onClick={() => {
-                          const hoy = new Date();
-                          const hace7dias = new Date(hoy);
-                          hace7dias.setDate(hace7dias.getDate() - 7);
-                          setReporteDesde(hace7dias.toISOString().slice(0, 10));
-                          setReporteHasta(hoy.toISOString().slice(0, 10));
-                          const rangoNormalizado = normalizarRangoFechas(
-                            hace7dias.toISOString().slice(0, 10),
-                            hoy.toISOString().slice(0, 10)
-                          );
-                          if (rangoNormalizado) setReporteRango(rangoNormalizado);
-                        }}
-                      >
-                        Últimos 7 días
-                      </Button>
-                      <Button
-                        type="button"
-                        size="sm"
-                        variant="secondary"
-                        onClick={() => {
-                          const hoy = new Date();
-                          const primerDiaMes = new Date(hoy.getFullYear(), hoy.getMonth(), 1);
-                          setReporteDesde(primerDiaMes.toISOString().slice(0, 10));
-                          setReporteHasta(hoy.toISOString().slice(0, 10));
-                          const rangoNormalizado = normalizarRangoFechas(
-                            primerDiaMes.toISOString().slice(0, 10),
-                            hoy.toISOString().slice(0, 10)
-                          );
-                          if (rangoNormalizado) setReporteRango(rangoNormalizado);
-                        }}
-                      >
-                        Este mes
-                      </Button>
-                    </div>
-
-                    <div className="flex gap-2">
-                      <Button type="button" onClick={handleGenerarReporte} className="flex-1 gap-2">
-                        <CalendarCheck className="h-4 w-4" />
-                        Generar reporte
+                <CollapsibleContent>
+                  <CardContent className="p-4 pt-0 space-y-3">
+                    <div className="flex items-center gap-2">
+                      <Input
+                        type="date"
+                        value={reporteDesde}
+                        onChange={(e) => setReporteDesde(e.target.value)}
+                        className="h-9 text-sm"
+                      />
+                      <span className="text-sm text-slate-500">a</span>
+                      <Input
+                        type="date"
+                        value={reporteHasta}
+                        onChange={(e) => setReporteHasta(e.target.value)}
+                        className="h-9 text-sm"
+                      />
+                      <Button onClick={handleGenerarReporte} size="sm" className="h-9">
+                        Generar
                       </Button>
                       {reporteRango && (
-                        <Button type="button" onClick={handleLimpiarReporte} variant="outline" className="gap-2">
-                          <X className="h-4 w-4" />
+                        <Button onClick={handleLimpiarReporte} size="sm" variant="outline" className="h-9">
                           Limpiar
                         </Button>
                       )}
                     </div>
-                  </div>
+                  </CardContent>
+                </CollapsibleContent>
+              </Card>
+            </Collapsible>
 
-                  {resumenActualizaciones ? (
-                    <div className="space-y-6">
-                      <div className="flex flex-wrap gap-3">
-                        <Badge variant="secondary">
-                          Actualizados: {resumenActualizaciones.actualizados.length}
-                        </Badge>
-                        <Badge variant={resumenActualizaciones.pendientes.length > 0 ? 'destructive' : 'outline'}>
-                          Pendientes: {resumenActualizaciones.pendientes.length}
-                        </Badge>
-                        <Badge variant="outline">
-                          Período: {new Date(resumenActualizaciones.desde).toLocaleDateString()} - {new Date(resumenActualizaciones.hasta).toLocaleDateString()}
-                        </Badge>
-                      </div>
+            {/* Próximos Mantenimientos */}
+            <Card className="border-slate-200">
+              <CardHeader className="px-4 py-3 border-b bg-slate-50 dark:bg-slate-900">
+                <CardTitle className="text-base font-semibold">
+                  Próximos Mantenimientos
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="p-0">
+                <div className="overflow-auto max-h-96">
+                  <Table className="text-sm">
+                    <TableHeader className="sticky top-0 bg-slate-50 dark:bg-slate-900">
+                      <TableRow className="hover:bg-transparent">
+                        <TableHead className="h-8 text-xs">Equipo</TableHead>
+                        <TableHead className="h-8 text-xs w-20">Ficha</TableHead>
+                        <TableHead className="h-8 text-xs w-24 text-right">Lectura</TableHead>
+                        <TableHead className="h-8 text-xs w-24 text-right">Restante</TableHead>
+                        <TableHead className="h-8 text-xs w-24 text-right">Próximo</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {proximos.map((m) => (
+                        <TableRow key={m.id} className="h-10">
+                          <TableCell className="py-1">
+                            <div className="font-medium text-sm">{m.nombreEquipo}</div>
+                            <div className="text-xs text-slate-500">{m.tipoMantenimiento}</div>
+                          </TableCell>
+                          <TableCell className="font-mono text-xs py-1">{m.ficha}</TableCell>
+                          <TableCell className="text-right py-1">
+                            <span className="text-sm">{m.horasKmActuales}</span>
+                          </TableCell>
+                          <TableCell className="text-right py-1">
+                            <Badge variant={getRemainingVariant(m.horasKmRestante)} className="text-xs px-1">
+                              {m.horasKmRestante}
+                            </Badge>
+                          </TableCell>
+                          <TableCell className="text-right py-1">
+                            <span className="text-sm font-medium">{m.proximoMantenimiento}</span>
+                          </TableCell>
+                        </TableRow>
+                      ))}
+                    </TableBody>
+                  </Table>
+                </div>
+              </CardContent>
+            </Card>
+          </div>
 
-                      <div className="grid gap-6 lg:grid-cols-2">
-                        <div className="space-y-3">
-                          <h4 className="text-sm font-semibold">Equipos con lectura registrada</h4>
-                          {resumenActualizaciones.actualizados.length === 0 ? (
-                            <p className="text-sm text-muted-foreground">No hay registros en el rango seleccionado.</p>
-                          ) : (
-                            <div className="rounded-md border overflow-auto max-h-64">
-                              <Table className="text-sm">
-                                <TableHeader className="sticky top-0 bg-slate-50 dark:bg-slate-900">
-                                  <TableRow>
-                                    <TableHead className="text-xs h-8">Equipo</TableHead>
-                                    <TableHead className="text-xs h-8">Ficha</TableHead>
-                                    <TableHead className="text-xs h-8">Última lectura</TableHead>
-                                    <TableHead className="text-xs h-8">Responsable</TableHead>
-                                  </TableRow>
-                                </TableHeader>
-                                <TableBody>
-                                  {resumenActualizaciones.actualizados.map(({ mantenimiento, evento }) => (
-                                    <TableRow key={mantenimiento.id} className="h-10">
-                                      <TableCell className="font-medium">{mantenimiento.nombreEquipo}</TableCell>
-                                      <TableCell className="font-mono text-xs">{mantenimiento.ficha}</TableCell>
-                                      <TableCell className="text-xs">
-                                        {evento
-                                          ? `${evento.horasKm} h/km • ${new Date(evento.fecha).toLocaleDateString()}`
-                                          : 'Sin detalle'}
-                                      </TableCell>
-                                      <TableCell className="text-xs">{evento?.usuarioResponsable ?? 'No registrado'}</TableCell>
-                                    </TableRow>
-                                  ))}
-                                </TableBody>
-                              </Table>
-                            </div>
-                          )}
-                        </div>
-
-                        <div className="space-y-3">
-                          <h4 className="text-sm font-semibold">Equipos pendientes</h4>
-                          {resumenActualizaciones.pendientes.length === 0 ? (
-                            <p className="text-sm text-muted-foreground">Todos los equipos tienen lectura en el rango.</p>
-                          ) : (
-                            <div className="rounded-md border overflow-auto max-h-64">
-                              <Table className="text-sm">
-                                <TableHeader className="sticky top-0 bg-slate-50 dark:bg-slate-900">
-                                  <TableRow>
-                                    <TableHead className="text-xs h-8">Equipo</TableHead>
-                                    <TableHead className="text-xs h-8">Ficha</TableHead>
-                                    <TableHead className="text-xs h-8">Última act.</TableHead>
-                                    <TableHead className="text-xs h-8">Horas/km</TableHead>
-                                  </TableRow>
-                                </TableHeader>
-                                <TableBody>
-                                  {resumenActualizaciones.pendientes.map((mantenimiento) => (
-                                    <TableRow key={mantenimiento.id} className="h-10">
-                                      <TableCell className="font-medium">{mantenimiento.nombreEquipo}</TableCell>
-                                      <TableCell className="font-mono text-xs">{mantenimiento.ficha}</TableCell>
-                                      <TableCell className="text-xs">{formatDate(mantenimiento.fechaUltimaActualizacion)}</TableCell>
-                                      <TableCell className="text-xs">{mantenimiento.horasKmActuales}</TableCell>
-                                    </TableRow>
-                                  ))}
-                                </TableBody>
-                              </Table>
-                            </div>
-                          )}
-                        </div>
+          {/* Botón Flotante y Panel Arrastrable */}
+          <div className="pointer-events-none fixed bottom-6 right-6 z-40 flex flex-col items-end gap-3">
+            {panelOpen && (
+              <Draggable
+                handle=".drag-handle"
+                defaultPosition={{ x: 0, y: 0 }}
+                position={undefined}
+              >
+                <div
+                  role="dialog"
+                  aria-modal="false"
+                  className="pointer-events-auto w-[95vw] max-w-[1400px] overflow-hidden rounded-2xl border border-primary/20 bg-background/95 shadow-2xl backdrop-blur supports-[backdrop-filter]:backdrop-blur"
+                >
+                  <div className="drag-handle cursor-move flex items-start justify-between gap-4 border-b px-6 py-4 bg-slate-50 dark:bg-slate-900">
+                    <div className="flex items-center gap-2">
+                      <GripVertical className="h-5 w-5 text-slate-400" />
+                      <div>
+                        <h3 className="flex items-center gap-2 text-base font-semibold">
+                          <CalendarRange className="h-5 w-5 text-primary" /> Panel Flotante de Gestión
+                        </h3>
+                        <p className="mt-1 text-sm text-muted-foreground">
+                          Arrastra para mover libremente. Actualiza lecturas y genera reportes sin salir de esta vista.
+                        </p>
                       </div>
                     </div>
-                  ) : (
-                    <p className="text-sm text-muted-foreground">
-                      Completa el rango y genera el reporte para revisar el estado de las lecturas.
-                    </p>
-                  )}
+                    <Button variant="ghost" size="icon" onClick={() => setPanelOpen(false)}>
+                      <X className="h-4 w-4" />
+                      <span className="sr-only">Cerrar panel</span>
+                    </Button>
+                  </div>
+
+                  <div className="grid gap-6 lg:grid-cols-[400px,1fr] max-h-[80vh] overflow-hidden">
+                    {/* Columna Izquierda: Actualización Rápida */}
+                    <div className="border-r overflow-y-auto px-6 py-6 space-y-4 bg-slate-50/50 dark:bg-slate-900/50">
+                      <div>
+                        <h4 className="text-sm font-semibold mb-1 flex items-center gap-2">
+                          <Gauge className="h-4 w-4 text-primary" />
+                          Actualización Rápida
+                        </h4>
+                        <p className="text-xs text-muted-foreground">Ingresa la ficha para actualizar la lectura</p>
+                      </div>
+
+                      <div className="space-y-3">
+                        <div className="space-y-2">
+                          <Label htmlFor="fichaRapida" className="text-xs font-semibold">Ficha del equipo</Label>
+                          <Input
+                            id="fichaRapida"
+                            placeholder="Ej: AC-003"
+                            value={fichaRapida}
+                            onChange={(e) => setFichaRapida(e.target.value.toUpperCase())}
+                            className="h-9 text-sm font-mono"
+                            autoComplete="off"
+                          />
+                        </div>
+
+                        {fichaRapida && !equipoRapido && (
+                          <Alert variant="destructive" className="py-2">
+                            <AlertTriangle className="h-4 w-4" />
+                            <AlertTitle className="text-sm">Equipo no encontrado</AlertTitle>
+                            <AlertDescription className="text-xs">
+                              No existe un equipo con la ficha "{fichaRapida}"
+                            </AlertDescription>
+                          </Alert>
+                        )}
+
+                        {equipoRapido && (
+                          <div className="space-y-4">
+                            <Card className="border-primary/30 bg-white dark:bg-slate-950">
+                              <CardContent className="p-3 space-y-2">
+                                <div>
+                                  <p className="font-semibold text-sm">{equipoRapido.nombreEquipo}</p>
+                                  <p className="text-xs text-muted-foreground">
+                                    {equipoRapido.tipoMantenimiento}
+                                  </p>
+                                </div>
+                                <div className="grid grid-cols-2 gap-2 text-xs">
+                                  <div>
+                                    <span className="text-muted-foreground">Actual:</span>
+                                    <span className="font-semibold ml-1">{equipoRapido.horasKmActuales}</span>
+                                  </div>
+                                  <div>
+                                    <span className="text-muted-foreground">Próximo:</span>
+                                    <span className="font-semibold ml-1">{equipoRapido.proximoMantenimiento}</span>
+                                  </div>
+                                  <div className="col-span-2">
+                                    <span className="text-muted-foreground">Restante:</span>
+                                    <Badge
+                                      variant={getRemainingVariant(equipoRapido.horasKmRestante)}
+                                      className="ml-1 text-xs"
+                                    >
+                                      {equipoRapido.horasKmRestante}
+                                    </Badge>
+                                  </div>
+                                </div>
+                              </CardContent>
+                            </Card>
+
+                            <form onSubmit={handleActualizarRapido} className="space-y-3">
+                              <div className="space-y-2">
+                                <Label htmlFor="lecturaRapida" className="text-xs font-semibold">Nueva lectura *</Label>
+                                <Input
+                                  id="lecturaRapida"
+                                  type="number"
+                                  value={lecturaRapida}
+                                  onChange={(e) => setLecturaRapida(e.target.value)}
+                                  className="h-9 text-sm"
+                                  required
+                                />
+                              </div>
+
+                              <div className="space-y-2">
+                                <Label htmlFor="fechaRapida" className="text-xs font-semibold">Fecha *</Label>
+                                <Input
+                                  id="fechaRapida"
+                                  type="date"
+                                  value={fechaRapida}
+                                  onChange={(e) => setFechaRapida(e.target.value)}
+                                  className="h-9 text-sm"
+                                  required
+                                />
+                              </div>
+
+                              <div className="space-y-2">
+                                <Label htmlFor="responsableRapido" className="text-xs font-semibold">Responsable</Label>
+                                <Input
+                                  id="responsableRapido"
+                                  placeholder="Nombre del responsable"
+                                  value={responsableRapido}
+                                  onChange={(e) => setResponsableRapido(e.target.value)}
+                                  className="h-9 text-sm"
+                                />
+                              </div>
+
+                              <div className="space-y-2">
+                                <Label htmlFor="notasRapida" className="text-xs font-semibold">Observaciones</Label>
+                                <Textarea
+                                  id="notasRapida"
+                                  placeholder="Notas adicionales..."
+                                  value={notasRapida}
+                                  onChange={(e) => setNotasRapida(e.target.value)}
+                                  className="text-sm min-h-[60px]"
+                                  rows={2}
+                                />
+                              </div>
+
+                              <Button
+                                type="submit"
+                                className="w-full gap-2"
+                                disabled={updatingRapido}
+                              >
+                                {updatingRapido ? (
+                                  <>
+                                    <Loader2 className="h-4 w-4 animate-spin" />
+                                    Actualizando...
+                                  </>
+                                ) : (
+                                  <>
+                                    <CalendarCheck className="h-4 w-4" />
+                                    Actualizar Lectura
+                                  </>
+                                )}
+                              </Button>
+                            </form>
+                          </div>
+                        )}
+                      </div>
+
+                      {/* Sección de Alertas de Actualización */}
+                      {alertasActualizacion.length > 0 && (
+                        <div className="mt-6 space-y-3">
+                          <div className="flex items-center justify-between">
+                            <h5 className="text-xs font-semibold flex items-center gap-2">
+                              <Bell className="h-3.5 w-3.5 text-amber-500" />
+                              Alertas de Actualización
+                            </h5>
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              className="h-6 text-xs"
+                              onClick={() => setAlertasActualizacion([])}
+                            >
+                              Limpiar
+                            </Button>
+                          </div>
+
+                          <div className="space-y-2 max-h-64 overflow-y-auto">
+                            {alertasActualizacion.map((alerta) => (
+                              <Alert key={alerta.id} className="py-2 bg-amber-50 dark:bg-amber-950/20 border-amber-200">
+                                <div className="flex items-start gap-2">
+                                  <Bell className="h-4 w-4 text-amber-600 mt-0.5" />
+                                  <div className="flex-1 space-y-1">
+                                    <div className="flex items-start justify-between">
+                                      <div>
+                                        <p className="text-xs font-semibold">{alerta.ficha} - {alerta.nombreEquipo}</p>
+                                        <p className="text-xs text-muted-foreground">
+                                          {new Date(alerta.timestamp).toLocaleString('es-ES', {
+                                            day: '2-digit',
+                                            month: '2-digit',
+                                            year: 'numeric',
+                                            hour: '2-digit',
+                                            minute: '2-digit'
+                                          })}
+                                        </p>
+                                      </div>
+                                    </div>
+                                    <div className="grid grid-cols-3 gap-2 text-xs">
+                                      <div>
+                                        <span className="text-muted-foreground">Anterior:</span>
+                                        <p className="font-semibold">{alerta.lecturaAnterior}</p>
+                                      </div>
+                                      <div>
+                                        <span className="text-muted-foreground">Actual:</span>
+                                        <p className="font-semibold text-green-600">{alerta.lecturaActual}</p>
+                                      </div>
+                                      <div>
+                                        <span className="text-muted-foreground">Incremento:</span>
+                                        <p className="font-semibold text-blue-600">+{alerta.incremento}</p>
+                                      </div>
+                                    </div>
+                                  </div>
+                                </div>
+                              </Alert>
+                            ))}
+                          </div>
+                        </div>
+                      )}
+                    </div>
+
+                    {/* Columna Derecha: Reportes */}
+                    <div className="overflow-y-auto px-6 py-6 space-y-6">
+                      <div>
+                        <h4 className="text-sm font-semibold mb-1 flex items-center gap-2">
+                          <CalendarRange className="h-4 w-4 text-primary" />
+                          Reportes por Rango
+                        </h4>
+                        <p className="text-xs text-muted-foreground">Genera reportes de actualizaciones por período</p>
+                      </div>
+
+                      <div className="space-y-4">
+                        <div className="grid gap-4 md:grid-cols-2">
+                          <div className="space-y-2">
+                            <Label htmlFor="reporteDesde" className="font-semibold text-sm">Desde</Label>
+                            <Input
+                              id="reporteDesde"
+                              type="date"
+                              value={reporteDesde}
+                              onChange={(event) => setReporteDesde(event.target.value)}
+                              className="h-9"
+                            />
+                          </div>
+                          <div className="space-y-2">
+                            <Label htmlFor="reporteHasta" className="font-semibold text-sm">Hasta</Label>
+                            <Input
+                              id="reporteHasta"
+                              type="date"
+                              value={reporteHasta}
+                              onChange={(event) => setReporteHasta(event.target.value)}
+                              className="h-9"
+                            />
+                          </div>
+                        </div>
+
+                        <div className="flex flex-wrap gap-2">
+                          <Button
+                            type="button"
+                            size="sm"
+                            variant="secondary"
+                            onClick={() => {
+                              const semana = obtenerSemanaActual();
+                              setReporteDesde(semana.desde);
+                              setReporteHasta(semana.hasta);
+                              const rangoNormalizado = normalizarRangoFechas(semana.desde, semana.hasta);
+                              if (rangoNormalizado) setReporteRango(rangoNormalizado);
+                            }}
+                          >
+                            Última semana
+                          </Button>
+                          <Button
+                            type="button"
+                            size="sm"
+                            variant="secondary"
+                            onClick={() => {
+                              const hoy = new Date();
+                              const hace7dias = new Date(hoy);
+                              hace7dias.setDate(hace7dias.getDate() - 7);
+                              setReporteDesde(hace7dias.toISOString().slice(0, 10));
+                              setReporteHasta(hoy.toISOString().slice(0, 10));
+                              const rangoNormalizado = normalizarRangoFechas(
+                                hace7dias.toISOString().slice(0, 10),
+                                hoy.toISOString().slice(0, 10)
+                              );
+                              if (rangoNormalizado) setReporteRango(rangoNormalizado);
+                            }}
+                          >
+                            Últimos 7 días
+                          </Button>
+                          <Button
+                            type="button"
+                            size="sm"
+                            variant="secondary"
+                            onClick={() => {
+                              const hoy = new Date();
+                              const primerDiaMes = new Date(hoy.getFullYear(), hoy.getMonth(), 1);
+                              setReporteDesde(primerDiaMes.toISOString().slice(0, 10));
+                              setReporteHasta(hoy.toISOString().slice(0, 10));
+                              const rangoNormalizado = normalizarRangoFechas(
+                                primerDiaMes.toISOString().slice(0, 10),
+                                hoy.toISOString().slice(0, 10)
+                              );
+                              if (rangoNormalizado) setReporteRango(rangoNormalizado);
+                            }}
+                          >
+                            Este mes
+                          </Button>
+                        </div>
+
+                        <div className="flex gap-2">
+                          <Button type="button" onClick={handleGenerarReporte} className="flex-1 gap-2">
+                            <CalendarCheck className="h-4 w-4" />
+                            Generar reporte
+                          </Button>
+                          {reporteRango && (
+                            <Button type="button" onClick={handleLimpiarReporte} variant="outline" className="gap-2">
+                              <X className="h-4 w-4" />
+                              Limpiar
+                            </Button>
+                          )}
+                        </div>
+                      </div>
+
+                      {resumenActualizaciones ? (
+                        <div className="space-y-6">
+                          <div className="flex flex-wrap gap-3">
+                            <Badge variant="secondary">
+                              Actualizados: {resumenActualizaciones.actualizados.length}
+                            </Badge>
+                            <Badge variant={resumenActualizaciones.pendientes.length > 0 ? 'destructive' : 'outline'}>
+                              Pendientes: {resumenActualizaciones.pendientes.length}
+                            </Badge>
+                            <Badge variant="outline">
+                              Período: {new Date(resumenActualizaciones.desde).toLocaleDateString()} - {new Date(resumenActualizaciones.hasta).toLocaleDateString()}
+                            </Badge>
+                          </div>
+
+                          <div className="grid gap-6 lg:grid-cols-2">
+                            <div className="space-y-3">
+                              <h4 className="text-sm font-semibold">Equipos con lectura registrada</h4>
+                              {resumenActualizaciones.actualizados.length === 0 ? (
+                                <p className="text-sm text-muted-foreground">No hay registros en el rango seleccionado.</p>
+                              ) : (
+                                <div className="rounded-md border overflow-auto max-h-64">
+                                  <Table className="text-sm">
+                                    <TableHeader className="sticky top-0 bg-slate-50 dark:bg-slate-900">
+                                      <TableRow>
+                                        <TableHead className="text-xs h-8">Equipo</TableHead>
+                                        <TableHead className="text-xs h-8">Ficha</TableHead>
+                                        <TableHead className="text-xs h-8">Última lectura</TableHead>
+                                        <TableHead className="text-xs h-8">Responsable</TableHead>
+                                      </TableRow>
+                                    </TableHeader>
+                                    <TableBody>
+                                      {resumenActualizaciones.actualizados.map(({ mantenimiento, evento }) => (
+                                        <TableRow key={mantenimiento.id} className="h-10">
+                                          <TableCell className="font-medium">{mantenimiento.nombreEquipo}</TableCell>
+                                          <TableCell className="font-mono text-xs">{mantenimiento.ficha}</TableCell>
+                                          <TableCell className="text-xs">
+                                            {evento
+                                              ? `${evento.horasKm} h/km • ${new Date(evento.fecha).toLocaleDateString()}`
+                                              : 'Sin detalle'}
+                                          </TableCell>
+                                          <TableCell className="text-xs">{evento?.usuarioResponsable ?? 'No registrado'}</TableCell>
+                                        </TableRow>
+                                      ))}
+                                    </TableBody>
+                                  </Table>
+                                </div>
+                              )}
+                            </div>
+
+                            <div className="space-y-3">
+                              <h4 className="text-sm font-semibold">Equipos pendientes</h4>
+                              {resumenActualizaciones.pendientes.length === 0 ? (
+                                <p className="text-sm text-muted-foreground">Todos los equipos tienen lectura en el rango.</p>
+                              ) : (
+                                <div className="rounded-md border overflow-auto max-h-64">
+                                  <Table className="text-sm">
+                                    <TableHeader className="sticky top-0 bg-slate-50 dark:bg-slate-900">
+                                      <TableRow>
+                                        <TableHead className="text-xs h-8">Equipo</TableHead>
+                                        <TableHead className="text-xs h-8">Ficha</TableHead>
+                                        <TableHead className="text-xs h-8">Última act.</TableHead>
+                                        <TableHead className="text-xs h-8">Horas/km</TableHead>
+                                      </TableRow>
+                                    </TableHeader>
+                                    <TableBody>
+                                      {resumenActualizaciones.pendientes.map((mantenimiento) => (
+                                        <TableRow key={mantenimiento.id} className="h-10">
+                                          <TableCell className="font-medium">{mantenimiento.nombreEquipo}</TableCell>
+                                          <TableCell className="font-mono text-xs">{mantenimiento.ficha}</TableCell>
+                                          <TableCell className="text-xs">{formatDate(mantenimiento.fechaUltimaActualizacion)}</TableCell>
+                                          <TableCell className="text-xs">{mantenimiento.horasKmActuales}</TableCell>
+                                        </TableRow>
+                                      ))}
+                                    </TableBody>
+                                  </Table>
+                                </div>
+                              )}
+                            </div>
+                          </div>
+                        </div>
+                      ) : (
+                        <p className="text-sm text-muted-foreground">
+                          Completa el rango y genera el reporte para revisar el estado de las lecturas.
+                        </p>
+                      )}
+                    </div>
+                  </div>
                 </div>
-              </div>
-            </div>
-          </Draggable>
-        )}
-        
-        <Button
-          className="pointer-events-auto h-14 w-14 rounded-full shadow-lg transition hover:scale-105"
-          onClick={() => setPanelOpen((prev) => !prev)}
-          size="icon"
-        >
-          <CalendarRange className="h-5 w-5" />
-          <span className="sr-only">Alternar resumen de actualizaciones</span>
-        </Button>
-      </div>
+              </Draggable>
+            )}
+
+            <Button
+              className="pointer-events-auto h-14 w-14 rounded-full shadow-lg transition hover:scale-105"
+              onClick={() => setPanelOpen((prev) => !prev)}
+              size="icon"
+            >
+              <CalendarRange className="h-5 w-5" />
+              <span className="sr-only">Alternar resumen de actualizaciones</span>
+            </Button>
+          </div>
         </TabsContent>
 
         {/* Tab de Planificador */}
@@ -1890,8 +1930,8 @@ export default function ControlMantenimientoProfesional() {
                                     </p>
                                   </TableCell>
                                   <TableCell className="text-right py-2">
-                                    <Badge 
-                                      variant={getRemainingVariant(item.restante)} 
+                                    <Badge
+                                      variant={getRemainingVariant(item.restante)}
                                       className="text-xs font-semibold"
                                     >
                                       {item.restante}

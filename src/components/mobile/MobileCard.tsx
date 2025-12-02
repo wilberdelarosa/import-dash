@@ -20,9 +20,10 @@ interface MobileCardProps {
   footer?: ReactNode;
   onClick?: () => void;
   className?: string;
-  variant?: 'default' | 'compact' | 'list-item';
+  variant?: 'default' | 'compact' | 'list-item' | 'glass';
   showArrow?: boolean;
   icon?: ReactNode;
+  style?: React.CSSProperties;
 }
 
 export function MobileCard({
@@ -35,41 +36,62 @@ export function MobileCard({
   variant = 'default',
   showArrow = false,
   icon,
+  style,
 }: MobileCardProps) {
   const [isPressed, setIsPressed] = useState(false);
 
   const isCompact = variant === 'compact' || variant === 'list-item';
   const isListItem = variant === 'list-item';
+  const isGlass = variant === 'glass';
 
   return (
     <Card
       className={cn(
-        "transition-all duration-200",
+        "transition-all duration-300 overflow-hidden",
+        // Base styles
+        isGlass
+          ? "bg-white/40 dark:bg-black/40 backdrop-blur-xl border-white/20 dark:border-white/10 shadow-lg"
+          : "bg-card border-border/50 shadow-sm",
+
+        // Interactive states
         onClick && "cursor-pointer active:scale-[0.98]",
-        isPressed && "shadow-sm",
+        isPressed && !isGlass ? "shadow-inner bg-accent/50" : "",
+        !isPressed && !isGlass ? "hover:shadow-md" : "",
+
+        // Variant specific
         isListItem && "border-l-4 border-l-primary",
         className
       )}
       onClick={onClick}
       onTouchStart={() => setIsPressed(true)}
       onTouchEnd={() => setIsPressed(false)}
+      style={style}
     >
       {(title || description) && (
         <CardHeader className={cn(
-          isCompact ? "p-3 pb-2" : "p-4 pb-3"
+          isCompact ? "p-3 pb-2" : "p-4 pb-3",
+          "relative"
         )}>
-          <div className="flex items-start justify-between gap-2">
+          {/* Decorative gradient blob for glass cards */}
+          {isGlass && (
+            <div className="absolute -top-10 -right-10 w-20 h-20 bg-primary/20 rounded-full blur-2xl pointer-events-none" />
+          )}
+
+          <div className="flex items-start justify-between gap-2 relative z-10">
             <div className="flex items-center gap-3 flex-1 min-w-0">
               {icon && (
-                <div className="flex-shrink-0">
+                <div className={cn(
+                  "flex-shrink-0 p-2 rounded-xl shadow-sm",
+                  isGlass ? "bg-white/50 dark:bg-white/10 text-primary" : "bg-primary/10 text-primary"
+                )}>
                   {icon}
                 </div>
               )}
               <div className="min-w-0 flex-1">
                 {title && (
                   <CardTitle className={cn(
-                    "truncate",
-                    isCompact ? "text-sm" : "text-base"
+                    "truncate text-foreground/90",
+                    isCompact ? "text-sm font-medium" : "text-base font-bold"
                   )}>
                     {title}
                   </CardTitle>
@@ -77,7 +99,8 @@ export function MobileCard({
                 {description && (
                   <CardDescription className={cn(
                     "truncate",
-                    isCompact ? "text-xs mt-0.5" : "text-sm mt-1"
+                    isCompact ? "text-xs mt-0.5" : "text-sm mt-1",
+                    isGlass && "text-muted-foreground/80"
                   )}>
                     {description}
                   </CardDescription>
@@ -85,21 +108,27 @@ export function MobileCard({
               </div>
             </div>
             {showArrow && (
-              <ChevronRight className="h-5 w-5 flex-shrink-0 text-muted-foreground" />
+              <div className={cn(
+                "p-1 rounded-full text-muted-foreground",
+                isGlass ? "bg-black/5 dark:bg-white/10" : "bg-accent/50"
+              )}>
+                <ChevronRight className="h-4 w-4" />
+              </div>
             )}
           </div>
         </CardHeader>
       )}
-      
+
       <CardContent className={cn(
         isCompact ? "p-3 pt-0" : "p-4 pt-0"
       )}>
         {children}
       </CardContent>
-      
+
       {footer && (
         <CardFooter className={cn(
           "border-t",
+          isGlass ? "border-white/10 dark:border-white/5 bg-black/5 dark:bg-white/5" : "border-border/50 bg-accent/5",
           isCompact ? "p-3" : "p-4"
         )}>
           {footer}
@@ -147,14 +176,14 @@ export function MobileListCard({
           {icon}
         </div>
       )}
-      
+
       {/* Si hay children, usar eso; sino usar estructura por defecto */}
       {children ? (
         children
       ) : (
         <div className="min-w-0 flex-1">
           <div className="flex items-center gap-2">
-            {title && <p className="truncate text-sm font-semibold">{title}</p>}
+            {title && <p className="truncate text-sm font-medium">{title}</p>}
             {badge}
           </div>
           {subtitle && (
@@ -165,7 +194,7 @@ export function MobileListCard({
           )}
         </div>
       )}
-      
+
       {!children && <ChevronRight className="h-5 w-5 flex-shrink-0 text-muted-foreground/50" />}
     </div>
   );

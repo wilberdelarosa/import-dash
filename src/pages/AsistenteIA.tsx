@@ -7,6 +7,8 @@ import FloatingPrompt from '@/components/FloatingPrompt';
 import { useSupabaseDataContext } from '@/context/SupabaseDataContext';
 import { useSystemConfig } from '@/context/SystemConfigContext';
 import { useChatbot } from '@/hooks/useChatbot';
+import { useDeviceDetection } from '@/hooks/useDeviceDetection';
+import { AsistenteIAMobile } from '@/pages/mobile/AsistenteIAMobile';
 import { getGroqModelPriority } from '@/integrations/groq/client';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { ScrollArea } from '@/components/ui/scroll-area';
@@ -308,6 +310,7 @@ const buildInitialAssistantMessage = (contextSections: ContextSection[]): string
 export default function AsistenteIA() {
   const { data, loading, usingDemoData } = useSupabaseDataContext();
   const { config } = useSystemConfig();
+  const { isMobile } = useDeviceDetection();
   const [contextMode, setContextMode] = useState<'docked' | 'floating'>('docked');
   const [contextSheetOpen, setContextSheetOpen] = useState(false);
   const [chatExpanded, setChatExpanded] = useState(false);
@@ -317,11 +320,11 @@ export default function AsistenteIA() {
   const context = useMemo(() => {
     // Crear contexto enriquecido con datos completos para búsquedas
     const baseContext = buildChatContext(loading ? null : data, config);
-    
+
     if (!data) return baseContext;
 
     // Agregar todos los equipos con detalles completos al contexto
-    const equiposDetallados = data.equipos.map(e => 
+    const equiposDetallados = data.equipos.map(e =>
       `${e.nombre} (Ficha: ${e.ficha}, Marca: ${e.marca}, Modelo: ${e.modelo}, Serie: ${e.numeroSerie}, Categoría: ${e.categoria}, Estado: ${e.activo ? 'Activo' : 'Inactivo'})`
     ).join(' | ');
 
@@ -553,8 +556,8 @@ Usa estos datos para responder consultas específicas y generar tablas filtradas
               </span>
             </li>
           </ul>
-          </CardContent>
-        </Card>
+        </CardContent>
+      </Card>
       <Card className="overflow-hidden border border-border/30 bg-gradient-to-br from-card/80 via-card/90 to-primary/5 shadow-lg backdrop-blur-sm">
         <CardHeader className="border-b border-border/20 bg-gradient-to-r from-primary/5 to-transparent pb-4">
           <div className="flex items-center gap-2.5">
@@ -610,576 +613,588 @@ Usa estos datos para responder consultas específicas y generar tablas filtradas
 
   return (
     <>
-    <Layout title="Asistente inteligente con IA">
-      {usingDemoData && (
-        <Alert variant="warning" className="mb-6 border-warning/50 bg-warning/10 text-warning-foreground">
-          <AlertTriangle className="h-4 w-4" />
-          <AlertTitle>Modo demostración con datos locales</AlertTitle>
-          <AlertDescription>
-            No se pudieron obtener datos reales desde Supabase. Revisa las variables{' '}
-            <code className="rounded bg-muted px-1 py-0.5 text-xs">VITE_SUPABASE_URL</code> y{' '}
-            <code className="rounded bg-muted px-1 py-0.5 text-xs">VITE_SUPABASE_PUBLISHABLE_KEY</code>{' '}
-            para conectar tu proyecto. Mientras tanto, se muestran datos de ejemplo para que puedas
-            explorar la interfaz sin interrupciones.
-          </AlertDescription>
-        </Alert>
-      )}
-      <section className="mb-8 grid gap-4 md:grid-cols-2 xl:grid-cols-4">
-        <Card className="group relative overflow-hidden border-primary/20 bg-gradient-to-br from-primary/20 via-primary/10 to-transparent shadow-lg backdrop-blur-sm transition-all duration-300 hover:shadow-xl hover:shadow-primary/20 hover:scale-[1.02]">
-          <div className="absolute -right-8 -top-8 h-32 w-32 rounded-full bg-primary/10 blur-3xl transition-all duration-300 group-hover:scale-150" />
-          <CardHeader className="relative space-y-2.5 pb-3">
-            <div className="flex items-center justify-between">
-              <div className="rounded-xl bg-primary/20 p-2 backdrop-blur-sm shadow-sm">
-                <Sparkles className="h-4 w-4 text-primary" />
-              </div>
-              <Badge variant="secondary" className="bg-primary/10 text-primary border-primary/20 text-xs h-5">
-                Activo
-              </Badge>
-            </div>
-            <CardTitle className="text-xs font-bold uppercase tracking-widest text-primary/90">
-              Contexto sincronizado
-            </CardTitle>
-            <CardDescription className="text-xs leading-relaxed text-foreground/70 line-clamp-2">
-              {summarySnippet || 'Conecta los datos para habilitar el contexto corporativo.'}
-            </CardDescription>
-          </CardHeader>
-          <CardContent className="relative text-[0.7rem] text-muted-foreground pt-0">
-            <div className="flex items-center gap-1.5">
-              <div className="h-1.5 w-1.5 rounded-full bg-green-500 animate-pulse" />
-              <span className="truncate">Actualizado: {context.lastUpdatedLabel.split(',')[1]?.trim() || context.lastUpdatedLabel}</span>
-            </div>
-          </CardContent>
-        </Card>
-
-        <Card className="group relative overflow-hidden border-border/40 bg-gradient-to-br from-background via-muted/30 to-background shadow-lg backdrop-blur-sm transition-all duration-300 hover:border-primary/30 hover:shadow-xl hover:scale-[1.02]">
-          <div className="absolute -right-6 -top-6 h-24 w-24 rounded-full bg-gradient-to-br from-primary/5 to-transparent blur-2xl transition-all duration-300 group-hover:scale-125" />
-          <CardHeader className="relative space-y-2.5 pb-3">
-            <div className="flex items-center justify-between">
-              <div className="rounded-xl bg-muted p-2 backdrop-blur-sm shadow-sm">
-                <MessageSquare className="h-4 w-4 text-primary" />
-              </div>
-            </div>
-            <CardTitle className="text-xs font-bold uppercase tracking-widest text-muted-foreground">
-              Motor IA activo
-            </CardTitle>
-            <CardDescription className="text-base font-bold text-foreground truncate">
-              {activeModel ?? 'Selección dinámica'}
-            </CardDescription>
-          </CardHeader>
-          <CardContent className="relative pt-0">
-            <p className="text-[0.7rem] text-muted-foreground truncate">
-              <span className="font-medium">Prioridad:</span>{' '}
-              <span className="font-semibold text-foreground">{modelPriority.slice(0, 2).join(' → ')}</span>
-            </p>
-          </CardContent>
-        </Card>
-
-        <Card className="group relative overflow-hidden border-border/40 bg-gradient-to-br from-background via-muted/20 to-background shadow-lg backdrop-blur-sm transition-all duration-300 hover:border-primary/30 hover:shadow-xl hover:scale-[1.02]">
-          <div className="absolute -left-6 -bottom-6 h-24 w-24 rounded-full bg-gradient-to-tl from-primary/5 to-transparent blur-2xl transition-all duration-300 group-hover:scale-125" />
-          <CardHeader className="relative space-y-2.5 pb-3">
-            <div className="flex items-center justify-between">
-              <div className="rounded-xl bg-muted p-2 backdrop-blur-sm shadow-sm">
-                <UserRound className="h-4 w-4 text-primary" />
-              </div>
-              <Badge variant="outline" className="text-xs h-5">
-                {totalMensajes}
-              </Badge>
-            </div>
-            <CardTitle className="text-xs font-bold uppercase tracking-widest text-muted-foreground">
-              Actividad del chat
-            </CardTitle>
-            <CardDescription className="text-base font-bold text-foreground">
-              {userMessages} {userMessages === 1 ? 'consulta' : 'consultas'}
-            </CardDescription>
-          </CardHeader>
-          <CardContent className="relative text-[0.7rem] text-muted-foreground pt-0">
-            Conversaciones con datos en tiempo real
-          </CardContent>
-        </Card>
-
-        <Card className="group relative overflow-hidden border-dashed border-border/60 bg-gradient-to-br from-muted/10 via-background to-muted/5 shadow-lg backdrop-blur-sm transition-all duration-300 hover:border-primary/40 hover:shadow-xl hover:scale-[1.02]">
-          <CardHeader className="space-y-2.5 pb-3">
-            <div className="flex items-center justify-between">
-              <div className="rounded-xl bg-muted/50 p-2 backdrop-blur-sm shadow-sm">
-                {contextMode === 'docked' ? (
-                  <SidebarClose className="h-4 w-4 text-primary" />
-                ) : (
-                  <SidebarOpen className="h-4 w-4 text-primary" />
-                )}
-              </div>
-            </div>
-            <CardTitle className="text-xs font-bold uppercase tracking-widest text-muted-foreground">
-              Panel contextual
-            </CardTitle>
-            <CardDescription className="text-xs text-foreground/70">
-              {showDockedPanel ? 'Acoplado al chat' : 'Modo flotante activo'}
-            </CardDescription>
-          </CardHeader>
-          <CardContent className="pt-0">
-            <Button 
-              variant="outline" 
-              size="sm"
-              className="w-full gap-2 rounded-xl border-border/60 bg-background/50 backdrop-blur-sm transition-all hover:border-primary/50 hover:bg-primary/5 hover:scale-105" 
-              onClick={handleToggleContextMode}
-            >
-              {contextMode === 'docked' ? <SidebarOpen className="h-3.5 w-3.5" /> : <SidebarClose className="h-3.5 w-3.5" />}
-              <span className="text-xs font-semibold">{contextMode === 'docked' ? 'Desacoplar' : 'Acoplar'}</span>
-            </Button>
-          </CardContent>
-        </Card>
-      </section>
-      <div
-        className={cn('flex flex-col gap-6 xl:gap-8', showDockedPanel && 'xl:grid xl:grid-cols-[minmax(0,1fr)_380px]')}
-      >
-        <Card
-          className={cn(
-            'flex h-full flex-col overflow-hidden rounded-xl border shadow-sm transition-all',
-            chatExpanded ? 'min-h-[80vh] lg:min-h-[calc(100vh-200px)]' : 'min-h-[70vh] lg:min-h-[calc(100vh-240px)]',
+      {isMobile ? (
+        <AsistenteIAMobile
+          messages={messages}
+          isLoading={isLoading}
+          onSendMessage={sendMessage}
+          onClearChat={reset}
+        />
+      ) : (
+        <Layout title="Asistente inteligente con IA">
+          {usingDemoData && (
+            <Alert variant="warning" className="mb-6 border-warning/50 bg-warning/10 text-warning-foreground">
+              <AlertTriangle className="h-4 w-4" />
+              <AlertTitle>Modo demostración con datos locales</AlertTitle>
+              <AlertDescription>
+                No se pudieron obtener datos reales desde Supabase. Revisa las variables{' '}
+                <code className="rounded bg-muted px-1 py-0.5 text-xs">VITE_SUPABASE_URL</code> y{' '}
+                <code className="rounded bg-muted px-1 py-0.5 text-xs">VITE_SUPABASE_PUBLISHABLE_KEY</code>{' '}
+                para conectar tu proyecto. Mientras tanto, se muestran datos de ejemplo para que puedas
+                explorar la interfaz sin interrupciones.
+              </AlertDescription>
+            </Alert>
           )}
-        >
-          <CardHeader className="border-b bg-muted/30 px-6 py-5">
-            <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
-            <div className="space-y-3">
-              <div className="flex items-center gap-3">
-                <div className="rounded-xl bg-primary/10 p-2.5 shadow-sm">
-                  <MessageSquare className="h-5 w-5 text-primary" />
+          <section className="mb-8 grid gap-4 md:grid-cols-2 xl:grid-cols-4">
+            <Card className="group relative overflow-hidden border-primary/20 bg-gradient-to-br from-primary/20 via-primary/10 to-transparent shadow-lg backdrop-blur-sm transition-all duration-300 hover:shadow-xl hover:shadow-primary/20 hover:scale-[1.02]">
+              <div className="absolute -right-8 -top-8 h-32 w-32 rounded-full bg-primary/10 blur-3xl transition-all duration-300 group-hover:scale-150" />
+              <CardHeader className="relative space-y-2.5 pb-3">
+                <div className="flex items-center justify-between">
+                  <div className="rounded-xl bg-primary/20 p-2 backdrop-blur-sm shadow-sm">
+                    <Sparkles className="h-4 w-4 text-primary" />
+                  </div>
+                  <Badge variant="secondary" className="bg-primary/10 text-primary border-primary/20 text-xs h-5">
+                    Activo
+                  </Badge>
                 </div>
-                <div>
-                  <CardTitle className="text-lg font-bold">
-                    Asistente IA
-                  </CardTitle>
-                  <CardDescription className="text-xs mt-0.5">
-                    Chatea con ALITO BOT sobre tu flota
-                  </CardDescription>
+                <CardTitle className="text-xs font-bold uppercase tracking-widest text-primary/90">
+                  Contexto sincronizado
+                </CardTitle>
+                <CardDescription className="text-xs leading-relaxed text-foreground/70 line-clamp-2">
+                  {summarySnippet || 'Conecta los datos para habilitar el contexto corporativo.'}
+                </CardDescription>
+              </CardHeader>
+              <CardContent className="relative text-[0.7rem] text-muted-foreground pt-0">
+                <div className="flex items-center gap-1.5">
+                  <div className="h-1.5 w-1.5 rounded-full bg-green-500 animate-pulse" />
+                  <span className="truncate">Actualizado: {context.lastUpdatedLabel.split(',')[1]?.trim() || context.lastUpdatedLabel}</span>
                 </div>
-              </div>
-               <div className="mt-4 grid gap-2.5 sm:grid-cols-2 lg:grid-cols-4">
-                 {highlightStats.map((stat) => (
-                   <div
-                     key={stat.label}
-                     className="group rounded-xl border border-border/30 bg-gradient-to-br from-card/90 to-muted/20 p-3 transition-all hover:shadow-md hover:border-primary/30 hover:scale-[1.02]"
-                   >
-                     <p className="text-[0.65rem] font-bold uppercase tracking-[0.08em] text-muted-foreground">
-                       {stat.label}
-                     </p>
-                    <p className="mt-1.5 text-lg font-bold text-foreground leading-tight truncate">{stat.value}</p>
-                     <p className="mt-1 text-[0.7rem] text-muted-foreground truncate">{stat.helper}</p>
-                   </div>
-                 ))}
-               </div>
-            </div>
-            <div className="hidden items-center gap-2 sm:flex">
-                <Button
-                  type="button"
-                  variant="ghost"
-                  size="sm"
-                  onClick={() => {
-                    const conversationText = messages.map(m => 
-                      `${m.role === 'user' ? 'Usuario' : 'ALITO BOT'}: ${m.content}`
-                    ).join('\n\n');
-                    const blob = new Blob([conversationText], { type: 'text/plain' });
-                    const url = URL.createObjectURL(blob);
-                    const a = document.createElement('a');
-                    a.href = url;
-                    a.download = `conversacion-alito-${new Date().toISOString().split('T')[0]}.txt`;
-                    a.click();
-                    URL.revokeObjectURL(url);
-                  }}
-                  disabled={messages.length === 0}
-                  title="Exportar conversación"
-                  className="h-9 w-9 rounded-lg hover:bg-primary/10"
-                >
-                  <SendHorizontal className="h-4 w-4" />
-                </Button>
-                <Button
-                  type="button"
-                  variant="ghost"
-                  size="sm"
-                  onClick={() => setChatExpanded((prev) => !prev)}
-                  className="h-9 w-9 rounded-lg hover:bg-primary/10"
-                >
-                  {chatExpanded ? <Minimize2 className="h-4 w-4" /> : <Maximize2 className="h-4 w-4" />}
-                </Button>
-                <Button
-                  type="button"
-                  variant="ghost"
-                  size="sm"
-                  onClick={handleToggleContextMode}
-                  className="h-9 w-9 rounded-lg hover:bg-primary/10"
-                >
-                  {contextMode === 'docked' ? <SidebarOpen className="h-4 w-4" /> : <SidebarClose className="h-4 w-4" />}
-                </Button>
-              </div>
-            </div>
-            <div className="flex gap-2 sm:hidden">
-              <Button
-                type="button"
-                variant="outline"
-                size="sm"
-                className="flex-1 gap-2 rounded-xl border border-border/40 bg-background/80 shadow-sm backdrop-blur-sm transition-all hover:border-primary/50 hover:bg-primary/5 hover:scale-[1.02]"
-                onClick={() => setChatExpanded((prev) => !prev)}
-              >
-                {chatExpanded ? <Minimize2 className="h-3.5 w-3.5" /> : <Maximize2 className="h-3.5 w-3.5" />}
-                <span className="text-xs font-semibold">{chatExpanded ? 'Compactar' : 'Expandir'}</span>
-              </Button>
-              <Button
-                type="button"
-                variant="outline"
-                size="sm"
-                className="flex-1 gap-2 rounded-xl border border-border/40 bg-background/80 shadow-sm backdrop-blur-sm transition-all hover:border-primary/50 hover:bg-primary/5 hover:scale-[1.02]"
-                onClick={handleToggleContextMode}
-              >
-                {contextMode === 'docked' ? <SidebarOpen className="h-3.5 w-3.5" /> : <SidebarClose className="h-3.5 w-3.5" />}
-                <span className="text-xs font-semibold">{contextMode === 'docked' ? 'Flotante' : 'Acoplar'}</span>
-              </Button>
-            </div>
-          </CardHeader>
-          <CardContent className="flex-1 overflow-hidden p-0">
-            <ScrollArea className="h-full px-6 pt-6 pb-4" style={{ paddingBottom: 140 }}>
-              <div className="flex flex-col gap-5">
-                {messages.map((message) => {
-                  const isAssistant = message.role === 'assistant';
-                  const isUser = message.role === 'user';
-                const timestamp = new Date(message.createdAt).toLocaleTimeString('es-ES', {
-                  hour: '2-digit',
-                  minute: '2-digit',
-                });
-                const parsedTable = parseMarkdownTable(message.content);
-                const creationDate = new Date(message.createdAt ?? Date.now());
-                const tableLabel = `${isAssistant ? 'Tabla respuesta' : 'Tabla consulta'}-${creationDate.toISOString().split('T')[0]}`;
+              </CardContent>
+            </Card>
 
-                  return (
-                    <div
-                      key={message.id}
-                      className={cn(
-                        'group relative flex w-full items-start gap-3',
-                        isUser ? 'flex-row-reverse' : 'flex-row',
-                      )}
-                    >
-                      <Avatar
-                        className={cn(
-                          'h-9 w-9 shrink-0 border shadow-sm transition-all',
-                          isAssistant
-                            ? 'border-primary/20 bg-primary/5'
-                            : 'border-border bg-muted',
-                        )}
-                      >
-                        <AvatarFallback className="bg-transparent">
-                          {isAssistant ? (
-                            <Sparkles className="h-4 w-4 text-primary" />
-                          ) : (
-                            <UserRound className="h-4 w-4 text-muted-foreground" />
-                          )}
-                        </AvatarFallback>
-                      </Avatar>
-                      <div
-                        className={cn(
-                          'relative w-full max-w-full rounded-2xl border px-4 py-3.5 shadow-sm transition-all sm:max-w-[85%]',
-                          isAssistant
-                            ? 'border-border/50 bg-gradient-to-br from-muted/40 to-muted/20 text-foreground'
-                            : 'border-primary/30 bg-primary text-primary-foreground shadow-md shadow-primary/10',
-                        )}
-                      >
-                        <div className="mb-2.5 flex items-center justify-between gap-3">
-                          <div className="flex items-center gap-1.5">
-                            <span
-                              className={cn(
-                                'text-[0.65rem] font-bold uppercase tracking-[0.1em]',
-                                isAssistant ? 'text-primary' : 'text-primary-foreground/90',
-                              )}
-                            >
-                              {isAssistant ? 'ALITO BOT' : 'TÚ'}
-                            </span>
-                            {isAssistant && (
-                              <Badge variant="outline" className="h-4 border-primary/30 bg-primary/10 px-1.5 text-[0.6rem] text-primary">
-                                IA
-                              </Badge>
-                            )}
-                          </div>
-                          <span
-                            className={cn(
-                              'text-[0.65rem] font-medium tabular-nums',
-                              isAssistant ? 'text-muted-foreground' : 'text-primary-foreground/70',
-                            )}
-                          >
-                            {timestamp}
-                          </span>
-                        </div>
-                        <div
-                        className={cn(
-                          'whitespace-pre-wrap text-sm leading-relaxed',
-                          isAssistant ? 'text-foreground' : 'text-primary-foreground',
-                        )}
-                        >
-                          {isAssistant ? (
-                            <div className="prose prose-sm max-w-none dark:prose-invert prose-headings:mb-2 prose-headings:mt-3 prose-headings:font-semibold prose-headings:tracking-tight prose-p:my-2 prose-p:leading-7 prose-a:text-primary prose-a:font-medium prose-a:no-underline hover:prose-a:underline prose-strong:font-semibold prose-code:rounded-md prose-code:bg-muted/60 prose-code:px-1.5 prose-code:py-0.5 prose-code:text-[0.85em] prose-code:font-mono prose-code:font-medium prose-code:border prose-code:border-border/40 prose-pre:my-3 prose-pre:bg-muted/50 prose-pre:border prose-pre:border-border prose-pre:shadow-sm prose-ul:my-2 prose-ol:my-2 prose-li:my-0.5">
-                              <MarkdownRenderer content={message.content} />
-                            </div>
-                          ) : (
-                            message.content
-                          )}
-                        </div>
-                        {parsedTable && (
-                          <div className="mt-3.5 overflow-hidden rounded-xl border border-border/50 bg-card shadow-sm">
-                            <div className="flex items-center justify-between gap-2 border-b bg-gradient-to-r from-muted/40 to-muted/20 px-3.5 py-2.5">
-                              <div className="flex items-center gap-2">
-                                <CircleStop className="h-3.5 w-3.5 text-primary" />
-                                <p className="text-[0.7rem] font-bold uppercase tracking-[0.08em] text-foreground">
-                                  {tableLabel}
-                                </p>
-                              </div>
-                              <Button
-                                size="sm"
-                                variant="ghost"
-                                className="h-7 gap-1.5 rounded-lg px-2.5 hover:bg-primary/10"
-                                onClick={() => handleDownloadTable(message.id, parsedTable, tableLabel)}
-                                disabled={downloadingTableId === message.id}
-                              >
-                                {downloadingTableId === message.id ? (
-                                  <Loader2 className="h-3.5 w-3.5 animate-spin" />
-                                ) : (
-                                  <>
-                                    <SendHorizontal className="h-3.5 w-3.5" />
-                                    <span className="text-[0.7rem] font-semibold">PDF</span>
-                                  </>
-                                )}
-                              </Button>
-                            </div>
-                            <div className="overflow-x-auto">
-                              <table className="min-w-[280px] w-full table-auto">
-                                <thead>
-                                  <tr className="border-b bg-muted/20">
-                                    {parsedTable.headers.map((header) => (
-                                      <th
-                                        key={`${message.id}-${header}`}
-                                        className="px-3 py-2.5 text-left text-[0.65rem] font-bold uppercase tracking-[0.08em] text-muted-foreground"
-                                      >
-                                        {header}
-                                      </th>
-                                    ))}
-                                  </tr>
-                                </thead>
-                                <tbody>
-                                  {parsedTable.rows.map((row, rowIndex) => (
-                                    <tr
-                                      key={`${message.id}-row-${rowIndex}`}
-                                      className={cn(
-                                        'border-b transition-colors hover:bg-muted/40',
-                                        rowIndex % 2 === 0 ? 'bg-muted/10' : 'bg-card'
-                                      )}
-                                    >
-                                      {row.map((cell, cellIndex) => (
-                                        <td
-                                          key={`${message.id}-row-${rowIndex}-cell-${cellIndex}`}
-                                          className="px-3 py-2.5 text-[0.8rem] tabular-nums"
-                                        >
-                                          {cell || '—'}
-                                        </td>
-                                      ))}
-                                    </tr>
-                                  ))}
-                                </tbody>
-                              </table>
-                            </div>
-                          </div>
-                        )}
-                        {isAssistant && message.model && (
-                          <div className="mt-3 inline-flex items-center gap-1.5 rounded-lg border bg-card px-2.5 py-1 text-[0.65rem] font-semibold uppercase tracking-[0.08em] text-muted-foreground shadow-sm">
-                            <Sparkles className="h-3 w-3 text-primary" />
-                            {message.model}
-                          </div>
-                        )}
+            <Card className="group relative overflow-hidden border-border/40 bg-gradient-to-br from-background via-muted/30 to-background shadow-lg backdrop-blur-sm transition-all duration-300 hover:border-primary/30 hover:shadow-xl hover:scale-[1.02]">
+              <div className="absolute -right-6 -top-6 h-24 w-24 rounded-full bg-gradient-to-br from-primary/5 to-transparent blur-2xl transition-all duration-300 group-hover:scale-125" />
+              <CardHeader className="relative space-y-2.5 pb-3">
+                <div className="flex items-center justify-between">
+                  <div className="rounded-xl bg-muted p-2 backdrop-blur-sm shadow-sm">
+                    <MessageSquare className="h-4 w-4 text-primary" />
+                  </div>
+                </div>
+                <CardTitle className="text-xs font-bold uppercase tracking-widest text-muted-foreground">
+                  Motor IA activo
+                </CardTitle>
+                <CardDescription className="text-base font-bold text-foreground truncate">
+                  {activeModel ?? 'Selección dinámica'}
+                </CardDescription>
+              </CardHeader>
+              <CardContent className="relative pt-0">
+                <p className="text-[0.7rem] text-muted-foreground truncate">
+                  <span className="font-medium">Prioridad:</span>{' '}
+                  <span className="font-semibold text-foreground">{modelPriority.slice(0, 2).join(' → ')}</span>
+                </p>
+              </CardContent>
+            </Card>
+
+            <Card className="group relative overflow-hidden border-border/40 bg-gradient-to-br from-background via-muted/20 to-background shadow-lg backdrop-blur-sm transition-all duration-300 hover:border-primary/30 hover:shadow-xl hover:scale-[1.02]">
+              <div className="absolute -left-6 -bottom-6 h-24 w-24 rounded-full bg-gradient-to-tl from-primary/5 to-transparent blur-2xl transition-all duration-300 group-hover:scale-125" />
+              <CardHeader className="relative space-y-2.5 pb-3">
+                <div className="flex items-center justify-between">
+                  <div className="rounded-xl bg-muted p-2 backdrop-blur-sm shadow-sm">
+                    <UserRound className="h-4 w-4 text-primary" />
+                  </div>
+                  <Badge variant="outline" className="text-xs h-5">
+                    {totalMensajes}
+                  </Badge>
+                </div>
+                <CardTitle className="text-xs font-bold uppercase tracking-widest text-muted-foreground">
+                  Actividad del chat
+                </CardTitle>
+                <CardDescription className="text-base font-bold text-foreground">
+                  {userMessages} {userMessages === 1 ? 'consulta' : 'consultas'}
+                </CardDescription>
+              </CardHeader>
+              <CardContent className="relative text-[0.7rem] text-muted-foreground pt-0">
+                Conversaciones con datos en tiempo real
+              </CardContent>
+            </Card>
+
+            <Card className="group relative overflow-hidden border-dashed border-border/60 bg-gradient-to-br from-muted/10 via-background to-muted/5 shadow-lg backdrop-blur-sm transition-all duration-300 hover:border-primary/40 hover:shadow-xl hover:scale-[1.02]">
+              <CardHeader className="space-y-2.5 pb-3">
+                <div className="flex items-center justify-between">
+                  <div className="rounded-xl bg-muted/50 p-2 backdrop-blur-sm shadow-sm">
+                    {contextMode === 'docked' ? (
+                      <SidebarClose className="h-4 w-4 text-primary" />
+                    ) : (
+                      <SidebarOpen className="h-4 w-4 text-primary" />
+                    )}
+                  </div>
+                </div>
+                <CardTitle className="text-xs font-bold uppercase tracking-widest text-muted-foreground">
+                  Panel contextual
+                </CardTitle>
+                <CardDescription className="text-xs text-foreground/70">
+                  {showDockedPanel ? 'Acoplado al chat' : 'Modo flotante activo'}
+                </CardDescription>
+              </CardHeader>
+              <CardContent className="pt-0">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="w-full gap-2 rounded-xl border-border/60 bg-background/50 backdrop-blur-sm transition-all hover:border-primary/50 hover:bg-primary/5 hover:scale-105"
+                  onClick={handleToggleContextMode}
+                >
+                  {contextMode === 'docked' ? <SidebarOpen className="h-3.5 w-3.5" /> : <SidebarClose className="h-3.5 w-3.5" />}
+                  <span className="text-xs font-semibold">{contextMode === 'docked' ? 'Desacoplar' : 'Acoplar'}</span>
+                </Button>
+              </CardContent>
+            </Card>
+          </section>
+          <div
+            className={cn('flex flex-col gap-6 xl:gap-8', showDockedPanel && 'xl:grid xl:grid-cols-[minmax(0,1fr)_380px]')}
+          >
+            <Card
+              className={cn(
+                'flex h-full flex-col overflow-hidden rounded-xl border shadow-sm transition-all',
+                chatExpanded ? 'min-h-[80vh] lg:min-h-[calc(100vh-200px)]' : 'min-h-[70vh] lg:min-h-[calc(100vh-240px)]',
+              )}
+            >
+              <CardHeader className="border-b bg-muted/30 px-6 py-5">
+                <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
+                  <div className="space-y-3">
+                    <div className="flex items-center gap-3">
+                      <div className="rounded-xl bg-primary/10 p-2.5 shadow-sm">
+                        <MessageSquare className="h-5 w-5 text-primary" />
                       </div>
-                      <div
-                        className={cn(
-                          'pointer-events-none absolute inset-0 -z-10 translate-y-4 rounded-[2.5rem] opacity-0 blur-2xl transition-all duration-500 group-hover:opacity-100',
-                          isAssistant
-                            ? 'bg-gradient-to-br from-primary/20 to-primary/5 group-hover:translate-y-6'
-                            : 'bg-gradient-to-br from-primary/40 to-primary/20 group-hover:translate-y-6',
-                        )}
-                      />
+                      <div>
+                        <CardTitle className="text-lg font-bold">
+                          Asistente IA
+                        </CardTitle>
+                        <CardDescription className="text-xs mt-0.5">
+                          Chatea con ALITO BOT sobre tu flota
+                        </CardDescription>
+                      </div>
                     </div>
-                  );
-                })}
-                {isLoading && (
-                  <div className="flex items-center gap-3 animate-in fade-in slide-in-from-bottom-2 duration-300">
-                    <Avatar className="h-9 w-9 border bg-primary/5 shadow-sm">
-                      <AvatarFallback className="bg-transparent">
-                        <Loader2 className="h-4 w-4 animate-spin text-primary" />
-                      </AvatarFallback>
-                    </Avatar>
-                    <div className="flex items-center gap-2.5 rounded-xl border bg-gradient-to-br from-muted/40 to-muted/20 px-4 py-2.5 shadow-sm">
-                      <div className="flex gap-1">
-                        <div className="h-1.5 w-1.5 animate-bounce rounded-full bg-primary [animation-delay:0ms]" />
-                        <div className="h-1.5 w-1.5 animate-bounce rounded-full bg-primary [animation-delay:150ms]" />
-                        <div className="h-1.5 w-1.5 animate-bounce rounded-full bg-primary [animation-delay:300ms]" />
-                      </div>
-                      <span className="text-xs font-medium text-muted-foreground">
-                        Generando respuesta...
-                      </span>
+                    <div className="mt-4 grid gap-2.5 sm:grid-cols-2 lg:grid-cols-4">
+                      {highlightStats.map((stat) => (
+                        <div
+                          key={stat.label}
+                          className="group rounded-xl border border-border/30 bg-gradient-to-br from-card/90 to-muted/20 p-3 transition-all hover:shadow-md hover:border-primary/30 hover:scale-[1.02]"
+                        >
+                          <p className="text-[0.65rem] font-bold uppercase tracking-[0.08em] text-muted-foreground">
+                            {stat.label}
+                          </p>
+                          <p className="mt-1.5 text-lg font-bold text-foreground leading-tight truncate">{stat.value}</p>
+                          <p className="mt-1 text-[0.7rem] text-muted-foreground truncate">{stat.helper}</p>
+                        </div>
+                      ))}
                     </div>
                   </div>
-                )}
-                <div ref={listEndRef} />
-              </div>
-            </ScrollArea>
-          </CardContent>
-          <Separator />
-          <CardFooter className="sticky bottom-0 z-10 flex flex-col gap-3.5 border-t border-border/20 bg-gradient-to-r from-card/95 via-card/90 to-card/95 p-5 backdrop-blur-xl">
-            <div className="absolute inset-0 bg-gradient-to-r from-primary/3 via-transparent to-primary/3 opacity-50" />
-            {error && (
-              <Alert variant="destructive" className="relative shadow-md">
-                <AlertTitle className="font-bold text-sm">No se pudo completar la consulta</AlertTitle>
-                <AlertDescription className="text-xs">{error}</AlertDescription>
-              </Alert>
-            )}
-            <form
-              className="relative flex w-full flex-col gap-3.5"
-              onSubmit={(event) => {
-                event.preventDefault();
-                handleSubmit();
-              }}
-            >
-              <Textarea
-                placeholder="Pregunta sobre tu flota, solicita análisis o información específica..."
-                value={input}
-                ref={textareaRef}
-                onInput={adjustTextareaHeight}
-                onChange={(event) => {
-                  setInput(event.target.value);
-                  adjustTextareaHeight();
-                }}
-                onKeyDown={(event) => {
-                  if (event.key === 'Enter' && !event.shiftKey) {
-                    event.preventDefault();
-                    handleSubmit();
-                  }
-                }}
-                className="min-h-[70px] max-h-[180px] resize-none rounded-xl border border-border/40 bg-gradient-to-br from-background via-background/98 to-muted/5 px-4 py-3.5 text-sm leading-relaxed shadow-lg backdrop-blur-sm transition-all placeholder:text-muted-foreground/60 focus-visible:border-primary/40 focus-visible:shadow-xl focus-visible:shadow-primary/10 focus-visible:ring-2 focus-visible:ring-primary/10"
-              />
-              <p className="text-[0.7rem] text-muted-foreground">
-                <kbd className="rounded border bg-muted px-1.5 py-0.5 text-[0.65rem] font-mono shadow-sm">Enter</kbd> para enviar • <kbd className="rounded border bg-muted px-1.5 py-0.5 text-[0.65rem] font-mono shadow-sm">Shift+Enter</kbd> para nueva línea
-              </p>
-
-              <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-                <div className="flex flex-wrap items-center gap-2 text-xs text-muted-foreground">
-                  {activeModel ? (
-                    <Badge variant="outline" className="border-primary/30 bg-primary/5 text-primary shadow-sm">
-                      <Sparkles className="mr-1 h-3 w-3" />
-                      {activeModel}
-                    </Badge>
-                  ) : (
-                    <Badge variant="outline" className="border-border/40 shadow-sm">
-                      <Sparkles className="mr-1 h-3 w-3" />
-                      Selección automática
-                    </Badge>
-                  )}
-                  {usage && (
-                    <div className="flex flex-wrap items-center gap-1.5">
-                      <Badge variant="outline" className="font-mono text-[0.7rem] tabular-nums shadow-sm">
-                        In: {usage.promptTokens}
-                      </Badge>
-                      <Badge variant="outline" className="font-mono text-[0.7rem] tabular-nums shadow-sm">
-                        Out: {usage.completionTokens}
-                      </Badge>
-                      <Badge variant="secondary" className="font-mono text-[0.7rem] font-semibold tabular-nums shadow-sm">
-                        {usage.totalTokens}
-                      </Badge>
-                    </div>
-                  )}
+                  <div className="hidden items-center gap-2 sm:flex">
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => {
+                        const conversationText = messages.map(m =>
+                          `${m.role === 'user' ? 'Usuario' : 'ALITO BOT'}: ${m.content}`
+                        ).join('\n\n');
+                        const blob = new Blob([conversationText], { type: 'text/plain' });
+                        const url = URL.createObjectURL(blob);
+                        const a = document.createElement('a');
+                        a.href = url;
+                        a.download = `conversacion-alito-${new Date().toISOString().split('T')[0]}.txt`;
+                        a.click();
+                        URL.revokeObjectURL(url);
+                      }}
+                      disabled={messages.length === 0}
+                      title="Exportar conversación"
+                      className="h-9 w-9 rounded-lg hover:bg-primary/10"
+                    >
+                      <SendHorizontal className="h-4 w-4" />
+                    </Button>
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => setChatExpanded((prev) => !prev)}
+                      className="h-9 w-9 rounded-lg hover:bg-primary/10"
+                    >
+                      {chatExpanded ? <Minimize2 className="h-4 w-4" /> : <Maximize2 className="h-4 w-4" />}
+                    </Button>
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="sm"
+                      onClick={handleToggleContextMode}
+                      className="h-9 w-9 rounded-lg hover:bg-primary/10"
+                    >
+                      {contextMode === 'docked' ? <SidebarOpen className="h-4 w-4" /> : <SidebarClose className="h-4 w-4" />}
+                    </Button>
+                  </div>
                 </div>
-
-                <div className="flex flex-wrap gap-2">
+                <div className="flex gap-2 sm:hidden">
                   <Button
                     type="button"
                     variant="outline"
                     size="sm"
-                    onClick={reset}
-                    disabled={isLoading}
-                    className="h-9 rounded-lg px-3 hover:bg-primary/5"
+                    className="flex-1 gap-2 rounded-xl border border-border/40 bg-background/80 shadow-sm backdrop-blur-sm transition-all hover:border-primary/50 hover:bg-primary/5 hover:scale-[1.02]"
+                    onClick={() => setChatExpanded((prev) => !prev)}
                   >
-                    <RefreshCw className="h-3.5 w-3.5" />
+                    {chatExpanded ? <Minimize2 className="h-3.5 w-3.5" /> : <Maximize2 className="h-3.5 w-3.5" />}
+                    <span className="text-xs font-semibold">{chatExpanded ? 'Compactar' : 'Expandir'}</span>
                   </Button>
-                  {isLoading && (
-                    <Button
-                      type="button"
-                      variant="outline"
-                      size="sm"
-                      onClick={stop}
-                      className="h-9 rounded-lg px-3 hover:bg-destructive/5"
-                    >
-                      <CircleStop className="h-3.5 w-3.5" />
-                    </Button>
-                  )}
                   <Button
-                    type="submit"
+                    type="button"
+                    variant="outline"
                     size="sm"
-                    disabled={isLoading || !input.trim()}
-                    className="gap-2 rounded-xl bg-gradient-to-r from-primary to-primary/90 px-5 text-sm font-semibold shadow-lg shadow-primary/20 transition-all hover:scale-105 hover:shadow-xl hover:shadow-primary/30 disabled:opacity-50 disabled:hover:scale-100"
+                    className="flex-1 gap-2 rounded-xl border border-border/40 bg-background/80 shadow-sm backdrop-blur-sm transition-all hover:border-primary/50 hover:bg-primary/5 hover:scale-[1.02]"
+                    onClick={handleToggleContextMode}
                   >
-                    {isLoading ? (
-                      <Loader2 className="h-3.5 w-3.5 animate-spin" />
-                    ) : (
-                      <SendHorizontal className="h-3.5 w-3.5" />
-                    )}
-                    <span>{isLoading ? 'Generando...' : 'Enviar'}</span>
+                    {contextMode === 'docked' ? <SidebarOpen className="h-3.5 w-3.5" /> : <SidebarClose className="h-3.5 w-3.5" />}
+                    <span className="text-xs font-semibold">{contextMode === 'docked' ? 'Flotante' : 'Acoplar'}</span>
                   </Button>
                 </div>
+              </CardHeader>
+              <CardContent className="flex-1 overflow-hidden p-0">
+                <ScrollArea className="h-full px-6 pt-6 pb-4" style={{ paddingBottom: 140 }}>
+                  <div className="flex flex-col gap-5">
+                    {messages.map((message) => {
+                      const isAssistant = message.role === 'assistant';
+                      const isUser = message.role === 'user';
+                      const timestamp = new Date(message.createdAt).toLocaleTimeString('es-ES', {
+                        hour: '2-digit',
+                        minute: '2-digit',
+                      });
+                      const parsedTable = parseMarkdownTable(message.content);
+                      const creationDate = new Date(message.createdAt ?? Date.now());
+                      const tableLabel = `${isAssistant ? 'Tabla respuesta' : 'Tabla consulta'}-${creationDate.toISOString().split('T')[0]}`;
+
+                      return (
+                        <div
+                          key={message.id}
+                          className={cn(
+                            'group relative flex w-full items-start gap-3',
+                            isUser ? 'flex-row-reverse' : 'flex-row',
+                          )}
+                        >
+                          <Avatar
+                            className={cn(
+                              'h-9 w-9 shrink-0 border shadow-sm transition-all',
+                              isAssistant
+                                ? 'border-primary/20 bg-primary/5'
+                                : 'border-border bg-muted',
+                            )}
+                          >
+                            <AvatarFallback className="bg-transparent">
+                              {isAssistant ? (
+                                <Sparkles className="h-4 w-4 text-primary" />
+                              ) : (
+                                <UserRound className="h-4 w-4 text-muted-foreground" />
+                              )}
+                            </AvatarFallback>
+                          </Avatar>
+                          <div
+                            className={cn(
+                              'relative w-full max-w-full rounded-2xl border px-4 py-3.5 shadow-sm transition-all sm:max-w-[85%]',
+                              isAssistant
+                                ? 'border-border/50 bg-gradient-to-br from-muted/40 to-muted/20 text-foreground'
+                                : 'border-primary/30 bg-primary text-primary-foreground shadow-md shadow-primary/10',
+                            )}
+                          >
+                            <div className="mb-2.5 flex items-center justify-between gap-3">
+                              <div className="flex items-center gap-1.5">
+                                <span
+                                  className={cn(
+                                    'text-[0.65rem] font-bold uppercase tracking-[0.1em]',
+                                    isAssistant ? 'text-primary' : 'text-primary-foreground/90',
+                                  )}
+                                >
+                                  {isAssistant ? 'ALITO BOT' : 'TÚ'}
+                                </span>
+                                {isAssistant && (
+                                  <Badge variant="outline" className="h-4 border-primary/30 bg-primary/10 px-1.5 text-[0.6rem] text-primary">
+                                    IA
+                                  </Badge>
+                                )}
+                              </div>
+                              <span
+                                className={cn(
+                                  'text-[0.65rem] font-medium tabular-nums',
+                                  isAssistant ? 'text-muted-foreground' : 'text-primary-foreground/70',
+                                )}
+                              >
+                                {timestamp}
+                              </span>
+                            </div>
+                            <div
+                              className={cn(
+                                'whitespace-pre-wrap text-sm leading-relaxed',
+                                isAssistant ? 'text-foreground' : 'text-primary-foreground',
+                              )}
+                            >
+                              {isAssistant ? (
+                                <div className="prose prose-sm max-w-none dark:prose-invert prose-headings:mb-2 prose-headings:mt-3 prose-headings:font-semibold prose-headings:tracking-tight prose-p:my-2 prose-p:leading-7 prose-a:text-primary prose-a:font-medium prose-a:no-underline hover:prose-a:underline prose-strong:font-semibold prose-code:rounded-md prose-code:bg-muted/60 prose-code:px-1.5 prose-code:py-0.5 prose-code:text-[0.85em] prose-code:font-mono prose-code:font-medium prose-code:border prose-code:border-border/40 prose-pre:my-3 prose-pre:bg-muted/50 prose-pre:border prose-pre:border-border prose-pre:shadow-sm prose-ul:my-2 prose-ol:my-2 prose-li:my-0.5">
+                                  <MarkdownRenderer content={message.content} />
+                                </div>
+                              ) : (
+                                message.content
+                              )}
+                            </div>
+                            {parsedTable && (
+                              <div className="mt-3.5 overflow-hidden rounded-xl border border-border/50 bg-card shadow-sm">
+                                <div className="flex items-center justify-between gap-2 border-b bg-gradient-to-r from-muted/40 to-muted/20 px-3.5 py-2.5">
+                                  <div className="flex items-center gap-2">
+                                    <CircleStop className="h-3.5 w-3.5 text-primary" />
+                                    <p className="text-[0.7rem] font-bold uppercase tracking-[0.08em] text-foreground">
+                                      {tableLabel}
+                                    </p>
+                                  </div>
+                                  <Button
+                                    size="sm"
+                                    variant="ghost"
+                                    className="h-7 gap-1.5 rounded-lg px-2.5 hover:bg-primary/10"
+                                    onClick={() => handleDownloadTable(message.id, parsedTable, tableLabel)}
+                                    disabled={downloadingTableId === message.id}
+                                  >
+                                    {downloadingTableId === message.id ? (
+                                      <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                                    ) : (
+                                      <>
+                                        <SendHorizontal className="h-3.5 w-3.5" />
+                                        <span className="text-[0.7rem] font-semibold">PDF</span>
+                                      </>
+                                    )}
+                                  </Button>
+                                </div>
+                                <div className="overflow-x-auto">
+                                  <table className="min-w-[280px] w-full table-auto">
+                                    <thead>
+                                      <tr className="border-b bg-muted/20">
+                                        {parsedTable.headers.map((header) => (
+                                          <th
+                                            key={`${message.id}-${header}`}
+                                            className="px-3 py-2.5 text-left text-[0.65rem] font-bold uppercase tracking-[0.08em] text-muted-foreground"
+                                          >
+                                            {header}
+                                          </th>
+                                        ))}
+                                      </tr>
+                                    </thead>
+                                    <tbody>
+                                      {parsedTable.rows.map((row, rowIndex) => (
+                                        <tr
+                                          key={`${message.id}-row-${rowIndex}`}
+                                          className={cn(
+                                            'border-b transition-colors hover:bg-muted/40',
+                                            rowIndex % 2 === 0 ? 'bg-muted/10' : 'bg-card'
+                                          )}
+                                        >
+                                          {row.map((cell, cellIndex) => (
+                                            <td
+                                              key={`${message.id}-row-${rowIndex}-cell-${cellIndex}`}
+                                              className="px-3 py-2.5 text-[0.8rem] tabular-nums"
+                                            >
+                                              {cell || '—'}
+                                            </td>
+                                          ))}
+                                        </tr>
+                                      ))}
+                                    </tbody>
+                                  </table>
+                                </div>
+                              </div>
+                            )}
+                            {isAssistant && message.model && (
+                              <div className="mt-3 inline-flex items-center gap-1.5 rounded-lg border bg-card px-2.5 py-1 text-[0.65rem] font-semibold uppercase tracking-[0.08em] text-muted-foreground shadow-sm">
+                                <Sparkles className="h-3 w-3 text-primary" />
+                                {message.model}
+                              </div>
+                            )}
+                          </div>
+                          <div
+                            className={cn(
+                              'pointer-events-none absolute inset-0 -z-10 translate-y-4 rounded-[2.5rem] opacity-0 blur-2xl transition-all duration-500 group-hover:opacity-100',
+                              isAssistant
+                                ? 'bg-gradient-to-br from-primary/20 to-primary/5 group-hover:translate-y-6'
+                                : 'bg-gradient-to-br from-primary/40 to-primary/20 group-hover:translate-y-6',
+                            )}
+                          />
+                        </div>
+                      );
+                    })}
+                    {isLoading && (
+                      <div className="flex items-center gap-3 animate-in fade-in slide-in-from-bottom-2 duration-300">
+                        <Avatar className="h-9 w-9 border bg-primary/5 shadow-sm">
+                          <AvatarFallback className="bg-transparent">
+                            <Loader2 className="h-4 w-4 animate-spin text-primary" />
+                          </AvatarFallback>
+                        </Avatar>
+                        <div className="flex items-center gap-2.5 rounded-xl border bg-gradient-to-br from-muted/40 to-muted/20 px-4 py-2.5 shadow-sm">
+                          <div className="flex gap-1">
+                            <div className="h-1.5 w-1.5 animate-bounce rounded-full bg-primary [animation-delay:0ms]" />
+                            <div className="h-1.5 w-1.5 animate-bounce rounded-full bg-primary [animation-delay:150ms]" />
+                            <div className="h-1.5 w-1.5 animate-bounce rounded-full bg-primary [animation-delay:300ms]" />
+                          </div>
+                          <span className="text-xs font-medium text-muted-foreground">
+                            Generando respuesta...
+                          </span>
+                        </div>
+                      </div>
+                    )}
+                    <div ref={listEndRef} />
+                  </div>
+                </ScrollArea>
+              </CardContent>
+              <Separator />
+              <CardFooter className="sticky bottom-0 z-10 flex flex-col gap-3.5 border-t border-border/20 bg-gradient-to-r from-card/95 via-card/90 to-card/95 p-5 backdrop-blur-xl">
+                <div className="absolute inset-0 bg-gradient-to-r from-primary/3 via-transparent to-primary/3 opacity-50" />
+                {error && (
+                  <Alert variant="destructive" className="relative shadow-md">
+                    <AlertTitle className="font-bold text-sm">No se pudo completar la consulta</AlertTitle>
+                    <AlertDescription className="text-xs">{error}</AlertDescription>
+                  </Alert>
+                )}
+                <form
+                  className="relative flex w-full flex-col gap-3.5"
+                  onSubmit={(event) => {
+                    event.preventDefault();
+                    handleSubmit();
+                  }}
+                >
+                  <Textarea
+                    placeholder="Pregunta sobre tu flota, solicita análisis o información específica..."
+                    value={input}
+                    ref={textareaRef}
+                    onInput={adjustTextareaHeight}
+                    onChange={(event) => {
+                      setInput(event.target.value);
+                      adjustTextareaHeight();
+                    }}
+                    onKeyDown={(event) => {
+                      if (event.key === 'Enter' && !event.shiftKey) {
+                        event.preventDefault();
+                        handleSubmit();
+                      }
+                    }}
+                    className="min-h-[70px] max-h-[180px] resize-none rounded-xl border border-border/40 bg-gradient-to-br from-background via-background/98 to-muted/5 px-4 py-3.5 text-sm leading-relaxed shadow-lg backdrop-blur-sm transition-all placeholder:text-muted-foreground/60 focus-visible:border-primary/40 focus-visible:shadow-xl focus-visible:shadow-primary/10 focus-visible:ring-2 focus-visible:ring-primary/10"
+                  />
+                  <p className="text-[0.7rem] text-muted-foreground">
+                    <kbd className="rounded border bg-muted px-1.5 py-0.5 text-[0.65rem] font-mono shadow-sm">Enter</kbd> para enviar • <kbd className="rounded border bg-muted px-1.5 py-0.5 text-[0.65rem] font-mono shadow-sm">Shift+Enter</kbd> para nueva línea
+                  </p>
+
+                  <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                    <div className="flex flex-wrap items-center gap-2 text-xs text-muted-foreground">
+                      {activeModel ? (
+                        <Badge variant="outline" className="border-primary/30 bg-primary/5 text-primary shadow-sm">
+                          <Sparkles className="mr-1 h-3 w-3" />
+                          {activeModel}
+                        </Badge>
+                      ) : (
+                        <Badge variant="outline" className="border-border/40 shadow-sm">
+                          <Sparkles className="mr-1 h-3 w-3" />
+                          Selección automática
+                        </Badge>
+                      )}
+                      {usage && (
+                        <div className="flex flex-wrap items-center gap-1.5">
+                          <Badge variant="outline" className="font-mono text-[0.7rem] tabular-nums shadow-sm">
+                            In: {usage.promptTokens}
+                          </Badge>
+                          <Badge variant="outline" className="font-mono text-[0.7rem] tabular-nums shadow-sm">
+                            Out: {usage.completionTokens}
+                          </Badge>
+                          <Badge variant="secondary" className="font-mono text-[0.7rem] font-semibold tabular-nums shadow-sm">
+                            {usage.totalTokens}
+                          </Badge>
+                        </div>
+                      )}
+                    </div>
+
+                    <div className="flex flex-wrap gap-2">
+                      <Button
+                        type="button"
+                        variant="outline"
+                        size="sm"
+                        onClick={reset}
+                        disabled={isLoading}
+                        className="h-9 rounded-lg px-3 hover:bg-primary/5"
+                      >
+                        <RefreshCw className="h-3.5 w-3.5" />
+                      </Button>
+                      {isLoading && (
+                        <Button
+                          type="button"
+                          variant="outline"
+                          size="sm"
+                          onClick={stop}
+                          className="h-9 rounded-lg px-3 hover:bg-destructive/5"
+                        >
+                          <CircleStop className="h-3.5 w-3.5" />
+                        </Button>
+                      )}
+                      <Button
+                        type="submit"
+                        size="sm"
+                        disabled={isLoading || !input.trim()}
+                        className="gap-2 rounded-xl bg-gradient-to-r from-primary to-primary/90 px-5 text-sm font-semibold shadow-lg shadow-primary/20 transition-all hover:scale-105 hover:shadow-xl hover:shadow-primary/30 disabled:opacity-50 disabled:hover:scale-100"
+                      >
+                        {isLoading ? (
+                          <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                        ) : (
+                          <SendHorizontal className="h-3.5 w-3.5" />
+                        )}
+                        <span>{isLoading ? 'Generando...' : 'Enviar'}</span>
+                      </Button>
+                    </div>
+                  </div>
+                </form>
+              </CardFooter>
+            </Card>
+            {showDockedPanel ? (
+              <div className="space-y-3.5">{contextPanels}</div>
+            ) : (
+              <div className="flex flex-col gap-4 rounded-xl border border-dashed bg-muted/30 p-6 text-center shadow-sm">
+                <div className="mx-auto rounded-xl bg-primary/10 p-3">
+                  <SidebarOpen className="h-5 w-5 text-primary" />
+                </div>
+                <div className="space-y-1">
+                  <p className="text-sm font-semibold">Panel contextual desacoplado</p>
+                  <p className="text-xs text-muted-foreground">
+                    Abre el panel lateral para consultar el resumen
+                  </p>
+                </div>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setContextSheetOpen(true)}
+                  className="gap-2 rounded-xl hover:bg-primary/5"
+                >
+                  <SidebarOpen className="h-3.5 w-3.5" />
+                  Abrir panel
+                </Button>
               </div>
-            </form>
-          </CardFooter>
-        </Card>
-        {showDockedPanel ? (
-          <div className="space-y-3.5">{contextPanels}</div>
-        ) : (
-          <div className="flex flex-col gap-4 rounded-xl border border-dashed bg-muted/30 p-6 text-center shadow-sm">
-            <div className="mx-auto rounded-xl bg-primary/10 p-3">
-              <SidebarOpen className="h-5 w-5 text-primary" />
-            </div>
-            <div className="space-y-1">
-              <p className="text-sm font-semibold">Panel contextual desacoplado</p>
-              <p className="text-xs text-muted-foreground">
-                Abre el panel lateral para consultar el resumen
-              </p>
-            </div>
-            <Button 
-              variant="outline" 
-              size="sm"
-              onClick={() => setContextSheetOpen(true)}
-              className="gap-2 rounded-xl hover:bg-primary/5"
-            >
-              <SidebarOpen className="h-3.5 w-3.5" />
-              Abrir panel
-            </Button>
+            )}
           </div>
-        )}
-      </div>
-      <Sheet open={contextMode === 'floating' && contextSheetOpen} onOpenChange={setContextSheetOpen}>
-        <SheetContent side="right" className="w-full overflow-y-auto sm:max-w-lg">
-          <SheetHeader className="space-y-2 border-b pb-4">
-            <div className="flex items-center gap-2">
-              <div className="rounded-xl bg-primary/10 p-2">
-                <Sparkles className="h-4 w-4 text-primary" />
-              </div>
-              <div>
-                <SheetTitle className="text-sm font-semibold">Panel contextual</SheetTitle>
-                <SheetDescription className="text-xs">
-                  Resumen de la conversación
-                </SheetDescription>
-              </div>
-            </div>
-          </SheetHeader>
-          <div className="mt-4 space-y-3.5">{contextPanels}</div>
-        </SheetContent>
-      </Sheet>    </Layout>
-        {/* Floating prompt stays visible in the assistant page and sends via the chatbot */}
+          <Sheet open={contextMode === 'floating' && contextSheetOpen} onOpenChange={setContextSheetOpen}>
+            <SheetContent side="right" className="w-full overflow-y-auto sm:max-w-lg">
+              <SheetHeader className="space-y-2 border-b pb-4">
+                <div className="flex items-center gap-2">
+                  <div className="rounded-xl bg-primary/10 p-2">
+                    <Sparkles className="h-4 w-4 text-primary" />
+                  </div>
+                  <div>
+                    <SheetTitle className="text-sm font-semibold">Panel contextual</SheetTitle>
+                    <SheetDescription className="text-xs">
+                      Resumen de la conversación
+                    </SheetDescription>
+                  </div>
+                </div>
+              </SheetHeader>
+              <div className="mt-4 space-y-3.5">{contextPanels}</div>
+            </SheetContent>
+          </Sheet>
+        </Layout>
+      )}
+      {/* Floating prompt stays visible in the assistant page and sends via the chatbot */}
+      {!isMobile && (
         <FloatingPrompt
           onSend={async (text) => {
             await handleSubmit(text);
           }}
-          />
-          </>
-        );
+        />
+      )}
+    </>
+  );
 }
 
 

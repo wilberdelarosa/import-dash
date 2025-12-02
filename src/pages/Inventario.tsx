@@ -39,7 +39,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Package, Search, Filter, AlertTriangle, Plus, Pencil, Trash2, PackageX, Box } from 'lucide-react';
 import type { Inventario as InventarioItem } from '@/types/equipment';
 import { useDeviceDetection } from '@/hooks/useDeviceDetection';
-import { InventarioMobile } from '@/components/mobile/InventarioMobile';
+import { InventarioMobile } from '@/pages/mobile/InventarioMobile';
 
 type InventoryFormState = {
   nombre: string;
@@ -92,9 +92,9 @@ export default function Inventario() {
     updateInventario,
     deleteInventario,
   } = useSupabaseDataContext();
-  
+
   const inventarios = useMemo(() => data.inventarios ?? [], [data.inventarios]);
-  
+
   const [searchTerm, setSearchTerm] = useState('');
   const [filterTipo, setFilterTipo] = useState('all');
   const [openForm, setOpenForm] = useState(false);
@@ -429,7 +429,7 @@ export default function Inventario() {
               <AlertDialogCancel>Cancelar</AlertDialogCancel>
               <AlertDialogAction
                 onClick={() => {
-                  if (deleteTarget) handleDelete(deleteTarget);
+                  if (deleteTarget) handleDelete();
                 }}
                 className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
               >

@@ -14,6 +14,8 @@ import { useSystemConfig } from '@/context/SystemConfigContext';
 import { DEFAULT_SYSTEM_CONFIG } from '@/types/config';
 import { useNotifications } from '@/hooks/useNotifications';
 import { useToast } from '@/hooks/use-toast';
+import { useDeviceDetection } from '@/hooks/useDeviceDetection';
+import { ConfiguracionesMobile } from '@/pages/mobile/ConfiguracionesMobile';
 
 export default function Configuraciones() {
   const { config, loading, saving, updateConfig } = useSystemConfig();
@@ -22,6 +24,7 @@ export default function Configuraciones() {
   const timeoutRef = useRef<number>();
   const { permission, supported, requestPermission } = useNotifications();
   const { toast } = useToast();
+  const { isMobile } = useDeviceDetection();
 
   useEffect(() => {
     setDraft(config);
@@ -111,13 +114,27 @@ export default function Configuraciones() {
   };
 
   if (loading) {
+    if (isMobile) {
+      return (
+        <div className="flex h-screen flex-col bg-background">
+          <div className="flex items-center justify-center flex-1">
+            <div className="text-sm text-muted-foreground">Cargando preferencias...</div>
+          </div>
+        </div>
+      );
+    }
     return (
-    <Layout title="Preferencias y automatizaciones">
+      <Layout title="Preferencias y automatizaciones">
         <div className="flex items-center justify-center h-64">
           <div className="text-sm text-muted-foreground">Cargando preferencias...</div>
         </div>
       </Layout>
     );
+  }
+
+  // Renderizar versión móvil
+  if (isMobile) {
+    return <ConfiguracionesMobile />;
   }
 
   return (
@@ -201,14 +218,20 @@ export default function Configuraciones() {
             <div className="flex items-start justify-between gap-4">
               <div>
                 <Label className="text-sm font-semibold">Notificaciones en este dispositivo</Label>
-                <p className="text-sm text-muted-foreground">Activa alertas nativas en el navegador o escritorio.</p>
-                <p
-                  className={`mt-2 text-xs ${
-                    !supported || permission === 'denied' ? 'text-destructive' : 'text-muted-foreground'
-                  }`}
-                >
-                  {deviceStatusMessage}
+                <p className="text-sm text-muted-foreground">
+                  Recibe alertas incluso cuando la app está en segundo plano (requiere permiso).
                 </p>
+                <div className="mt-2 flex flex-col gap-1">
+                  <p
+                    className={`text-xs ${!supported || permission === 'denied' ? 'text-destructive' : 'text-green-600'
+                      }`}
+                  >
+                    {deviceStatusMessage}
+                  </p>
+                  <p className="text-[10px] text-muted-foreground italic">
+                    * Al activar, aceptas recibir notificaciones según nuestra política de privacidad.
+                  </p>
+                </div>
               </div>
               <Switch checked={draft.notificarDispositivo} onCheckedChange={(value) => void handleDeviceToggle(value)} />
             </div>

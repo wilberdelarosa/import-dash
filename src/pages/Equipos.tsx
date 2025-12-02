@@ -6,7 +6,7 @@ import { EquipoDialog } from '@/components/equipos/EquipoDialog';
 import { EquipoDetalleUnificado } from '@/components/EquipoDetalleUnificado';
 import { useSupabaseDataContext } from '@/context/SupabaseDataContext';
 import { useDeviceDetection } from '@/hooks/useDeviceDetection';
-import { EquiposMobile } from '@/components/mobile/EquiposMobile';
+import { EquiposMobile } from '@/pages/mobile/EquiposMobile';
 import { Equipo } from '@/types/equipment';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { ConfirmDialog } from '@/components/ConfirmDialog';

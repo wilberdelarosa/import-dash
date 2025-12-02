@@ -1,7 +1,7 @@
 import { useState, useMemo } from 'react';
 import { usePlanesAsignados, type PlanAsignadoDetallado } from '@/hooks/usePlanesAsignados';
 import { useDeviceDetection } from '@/hooks/useDeviceDetection';
-import { PlanesAsignadosMobile } from '@/components/mobile/PlanesAsignadosMobile';
+import { PlanesAsignadosMobile } from '@/pages/mobile/PlanesAsignadosMobile';
 import {
   Table,
   TableBody,
@@ -22,12 +22,12 @@ import { cn } from '@/lib/utils';
 export function PlanesAsignadosTable() {
   const { isMobile } = useDeviceDetection();
   const { planes, loading, actualizarPlanAsignado, eliminarPlanAsignado } = usePlanesAsignados();
-  
+
   const [busqueda, setBusqueda] = useState('');
   const [filtroEstado, setFiltroEstado] = useState<string>('all');
   const [filtroTecnico, setFiltroTecnico] = useState<string>('all');
   const [filtroPrioridad, setFiltroPrioridad] = useState<string>('all');
-  
+
   const [editandoId, setEditandoId] = useState<string | null>(null);
   const [editForm, setEditForm] = useState<{
     tecnico_responsable: string;
@@ -362,8 +362,8 @@ export function PlanesAsignadosTable() {
                               'text-sm font-medium',
                               plan.horas_restantes <= 0 && 'text-red-600',
                               plan.horas_restantes > 0 &&
-                                plan.horas_restantes <= plan.horas_alerta &&
-                                'text-orange-600'
+                              plan.horas_restantes <= plan.horas_alerta &&
+                              'text-orange-600'
                             )}
                           >
                             {plan.horas_restantes}h
