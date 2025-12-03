@@ -24,6 +24,7 @@ import { NotificacionesCentro } from '@/components/NotificacionesCentro';
 import { LogoutButton } from '@/components/LogoutButton';
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetDescription, SheetTrigger, SheetClose } from '@/components/ui/sheet';
 import { BrandLogo } from '@/components/BrandLogo';
+import { UserBadge } from '@/components/UserBadge';
 
 const navItems = [
   { path: '/', label: 'Dashboard', icon: LayoutDashboard },
@@ -163,7 +164,8 @@ export function Navigation({ hideBrand = false }: NavigationProps) {
                   </Popover>
                 </div>
               </div>
-              <div className="hidden shrink-0 items-center gap-2 lg:flex">
+              <div className="hidden shrink-0 items-center gap-3 lg:flex">
+                <UserBadge />
                 <NotificacionesCentro />
                 <LogoutButton />
               </div>
@@ -242,8 +244,9 @@ export function Navigation({ hideBrand = false }: NavigationProps) {
               </div>
             </div>
             
-            {/* Configuración y Cuenta */}
-            <div className="pt-4 border-t border-border space-y-2">
+            {/* Usuario y Cuenta */}
+            <div className="pt-4 border-t border-border space-y-3">
+              <UserBadge className="w-full" />
               <NotificacionesCentro />
               <LogoutButton className="w-full" />
             </div>

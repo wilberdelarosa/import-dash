@@ -1,4 +1,4 @@
-﻿import { useMemo, useState } from 'react';
+import { useMemo, useState } from 'react';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -13,11 +13,13 @@ import {
   SheetDescription,
   SheetTrigger,
 } from '@/components/ui/sheet';
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { cn } from '@/lib/utils';
-import { Trash2, Edit, Search, Filter, ZoomIn, ZoomOut, Sparkles } from 'lucide-react';
+import { Trash2, Edit, Search, Filter, ZoomIn, ZoomOut, Sparkles, Lock } from 'lucide-react';
 import { Equipo } from '@/types/equipment';
 import { EquipoDialog } from './EquipoDialog';
 import { EquipoLink } from '@/components/EquipoLink';
+import { usePermissions } from '@/hooks/usePermissions';
 
 const CATEGORY_SYNONYMS: Record<string, string[]> = {
   transporte: ['camion', 'camiones', 'volquete', 'dump truck', 'haul truck'],
@@ -55,6 +57,10 @@ export function EquiposTable({ equipos, onEdit, onDelete, onVerDetalle }: Equipo
   const [filterCategoria, setFilterCategoria] = useState('all');
   const [filterActivo, setFilterActivo] = useState('all');
   const [tableScale, setTableScale] = useState(1);
+  
+  const { canEdit, canDelete } = usePermissions();
+  const canEditEquipos = canEdit('equipos');
+  const canDeleteEquipos = canDelete('equipos');
 
   const categorias = useMemo(() => [...new Set(equipos.map(eq => eq.categoria))], [equipos]);
   const marcas = useMemo(() => [...new Set(equipos.map(eq => eq.marca))], [equipos]);
@@ -410,23 +416,53 @@ export function EquiposTable({ equipos, onEdit, onDelete, onVerDetalle }: Equipo
                             Ver Detalle
                           </Button>
                         )}
-                        <EquipoDialog
-                          equipo={equipo}
-                          onSave={onEdit}
-                          trigger={
-                            <Button variant="outline" size="sm">
-                              <Edit className="w-4 h-4" />
-                            </Button>
-                          }
-                        />
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          onClick={() => onDelete(equipo.id)}
-                          className="text-destructive hover:text-destructive-foreground hover:bg-destructive"
-                        >
-                          <Trash2 className="w-4 h-4" />
-                        </Button>
+                        {canEditEquipos ? (
+                          <EquipoDialog
+                            equipo={equipo}
+                            onSave={onEdit}
+                            trigger={
+                              <Button variant="outline" size="sm">
+                                <Edit className="w-4 h-4" />
+                              </Button>
+                            }
+                          />
+                        ) : (
+                          <TooltipProvider>
+                            <Tooltip>
+                              <TooltipTrigger asChild>
+                                <Button variant="outline" size="sm" disabled className="opacity-50">
+                                  <Lock className="w-4 h-4" />
+                                </Button>
+                              </TooltipTrigger>
+                              <TooltipContent>
+                                <p>Solo administradores pueden editar</p>
+                              </TooltipContent>
+                            </Tooltip>
+                          </TooltipProvider>
+                        )}
+                        {canDeleteEquipos ? (
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => onDelete(equipo.id)}
+                            className="text-destructive hover:text-destructive-foreground hover:bg-destructive"
+                          >
+                            <Trash2 className="w-4 h-4" />
+                          </Button>
+                        ) : (
+                          <TooltipProvider>
+                            <Tooltip>
+                              <TooltipTrigger asChild>
+                                <Button variant="outline" size="sm" disabled className="opacity-50">
+                                  <Lock className="w-4 h-4" />
+                                </Button>
+                              </TooltipTrigger>
+                              <TooltipContent>
+                                <p>Solo administradores pueden eliminar</p>
+                              </TooltipContent>
+                            </Tooltip>
+                          </TooltipProvider>
+                        )}
                       </div>
                     </TableCell>
                   </TableRow>
