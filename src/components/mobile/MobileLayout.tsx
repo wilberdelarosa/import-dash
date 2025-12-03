@@ -170,7 +170,7 @@ export function MobileLayout({
                   <Menu className="h-5 w-5 text-foreground/80" />
                 </Button>
               </SheetTrigger>
-              <SheetContent side="right" className="w-[85vw] sm:w-80 p-0 border-l-0 bg-background/95 backdrop-blur-2xl supports-[backdrop-filter]:bg-background/60">
+              <SheetContent side="right" className="w-[85vw] sm:w-80 p-0 border-l-0 bg-background">
                 <div className="flex flex-col h-full">
                   {/* Header del menú con info de usuario */}
                   <div className="relative p-4 pb-3 border-b border-border/50">

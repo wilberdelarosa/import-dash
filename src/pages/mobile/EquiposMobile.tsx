@@ -28,7 +28,9 @@ import {
   Edit2,
   Trash2,
   ListFilter,
+  Lock,
 } from 'lucide-react';
+import { useUserRoles } from '@/hooks/useUserRoles';
 import { cn } from '@/lib/utils';
 import { Equipo } from '@/types/equipment';
 import {
@@ -66,6 +68,8 @@ export function EquiposMobile({
   const [searchQuery, setSearchQuery] = useState('');
   const [filter, setFilter] = useState<FilterType>('all');
   const [filtersOpen, setFiltersOpen] = useState(false);
+  const { currentUserRole } = useUserRoles();
+  const isAdmin = currentUserRole === 'admin';
 
   // Estadísticas
   const stats = useMemo(() => ({
@@ -293,26 +297,35 @@ export function EquiposMobile({
                       <Eye className="h-4 w-4 text-primary" />
                       Ver detalle
                     </DropdownMenuItem>
-                    <DropdownMenuItem
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        onEdit(equipo);
-                      }}
-                      className="gap-2 py-2.5"
-                    >
-                      <Edit2 className="h-4 w-4" />
-                      Editar
-                    </DropdownMenuItem>
-                    <DropdownMenuItem
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        onDelete(equipo.id);
-                      }}
-                      className="gap-2 py-2.5 text-destructive focus:text-destructive focus:bg-destructive/10"
-                    >
-                      <Trash2 className="h-4 w-4" />
-                      Eliminar
-                    </DropdownMenuItem>
+                    {isAdmin ? (
+                      <>
+                        <DropdownMenuItem
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            onEdit(equipo);
+                          }}
+                          className="gap-2 py-2.5"
+                        >
+                          <Edit2 className="h-4 w-4" />
+                          Editar
+                        </DropdownMenuItem>
+                        <DropdownMenuItem
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            onDelete(equipo.id);
+                          }}
+                          className="gap-2 py-2.5 text-destructive focus:text-destructive focus:bg-destructive/10"
+                        >
+                          <Trash2 className="h-4 w-4" />
+                          Eliminar
+                        </DropdownMenuItem>
+                      </>
+                    ) : (
+                      <DropdownMenuItem disabled className="gap-2 py-2.5 text-muted-foreground">
+                        <Lock className="h-4 w-4" />
+                        Solo lectura
+                      </DropdownMenuItem>
+                    )}
                   </DropdownMenuContent>
                 </DropdownMenu>
               </div>
@@ -321,14 +334,16 @@ export function EquiposMobile({
         )}
       </div>
 
-      {/* FAB Premium para agregar equipo */}
-      <Button
-        className="fixed bottom-6 right-6 z-50 h-14 w-14 min-h-[var(--touch-target-large)] rounded-full shadow-lg shadow-primary/30 bg-primary hover:bg-primary/90 hover:scale-105 active:scale-95 transition-all duration-300"
-        size="icon"
-        onClick={onAdd}
-      >
-        <Plus className="h-7 w-7 text-primary-foreground" />
-      </Button>
+      {/* FAB Premium para agregar equipo - Solo admin */}
+      {isAdmin && (
+        <Button
+          className="fixed bottom-24 right-4 z-50 h-14 w-14 min-h-[var(--touch-target-large)] rounded-full shadow-lg shadow-primary/30 bg-primary hover:bg-primary/90 hover:scale-105 active:scale-95 transition-all duration-300"
+          size="icon"
+          onClick={onAdd}
+        >
+          <Plus className="h-7 w-7 text-primary-foreground" />
+        </Button>
+      )}
     </MobileLayout>
   );
 }

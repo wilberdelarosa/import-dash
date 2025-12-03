@@ -36,7 +36,9 @@ import {
   Clock,
   Wrench,
   ChevronRight,
+  Lock,
 } from 'lucide-react';
+import { useUserRoles } from '@/hooks/useUserRoles';
 import { cn } from '@/lib/utils';
 
 interface Kit {
@@ -70,6 +72,8 @@ export function KitsMantenimientoMobile({
   const [searchTerm, setSearchTerm] = useState('');
   const [filterCategory, setFilterCategory] = useState<string>('all');
   const [filtersOpen, setFiltersOpen] = useState(false);
+  const { currentUserRole } = useUserRoles();
+  const isAdmin = currentUserRole === 'admin';
 
   // Categorías únicas
   const categories = useMemo(() => {
@@ -237,17 +241,26 @@ export function KitsMantenimientoMobile({
                       <Eye className="h-4 w-4" />
                       Ver detalle
                     </DropdownMenuItem>
-                    <DropdownMenuItem onClick={() => onEdit(kit)} className="gap-2">
-                      <Edit2 className="h-4 w-4" />
-                      Editar
-                    </DropdownMenuItem>
-                    <DropdownMenuItem 
-                      onClick={() => onDelete(kit)} 
-                      className="gap-2 text-destructive focus:text-destructive"
-                    >
-                      <Trash2 className="h-4 w-4" />
-                      Eliminar
-                    </DropdownMenuItem>
+                    {isAdmin ? (
+                      <>
+                        <DropdownMenuItem onClick={() => onEdit(kit)} className="gap-2">
+                          <Edit2 className="h-4 w-4" />
+                          Editar
+                        </DropdownMenuItem>
+                        <DropdownMenuItem 
+                          onClick={() => onDelete(kit)} 
+                          className="gap-2 text-destructive focus:text-destructive"
+                        >
+                          <Trash2 className="h-4 w-4" />
+                          Eliminar
+                        </DropdownMenuItem>
+                      </>
+                    ) : (
+                      <DropdownMenuItem disabled className="gap-2 text-muted-foreground">
+                        <Lock className="h-4 w-4" />
+                        Solo lectura
+                      </DropdownMenuItem>
+                    )}
                   </DropdownMenuContent>
                 </DropdownMenu>
               </MobileCard>
@@ -266,13 +279,15 @@ export function KitsMantenimientoMobile({
         )}
       </div>
 
-      {/* FAB */}
-      <Button
-        className="fixed bottom-6 right-6 h-14 w-14 rounded-full shadow-lg shadow-primary/30 z-50"
-        onClick={onCreate}
-      >
-        <Plus className="h-7 w-7" />
-      </Button>
+      {/* FAB - Solo admin */}
+      {isAdmin && (
+        <Button
+          className="fixed bottom-24 right-4 h-14 w-14 rounded-full shadow-lg shadow-primary/30 z-50"
+          onClick={onCreate}
+        >
+          <Plus className="h-7 w-7" />
+        </Button>
+      )}
     </MobileLayout>
   );
 }
