@@ -137,15 +137,12 @@ export default function Equipos() {
           onOpenChange={setDetalleAbierto}
         />
 
-        <EquipoDialog
-          open={dialogOpen}
-          onOpenChange={(open) => {
-            setDialogOpen(open);
-            if (!open) setEquipoToEdit(null);
-          }}
-          onSubmit={equipoToEdit ? handleEditEquipo : handleAddEquipo}
-          initialData={equipoToEdit || undefined}
-        />
+        {dialogOpen && (
+          <EquipoDialog
+            equipo={equipoToEdit || undefined}
+            onSave={equipoToEdit ? handleEditEquipo : handleAddEquipo}
+          />
+        )}
 
         <ConfirmDialog
           open={confirmOpen}

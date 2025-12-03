@@ -493,7 +493,11 @@ export default function Mantenimiento() {
     const matchesRestanteMax = !filtros.restanteMax || restante <= parseFloat(filtros.restanteMax);
 
     return matchesSearch && matchesTipo && matchesCategoria && matchesFicha && matchesEstado && matchesRestanteMin && matchesRestanteMax && mant.activo;
-  });
+  })
+    .sort((a, b) => {
+      // Ordenar por ficha de menor a mayor
+      return a.ficha.localeCompare(b.ficha, 'es', { numeric: true, sensitivity: 'base' });
+    });
 
   const totalMantenimientos = mantenimientosFiltrados.length;
   const vencidos = mantenimientosFiltrados.filter(m => m.horasKmRestante <= 0).length;
