@@ -505,10 +505,10 @@ export function ListasPersonalizadasMobile() {
                     </ScrollArea>
 
                     <div className="pt-4 border-t">
-                        <Button className="w-full" onClick(() => setColumnsSheetOpen(false)}>
+                        <Button className="w-full" onClick={() => setColumnsSheetOpen(false)}>
                             Listo
-                    </Button>
-                </div>
+                        </Button>
+                    </div>
             </SheetContent>
         </Sheet>
         </MobileLayout>
