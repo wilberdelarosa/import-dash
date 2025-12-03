@@ -7,11 +7,12 @@
  * - Bottom navigation bar fija con TODAS las rutas principales
  * - Menú lateral completo con todos los módulos
  * - UserBadge con información del usuario y rol
+ * - Centro de notificaciones funcional
  * - Soporte para gestos táctiles
  * - Transiciones suaves
  */
 
-import { ReactNode } from 'react';
+import { ReactNode, useState } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { cn } from '@/lib/utils';
 import {
@@ -34,17 +35,25 @@ import {
   ChevronRight,
   ShieldCheck,
   User,
+  AlertCircle,
+  AlertTriangle,
+  Info,
+  X,
+  CheckCheck,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { ThemeToggle } from '@/components/ThemeToggle';
-import { Sheet, SheetContent, SheetTrigger } from '@/components/ui/sheet';
+import { Sheet, SheetContent, SheetTrigger, SheetHeader, SheetTitle, SheetDescription } from '@/components/ui/sheet';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Separator } from '@/components/ui/separator';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { useAuth } from '@/context/AuthContext';
 import { useUserRoles } from '@/hooks/useUserRoles';
 import { useToast } from '@/hooks/use-toast';
+import { useNotificaciones } from '@/hooks/useNotificaciones';
+import { formatDistanceToNow } from 'date-fns';
+import { es } from 'date-fns/locale';
 
 interface MobileLayoutProps {
   children: ReactNode;
@@ -111,6 +120,17 @@ export function MobileLayout({
   const { user, signOut } = useAuth();
   const { currentUserRole, loading: loadingRole } = useUserRoles();
   const { toast } = useToast();
+  const [notificacionesOpen, setNotificacionesOpen] = useState(false);
+  
+  // Hook de notificaciones
+  const {
+    notificaciones,
+    loading: loadingNotificaciones,
+    noLeidas,
+    marcarComoLeida,
+    marcarTodasComoLeidas,
+    eliminarNotificacion,
+  } = useNotificaciones();
 
   // Verificar si la ruta actual coincide (incluyendo rutas parciales como /planificador*)
   const isRouteActive = (path: string) => {
@@ -121,6 +141,36 @@ export function MobileLayout({
   const isAdmin = currentUserRole === 'admin';
   const email = user?.email || 'Usuario';
   const initials = email.substring(0, 2).toUpperCase();
+
+  const getIconoNivel = (nivel: string) => {
+    switch (nivel) {
+      case 'critical':
+        return <AlertCircle className="h-4 w-4 text-destructive" />;
+      case 'warning':
+        return <AlertTriangle className="h-4 w-4 text-amber-500" />;
+      default:
+        return <Info className="h-4 w-4 text-blue-500" />;
+    }
+  };
+
+  const getBgNivel = (nivel: string) => {
+    switch (nivel) {
+      case 'critical':
+        return 'bg-red-50 border-red-200 dark:bg-red-950/20 dark:border-red-900/50';
+      case 'warning':
+        return 'bg-amber-50 border-amber-200 dark:bg-amber-950/20 dark:border-amber-900/50';
+      default:
+        return 'bg-blue-50 border-blue-200 dark:bg-blue-950/20 dark:border-blue-900/50';
+    }
+  };
+
+  const handleNotificacionClick = (notif: any) => {
+    marcarComoLeida(notif.id);
+    if (notif.accionUrl) {
+      setNotificacionesOpen(false);
+      navigate(notif.accionUrl);
+    }
+  };
 
   const handleLogout = async () => {
     try {
@@ -210,21 +260,114 @@ export function MobileLayout({
                       <ThemeToggle />
                     </div>
 
-                    {/* Notificaciones con diseño mejorado */}
-                    <Button
-                      variant="ghost"
-                      className="relative w-full justify-start gap-3 h-11 text-sm font-medium hover:bg-primary/10 rounded-xl transition-all group overflow-hidden"
-                      onClick={() => navigate('/configuraciones')}
-                    >
-                      <div className="absolute inset-0 bg-gradient-to-r from-primary/5 to-transparent opacity-0 group-hover:opacity-100 transition-opacity" />
-                      <div className="relative flex items-center gap-3 flex-1">
-                        <div className="rounded-lg p-1.5 bg-primary/10">
-                          <Bell className="h-4 w-4 text-primary" />
-                        </div>
-                        Notificaciones
-                      </div>
-                      <Badge variant="destructive" className="shadow-lg shadow-destructive/30">3</Badge>
-                    </Button>
+                    {/* Notificaciones - Sheet funcional */}
+                    <Sheet open={notificacionesOpen} onOpenChange={setNotificacionesOpen}>
+                      <SheetTrigger asChild>
+                        <Button
+                          variant="ghost"
+                          className="relative w-full justify-start gap-3 h-11 text-sm font-medium hover:bg-primary/10 rounded-xl transition-all group overflow-hidden"
+                        >
+                          <div className="absolute inset-0 bg-gradient-to-r from-primary/5 to-transparent opacity-0 group-hover:opacity-100 transition-opacity" />
+                          <div className="relative flex items-center gap-3 flex-1">
+                            <div className="rounded-lg p-1.5 bg-primary/10">
+                              <Bell className="h-4 w-4 text-primary" />
+                            </div>
+                            Notificaciones
+                          </div>
+                          {noLeidas > 0 && (
+                            <Badge variant="destructive" className="shadow-lg shadow-destructive/30">
+                              {noLeidas > 99 ? '99+' : noLeidas}
+                            </Badge>
+                          )}
+                        </Button>
+                      </SheetTrigger>
+                      <SheetContent side="bottom" className="h-[85vh] rounded-t-[2rem] bg-background">
+                        <div className="mx-auto mt-2 h-1 w-12 rounded-full bg-muted" />
+                        <SheetHeader className="mt-4">
+                          <SheetTitle className="text-center text-xl font-bold">Notificaciones</SheetTitle>
+                          <SheetDescription className="text-center">
+                            {noLeidas > 0 ? `${noLeidas} sin leer` : 'Todas leídas'}
+                          </SheetDescription>
+                        </SheetHeader>
+                        
+                        {noLeidas > 0 && (
+                          <div className="flex justify-center mt-4">
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              onClick={marcarTodasComoLeidas}
+                              className="gap-2"
+                            >
+                              <CheckCheck className="h-4 w-4" />
+                              Marcar todas como leídas
+                            </Button>
+                          </div>
+                        )}
+                        
+                        <ScrollArea className="flex-1 mt-4 h-[calc(85vh-180px)]">
+                          {loadingNotificaciones ? (
+                            <div className="p-8 text-center text-muted-foreground">
+                              Cargando notificaciones...
+                            </div>
+                          ) : notificaciones.length === 0 ? (
+                            <div className="p-12 text-center">
+                              <Bell className="h-16 w-16 mx-auto text-muted-foreground/30 mb-4" />
+                              <p className="text-muted-foreground font-medium">No hay notificaciones</p>
+                              <p className="text-sm text-muted-foreground/70 mt-1">Todo está al día</p>
+                            </div>
+                          ) : (
+                            <div className="space-y-2 px-4 pb-8">
+                              {notificaciones.map((notif) => (
+                                <div
+                                  key={notif.id}
+                                  className={cn(
+                                    "p-3 rounded-xl border transition-colors cursor-pointer",
+                                    !notif.leida ? getBgNivel(notif.nivel) : "bg-muted/30 border-border/50"
+                                  )}
+                                  onClick={() => handleNotificacionClick(notif)}
+                                >
+                                  <div className="flex items-start gap-3">
+                                    <div className="mt-0.5">
+                                      {getIconoNivel(notif.nivel)}
+                                    </div>
+                                    <div className="flex-1 min-w-0">
+                                      <div className="flex items-start justify-between gap-2">
+                                        <p className={cn(
+                                          "font-medium text-sm leading-tight",
+                                          !notif.leida && "font-semibold"
+                                        )}>
+                                          {notif.titulo}
+                                        </p>
+                                        <Button
+                                          variant="ghost"
+                                          size="icon"
+                                          className="h-6 w-6 shrink-0 -mt-1 -mr-1"
+                                          onClick={(e) => {
+                                            e.stopPropagation();
+                                            eliminarNotificacion(notif.id);
+                                          }}
+                                        >
+                                          <X className="h-3 w-3" />
+                                        </Button>
+                                      </div>
+                                      <p className="text-xs text-muted-foreground mt-1 line-clamp-2">
+                                        {notif.mensaje}
+                                      </p>
+                                      <span className="text-[10px] text-muted-foreground mt-2 block">
+                                        {formatDistanceToNow(new Date(notif.createdAt), { 
+                                          addSuffix: true, 
+                                          locale: es 
+                                        })}
+                                      </span>
+                                    </div>
+                                  </div>
+                                </div>
+                              ))}
+                            </div>
+                          )}
+                        </ScrollArea>
+                      </SheetContent>
+                    </Sheet>
                   </div>
 
                   <Separator className="opacity-50" />
