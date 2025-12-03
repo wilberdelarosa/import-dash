@@ -12,7 +12,7 @@ export function useNotificaciones() {
   const [noLeidas, setNoLeidas] = useState(0);
   const { config } = useSystemConfig();
   const configRef = useRef(config);
-  const { sendNotification, permission } = useNotifications();
+  const { addNotification, permission } = useNotifications();
 
   const construirMensajeConFicha = useCallback((mensaje: string, ficha: string | null) => {
     return ficha ? `Ficha ${ficha}: ${mensaje}` : mensaje;
@@ -134,9 +134,10 @@ export function useNotificaciones() {
 
           const currentConfig = configRef.current;
           if (currentConfig.notificarDispositivo && permission === 'granted') {
-            sendNotification(nuevaNotif.titulo, {
+            addNotification({
+              title: nuevaNotif.titulo,
               body: mensajeConFicha,
-              data: nuevaNotif,
+              type: nuevaNotif.nivel === 'critical' ? 'error' : 'info',
             });
           }
 
@@ -154,7 +155,7 @@ export function useNotificaciones() {
     return () => {
       supabase.removeChannel(channel);
     };
-  }, [registrarEnvioExterno, permission, sendNotification, construirMensajeConFicha, loadNotificaciones]);
+  }, [registrarEnvioExterno, permission, addNotification, construirMensajeConFicha, loadNotificaciones]);
 
   const marcarComoLeida = async (id: number) => {
     try {
