@@ -62,6 +62,7 @@ export function ControlMantenimientoMobile({
 
     // Estados para lectura
     const [lecturaActual, setLecturaActual] = useState('');
+    const [fechaLectura, setFechaLectura] = useState(new Date().toISOString().split('T')[0]);
     const [notasLectura, setNotasLectura] = useState('');
     const [updating, setUpdating] = useState(false);
 
@@ -173,7 +174,7 @@ export function ControlMantenimientoMobile({
             await onUpdateLectura(
                 selectedEquipo.id,
                 nuevaLectura,
-                new Date().toISOString(),
+                new Date(fechaLectura).toISOString(),
                 notasLectura
             );
             toast({ title: "Lectura actualizada", description: `Nueva lectura para ${selectedEquipo.ficha}: ${nuevaLectura}` });
@@ -285,49 +286,133 @@ export function ControlMantenimientoMobile({
 
                         {/* Vista de Equipo Seleccionado (Solo en Lecturas) */}
                         {selectedEquipo && (
-                            <div className="space-y-6 animate-in slide-in-from-right-4">
-                                <div className="flex items-center justify-between bg-muted/30 p-4 rounded-xl border border-border/50">
+                            <div className="space-y-4 animate-in slide-in-from-right-4">
+                                <div className="flex items-center justify-between bg-gradient-to-r from-primary/10 to-transparent p-4 rounded-xl border border-border/50">
                                     <div>
                                         <h2 className="text-2xl font-bold">{selectedEquipo.ficha}</h2>
                                         <p className="text-sm text-muted-foreground">{selectedEquipo.nombreEquipo}</p>
+                                        <p className="text-xs text-muted-foreground mt-1">
+                                            {selectedEquipo.tipoMantenimiento}
+                                        </p>
                                     </div>
                                     <Button variant="ghost" size="sm" onClick={() => setSelectedEquipo(null)}>
                                         Cambiar
                                     </Button>
                                 </div>
 
-                                <MobileCard className="p-6 space-y-6">
-                                    <div className="space-y-2">
-                                        <label className="text-sm font-medium text-muted-foreground">Lectura Actual</label>
-                                        <div className="flex items-center gap-2">
-                                            <Input
-                                                type="number"
-                                                value={lecturaActual}
-                                                onChange={(e) => setLecturaActual(e.target.value)}
-                                                className="text-3xl font-bold h-16 text-center tracking-widest"
-                                            />
+                                {/* Información contextual del mantenimiento */}
+                                <MobileCard variant="glass" className="p-4">
+                                    <h3 className="text-sm font-semibold mb-3 flex items-center gap-2">
+                                        <Activity className="h-4 w-4 text-primary" />
+                                        Estado del Mantenimiento
+                                    </h3>
+                                    <div className="space-y-3">
+                                        <div className="flex justify-between items-center py-2 border-b border-border/50">
+                                            <span className="text-xs text-muted-foreground flex items-center gap-2">
+                                                <Clock className="h-3 w-3" />
+                                                Última actualización
+                                            </span>
+                                            <span className="text-xs font-medium">
+                                                {new Date(selectedEquipo.fechaUltimaActualizacion).toLocaleDateString('es-ES', {
+                                                    day: '2-digit',
+                                                    month: 'short',
+                                                    year: 'numeric'
+                                                })}
+                                            </span>
                                         </div>
+
+                                        {selectedEquipo.fechaUltimoMantenimiento && (
+                                            <div className="flex justify-between items-center py-2 border-b border-border/50">
+                                                <span className="text-xs text-muted-foreground flex items-center gap-2">
+                                                    <Wrench className="h-3 w-3" />
+                                                    Último mantenimiento
+                                                </span>
+                                                <span className="text-xs font-medium">
+                                                    {new Date(selectedEquipo.fechaUltimoMantenimiento).toLocaleDateString('es-ES', {
+                                                        day: '2-digit',
+                                                        month: 'short',
+                                                        year: 'numeric'
+                                                    })}
+                                                </span>
+                                            </div>
+                                        )}
+
+                                        <div className="flex justify-between items-center py-2">
+                                            <span className="text-xs text-muted-foreground">Estado</span>
+                                            <Badge variant={getRemainingVariant(selectedEquipo.horasKmRestante)}>
+                                                {formatRemainingLabel(
+                                                    selectedEquipo.horasKmRestante,
+                                                    selectedEquipo.tipoMantenimiento.toLowerCase().includes('km') ? 'km' : 'horas'
+                                                )}
+                                            </Badge>
+                                        </div>
+                                    </div>
+                                </MobileCard>
+
+                                {/* Formulario de actualización de lectura */}
+                                <MobileCard className="p-4 sm:p-6 space-y-4">
+                                    <div className="space-y-2">
+                                        <label className="text-sm font-medium text-muted-foreground flex items-center gap-2">
+                                            <Gauge className="h-4 w-4" />
+                                            Nueva Lectura
+                                        </label>
+                                        <Input
+                                            type="number"
+                                            value={lecturaActual}
+                                            onChange={(e) => setLecturaActual(e.target.value)}
+                                            className="text-2xl sm:text-3xl font-bold h-14 sm:h-16 text-center tracking-widest"
+                                            placeholder="0"
+                                        />
                                         <div className="flex justify-between text-xs text-muted-foreground px-1">
                                             <span>Anterior: {selectedEquipo.horasKmActuales}</span>
-                                            <span>Diferencia: {Number(lecturaActual) - selectedEquipo.horasKmActuales}</span>
+                                            <span className={cn(
+                                                "font-medium",
+                                                Number(lecturaActual) < selectedEquipo.horasKmActuales && "text-destructive"
+                                            )}>
+                                                Diferencia: {Number(lecturaActual || 0) - selectedEquipo.horasKmActuales}
+                                            </span>
                                         </div>
+                                    </div>
+
+                                    <div className="space-y-2">
+                                        <label className="text-sm font-medium text-muted-foreground flex items-center gap-2">
+                                            <Calendar className="h-4 w-4" />
+                                            Fecha de Actualización
+                                        </label>
+                                        <Input
+                                            type="date"
+                                            value={fechaLectura}
+                                            onChange={(e) => setFechaLectura(e.target.value)}
+                                            className="h-11"
+                                        />
                                     </div>
 
                                     <div className="space-y-2">
                                         <label className="text-sm font-medium text-muted-foreground">Notas (Opcional)</label>
                                         <Input
-                                            placeholder="Observaciones..."
+                                            placeholder="Observaciones adicionales..."
                                             value={notasLectura}
                                             onChange={(e) => setNotasLectura(e.target.value)}
+                                            className="h-11"
                                         />
                                     </div>
 
                                     <Button
-                                        className="w-full h-12 text-lg"
+                                        className="w-full h-12 text-base font-semibold"
                                         onClick={handleUpdate}
                                         disabled={updating || !lecturaActual}
                                     >
-                                        {updating ? 'Guardando...' : 'Actualizar Lectura'}
+                                        {updating ? (
+                                            <>
+                                                <Clock className="mr-2 h-4 w-4 animate-spin" />
+                                                Guardando...
+                                            </>
+                                        ) : (
+                                            <>
+                                                <Save className="mr-2 h-4 w-4" />
+                                                Actualizar Lectura
+                                            </>
+                                        )}
                                     </Button>
                                 </MobileCard>
                             </div>

@@ -65,8 +65,11 @@ import { format } from 'date-fns';
 import { es } from 'date-fns/locale';
 import { cn } from '@/lib/utils';
 import { HistorialEvento, TipoEventoBase } from '@/types/historial';
+import { useDeviceDetection } from '@/hooks/useDeviceDetection';
+import { HistorialMobile } from '@/pages/mobile/HistorialMobile';
 
 export default function Historial() {
+  const { isMobile } = useDeviceDetection();
   const {
     eventos,
     loading,
@@ -78,6 +81,11 @@ export default function Historial() {
   const [mostrarFiltros, setMostrarFiltros] = useState(false);
   const [vistaActiva, setVistaActiva] = useState<'timeline' | 'tabla' | 'estadisticas'>('timeline');
   const [mostrarDetallesTecnicos, setMostrarDetallesTecnicos] = useState(false);
+
+  // Si es móvil, renderizar versión mobile
+  if (isMobile) {
+    return <HistorialMobile loading={loading} />;
+  }
 
   const normalizeNumber = (value: unknown): number | null => {
     if (typeof value === 'number') return Number.isFinite(value) ? value : null;
@@ -130,8 +138,8 @@ export default function Historial() {
         const filtros = Array.isArray(metadata.filtrosUtilizados)
           ? metadata.filtrosUtilizados
           : Array.isArray(datosDespues.filtrosUtilizados)
-          ? datosDespues.filtrosUtilizados
-          : [];
+            ? datosDespues.filtrosUtilizados
+            : [];
         const observaciones = metadata.observaciones ?? datosDespues.observaciones;
 
         if (lectura !== null) {
@@ -425,16 +433,16 @@ export default function Historial() {
             </Tabs>
 
             <div className="flex gap-2 w-full sm:w-auto">
-              <Button 
+              <Button
                 onClick={() => setMostrarDetallesTecnicos(!mostrarDetallesTecnicos)}
-                variant="outline" 
+                variant="outline"
                 size="sm"
                 className="flex-1 sm:flex-none"
               >
                 {mostrarDetallesTecnicos ? <EyeOff className="h-4 w-4 mr-2" /> : <Eye className="h-4 w-4 mr-2" />}
                 {mostrarDetallesTecnicos ? 'Ocultar' : 'Ver'} Datos
               </Button>
-              
+
               <Button onClick={exportarPDF} variant="outline" size="sm" className="flex-1 sm:flex-none">
                 <Download className="h-4 w-4 mr-2" />
                 Exportar
@@ -491,7 +499,7 @@ export default function Historial() {
               <div className="text-2xl font-bold text-destructive">
                 {eventos.filter(e => e.nivelImportancia === 'critical').length}
               </div>
-              <Progress 
+              <Progress
                 value={(eventos.filter(e => e.nivelImportancia === 'critical').length / (eventos.length || 1)) * 100}
                 className="mt-2 h-1"
               />
@@ -507,7 +515,7 @@ export default function Historial() {
               <div className="text-2xl font-bold text-amber-600">
                 {eventos.filter(e => e.nivelImportancia === 'warning').length}
               </div>
-              <Progress 
+              <Progress
                 value={(eventos.filter(e => e.nivelImportancia === 'warning').length / (eventos.length || 1)) * 100}
                 className="mt-2 h-1"
               />
@@ -523,7 +531,7 @@ export default function Historial() {
               <div className="text-2xl font-bold text-blue-600">
                 {eventos.filter(e => e.nivelImportancia === 'info').length}
               </div>
-              <Progress 
+              <Progress
                 value={(eventos.filter(e => e.nivelImportancia === 'info').length / (eventos.length || 1)) * 100}
                 className="mt-2 h-1"
               />
@@ -615,7 +623,7 @@ export default function Historial() {
                     <label className="text-sm font-medium mb-2 block">Módulo</label>
                     <Select
                       value={filtros.modulo[0] || "todos"}
-                      onValueChange={(value) => 
+                      onValueChange={(value) =>
                         setFiltros({ ...filtros, modulo: value === "todos" ? [] : [value] })
                       }
                     >
@@ -635,7 +643,7 @@ export default function Historial() {
                     <label className="text-sm font-medium mb-2 block">Nivel</label>
                     <Select
                       value={filtros.nivelImportancia[0] || "todos"}
-                      onValueChange={(value) => 
+                      onValueChange={(value) =>
                         setFiltros({ ...filtros, nivelImportancia: value === "todos" ? [] : [value] })
                       }
                     >
@@ -656,10 +664,10 @@ export default function Historial() {
                     <Input
                       type="date"
                       value={filtros.fechaDesde?.toISOString().split('T')[0] || ''}
-                      onChange={(e) => 
-                        setFiltros({ 
-                          ...filtros, 
-                          fechaDesde: e.target.value ? new Date(e.target.value) : null 
+                      onChange={(e) =>
+                        setFiltros({
+                          ...filtros,
+                          fechaDesde: e.target.value ? new Date(e.target.value) : null
                         })
                       }
                     />
@@ -670,10 +678,10 @@ export default function Historial() {
                     <Input
                       type="date"
                       value={filtros.fechaHasta?.toISOString().split('T')[0] || ''}
-                      onChange={(e) => 
-                        setFiltros({ 
-                          ...filtros, 
-                          fechaHasta: e.target.value ? new Date(e.target.value) : null 
+                      onChange={(e) =>
+                        setFiltros({
+                          ...filtros,
+                          fechaHasta: e.target.value ? new Date(e.target.value) : null
                         })
                       }
                     />
@@ -684,7 +692,7 @@ export default function Historial() {
                     <Input
                       placeholder="AC-001"
                       value={filtros.fichaEquipo || ''}
-                      onChange={(e) => 
+                      onChange={(e) =>
                         setFiltros({ ...filtros, fichaEquipo: e.target.value || null })
                       }
                     />
@@ -704,7 +712,7 @@ export default function Historial() {
                 Línea de Tiempo
               </CardTitle>
               <CardDescription>
-                {eventos.length > 0 
+                {eventos.length > 0
                   ? `Mostrando ${eventos.length} evento(s) ordenados cronológicamente`
                   : 'No hay eventos registrados'
                 }
@@ -757,8 +765,8 @@ export default function Historial() {
                                       visual.cardClass
                                     )} style={{
                                       borderLeftColor: evento.nivelImportancia === 'critical' ? 'hsl(var(--destructive))' :
-                                                      evento.nivelImportancia === 'warning' ? 'rgb(245, 158, 11)' :
-                                                      'hsl(var(--primary))'
+                                        evento.nivelImportancia === 'warning' ? 'rgb(245, 158, 11)' :
+                                          'hsl(var(--primary))'
                                     }}>
                                       <CardHeader className="pb-3">
                                         <div className="flex items-start justify-between gap-2">
@@ -789,11 +797,11 @@ export default function Historial() {
                                                 </Badge>
                                               )}
                                             </div>
-                                            
+
                                             <p className="text-sm font-medium leading-relaxed">
                                               {evento.descripcion}
                                             </p>
-                                            
+
                                             {evento.nombreEquipo && (
                                               <p className="text-sm text-muted-foreground flex items-center gap-1">
                                                 <Activity className="h-3 w-3" />
@@ -806,7 +814,7 @@ export default function Historial() {
 
                                       <CardContent className="pt-0 space-y-3">
                                         <Separator />
-                                        
+
                                         <div className="flex items-center gap-4 text-xs text-muted-foreground flex-wrap">
                                           <div className="flex items-center gap-1.5 bg-muted px-2 py-1 rounded">
                                             <User className="h-3 w-3" />
@@ -841,7 +849,7 @@ export default function Historial() {
                                                 </pre>
                                               </div>
                                             )}
-                                            
+
                                             {evento.datosDespues && (
                                               <div className="rounded-lg bg-muted/50 p-3 space-y-1 border">
                                                 <p className="text-xs font-semibold flex items-center gap-1 text-muted-foreground">
@@ -902,48 +910,48 @@ export default function Historial() {
                             "border-b transition-colors hover:bg-muted/50",
                             idx % 2 === 0 ? 'bg-background' : 'bg-muted/20'
                           )}>
-                          <td className="px-4 py-3 text-xs whitespace-nowrap">
-                            {new Date(evento.createdAt).toLocaleString('es-ES')}
-                          </td>
-                          <td className="px-4 py-3">
-                            <div className="flex flex-col gap-1">
-                              <Badge variant={getBadgeVariant(evento.categoriaEvento)} className="text-xs">
-                                <span className="flex items-center gap-1">
-                                  <span className={cn('flex h-5 w-5 items-center justify-center rounded-full', visual.iconBgClass)}>
-                                    {visual.icon}
+                            <td className="px-4 py-3 text-xs whitespace-nowrap">
+                              {new Date(evento.createdAt).toLocaleString('es-ES')}
+                            </td>
+                            <td className="px-4 py-3">
+                              <div className="flex flex-col gap-1">
+                                <Badge variant={getBadgeVariant(evento.categoriaEvento)} className="text-xs">
+                                  <span className="flex items-center gap-1">
+                                    <span className={cn('flex h-5 w-5 items-center justify-center rounded-full', visual.iconBgClass)}>
+                                      {visual.icon}
+                                    </span>
+                                    {visual.label}
                                   </span>
-                                  {visual.label}
-                                </span>
-                              </Badge>
-                              {evento.etiquetaSubtipo && evento.etiquetaSubtipo !== visual.label && (
-                                <span className="text-[11px] text-muted-foreground">
-                                  {evento.etiquetaSubtipo}
-                                </span>
-                              )}
-                            </div>
-                          </td>
-                          <td className="px-4 py-3">
-                            <div className="flex items-center gap-1">
-                              {getIconoModulo(evento.modulo)}
-                              <span className="text-xs capitalize">{evento.modulo}</span>
-                            </div>
-                          </td>
-                          <td className="px-4 py-3 text-xs max-w-xs truncate">
-                            {evento.descripcion}
-                          </td>
-                          <td className="px-4 py-3 text-xs">
-                            {evento.fichaEquipo ? (
-                              <Badge variant="secondary" className="text-xs">
-                                {evento.fichaEquipo}
-                              </Badge>
-                            ) : '-'}
-                          </td>
-                          <td className="px-4 py-3 text-xs">{evento.usuarioResponsable}</td>
-                          <td className="px-4 py-3">
-                            <div className="flex items-center gap-1">
-                              {getIconoNivel(evento.nivelImportancia)}
-                            </div>
-                          </td>
+                                </Badge>
+                                {evento.etiquetaSubtipo && evento.etiquetaSubtipo !== visual.label && (
+                                  <span className="text-[11px] text-muted-foreground">
+                                    {evento.etiquetaSubtipo}
+                                  </span>
+                                )}
+                              </div>
+                            </td>
+                            <td className="px-4 py-3">
+                              <div className="flex items-center gap-1">
+                                {getIconoModulo(evento.modulo)}
+                                <span className="text-xs capitalize">{evento.modulo}</span>
+                              </div>
+                            </td>
+                            <td className="px-4 py-3 text-xs max-w-xs truncate">
+                              {evento.descripcion}
+                            </td>
+                            <td className="px-4 py-3 text-xs">
+                              {evento.fichaEquipo ? (
+                                <Badge variant="secondary" className="text-xs">
+                                  {evento.fichaEquipo}
+                                </Badge>
+                              ) : '-'}
+                            </td>
+                            <td className="px-4 py-3 text-xs">{evento.usuarioResponsable}</td>
+                            <td className="px-4 py-3">
+                              <div className="flex items-center gap-1">
+                                {getIconoNivel(evento.nivelImportancia)}
+                              </div>
+                            </td>
                           </tr>
                         );
                       })}

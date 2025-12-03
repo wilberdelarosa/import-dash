@@ -26,6 +26,8 @@ import { formatRemainingLabel } from '@/lib/maintenanceUtils';
 import { cn } from '@/lib/utils';
 import { getStaticCaterpillarData } from '@/data/caterpillarMaintenance';
 import type { Equipo, MantenimientoProgramado } from '@/types/equipment';
+import { useDeviceDetection } from '@/hooks/useDeviceDetection';
+import { ListasPersonalizadasMobile } from '@/pages/mobile/ListasPersonalizadasMobile';
 
 interface ColumnOption {
   key: string;
@@ -168,6 +170,7 @@ const buildColumnOptions = (): ColumnOption[] => [
 ];
 
 export default function ListasPersonalizadas() {
+  const { isMobile } = useDeviceDetection();
   const { data } = useSupabaseDataContext();
   const columnOptions = useMemo(() => buildColumnOptions(), []);
   const [selectedColumns, setSelectedColumns] = useState<string[]>(DEFAULT_COLUMNS);
@@ -253,8 +256,8 @@ export default function ListasPersonalizadas() {
             : 'Sin detalle disponible para el modelo registrado.',
         kitRecomendado: piezas.length
           ? piezas
-              .map((pieza) => `${pieza.pieza.numero_parte} — ${pieza.pieza.descripcion}`)
-              .join(' \n')
+            .map((pieza) => `${pieza.pieza.numero_parte} — ${pieza.pieza.descripcion}`)
+            .join(' \n')
           : 'No hay kit sugerido para este modelo.',
         tareasClave: tareas.length ? tareas.join(' \n') : 'Sin tareas recomendadas en el catalogo.',
       } satisfies EnrichedEquipo;
@@ -417,9 +420,8 @@ export default function ListasPersonalizadas() {
     const header = selectedColumns.map((key) => columnMap[key]?.label ?? key);
     const rows = source.map((equipo) =>
       selectedColumns
-        .map((key) => `<td style="padding:8px;border:1px solid #ddd;font-size:12px;">${
-          columnMap[key]?.accessor(equipo).replace(/\n/g, '<br/>') ?? ''
-        }</td>`)
+        .map((key) => `<td style="padding:8px;border:1px solid #ddd;font-size:12px;">${columnMap[key]?.accessor(equipo).replace(/\n/g, '<br/>') ?? ''
+          }</td>`)
         .join(''),
     );
 
@@ -464,6 +466,11 @@ export default function ListasPersonalizadas() {
       : selectedCount > 0
         ? 'indeterminate'
         : false;
+
+  // Renderizar versión mobile
+  if (isMobile) {
+    return <ListasPersonalizadasMobile />;
+  }
 
   return (
     <Layout title="Listas personalizadas">
@@ -710,25 +717,25 @@ export default function ListasPersonalizadas() {
                                 aria-label={`Seleccionar ${equipo.ficha}`}
                               />
                             </TableCell>
-                          {selectedColumns.map((key) => {
-                            const rawValue = columnMap[key]?.accessor(equipo) ?? '';
-                            const parts = rawValue.split('\n');
-                            return (
-                              <TableCell key={`${equipo.id}-${key}`} className="align-top text-sm">
-                                {parts.map((part, index) => (
-                                  <span key={index} className="block">
-                                    {key === 'estadoMantenimiento' ? (
-                                      <Badge variant="outline" className={`${theme.badge} text-xs font-medium`}>
-                                        {part}
-                                      </Badge>
-                                    ) : (
-                                      part
-                                    )}
-                                  </span>
-                                ))}
-                              </TableCell>
-                            );
-                          })}
+                            {selectedColumns.map((key) => {
+                              const rawValue = columnMap[key]?.accessor(equipo) ?? '';
+                              const parts = rawValue.split('\n');
+                              return (
+                                <TableCell key={`${equipo.id}-${key}`} className="align-top text-sm">
+                                  {parts.map((part, index) => (
+                                    <span key={index} className="block">
+                                      {key === 'estadoMantenimiento' ? (
+                                        <Badge variant="outline" className={`${theme.badge} text-xs font-medium`}>
+                                          {part}
+                                        </Badge>
+                                      ) : (
+                                        part
+                                      )}
+                                    </span>
+                                  ))}
+                                </TableCell>
+                              );
+                            })}
                           </TableRow>
                         );
                       })}

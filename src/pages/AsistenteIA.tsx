@@ -871,11 +871,13 @@ Usa estos datos para responder consultas específicas y generar tablas filtradas
                             className={cn(
                               'h-9 w-9 shrink-0 border shadow-sm transition-all',
                               isAssistant
-                                ? 'border-primary/20 bg-primary/5'
+                                ? 'border-none bg-gradient-to-br from-violet-500 to-purple-600 shadow-lg shadow-primary/30'
                                 : 'border-border bg-muted',
                             )}
                           >
-                            <AvatarFallback className="bg-transparent">
+                            <AvatarFallback className={cn(
+                              isAssistant ? 'bg-transparent text-white' : 'bg-transparent text-muted-foreground'
+                            )}>
                               {isAssistant ? (
                                 <Sparkles className="h-4 w-4 text-primary" />
                               ) : (
@@ -885,10 +887,10 @@ Usa estos datos para responder consultas específicas y generar tablas filtradas
                           </Avatar>
                           <div
                             className={cn(
-                              'relative w-full max-w-full rounded-2xl border px-4 py-3.5 shadow-sm transition-all sm:max-w-[85%]',
+                              'relative w-full max-w-full border px-4 py-3.5 shadow-sm transition-all sm:max-w-[85%]',
                               isAssistant
-                                ? 'border-border/50 bg-gradient-to-br from-muted/40 to-muted/20 text-foreground'
-                                : 'border-primary/30 bg-primary text-primary-foreground shadow-md shadow-primary/10',
+                                ? 'rounded-2xl rounded-tl-md border-border/50 bg-gradient-to-br from-muted/80 to-muted/50 backdrop-blur-sm text-foreground'
+                                : 'rounded-2xl rounded-tr-md ml-auto border-none bg-primary text-primary-foreground shadow-lg shadow-primary/20',
                             )}
                           >
                             <div className="mb-2.5 flex items-center justify-between gap-3">
@@ -1013,20 +1015,20 @@ Usa estos datos para responder consultas específicas y generar tablas filtradas
                       );
                     })}
                     {isLoading && (
-                      <div className="flex items-center gap-3 animate-in fade-in slide-in-from-bottom-2 duration-300">
-                        <Avatar className="h-9 w-9 border bg-primary/5 shadow-sm">
-                          <AvatarFallback className="bg-transparent">
-                            <Loader2 className="h-4 w-4 animate-spin text-primary" />
+                      <div className="flex items-center gap-3 animate-in fade-in slide-in-from-bottom-4 duration-500">
+                        <Avatar className="h-9 w-9 border-none bg-gradient-to-br from-violet-500 to-purple-600 shadow-lg shadow-primary/30">
+                          <AvatarFallback className="bg-transparent text-white">
+                            <Sparkles className="h-4 w-4" />
                           </AvatarFallback>
                         </Avatar>
-                        <div className="flex items-center gap-2.5 rounded-xl border bg-gradient-to-br from-muted/40 to-muted/20 px-4 py-2.5 shadow-sm">
-                          <div className="flex gap-1">
-                            <div className="h-1.5 w-1.5 animate-bounce rounded-full bg-primary [animation-delay:0ms]" />
-                            <div className="h-1.5 w-1.5 animate-bounce rounded-full bg-primary [animation-delay:150ms]" />
-                            <div className="h-1.5 w-1.5 animate-bounce rounded-full bg-primary [animation-delay:300ms]" />
+                        <div className="flex items-center gap-3 rounded-2xl rounded-tl-md border border-border/50 bg-gradient-to-br from-muted/80 to-muted/50 backdrop-blur-sm px-5 py-3 shadow-sm">
+                          <div className="flex gap-1.5">
+                            <div className="h-2 w-2 animate-bounce rounded-full bg-primary [animation-delay:0ms]" />
+                            <div className="h-2 w-2 animate-bounce rounded-full bg-primary [animation-delay:150ms]" />
+                            <div className="h-2 w-2 animate-bounce rounded-full bg-primary [animation-delay:300ms]" />
                           </div>
                           <span className="text-xs font-medium text-muted-foreground">
-                            Generando respuesta...
+                            Pensando...
                           </span>
                         </div>
                       </div>
