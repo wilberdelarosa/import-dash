@@ -289,26 +289,14 @@ export default function Mantenimiento() {
           onEdit={handleOpenEditForm}
           onDelete={(mantenimiento) => {
             setDeleteTarget(mantenimiento);
-            // El diálogo de confirmación se maneja globalmente en el componente
-            // pero necesitamos abrirlo. Como el diálogo usa deleteTarget, 
-            // solo necesitamos setearlo y quizás tener un useEffect o abrirlo directamente si es controlado.
-            // Revisando el código, el AlertDialog usa deleteTarget para renderizar, 
-            // pero necesitamos un estado para abrirlo si es controlado, o simplemente funciona si deleteTarget no es null.
-            // En este archivo, el AlertDialog de eliminación parece no estar implementado completamente en la vista desktop
-            // o usa un patrón diferente. Vamos a verificar la implementación del diálogo de eliminación.
-            // Ah, veo handleDeleteMantenimiento pero no veo el JSX del diálogo en la parte desktop que leí antes.
-            // Asumiremos que necesitamos implementar el diálogo de confirmación para móvil también o usar el existente.
-            // Para asegurar que funcione, usaremos el estado deleteTarget y renderizaremos el diálogo.
           }}
           onCreate={handleOpenCreateForm}
           onRefresh={async () => {
-            // Simular refresh o recargar datos si es posible
-            // Como usamos SupabaseDataContext, los datos se actualizan solos o podríamos forzar un fetch si el contexto lo permite.
-            // Por ahora, una pequeña espera para simular UX
             await new Promise(resolve => setTimeout(resolve, 1000));
           }}
           categorias={categorias}
           tipos={tipos}
+          equiposPorFicha={equiposPorFicha}
         />
 
         {/* Diálogo de confirmación de eliminación para móvil */}
