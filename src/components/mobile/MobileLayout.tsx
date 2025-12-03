@@ -6,6 +6,7 @@
  * - Contenido scrollable con safe-area CONSISTENTE
  * - Bottom navigation bar fija con TODAS las rutas principales
  * - Menú lateral completo con todos los módulos
+ * - UserBadge con información del usuario y rol
  * - Soporte para gestos táctiles
  * - Transiciones suaves
  */
@@ -31,6 +32,8 @@ import {
   ListChecks,
   Boxes,
   ChevronRight,
+  ShieldCheck,
+  User,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -38,6 +41,10 @@ import { ThemeToggle } from '@/components/ThemeToggle';
 import { Sheet, SheetContent, SheetTrigger } from '@/components/ui/sheet';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Separator } from '@/components/ui/separator';
+import { Avatar, AvatarFallback } from '@/components/ui/avatar';
+import { useAuth } from '@/context/AuthContext';
+import { useUserRoles } from '@/hooks/useUserRoles';
+import { useToast } from '@/hooks/use-toast';
 
 interface MobileLayoutProps {
   children: ReactNode;
@@ -101,11 +108,35 @@ export function MobileLayout({
 }: MobileLayoutProps) {
   const location = useLocation();
   const navigate = useNavigate();
+  const { user, signOut } = useAuth();
+  const { currentUserRole, loading: loadingRole } = useUserRoles();
+  const { toast } = useToast();
 
   // Verificar si la ruta actual coincide (incluyendo rutas parciales como /planificador*)
   const isRouteActive = (path: string) => {
     if (path === '/') return location.pathname === '/';
     return location.pathname.startsWith(path);
+  };
+
+  const isAdmin = currentUserRole === 'admin';
+  const email = user?.email || 'Usuario';
+  const initials = email.substring(0, 2).toUpperCase();
+
+  const handleLogout = async () => {
+    try {
+      await signOut();
+      toast({
+        title: 'Sesión cerrada',
+        description: 'Has cerrado sesión exitosamente',
+      });
+      navigate('/auth');
+    } catch (error) {
+      toast({
+        title: 'Error',
+        description: 'No se pudo cerrar sesión',
+        variant: 'destructive',
+      });
+    }
   };
 
   return (
@@ -141,13 +172,40 @@ export function MobileLayout({
               </SheetTrigger>
               <SheetContent side="right" className="w-[85vw] sm:w-80 p-0 border-l-0 bg-background/95 backdrop-blur-2xl supports-[backdrop-filter]:bg-background/60">
                 <div className="flex flex-col h-full">
-                  {/* Header del menú con glassmorphism mejorado */}
-                  <div className="relative p-6 pb-4 border-b border-border/50">
+                  {/* Header del menú con info de usuario */}
+                  <div className="relative p-4 pb-3 border-b border-border/50">
                     <div className="absolute inset-0 bg-gradient-to-br from-primary/5 to-transparent" />
-                    <div className="relative flex items-center justify-between mb-6">
-                      <div>
-                        <h2 className="text-xl font-bold bg-gradient-to-r from-primary via-primary to-purple-600 bg-clip-text text-transparent">Menú</h2>
-                        <p className="text-xs text-muted-foreground mt-0.5">Navegación principal</p>
+                    
+                    {/* User Badge */}
+                    <div className={cn(
+                      "relative flex items-center gap-3 p-3 rounded-xl border mb-4",
+                      isAdmin ? "border-primary/30 bg-primary/5" : "border-border bg-muted/30"
+                    )}>
+                      <Avatar className={cn(
+                        "h-10 w-10 border-2",
+                        isAdmin ? "border-primary/40" : "border-border"
+                      )}>
+                        <AvatarFallback className={cn(
+                          "text-sm font-bold",
+                          isAdmin ? "bg-primary/20 text-primary" : "bg-muted text-muted-foreground"
+                        )}>
+                          {initials}
+                        </AvatarFallback>
+                      </Avatar>
+                      <div className="flex flex-col min-w-0 flex-1">
+                        <span className="text-sm font-medium truncate" title={email}>
+                          {email}
+                        </span>
+                        <Badge 
+                          variant={isAdmin ? "default" : "secondary"} 
+                          className={cn(
+                            "w-fit gap-1 text-[10px] px-1.5 py-0 mt-1",
+                            isAdmin ? "bg-primary/90" : ""
+                          )}
+                        >
+                          {isAdmin ? <ShieldCheck className="h-2.5 w-2.5" /> : <User className="h-2.5 w-2.5" />}
+                          {isAdmin ? 'Admin' : 'Usuario'}
+                        </Badge>
                       </div>
                       <ThemeToggle />
                     </div>
@@ -155,8 +213,8 @@ export function MobileLayout({
                     {/* Notificaciones con diseño mejorado */}
                     <Button
                       variant="ghost"
-                      className="relative w-full justify-start gap-3 h-12 text-base font-medium hover:bg-primary/10 rounded-xl transition-all group overflow-hidden"
-                      onClick={() => {/* TODO: Implementar notificaciones */ }}
+                      className="relative w-full justify-start gap-3 h-11 text-sm font-medium hover:bg-primary/10 rounded-xl transition-all group overflow-hidden"
+                      onClick={() => navigate('/configuraciones')}
                     >
                       <div className="absolute inset-0 bg-gradient-to-r from-primary/5 to-transparent opacity-0 group-hover:opacity-100 transition-opacity" />
                       <div className="relative flex items-center gap-3 flex-1">
@@ -223,7 +281,7 @@ export function MobileLayout({
                     <Button
                       variant="ghost"
                       className="w-full justify-start gap-3 h-11 text-sm font-medium text-destructive hover:bg-destructive/5"
-                      onClick={() => {/* TODO: Implementar logout */ }}
+                      onClick={handleLogout}
                     >
                       <LogOut className="h-4 w-4" />
                       Cerrar sesión
@@ -250,8 +308,8 @@ export function MobileLayout({
         <main
           className={cn(
             "container mx-auto p-3 sm:p-4 animate-fade-in max-w-screen-xl",
-            // Margen bottom CONSISTENTE para dar espacio al bottom nav
-            showBottomNav && "mb-20"
+            // Margen bottom aumentado para evitar que botones se oculten
+            showBottomNav && "mb-24"
           )}
         >
           {children}
