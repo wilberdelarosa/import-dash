@@ -53,7 +53,7 @@ export function NotificationCenter() {
                     {unreadCount > 0 && (
                         <Button
                             variant="ghost"
-                            size="xs"
+                            size="sm"
                             className="text-xs h-auto py-1"
                             onClick={markAllAsRead}
                         >
@@ -65,7 +65,7 @@ export function NotificationCenter() {
                 {permission !== 'granted' && (
                     <div className="bg-accent/50 p-3 text-xs flex items-center justify-between gap-2">
                         <span>Activa alertas de escritorio</span>
-                        <Button size="xs" variant="outline" onClick={requestPermission}>
+                        <Button size="sm" variant="outline" onClick={requestPermission}>
                             Activar
                         </Button>
                     </div>

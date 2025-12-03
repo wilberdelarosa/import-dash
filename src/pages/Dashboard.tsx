@@ -290,75 +290,76 @@ export default function Dashboard() {
           </Alert>
         )}
 
-        <section className="grid gap-3 sm:gap-4 grid-cols-2 xl:grid-cols-4">
+        {/* Cards de métricas - Responsive grid que se adapta */}
+        <section className="grid gap-3 sm:gap-4 grid-cols-2 lg:grid-cols-4">
           <Card
-            className="group cursor-pointer transition-all duration-300 hover:shadow-xl hover:scale-105 hover:border-success/50"
+            className="group cursor-pointer transition-all duration-300 hover:shadow-xl hover:scale-[1.02] hover:border-success/50"
             onClick={() => navigate('/equipos')}
           >
-            <CardHeader className="pb-2 sm:pb-3">
-              <CardDescription className="text-xs font-medium uppercase tracking-wide">Equipos activos</CardDescription>
-              <CardTitle className="text-3xl sm:text-4xl font-bold flex items-center gap-2 sm:gap-3">
-                <Activity className="h-6 w-6 sm:h-7 sm:w-7 text-success transition-transform group-hover:scale-110" />
-                {estadisticas.equiposActivos}
+            <CardHeader className="p-3 sm:p-4 pb-2">
+              <CardDescription className="text-[0.65rem] sm:text-xs font-medium uppercase tracking-wide truncate">Equipos activos</CardDescription>
+              <CardTitle className="text-2xl sm:text-3xl lg:text-4xl font-bold flex items-center gap-2">
+                <Activity className="h-5 w-5 sm:h-6 sm:w-6 lg:h-7 lg:w-7 text-success transition-transform group-hover:scale-110 shrink-0" />
+                <span className="truncate">{estadisticas.equiposActivos}</span>
               </CardTitle>
             </CardHeader>
-            <CardContent className="pb-4">
-              <p className="text-xs sm:text-sm text-muted-foreground flex items-center gap-1.5 group-hover:text-foreground transition-colors">
-                Operativos actualmente
-                <ExternalLink className="h-3 w-3 sm:h-3.5 sm:w-3.5 opacity-0 group-hover:opacity-100 transition-opacity" />
+            <CardContent className="p-3 sm:p-4 pt-0">
+              <p className="text-[0.65rem] sm:text-xs lg:text-sm text-muted-foreground flex items-center gap-1 group-hover:text-foreground transition-colors">
+                <span className="truncate">Operativos</span>
+                <ExternalLink className="h-3 w-3 opacity-0 group-hover:opacity-100 transition-opacity shrink-0" />
               </p>
             </CardContent>
           </Card>
           <Card
-            className="group cursor-pointer transition-all duration-300 hover:shadow-xl hover:scale-105 hover:border-warning/50"
+            className="group cursor-pointer transition-all duration-300 hover:shadow-xl hover:scale-[1.02] hover:border-warning/50"
             onClick={() => navigate('/equipos')}
           >
-            <CardHeader className="pb-3">
-              <CardDescription className="text-xs font-medium uppercase tracking-wide">Equipos fuera de servicio</CardDescription>
-              <CardTitle className="text-4xl font-bold flex items-center gap-3">
-                <AlertTriangle className="h-7 w-7 text-warning transition-transform group-hover:scale-110" />
-                {estadisticas.equiposInactivos}
+            <CardHeader className="p-3 sm:p-4 pb-2">
+              <CardDescription className="text-[0.65rem] sm:text-xs font-medium uppercase tracking-wide truncate">Fuera de servicio</CardDescription>
+              <CardTitle className="text-2xl sm:text-3xl lg:text-4xl font-bold flex items-center gap-2">
+                <AlertTriangle className="h-5 w-5 sm:h-6 sm:w-6 lg:h-7 lg:w-7 text-warning transition-transform group-hover:scale-110 shrink-0" />
+                <span className="truncate">{estadisticas.equiposInactivos}</span>
               </CardTitle>
             </CardHeader>
-            <CardContent>
-              <p className="text-sm text-muted-foreground flex items-center gap-1.5 group-hover:text-foreground transition-colors">
-                Requieren revisión o baja temporal
-                <ExternalLink className="h-3.5 w-3.5 opacity-0 group-hover:opacity-100 transition-opacity" />
+            <CardContent className="p-3 sm:p-4 pt-0">
+              <p className="text-[0.65rem] sm:text-xs lg:text-sm text-muted-foreground flex items-center gap-1 group-hover:text-foreground transition-colors">
+                <span className="truncate">Requieren revisión</span>
+                <ExternalLink className="h-3 w-3 opacity-0 group-hover:opacity-100 transition-opacity shrink-0" />
               </p>
             </CardContent>
           </Card>
           <Card
-            className="group cursor-pointer transition-all duration-300 hover:shadow-xl hover:scale-105 hover:border-primary/50"
+            className="group cursor-pointer transition-all duration-300 hover:shadow-xl hover:scale-[1.02] hover:border-primary/50"
             onClick={() => navigate('/mantenimiento')}
           >
-            <CardHeader className="pb-3">
-              <CardDescription className="text-xs font-medium uppercase tracking-wide">Mantenimientos próximos</CardDescription>
-              <CardTitle className="text-4xl font-bold flex items-center gap-3">
-                <CalendarClock className="h-7 w-7 text-primary transition-transform group-hover:scale-110" />
-                {estadisticas.mantenimientosPendientes}
+            <CardHeader className="p-3 sm:p-4 pb-2">
+              <CardDescription className="text-[0.65rem] sm:text-xs font-medium uppercase tracking-wide truncate">Mant. próximos</CardDescription>
+              <CardTitle className="text-2xl sm:text-3xl lg:text-4xl font-bold flex items-center gap-2">
+                <CalendarClock className="h-5 w-5 sm:h-6 sm:w-6 lg:h-7 lg:w-7 text-primary transition-transform group-hover:scale-110 shrink-0" />
+                <span className="truncate">{estadisticas.mantenimientosPendientes}</span>
               </CardTitle>
             </CardHeader>
-            <CardContent>
-              <p className="text-sm text-muted-foreground flex items-center gap-1.5 group-hover:text-foreground transition-colors">
+            <CardContent className="p-3 sm:p-4 pt-0">
+              <p className="text-[0.65rem] sm:text-xs lg:text-sm text-muted-foreground flex items-center gap-1 group-hover:text-foreground transition-colors truncate">
                 {estadisticas.mantenimientosVencidos > 0 ? (
-                  <span>Vencidos: <span className="font-semibold text-destructive">{estadisticas.mantenimientosVencidos}</span> ({Math.abs(data.mantenimientosProgramados.filter(m => m.horasKmRestante < 0).reduce((min, m) => Math.min(min, m.horasKmRestante), 0))}h)</span>
+                  <span className="truncate">Vencidos: <span className="font-semibold text-destructive">{estadisticas.mantenimientosVencidos}</span></span>
                 ) : (
-                  <span>Con menos de 50 horas/km restantes</span>
+                  <span className="truncate">&lt;50 hrs restantes</span>
                 )}
-                <ExternalLink className="h-3.5 w-3.5 opacity-0 group-hover:opacity-100 transition-opacity" />
+                <ExternalLink className="h-3 w-3 opacity-0 group-hover:opacity-100 transition-opacity shrink-0" />
               </p>
             </CardContent>
           </Card>
-          <Card className="group transition-all duration-300 hover:shadow-xl hover:scale-105 hover:border-info/50">
-            <CardHeader className="pb-3">
-              <CardDescription className="text-xs font-medium uppercase tracking-wide">Técnicos registrados</CardDescription>
-              <CardTitle className="text-4xl font-bold flex items-center gap-3">
-                <Users className="h-7 w-7 text-info transition-transform group-hover:scale-110" />
-                {data.empleados?.length ?? 0}
+          <Card className="group transition-all duration-300 hover:shadow-xl hover:scale-[1.02] hover:border-info/50">
+            <CardHeader className="p-3 sm:p-4 pb-2">
+              <CardDescription className="text-[0.65rem] sm:text-xs font-medium uppercase tracking-wide truncate">Técnicos</CardDescription>
+              <CardTitle className="text-2xl sm:text-3xl lg:text-4xl font-bold flex items-center gap-2">
+                <Users className="h-5 w-5 sm:h-6 sm:w-6 lg:h-7 lg:w-7 text-info transition-transform group-hover:scale-110 shrink-0" />
+                <span className="truncate">{data.empleados?.length ?? 0}</span>
               </CardTitle>
             </CardHeader>
-            <CardContent>
-              <p className="text-sm text-muted-foreground group-hover:text-foreground transition-colors">Personal disponible en la base</p>
+            <CardContent className="p-3 sm:p-4 pt-0">
+              <p className="text-[0.65rem] sm:text-xs lg:text-sm text-muted-foreground group-hover:text-foreground transition-colors truncate">Personal disponible</p>
             </CardContent>
           </Card>
         </section>
