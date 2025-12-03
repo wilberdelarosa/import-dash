@@ -6,16 +6,22 @@ import { EquipoDialog } from '@/components/equipos/EquipoDialog';
 import { EquipoDetalleUnificado } from '@/components/EquipoDetalleUnificado';
 import { useSupabaseDataContext } from '@/context/SupabaseDataContext';
 import { useDeviceDetection } from '@/hooks/useDeviceDetection';
+import { usePermissions } from '@/hooks/usePermissions';
 import { EquiposMobile } from '@/pages/mobile/EquiposMobile';
 import { Equipo } from '@/types/equipment';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { ConfirmDialog } from '@/components/ConfirmDialog';
 import { Skeleton } from '@/components/ui/skeleton';
-import { Truck, TrendingUp, AlertTriangle } from 'lucide-react';
+import { Button } from '@/components/ui/button';
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
+import { Truck, TrendingUp, AlertTriangle, Lock } from 'lucide-react';
 
 export default function Equipos() {
   const { data, loading, createEquipo, updateEquipo, deleteEquipo } = useSupabaseDataContext();
   const { isMobile } = useDeviceDetection();
+  const { canEdit } = usePermissions();
+  const canEditEquipos = canEdit('equipos');
+  
   const [fichaSeleccionada, setFichaSeleccionada] = useState<string | null>(null);
   const [detalleAbierto, setDetalleAbierto] = useState(false);
   const [confirmOpen, setConfirmOpen] = useState(false);
@@ -204,20 +210,36 @@ export default function Equipos() {
 
         <Card className="overflow-hidden shadow-lg border-t-4 border-t-primary/30">
           <CardHeader className="bg-gradient-to-r from-primary/5 via-transparent to-transparent">
-            <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-              <div className="space-y-1.5">
-                <CardTitle className="flex items-center gap-2.5 text-xl font-bold tracking-tight">
-                  <div className="rounded-lg bg-primary/10 p-2">
-                    <Truck className="h-5 w-5 text-primary" />
-                  </div>
-                  Catálogo de Equipos y Maquinaria
-                </CardTitle>
-                <CardDescription className="text-sm">
-                  Administra tu inventario completo de equipos, maquinaria y vehículos
-                </CardDescription>
+              <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+                <div className="space-y-1.5">
+                  <CardTitle className="flex items-center gap-2.5 text-xl font-bold tracking-tight">
+                    <div className="rounded-lg bg-primary/10 p-2">
+                      <Truck className="h-5 w-5 text-primary" />
+                    </div>
+                    Catálogo de Equipos y Maquinaria
+                  </CardTitle>
+                  <CardDescription className="text-sm">
+                    Administra tu inventario completo de equipos, maquinaria y vehículos
+                  </CardDescription>
+                </div>
+                {canEditEquipos ? (
+                  <EquipoDialog onSave={handleAddEquipo} />
+                ) : (
+                  <TooltipProvider>
+                    <Tooltip>
+                      <TooltipTrigger asChild>
+                        <Button variant="outline" disabled className="gap-2 opacity-50">
+                          <Lock className="h-4 w-4" />
+                          Agregar Equipo
+                        </Button>
+                      </TooltipTrigger>
+                      <TooltipContent>
+                        <p>Solo administradores pueden agregar equipos</p>
+                      </TooltipContent>
+                    </Tooltip>
+                  </TooltipProvider>
+                )}
               </div>
-              <EquipoDialog onSave={handleAddEquipo} />
-            </div>
           </CardHeader>
           <CardContent className="px-0 sm:px-6 pb-6">
             <EquiposTable
