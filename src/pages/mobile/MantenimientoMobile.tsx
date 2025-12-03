@@ -31,7 +31,8 @@ import {
   Trash2,
   Edit,
   RefreshCw,
-  FileDown
+  FileDown,
+  Lock,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { MantenimientoProgramado } from '@/types/equipment';
@@ -52,6 +53,7 @@ import {
 } from '@/components/ui/dropdown-menu';
 import { formatRemainingLabel, getRemainingVariant } from '@/lib/maintenanceUtils';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { useUserRoles } from '@/hooks/useUserRoles';
 
 interface MantenimientoMobileProps {
   mantenimientos: MantenimientoProgramado[];
@@ -84,6 +86,8 @@ export function MantenimientoMobile({
   const [refreshing, setRefreshing] = useState(false);
   const [selectedCategory, setSelectedCategory] = useState<string>('all');
   const [selectedType, setSelectedType] = useState<string>('all');
+  const { currentUserRole } = useUserRoles();
+  const isAdmin = currentUserRole === 'admin';
 
   // Pull to refresh
   const handleRefresh = async () => {
@@ -445,25 +449,30 @@ export function MantenimientoMobile({
                     </Button>
                   </DropdownMenuTrigger>
                   <DropdownMenuContent align="end" className="w-48 rounded-xl">
-                    {/* Registro desde móvil deshabilitado: solo ver detalle y acciones de edición/eliminación si aplican */}
                     <DropdownMenuItem onClick={() => onVerDetalle(item.ficha)} className="gap-2 py-2.5">
                       <Calendar className="h-4 w-4" />
                       Ver Equipo
                     </DropdownMenuItem>
-                    {(onEdit || onDelete) && <DropdownMenuSeparator />}
-                    {onEdit && (
+                    {isAdmin && (onEdit || onDelete) && <DropdownMenuSeparator />}
+                    {isAdmin && onEdit && (
                       <DropdownMenuItem onClick={() => onEdit(item)} className="gap-2 py-2.5">
                         <Edit className="h-4 w-4" />
                         Editar
                       </DropdownMenuItem>
                     )}
-                    {onDelete && (
+                    {isAdmin && onDelete && (
                       <DropdownMenuItem
                         onClick={() => onDelete(item)}
                         className="gap-2 py-2.5 text-destructive focus:text-destructive"
                       >
                         <Trash2 className="h-4 w-4" />
                         Eliminar
+                      </DropdownMenuItem>
+                    )}
+                    {!isAdmin && (
+                      <DropdownMenuItem disabled className="gap-2 py-2.5 text-muted-foreground">
+                        <Lock className="h-4 w-4" />
+                        Solo lectura
                       </DropdownMenuItem>
                     )}
                   </DropdownMenuContent>
@@ -547,8 +556,8 @@ export function MantenimientoMobile({
         )}
       </div>
 
-      {/* FAB - Floating Action Button */}
-      {onCreate && (
+      {/* FAB - Floating Action Button - Solo admin */}
+      {onCreate && isAdmin && (
         <div className="fixed bottom-24 right-4 z-40">
           <Button
             size="icon"

@@ -29,7 +29,9 @@ import {
   AlertTriangle,
   Box,
   ListFilter,
+  Lock,
 } from 'lucide-react';
+import { useUserRoles } from '@/hooks/useUserRoles';
 import { cn } from '@/lib/utils';
 import { Inventario as InventarioItem } from '@/types/equipment';
 
@@ -49,6 +51,8 @@ export function InventarioMobile({
   const [filter, setFilter] = useState<string>('all');
   const [searchTerm, setSearchTerm] = useState('');
   const [filtersOpen, setFiltersOpen] = useState(false);
+  const { currentUserRole } = useUserRoles();
+  const isAdmin = currentUserRole === 'admin';
 
   // Estadísticas rápidas
   const stats = useMemo(() => {
@@ -306,17 +310,26 @@ export function InventarioMobile({
                     </Button>
                   </DropdownMenuTrigger>
                   <DropdownMenuContent align="end" className="w-40 rounded-xl">
-                    <DropdownMenuItem onClick={() => onEdit(item)} className="gap-2">
-                      <Pencil className="h-4 w-4" />
-                      Editar
-                    </DropdownMenuItem>
-                    <DropdownMenuItem
-                      onClick={() => onDelete(item)}
-                      className="text-destructive focus:text-destructive focus:bg-destructive/10 gap-2"
-                    >
-                      <Trash2 className="h-4 w-4" />
-                      Eliminar
-                    </DropdownMenuItem>
+                    {isAdmin ? (
+                      <>
+                        <DropdownMenuItem onClick={() => onEdit(item)} className="gap-2">
+                          <Pencil className="h-4 w-4" />
+                          Editar
+                        </DropdownMenuItem>
+                        <DropdownMenuItem
+                          onClick={() => onDelete(item)}
+                          className="text-destructive focus:text-destructive focus:bg-destructive/10 gap-2"
+                        >
+                          <Trash2 className="h-4 w-4" />
+                          Eliminar
+                        </DropdownMenuItem>
+                      </>
+                    ) : (
+                      <DropdownMenuItem disabled className="gap-2 text-muted-foreground">
+                        <Lock className="h-4 w-4" />
+                        Solo lectura
+                      </DropdownMenuItem>
+                    )}
                   </DropdownMenuContent>
                 </DropdownMenu>
 
@@ -391,14 +404,16 @@ export function InventarioMobile({
         )}
       </div>
 
-      {/* FAB Premium */}
-      <Button
-        size="lg"
-        className="fixed bottom-6 right-6 h-14 w-14 rounded-full shadow-lg shadow-primary/30 bg-primary hover:bg-primary/90 hover:scale-105 active:scale-95 transition-all duration-300 z-50"
-        onClick={onAdd}
-      >
-        <Plus className="h-7 w-7 text-primary-foreground" />
-      </Button>
+      {/* FAB Premium - Solo admin */}
+      {isAdmin && (
+        <Button
+          size="lg"
+          className="fixed bottom-24 right-4 h-14 w-14 rounded-full shadow-lg shadow-primary/30 bg-primary hover:bg-primary/90 hover:scale-105 active:scale-95 transition-all duration-300 z-50"
+          onClick={onAdd}
+        >
+          <Plus className="h-7 w-7 text-primary-foreground" />
+        </Button>
+      )}
     </MobileLayout>
   );
 }
