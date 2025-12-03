@@ -9,7 +9,10 @@ import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Separator } from '@/components/ui/separator';
-import { Settings2, Bell, MoonStar } from 'lucide-react';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { Settings2, Bell, MoonStar, Shield } from 'lucide-react';
+import { AdminSection } from '@/components/admin/AdminSection';
+import { useUserRoles } from '@/hooks/useUserRoles';
 import { useSystemConfig } from '@/context/SystemConfigContext';
 import { DEFAULT_SYSTEM_CONFIG } from '@/types/config';
 import { useNotifications } from '@/hooks/useNotifications';
@@ -25,6 +28,8 @@ export default function Configuraciones() {
   const { permission, supported, requestPermission } = useNotifications();
   const { toast } = useToast();
   const { isMobile } = useDeviceDetection();
+  const { isAdmin } = useUserRoles();
+  const [activeTab, setActiveTab] = useState('general');
 
   useEffect(() => {
     setDraft(config);
@@ -139,8 +144,22 @@ export default function Configuraciones() {
 
   return (
     <Layout title="Preferencias y automatizaciones">
+      <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
+        <TabsList className="grid w-full grid-cols-2 lg:w-auto lg:inline-grid">
+          <TabsTrigger value="general" className="gap-2">
+            <Settings2 className="h-4 w-4" />
+            <span>General</span>
+          </TabsTrigger>
+          {isAdmin && (
+            <TabsTrigger value="admin" className="gap-2">
+              <Shield className="h-4 w-4" />
+              <span>Administración</span>
+            </TabsTrigger>
+          )}
+        </TabsList>
 
-      <div className="grid gap-6 lg:grid-cols-2">
+        <TabsContent value="general" className="space-y-6">
+          <div className="grid gap-6 lg:grid-cols-2">
         <Card>
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
@@ -276,45 +295,53 @@ export default function Configuraciones() {
         </Card>
       </div>
 
-      <Card className="mt-6">
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <MoonStar className="h-5 w-5 text-primary" /> Preferencias de apariencia
-          </CardTitle>
-          <CardDescription>Elige cómo debe comportarse el modo oscuro del panel.</CardDescription>
-        </CardHeader>
-        <CardContent className="space-y-4">
-          <div className="flex items-center justify-between">
-            <div>
-              <Label className="text-sm font-semibold">Activar modo oscuro automáticamente</Label>
-              <p className="text-sm text-muted-foreground">
-                Si está activo, el sistema respetará las preferencias del dispositivo del usuario.
-              </p>
-            </div>
-            <Switch
-              checked={draft.modoOscuroAutomatico}
-              onCheckedChange={(value) => scheduleUpdate({ modoOscuroAutomatico: value })}
-            />
-          </div>
-          <div className="flex items-center justify-between">
-            <div>
-              <Label className="text-sm font-semibold">Permitir importaciones manuales</Label>
-              <p className="text-sm text-muted-foreground">
-                Controla si los usuarios pueden subir archivos JSON desde cualquier módulo.
-              </p>
-            </div>
-            <Switch
-              checked={draft.permitirImportaciones}
-              onCheckedChange={(value) => scheduleUpdate({ permitirImportaciones: value })}
-            />
-          </div>
-          <div className="flex justify-end">
-            <Button variant="outline" onClick={handleReset}>
-              Restaurar valores por defecto
-            </Button>
-          </div>
-        </CardContent>
-      </Card>
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <MoonStar className="h-5 w-5 text-primary" /> Preferencias de apariencia
+              </CardTitle>
+              <CardDescription>Elige cómo debe comportarse el modo oscuro del panel.</CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div className="flex items-center justify-between">
+                <div>
+                  <Label className="text-sm font-semibold">Activar modo oscuro automáticamente</Label>
+                  <p className="text-sm text-muted-foreground">
+                    Si está activo, el sistema respetará las preferencias del dispositivo del usuario.
+                  </p>
+                </div>
+                <Switch
+                  checked={draft.modoOscuroAutomatico}
+                  onCheckedChange={(value) => scheduleUpdate({ modoOscuroAutomatico: value })}
+                />
+              </div>
+              <div className="flex items-center justify-between">
+                <div>
+                  <Label className="text-sm font-semibold">Permitir importaciones manuales</Label>
+                  <p className="text-sm text-muted-foreground">
+                    Controla si los usuarios pueden subir archivos JSON desde cualquier módulo.
+                  </p>
+                </div>
+                <Switch
+                  checked={draft.permitirImportaciones}
+                  onCheckedChange={(value) => scheduleUpdate({ permitirImportaciones: value })}
+                />
+              </div>
+              <div className="flex justify-end">
+                <Button variant="outline" onClick={handleReset}>
+                  Restaurar valores por defecto
+                </Button>
+              </div>
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        {isAdmin && (
+          <TabsContent value="admin">
+            <AdminSection />
+          </TabsContent>
+        )}
+      </Tabs>
     </Layout>
   );
 }
