@@ -179,7 +179,7 @@ export function AsistenteIAMobile({
                     </div>
                 }
             >
-                <div className="flex flex-col h-[calc(100vh-12rem)] -mx-4 -mt-4">
+                <div className="flex flex-col h-[calc(100vh-9rem)] -mx-4 -mt-4">
                     <ScrollArea
                         ref={scrollAreaRef}
                         className="flex-1 px-4 pt-4"

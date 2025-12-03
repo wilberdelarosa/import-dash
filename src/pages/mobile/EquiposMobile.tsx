@@ -323,7 +323,7 @@ export function EquiposMobile({
 
       {/* FAB Premium para agregar equipo */}
       <Button
-        className="fixed bottom-6 right-6 z-50 h-14 w-14 rounded-full shadow-lg shadow-primary/30 bg-primary hover:bg-primary/90 hover:scale-105 active:scale-95 transition-all duration-300"
+        className="fixed bottom-6 right-6 z-50 h-14 w-14 min-h-[var(--touch-target-large)] rounded-full shadow-lg shadow-primary/30 bg-primary hover:bg-primary/90 hover:scale-105 active:scale-95 transition-all duration-300"
         size="icon"
         onClick={onAdd}
       >
