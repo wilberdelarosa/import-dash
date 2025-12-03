@@ -803,6 +803,15 @@ export type Database = {
       }
       generar_notificaciones_mantenimientos: { Args: never; Returns: undefined }
       generar_notificaciones_stock_bajo: { Args: never; Returns: undefined }
+      get_users_with_emails: {
+        Args: never
+        Returns: {
+          created_at: string
+          email: string
+          id: string
+          last_sign_in_at: string
+        }[]
+      }
       has_role: {
         Args: {
           _role: Database["public"]["Enums"]["app_role"]
