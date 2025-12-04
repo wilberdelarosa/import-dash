@@ -27,6 +27,7 @@ const AsistenteIA = lazy(() => import("./pages/AsistenteIA"));
 const ListasPersonalizadas = lazy(() => import("./pages/ListasPersonalizadas"));
 const ImportarDatosCaterpillar = lazy(() => import("./pages/ImportarDatosCaterpillar"));
 const Auth = lazy(() => import("./pages/Auth"));
+const NotificacionesPage = lazy(() => import("./pages/Notificaciones"));
 
 const queryClient = new QueryClient();
 
@@ -56,6 +57,7 @@ const App = () => (
                   <Route path="/asistente" element={<ProtectedRoute><AsistenteIA /></ProtectedRoute>} />
                   <Route path="/listas-personalizadas" element={<ProtectedRoute><ListasPersonalizadas /></ProtectedRoute>} />
                   <Route path="/importar-caterpillar" element={<ProtectedRoute><ImportarDatosCaterpillar /></ProtectedRoute>} />
+                  <Route path="/notificaciones" element={<ProtectedRoute><NotificacionesPage /></ProtectedRoute>} />
                   {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
                   <Route path="*" element={<NotFound />} />
                 </Routes>

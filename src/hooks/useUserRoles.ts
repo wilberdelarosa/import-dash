@@ -6,7 +6,7 @@ import { useState, useEffect, useCallback } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/context/AuthContext';
 
-export type AppRole = 'admin' | 'user';
+export type AppRole = 'admin' | 'supervisor' | 'user';
 
 interface UserWithRole {
   id: string;
@@ -19,7 +19,13 @@ interface UserWithRole {
 interface UseUserRolesReturn {
   currentUserRole: AppRole | null;
   isAdmin: boolean;
+  isSupervisor: boolean;
   isUser: boolean;
+  canEdit: boolean;
+  canViewDashboard: boolean;
+  canViewMantenimiento: boolean;
+  canViewHistorial: boolean;
+  canViewNotificaciones: boolean;
   loading: boolean;
   users: UserWithRole[];
   loadingUsers: boolean;
@@ -175,10 +181,30 @@ export function useUserRoles(): UseUserRolesReturn {
     }
   }, [user, currentUserRole]);
 
+  // Permisos derivados
+  const isAdmin = currentUserRole === 'admin';
+  const isSupervisor = currentUserRole === 'supervisor';
+  const isUser = currentUserRole === 'user';
+  
+  // Permisos de edición: solo admin
+  const canEdit = isAdmin;
+  
+  // Permisos de visualización: admin y supervisor
+  const canViewDashboard = isAdmin || isSupervisor;
+  const canViewMantenimiento = isAdmin || isSupervisor;
+  const canViewHistorial = isAdmin || isSupervisor;
+  const canViewNotificaciones = isAdmin || isSupervisor;
+
   return {
     currentUserRole,
-    isAdmin: currentUserRole === 'admin',
-    isUser: currentUserRole === 'user',
+    isAdmin,
+    isSupervisor,
+    isUser,
+    canEdit,
+    canViewDashboard,
+    canViewMantenimiento,
+    canViewHistorial,
+    canViewNotificaciones,
     loading,
     users,
     loadingUsers,

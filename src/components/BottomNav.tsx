@@ -1,31 +1,69 @@
 import { Link, useLocation } from 'react-router-dom';
-import { Home, Truck, Calendar, Wrench, MessageSquare } from 'lucide-react';
+import { Home, Truck, Calendar, Wrench, MessageSquare, History, Bell, LucideIcon } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { useUserRoles } from '@/hooks/useUserRoles';
+import { Badge } from '@/components/ui/badge';
+import { useNotificaciones } from '@/hooks/useNotificaciones';
 
-const items = [
-  { to: '/', label: 'Dashboard', icon: Home },
-  { to: '/equipos', label: 'Equipos', icon: Truck },
-  { to: '/mantenimiento', label: 'Mantenimiento', icon: Calendar },
-  { to: '/control-mantenimiento', label: 'Control', icon: Wrench },
-  { to: '/asistente', label: 'Asistente', icon: MessageSquare },
-];
+interface NavItem {
+  to: string;
+  label: string;
+  icon: LucideIcon;
+  badge?: number;
+}
 
 export default function BottomNav() {
   const location = useLocation();
+  const { isAdmin, isSupervisor } = useUserRoles();
+  const { notificaciones } = useNotificaciones();
+  
+  const unreadCount = notificaciones.filter(n => !n.leida).length;
+
+  // Items base para todos los usuarios
+  const baseItems: NavItem[] = [
+    { to: '/', label: 'Dashboard', icon: Home },
+    { to: '/equipos', label: 'Equipos', icon: Truck },
+    { to: '/mantenimiento', label: 'Mant.', icon: Calendar },
+  ];
+
+  // Items para admin
+  const adminItems: NavItem[] = [
+    ...baseItems,
+    { to: '/control-mantenimiento', label: 'Control', icon: Wrench },
+    { to: '/asistente', label: 'IA', icon: MessageSquare },
+  ];
+
+  // Items para supervisor - incluye historial y notificaciones
+  const supervisorItems: NavItem[] = [
+    ...baseItems,
+    { to: '/historial', label: 'Historial', icon: History },
+    { to: '/notificaciones', label: 'Alertas', icon: Bell, badge: unreadCount },
+  ];
+
+  // Items para usuario normal
+  const userItems: NavItem[] = [
+    ...baseItems,
+    { to: '/asistente', label: 'IA', icon: MessageSquare },
+  ];
+
+  // Seleccionar items según rol
+  const items = isAdmin ? adminItems : isSupervisor ? supervisorItems : userItems;
 
   return (
     <nav className="fixed bottom-0 left-0 right-0 z-50 bg-card/98 backdrop-blur-xl border-t border-border/60 sm:hidden shadow-[0_-4px_20px_rgba(0,0,0,0.08)] dark:shadow-[0_-4px_20px_rgba(0,0,0,0.3)]">
       {/* Safe area para iOS */}
-      <div className="mx-auto flex max-w-[1600px] items-center justify-around px-2 py-2 pb-[calc(0.5rem+env(safe-area-inset-bottom))]">
+      <div className="mx-auto flex max-w-[1600px] items-center justify-around px-1 py-1.5 pb-[calc(0.375rem+env(safe-area-inset-bottom))]">
         {items.map((item) => {
           const Icon = item.icon;
           const active = location.pathname === item.to;
+          const hasBadge = 'badge' in item && item.badge && item.badge > 0;
+          
           return (
             <Link
               key={item.to}
               to={item.to}
               className={cn(
-                'relative flex flex-col items-center justify-center gap-1.5 px-3 py-2 rounded-xl transition-all duration-200 active:scale-95 min-w-[60px]',
+                'relative flex flex-col items-center justify-center gap-0.5 px-2 py-1.5 rounded-lg transition-all duration-200 active:scale-95 min-w-[52px]',
                 active 
                   ? 'text-primary' 
                   : 'text-muted-foreground active:bg-muted/50',
@@ -33,20 +71,30 @@ export default function BottomNav() {
             >
               {/* Indicador activo */}
               {active && (
-                <div className="absolute -top-0.5 left-1/2 -translate-x-1/2 w-8 h-1 bg-primary rounded-full" />
+                <div className="absolute -top-0.5 left-1/2 -translate-x-1/2 w-6 h-0.5 bg-primary rounded-full" />
               )}
               
               {/* Fondo sutil cuando está activo */}
               {active && (
-                <div className="absolute inset-0 bg-primary/5 rounded-xl" />
+                <div className="absolute inset-0 bg-primary/5 rounded-lg" />
               )}
               
-              <Icon className={cn(
-                'h-5 w-5 transition-all duration-200',
-                active ? 'scale-110' : 'scale-100',
-              )} />
+              <div className="relative">
+                <Icon className={cn(
+                  'h-4 w-4 transition-all duration-200',
+                  active ? 'scale-105' : 'scale-100',
+                )} />
+                {hasBadge && (
+                  <Badge 
+                    variant="destructive" 
+                    className="absolute -top-1.5 -right-2 h-4 min-w-4 px-1 text-[9px] flex items-center justify-center"
+                  >
+                    {item.badge > 99 ? '99+' : item.badge}
+                  </Badge>
+                )}
+              </div>
               <span className={cn(
-                'text-[0.65rem] font-medium transition-all duration-200',
+                'text-[0.6rem] font-medium transition-all duration-200 leading-tight',
                 active ? 'scale-100 opacity-100' : 'scale-95 opacity-70',
               )}>
                 {item.label}
