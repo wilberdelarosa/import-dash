@@ -1,0 +1,40 @@
+name: Auto Merge devPruebas to main
+
+on:
+  push:
+    branches:
+      - devPruebas
+
+jobs:
+  merge-to-main:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+        with:
+          fetch-depth: 0
+
+      - name: Configure Git
+        run: |
+          git config user.name "GitHub Action"
+          git config user.email "action@github.com"
+
+      - name: Switch to main
+        run: git checkout main
+
+      - name: Merge devPruebas into main
+        run: |
+          git merge origin/devPruebas --no-edit -X theirs
+        # -X theirs forces resolution of conflicts by accepting changes from devPruebas
+
+      - name: Install Dependencies
+        run: npm install
+
+      - name: Build Project
+        run: npm run build
+        # Verifies the build before pushing. If this fails, the push is aborted.
+
+      - name: Push changes to main
+        run: git push origin main
