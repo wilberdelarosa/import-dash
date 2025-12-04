@@ -478,9 +478,9 @@ export function MantenimientoMobile({
           9: { cellWidth: 20, halign: 'center' },
           10: { cellWidth: 16, halign: 'center', fontStyle: 'bold' },
         },
-        didParseCell: (data: any) => {
+        didParseCell: (data) => {
           if (data.section === 'body') {
-            const estado = data.row.raw[10];
+            const estado = (data.row.raw as string[])[10];
             if (data.column.index === 10) {
               if (estado === 'Vencido') {
                 data.cell.styles.fillColor = [254, 226, 226];
@@ -505,7 +505,7 @@ export function MantenimientoMobile({
       });
 
       // Pie de página
-      const pageCount = (doc as any).internal.getNumberOfPages();
+      const pageCount = doc.getNumberOfPages();
       for (let i = 1; i <= pageCount; i++) {
         doc.setPage(i);
         const footerY = doc.internal.pageSize.height - 12;

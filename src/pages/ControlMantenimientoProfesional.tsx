@@ -132,40 +132,9 @@ export default function ControlMantenimientoProfesional() {
   } = useSupabaseDataContext();
   const { toast } = useToast();
 
-  // Redirigir a /mantenimiento en dispositivos móviles
-  // (esa página SÍ tiene versión móvil completa con MantenimientoMobile)
-  /* 
-  useEffect(() => {
-    if (isMobile) {
-      navigate('/mantenimiento', { replace: true });
-    }
-  }, [isMobile, navigate]);
-  */
-
-  if (isMobile) {
-    return (
-      <ControlMantenimientoMobile
-        equipos={data.mantenimientosProgramados}
-        catalogoEquipos={data.equipos}
-        onUpdateLectura={async (id, lectura, fecha, notas) => {
-          await updateHorasActuales({
-            mantenimientoId: id,
-            horasKm: lectura,
-            fecha,
-            observaciones: notas,
-            unidad: 'horas' // Esto debería inferirse del equipo, pero por simplificación inicial
-          });
-        }}
-        onRegistrarMantenimiento={async (id, datos) => {
-          await registrarMantenimientoRealizado({
-            mantenimientoId: id,
-            ...datos
-          });
-        }}
-        loading={loading}
-      />
-    );
-  }
+  // ============================================
+  // TODOS LOS HOOKS DEBEN IR ANTES DE CUALQUIER RETURN CONDICIONAL
+  // ============================================
 
   // Lista derivada: solo equipos activos (no deben mostrarse inactivos en la UI)
   const activeEquipos = useMemo(() => data.equipos.filter((e) => e.activo), [data.equipos]);
@@ -803,6 +772,36 @@ export default function ControlMantenimientoProfesional() {
       setUpdatingRapido(false);
     }
   };
+
+  // ============================================
+  // RETURNS CONDICIONALES DESPUÉS DE TODOS LOS HOOKS
+  // ============================================
+
+  // Renderizar versión móvil
+  if (isMobile) {
+    return (
+      <ControlMantenimientoMobile
+        equipos={data.mantenimientosProgramados}
+        catalogoEquipos={data.equipos}
+        onUpdateLectura={async (id, lectura, fecha, notas) => {
+          await updateHorasActuales({
+            mantenimientoId: id,
+            horasKm: lectura,
+            fecha,
+            observaciones: notas,
+            unidad: 'horas' // Esto debería inferirse del equipo, pero por simplificación inicial
+          });
+        }}
+        onRegistrarMantenimiento={async (id, datos) => {
+          await registrarMantenimientoRealizado({
+            mantenimientoId: id,
+            ...datos
+          });
+        }}
+        loading={loading}
+      />
+    );
+  }
 
   if (loading) {
     return (

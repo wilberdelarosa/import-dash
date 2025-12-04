@@ -1,0 +1,1 @@
+const e=(t,n="horas")=>{if(t==null)return"Sin dato";if(t<=0){const r=Math.abs(t).toFixed(1);return`Vencido${r!=="0.0"?` (${r} ${n})`:""}`}return`${t.toFixed(1)} ${n} restantes`},o=t=>t==null?"secondary":t<=0?"destructive":t<=50?"secondary":"default";export{e as f,o as g};

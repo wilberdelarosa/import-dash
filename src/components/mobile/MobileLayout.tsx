@@ -54,6 +54,7 @@ import { useToast } from '@/hooks/use-toast';
 import { useNotificaciones } from '@/hooks/useNotificaciones';
 import { formatDistanceToNow } from 'date-fns';
 import { es } from 'date-fns/locale';
+import type { Notificacion } from '@/types/historial';
 
 interface MobileLayoutProps {
   children: ReactNode;
@@ -164,7 +165,7 @@ export function MobileLayout({
     }
   };
 
-  const handleNotificacionClick = (notif: any) => {
+  const handleNotificacionClick = (notif: Notificacion) => {
     marcarComoLeida(notif.id);
     if (notif.accionUrl) {
       setNotificacionesOpen(false);

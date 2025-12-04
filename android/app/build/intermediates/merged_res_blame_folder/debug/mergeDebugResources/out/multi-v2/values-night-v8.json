@@ -1,0 +1,79 @@
+{
+    "logs": [
+        {
+            "outputFile": "com.alito.mantenimiento.app-mergeDebugResources-25:/values-night-v8/values-night-v8.xml",
+            "map": [
+                {
+                    "source": "C:\\Users\\wilbe\\.gradle\\caches\\8.11.1\\transforms\\dda665aa4a1576cfb1759fb2bbcd5279\\transformed\\appcompat-1.7.0\\res\\values-night-v8\\values-night-v8.xml",
+                    "from": {
+                        "startLines": "2,3,4,5,6,7,8,9",
+                        "startColumns": "4,4,4,4,4,4,4,4",
+                        "startOffsets": "55,125,209,293,389,491,593,687",
+                        "endColumns": "69,83,83,95,101,101,93,88",
+                        "endOffsets": "120,204,288,384,486,588,682,771"
+                    },
+                    "to": {
+                        "startLines": "39,40,41,42,43,44,45,46",
+                        "startColumns": "4,4,4,4,4,4,4,4",
+                        "startOffsets": "2355,2425,2509,2593,2689,2791,2893,2987",
+                        "endColumns": "69,83,83,95,101,101,93,88",
+                        "endOffsets": "2420,2504,2588,2684,2786,2888,2982,3071"
+                    }
+                },
+                {
+                    "source": "C:\\Users\\wilbe\\OneDrive\\Documentos\\ALITO MANTENIMIENTO APP\\V01 APP WEB\\import-dash\\android\\app\\src\\main\\res\\values-night\\styles.xml",
+                    "from": {
+                        "startLines": "3,14,26",
+                        "startColumns": "4,4,4",
+                        "startOffsets": "96,744,1432",
+                        "endLines": "12,24,34",
+                        "endColumns": "12,12,12",
+                        "endOffsets": "736,1424,2038"
+                    },
+                    "to": {
+                        "startLines": "8,18,29",
+                        "startColumns": "4,4,4",
+                        "startOffsets": "355,991,1666",
+                        "endLines": "17,28,37",
+                        "endColumns": "12,12,12",
+                        "endOffsets": "986,1661,2264"
+                    }
+                },
+                {
+                    "source": "C:\\Users\\wilbe\\OneDrive\\Documentos\\ALITO MANTENIMIENTO APP\\V01 APP WEB\\import-dash\\android\\app\\src\\main\\res\\values-night\\colors.xml",
+                    "from": {
+                        "startLines": "3,8,5,6,7,4",
+                        "startColumns": "4,4,4,4,4,4",
+                        "startOffsets": "103,355,202,255,305,154",
+                        "endColumns": "49,52,51,48,48,46",
+                        "endOffsets": "148,403,249,299,349,196"
+                    },
+                    "to": {
+                        "startLines": "2,3,4,5,6,7",
+                        "startColumns": "4,4,4,4,4,4",
+                        "startOffsets": "55,105,158,210,259,308",
+                        "endColumns": "49,52,51,48,48,46",
+                        "endOffsets": "100,153,205,254,303,350"
+                    }
+                },
+                {
+                    "source": "C:\\Users\\wilbe\\.gradle\\caches\\8.11.1\\transforms\\ef234481c09f01fb9f0508a5da2b1126\\transformed\\core-splashscreen-1.0.1\\res\\values-night-v8\\values-night-v8.xml",
+                    "from": {
+                        "startLines": "2",
+                        "startColumns": "4",
+                        "startOffsets": "55",
+                        "endColumns": "85",
+                        "endOffsets": "136"
+                    },
+                    "to": {
+                        "startLines": "38",
+                        "startColumns": "4",
+                        "startOffsets": "2269",
+                        "endColumns": "85",
+                        "endOffsets": "2350"
+                    }
+                }
+            ]
+        }
+    ]
+}
