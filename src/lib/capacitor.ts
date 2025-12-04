@@ -6,7 +6,7 @@
 import { Capacitor } from '@capacitor/core';
 import { StatusBar, Style } from '@capacitor/status-bar';
 import { SplashScreen } from '@capacitor/splash-screen';
-import { Keyboard, KeyboardStyle } from '@capacitor/keyboard';
+import { Keyboard, KeyboardStyle, KeyboardResize } from '@capacitor/keyboard';
 import { Haptics, ImpactStyle, NotificationType } from '@capacitor/haptics';
 
 // Detectar si estamos en una plataforma nativa
@@ -34,7 +34,7 @@ export async function initializeNativeApp() {
     // Configurar teclado
     if (isAndroid) {
       await Keyboard.setStyle({ style: KeyboardStyle.Dark });
-      await Keyboard.setResizeMode({ mode: 'body' as any });
+      await Keyboard.setResizeMode({ mode: KeyboardResize.Body });
     }
     
     console.log('[Capacitor] App nativa inicializada correctamente');
@@ -52,7 +52,7 @@ export const haptic = {
     if (!isNativePlatform) return;
     try {
       await Haptics.impact({ style: ImpactStyle.Light });
-    } catch {}
+    } catch { /* Plugin no disponible */ }
   },
   
   /** Vibración media para selecciones */
@@ -60,7 +60,7 @@ export const haptic = {
     if (!isNativePlatform) return;
     try {
       await Haptics.impact({ style: ImpactStyle.Medium });
-    } catch {}
+    } catch { /* Plugin no disponible */ }
   },
   
   /** Vibración fuerte para acciones importantes */
@@ -68,7 +68,7 @@ export const haptic = {
     if (!isNativePlatform) return;
     try {
       await Haptics.impact({ style: ImpactStyle.Heavy });
-    } catch {}
+    } catch { /* Plugin no disponible */ }
   },
   
   /** Vibración de selección */
@@ -76,7 +76,7 @@ export const haptic = {
     if (!isNativePlatform) return;
     try {
       await Haptics.selectionChanged();
-    } catch {}
+    } catch { /* Plugin no disponible */ }
   },
   
   /** Notificación de éxito */
@@ -84,7 +84,7 @@ export const haptic = {
     if (!isNativePlatform) return;
     try {
       await Haptics.notification({ type: NotificationType.Success });
-    } catch {}
+    } catch { /* Plugin no disponible */ }
   },
   
   /** Notificación de advertencia */
@@ -92,7 +92,7 @@ export const haptic = {
     if (!isNativePlatform) return;
     try {
       await Haptics.notification({ type: NotificationType.Warning });
-    } catch {}
+    } catch { /* Plugin no disponible */ }
   },
   
   /** Notificación de error */
@@ -100,7 +100,7 @@ export const haptic = {
     if (!isNativePlatform) return;
     try {
       await Haptics.notification({ type: NotificationType.Error });
-    } catch {}
+    } catch { /* Plugin no disponible */ }
   },
 };
 
@@ -117,7 +117,7 @@ export async function setStatusBarStyle(isDark: boolean) {
     await StatusBar.setBackgroundColor({ 
       color: isDark ? '#0f172a' : '#ffffff' 
     });
-  } catch {}
+  } catch { /* Plugin no disponible */ }
 }
 
 /**
@@ -132,7 +132,7 @@ export async function toggleStatusBar(show: boolean) {
     } else {
       await StatusBar.hide();
     }
-  } catch {}
+  } catch { /* Plugin no disponible */ }
 }
 
 export default {
