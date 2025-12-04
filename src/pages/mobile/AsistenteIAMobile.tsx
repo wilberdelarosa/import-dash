@@ -179,45 +179,46 @@ export function AsistenteIAMobile({
                     </div>
                 }
             >
-                <div className="flex flex-col h-[calc(100vh-9rem)] -mx-4 -mt-4">
+                {/* Main container with proper height for mobile */}
+                <div className="flex flex-col h-[calc(100dvh-7.5rem)] -mx-4 -mt-2">
                     <ScrollArea
                         ref={scrollAreaRef}
-                        className="flex-1 px-4 pt-4"
+                        className="flex-1 px-3 pt-2"
                         onScroll={(e) => {
                             const target = e.target as HTMLDivElement;
                             const atBottom = target.scrollHeight - target.scrollTop - target.clientHeight < 100;
                             setShowScrollButton(!atBottom);
                         }}
                     >
-                        <div className="space-y-4 pb-4">
+                        <div className="space-y-3 pb-2">
                             {messages.length === 0 && (
-                                <MobileCard variant="glass" className="p-6 text-center border-primary/20 shadow-premium relative overflow-hidden">
-                                    <div className="absolute top-0 right-0 w-32 h-32 bg-primary/5 rounded-full blur-3xl" />
+                                <MobileCard variant="glass" className="p-4 text-center border-primary/20 shadow-premium relative overflow-hidden">
+                                    <div className="absolute top-0 right-0 w-24 h-24 bg-primary/5 rounded-full blur-3xl" />
                                     <div className="relative">
-                                        <div className="mx-auto mb-4 h-16 w-16 rounded-full bg-gradient-premium flex items-center justify-center shadow-lg shadow-primary/30">
-                                            <Sparkles className="h-8 w-8 text-primary-foreground" />
+                                        <div className="mx-auto mb-3 h-12 w-12 rounded-full bg-gradient-premium flex items-center justify-center shadow-lg shadow-primary/30">
+                                            <Sparkles className="h-6 w-6 text-primary-foreground" />
                                         </div>
-                                        <h2 className="text-xl font-bold text-foreground/90 mb-2">
+                                        <h2 className="text-lg font-bold text-foreground/90 mb-1">
                                             ¡Hola! Soy tu Asistente IA
                                         </h2>
-                                        <p className="text-sm text-muted-foreground leading-relaxed">
-                                            Puedo ayudarte con información sobre equipos, mantenimientos, inventario y más.
+                                        <p className="text-xs text-muted-foreground leading-relaxed">
+                                            Ayuda con equipos, mantenimientos e inventario.
                                         </p>
                                     </div>
                                 </MobileCard>
                             )}
 
                             {messages.length === 0 && (
-                                <div className="space-y-3">
-                                    <p className="text-xs font-semibold text-muted-foreground px-1 uppercase tracking-wider">
+                                <div className="space-y-2">
+                                    <p className="text-[10px] font-semibold text-muted-foreground px-1 uppercase tracking-wider">
                                         Consultas rápidas
                                     </p>
-                                    <div className="grid grid-cols-2 gap-2">
+                                    <div className="grid grid-cols-2 gap-1.5">
                                         {quickPrompts.map((prompt, idx) => (
                                             <Button
                                                 key={idx}
                                                 variant="outline"
-                                                className="h-auto p-3 text-xs text-left justify-start whitespace-normal bg-card/50 backdrop-blur-sm hover:bg-primary/5 hover:border-primary/30 transition-all active:scale-95"
+                                                className="h-auto p-2 text-[11px] text-left justify-start whitespace-normal bg-card/50 backdrop-blur-sm hover:bg-primary/5 hover:border-primary/30 transition-all active:scale-95"
                                                 onClick={() => handleQuickPrompt(prompt)}
                                                 disabled={isLoading}
                                             >

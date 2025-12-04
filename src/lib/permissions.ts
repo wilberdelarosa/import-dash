@@ -25,9 +25,10 @@ export const MODULES: ModuleConfig[] = [
   { id: 'configuraciones', name: 'Configuraciones', description: 'Ajustes del sistema', icon: 'Settings' },
   { id: 'admin', name: 'Administración', description: 'Panel de administración', icon: 'Shield' },
   { id: 'importar', name: 'Importar Datos', description: 'Importación de datos externos', icon: 'Upload' },
+  { id: 'notificaciones', name: 'Notificaciones', description: 'Centro de notificaciones', icon: 'Bell' },
 ];
 
-export type AppRole = 'admin' | 'user';
+export type AppRole = 'admin' | 'supervisor' | 'user';
 
 // Permisos por defecto para cada rol
 export const DEFAULT_ROLE_PERMISSIONS: Record<AppRole, Record<string, ModulePermission[]>> = {
@@ -45,6 +46,23 @@ export const DEFAULT_ROLE_PERMISSIONS: Record<AppRole, Record<string, ModulePerm
     configuraciones: ['read', 'write', 'delete', 'admin'],
     admin: ['read', 'write', 'delete', 'admin'],
     importar: ['read', 'write', 'delete', 'admin'],
+    notificaciones: ['read', 'write', 'delete', 'admin'],
+  },
+  supervisor: {
+    dashboard: ['read'],
+    equipos: ['read'],
+    inventario: ['read'],
+    mantenimiento: ['read'],
+    planificador: ['read'],
+    planes: ['read'],
+    kits: ['read'],
+    historial: ['read'],
+    reportes: ['read'],
+    asistente: ['read'],
+    configuraciones: [],
+    admin: [],
+    importar: [],
+    notificaciones: ['read', 'write'],
   },
   user: {
     dashboard: ['read'],
@@ -60,6 +78,7 @@ export const DEFAULT_ROLE_PERMISSIONS: Record<AppRole, Record<string, ModulePerm
     configuraciones: ['read'],
     admin: [],
     importar: [],
+    notificaciones: ['read'],
   },
 };
 
@@ -101,4 +120,32 @@ export function canDeleteModule(role: AppRole | null, moduleId: string): boolean
 // Verificar si es admin del módulo
 export function isModuleAdmin(role: AppRole | null, moduleId: string): boolean {
   return hasPermission(role, moduleId, 'admin');
+}
+
+// Obtener la etiqueta legible del rol
+export function getRoleLabel(role: AppRole | null): string {
+  switch (role) {
+    case 'admin':
+      return 'Administrador';
+    case 'supervisor':
+      return 'Supervisor';
+    case 'user':
+      return 'Usuario';
+    default:
+      return 'Sin rol';
+  }
+}
+
+// Obtener el color del badge del rol
+export function getRoleBadgeColor(role: AppRole | null): string {
+  switch (role) {
+    case 'admin':
+      return 'bg-red-500/10 text-red-600 border-red-500/20';
+    case 'supervisor':
+      return 'bg-amber-500/10 text-amber-600 border-amber-500/20';
+    case 'user':
+      return 'bg-blue-500/10 text-blue-600 border-blue-500/20';
+    default:
+      return 'bg-muted text-muted-foreground';
+  }
 }
