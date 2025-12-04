@@ -200,41 +200,40 @@ export function DashboardMobile({
           </Button>
         }
       >
-        <div className="space-y-5 pb-20">
-          {/* Welcome Section - Responsive */}
-          <div className="relative overflow-hidden rounded-xl sm:rounded-2xl bg-gradient-to-br from-primary/90 to-primary p-4 sm:p-5 text-primary-foreground shadow-lg">
-            <div className="absolute -right-10 -top-10 h-40 w-40 rounded-full bg-white/10 blur-3xl" />
-            <div className="absolute -left-10 -bottom-10 h-32 w-32 rounded-full bg-white/10 blur-2xl" />
-
+        <div className="space-y-3 pb-20 px-1">
+          {/* Welcome Section - Compact */}
+          <div className="relative overflow-hidden rounded-xl bg-gradient-to-br from-primary/90 to-primary p-3 text-primary-foreground shadow-lg">
+            <div className="absolute -right-8 -top-8 h-24 w-24 rounded-full bg-white/10 blur-2xl" />
+            
             <div className="relative z-10">
-              <div className="flex items-center gap-2 mb-1 opacity-90">
-                <Sparkles className="h-4 w-4" />
-                <span className="text-xs font-medium uppercase tracking-wider">Resumen Ejecutivo</span>
+              <div className="flex items-center gap-1.5 mb-0.5 opacity-90">
+                <Sparkles className="h-3.5 w-3.5" />
+                <span className="text-[0.65rem] font-medium uppercase tracking-wider">Resumen Ejecutivo</span>
               </div>
-              <h2 className="text-xl sm:text-2xl font-bold tracking-tight">Hola, Bienvenido</h2>
-              <p className="text-xs sm:text-sm opacity-90 mt-1">Aquí tienes el estado actual de tu flota.</p>
+              <h2 className="text-lg font-bold tracking-tight">Hola, Bienvenido</h2>
+              <p className="text-[0.7rem] opacity-90">Aquí tienes el estado actual de tu flota.</p>
             </div>
           </div>
 
-          {/* Alert si hay mantenimientos vencidos */}
+          {/* Alert si hay mantenimientos vencidos - Compact */}
           {mantenimientosVencidos > 0 && (
             <div className="animate-in fade-in slide-in-from-top-4 duration-500">
-              <div className="relative overflow-hidden rounded-xl border border-red-200 bg-red-50/80 p-4 shadow-sm backdrop-blur-sm dark:border-red-900/30 dark:bg-red-900/10">
-                <div className="flex items-start gap-3">
-                  <div className="rounded-full bg-red-100 p-2 dark:bg-red-900/30">
-                    <AlertTriangle className="h-5 w-5 text-red-600 dark:text-red-400" />
+              <div className="relative overflow-hidden rounded-lg border border-red-200 bg-red-50/80 p-2.5 shadow-sm backdrop-blur-sm dark:border-red-900/30 dark:bg-red-900/10">
+                <div className="flex items-start gap-2">
+                  <div className="rounded-full bg-red-100 p-1.5 dark:bg-red-900/30 flex-shrink-0">
+                    <AlertTriangle className="h-4 w-4 text-red-600 dark:text-red-400" />
                   </div>
-                  <div className="flex-1">
-                    <h3 className="font-semibold text-red-900 dark:text-red-200">
+                  <div className="flex-1 min-w-0">
+                    <h3 className="font-semibold text-sm text-red-900 dark:text-red-200">
                       Atención Requerida
                     </h3>
-                    <p className="text-sm text-red-700 dark:text-red-300 mt-1">
+                    <p className="text-xs text-red-700 dark:text-red-300 mt-0.5">
                       Tienes <span className="font-bold">{mantenimientosVencidos}</span> mantenimientos vencidos que necesitan revisión inmediata.
                     </p>
                     <Button
                       size="sm"
                       variant="ghost"
-                      className="mt-2 h-8 px-0 text-red-700 hover:text-red-800 hover:bg-transparent dark:text-red-300 dark:hover:text-red-200 font-medium"
+                      className="mt-1.5 h-7 px-0 text-xs text-red-700 hover:text-red-800 hover:bg-transparent dark:text-red-300 dark:hover:text-red-200 font-medium"
                       onClick={() => navigate('/control-mantenimiento')}
                     >
                       Ver detalles →
@@ -245,43 +244,43 @@ export function DashboardMobile({
             </div>
           )}
 
-          {/* Métricas principales - Grid responsive */}
-          <div className="grid grid-cols-2 gap-2 sm:gap-3">
+          {/* Métricas principales - Grid compacto */}
+          <div className="grid grid-cols-2 gap-2">
             {metrics.map((metric, index) => (
               <div
                 key={index}
                 onClick={() => metric.onClick ? metric.onClick() : metric.path && navigate(metric.path)}
                 className={cn(
-                  "group relative overflow-hidden rounded-xl sm:rounded-2xl border p-3 sm:p-4 transition-all active:scale-95 cursor-pointer shadow-sm hover:shadow-md",
+                  "group relative overflow-hidden rounded-lg border p-2.5 transition-all active:scale-95 cursor-pointer shadow-sm",
                   "bg-gradient-to-br backdrop-blur-sm",
                   metric.gradient,
                   metric.borderColor,
-                  metric.urgent && "ring-2 ring-red-500/20 border-red-500/30"
+                  metric.urgent && "ring-1 ring-red-500/20 border-red-500/30"
                 )}
               >
-                <div className="flex items-start justify-between mb-3">
+                <div className="flex items-start justify-between mb-2">
                   <div className={cn(
-                    "rounded-xl p-2.5 shadow-sm transition-transform group-hover:scale-110",
+                    "rounded-lg p-2 shadow-sm",
                     "bg-background/60 backdrop-blur-md"
                   )}>
-                    <metric.icon className={cn("h-5 w-5", metric.color)} />
+                    <metric.icon className={cn("h-4 w-4", metric.color)} />
                   </div>
                   {metric.trend && (
                     <div className={cn(
-                      "flex items-center gap-0.5 text-[10px] font-bold px-1.5 py-0.5 rounded-full",
+                      "flex items-center gap-0.5 text-[9px] font-bold px-1.5 py-0.5 rounded-full",
                       metric.trendUp ? "bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400" : "bg-red-100 text-red-700"
                     )}>
-                      {metric.trendUp ? <TrendingUp className="h-3 w-3" /> : <TrendingDown className="h-3 w-3" />}
+                      {metric.trendUp ? <TrendingUp className="h-2.5 w-2.5" /> : <TrendingDown className="h-2.5 w-2.5" />}
                       {metric.trend}
                     </div>
                   )}
                 </div>
 
-                <div className="space-y-1">
-                  <p className="text-2xl sm:text-3xl font-bold tracking-tight text-foreground">
+                <div className="space-y-0.5">
+                  <p className="text-xl font-bold tracking-tight text-foreground">
                     {metric.value}
                   </p>
-                  <p className="text-[0.65rem] sm:text-xs font-medium text-muted-foreground uppercase tracking-wide">
+                  <p className="text-[0.6rem] font-medium text-muted-foreground uppercase tracking-wide truncate">
                     {metric.label}
                   </p>
                 </div>
@@ -294,12 +293,12 @@ export function DashboardMobile({
             <MobileCard variant="glass" className="p-0 overflow-hidden">
               <button
                 onClick={() => setActividadExpanded(!actividadExpanded)}
-                className="w-full p-4 flex items-center justify-between hover:bg-muted/30 transition-colors active:bg-muted/50"
+                className="w-full p-3 flex items-center justify-between hover:bg-muted/30 transition-colors active:bg-muted/50"
               >
                 <div className="flex items-center gap-2">
-                  <Activity className="h-4 w-4 text-primary" />
-                  <span className="font-semibold text-sm">Actividad Reciente</span>
-                  <Badge variant="secondary" className="text-xs">
+                  <Activity className="h-3.5 w-3.5 text-primary" />
+                  <span className="font-semibold text-xs">Actividad Reciente</span>
+                  <Badge variant="secondary" className="text-[0.65rem] h-5">
                     {actualizacionesRecientes.length + mantenimientosRecientes.length}
                   </Badge>
                 </div>
@@ -312,24 +311,23 @@ export function DashboardMobile({
 
               {actividadExpanded && (
                 <div className="border-t border-border/50 animate-in slide-in-from-top-2 fade-in">
-                  <div className="p-4 space-y-4">
-                    {/* Actualizaciones de Horas/Km */}
+                  <div className="p-3 space-y-3">
                     {actualizacionesRecientes.length > 0 && (
                       <div>
-                        <h4 className="text-xs font-bold text-muted-foreground uppercase mb-2 flex items-center gap-2">
+                        <h4 className="text-[0.65rem] font-bold text-muted-foreground uppercase mb-1.5 flex items-center gap-1.5">
                           <Clock className="h-3 w-3" /> Actualizaciones de Horas/Km
                         </h4>
-                        <div className="space-y-2">
+                        <div className="space-y-1.5">
                           {actualizacionesRecientes.slice(0, 5).map((act) => (
                             <div key={act.id} className="rounded-lg border border-border/30 p-2 bg-muted/20">
-                              <div className="flex items-start justify-between">
+                              <div className="flex items-center justify-between">
                                 <div className="flex-1 min-w-0">
-                                  <p className="text-xs font-medium truncate">{act.nombreEquipo || `Ficha ${act.ficha}`}</p>
-                                  <p className="text-[0.65rem] text-muted-foreground mt-0.5">
+                                  <p className="text-[0.7rem] font-medium truncate">{act.nombreEquipo || `Ficha ${act.ficha}`}</p>
+                                  <p className="text-[0.6rem] text-muted-foreground">
                                     {act.horasKm} ({act.incremento >= 0 ? '+' : ''}{act.incremento})
                                   </p>
                                 </div>
-                                <span className="text-[0.65rem] text-muted-foreground whitespace-nowrap ml-2">
+                                <span className="text-[0.6rem] text-muted-foreground whitespace-nowrap ml-2">
                                   {formatDate(act.fecha)}
                                 </span>
                               </div>
@@ -339,25 +337,24 @@ export function DashboardMobile({
                       </div>
                     )}
 
-                    {/* Mantenimientos Realizados */}
                     {mantenimientosRecientes.length > 0 && (
                       <>
                         {actualizacionesRecientes.length > 0 && <Separator />}
                         <div>
-                          <h4 className="text-xs font-bold text-muted-foreground uppercase mb-2 flex items-center gap-2">
+                          <h4 className="text-[0.65rem] font-bold text-muted-foreground uppercase mb-1.5 flex items-center gap-1.5">
                             <Wrench className="h-3 w-3" /> Mantenimientos Realizados
                           </h4>
-                          <div className="space-y-2">
+                          <div className="space-y-1.5">
                             {mantenimientosRecientes.slice(0, 5).map((mant) => (
                               <div key={mant.id} className="rounded-lg border border-border/30 p-2 bg-muted/20">
-                                <div className="flex items-start justify-between">
+                                <div className="flex items-center justify-between">
                                   <div className="flex-1 min-w-0">
-                                    <p className="text-xs font-medium truncate">{mant.nombreEquipo || `Ficha ${mant.ficha}`}</p>
-                                    <p className="text-[0.65rem] text-muted-foreground mt-0.5">
+                                    <p className="text-[0.7rem] font-medium truncate">{mant.nombreEquipo || `Ficha ${mant.ficha}`}</p>
+                                    <p className="text-[0.6rem] text-muted-foreground">
                                       {mant.horasKmAlMomento} horas/km
                                     </p>
                                   </div>
-                                  <span className="text-[0.65rem] text-muted-foreground whitespace-nowrap ml-2">
+                                  <span className="text-[0.6rem] text-muted-foreground whitespace-nowrap ml-2">
                                     {formatDate(mant.fechaMantenimiento)}
                                   </span>
                                 </div>
@@ -368,14 +365,13 @@ export function DashboardMobile({
                       </>
                     )}
 
-                    {/* Enlace al historial */}
                     <Button
                       variant="outline"
                       size="sm"
-                      className="w-full gap-2"
+                      className="w-full gap-2 h-8 text-xs"
                       onClick={() => navigate('/historial')}
                     >
-                      <History className="h-3.5 w-3.5" />
+                      <History className="h-3 w-3" />
                       Ver historial completo
                     </Button>
                   </div>
@@ -387,56 +383,49 @@ export function DashboardMobile({
           {/* Mantenimientos Vencidos */}
           {mantenimientosVencidosList.length > 0 && (
             <MobileCard variant="glass" className="p-0 overflow-hidden border-red-500/30">
-              <div className="p-3 sm:p-4 border-b border-border/50 bg-gradient-to-r from-red-500/5 to-transparent">
+              <div className="p-2.5 border-b border-border/50 bg-gradient-to-r from-red-500/5 to-transparent">
                 <div className="flex items-center justify-between gap-2">
                   <div className="flex items-center gap-2">
-                    <div className="rounded-full bg-red-500/10 p-2">
-                      <AlertTriangle className="h-4 w-4 text-red-600 dark:text-red-400" />
+                    <div className="rounded-full bg-red-500/10 p-1.5">
+                      <AlertTriangle className="h-3.5 w-3.5 text-red-600 dark:text-red-400" />
                     </div>
                     <div className="min-w-0 flex-1">
-                      <span className="font-semibold text-xs sm:text-sm text-red-900 dark:text-red-200 block truncate">Mantenimientos Vencidos</span>
-                      <p className="text-[0.65rem] sm:text-xs text-red-700 dark:text-red-300 hidden xs:block">Requieren atención inmediata</p>
+                      <span className="font-semibold text-xs text-red-900 dark:text-red-200 block truncate">Mantenimientos Vencidos</span>
+                      <p className="text-[0.6rem] text-red-700 dark:text-red-300">Requieren atención inmediata</p>
                     </div>
                   </div>
-                  <Badge variant="destructive" className="shadow-sm">{mantenimientosVencidosList.length}</Badge>
+                  <Badge variant="destructive" className="text-[0.65rem] h-5">{mantenimientosVencidosList.length}</Badge>
                 </div>
               </div>
-              <div className="p-3 space-y-2">
+              <div className="p-2 space-y-1.5">
                 {mantenimientosVencidosList.slice(0, 5).map((mant) => (
                   <button
                     key={mant.id}
-                    onClick={() => {
-                      if (onVerEquipo) {
-                        onVerEquipo(mant.ficha);
-                      }
-                    }}
-                    className="w-full rounded-xl border border-red-500/20 bg-red-500/5 p-3 hover:bg-red-500/10 transition-all active:scale-98 text-left"
+                    onClick={() => onVerEquipo && onVerEquipo(mant.ficha)}
+                    className="w-full rounded-lg border border-red-500/20 bg-red-500/5 p-2 hover:bg-red-500/10 transition-all active:scale-98 text-left"
                   >
-                    <div className="flex items-start justify-between gap-3">
+                    <div className="flex items-center justify-between gap-2">
                       <div className="flex-1 min-w-0">
-                        <p className="font-semibold text-sm truncate text-foreground">{mant.nombreEquipo || 'Equipo sin nombre'}</p>
-                        <p className="text-xs text-muted-foreground">Ficha {mant.ficha}</p>
-                        <p className="text-xs text-muted-foreground mt-1">{mant.tipoMantenimiento}</p>
+                        <p className="font-medium text-xs truncate text-foreground">{mant.nombreEquipo || 'Equipo sin nombre'}</p>
+                        <p className="text-[0.6rem] text-muted-foreground">Ficha {mant.ficha}</p>
                       </div>
-                      <div className="flex flex-col items-end gap-1 flex-shrink-0">
-                        <Badge variant="destructive" className="text-[0.65rem] max-w-[120px] truncate">
-                          {formatRemainingLabel(mant.horasKmRestante, mant.tipoMantenimiento === 'Kilómetros' ? 'km' : 'horas')}
-                        </Badge>
-                      </div>
+                      <Badge variant="destructive" className="text-[0.6rem] h-5 max-w-[90px] truncate">
+                        {formatRemainingLabel(mant.horasKmRestante, mant.tipoMantenimiento === 'Kilómetros' ? 'km' : 'horas')}
+                      </Badge>
                     </div>
                   </button>
                 ))}
               </div>
               {mantenimientosVencidosList.length > 5 && (
-                <div className="p-3 pt-0">
+                <div className="p-2 pt-0">
                   <Button
                     variant="outline"
                     size="sm"
-                    className="w-full gap-2 border-red-500/30 text-red-700 dark:text-red-300 hover:bg-red-500/10"
+                    className="w-full gap-2 h-8 text-xs border-red-500/30 text-red-700 dark:text-red-300 hover:bg-red-500/10"
                     onClick={() => setVencidosSheetOpen(true)}
                   >
                     Ver todos ({mantenimientosVencidosList.length})
-                    <ExternalLink className="h-3.5 w-3.5" />
+                    <ExternalLink className="h-3 w-3" />
                   </Button>
                 </div>
               )}
@@ -446,56 +435,49 @@ export function DashboardMobile({
           {/* Mantenimientos Próximos */}
           {mantenimientosProximosList.length > 0 && (
             <MobileCard variant="glass" className="p-0 overflow-hidden border-primary/30">
-              <div className="p-3 sm:p-4 border-b border-border/50 bg-gradient-to-r from-primary/5 to-transparent">
+              <div className="p-2.5 border-b border-border/50 bg-gradient-to-r from-primary/5 to-transparent">
                 <div className="flex items-center justify-between gap-2">
                   <div className="flex items-center gap-2">
-                    <div className="rounded-full bg-primary/10 p-2">
-                      <CalendarClock className="h-4 w-4 text-primary" />
+                    <div className="rounded-full bg-primary/10 p-1.5">
+                      <CalendarClock className="h-3.5 w-3.5 text-primary" />
                     </div>
                     <div className="min-w-0 flex-1">
-                      <span className="font-semibold text-xs sm:text-sm block truncate">Mantenimientos Próximos</span>
-                      <p className="text-[0.65rem] sm:text-xs text-muted-foreground hidden xs:block">Próximas intervenciones</p>
+                      <span className="font-semibold text-xs block truncate">Mantenimientos Próximos</span>
+                      <p className="text-[0.6rem] text-muted-foreground">Próximas intervenciones</p>
                     </div>
                   </div>
-                  <Badge variant="secondary" className="shadow-sm">{mantenimientosProximosList.length}</Badge>
+                  <Badge variant="secondary" className="text-[0.65rem] h-5">{mantenimientosProximosList.length}</Badge>
                 </div>
               </div>
-              <div className="p-3 space-y-2">
+              <div className="p-2 space-y-1.5">
                 {mantenimientosProximosList.slice(0, 5).map((mant) => (
                   <button
                     key={mant.id}
-                    onClick={() => {
-                      if (onVerEquipo) {
-                        onVerEquipo(mant.ficha);
-                      }
-                    }}
-                    className="w-full rounded-xl border border-primary/20 bg-primary/5 p-3 hover:bg-primary/10 transition-all active:scale-98 text-left"
+                    onClick={() => onVerEquipo && onVerEquipo(mant.ficha)}
+                    className="w-full rounded-lg border border-primary/20 bg-primary/5 p-2 hover:bg-primary/10 transition-all active:scale-98 text-left"
                   >
-                    <div className="flex items-start justify-between gap-3">
+                    <div className="flex items-center justify-between gap-2">
                       <div className="flex-1 min-w-0">
-                        <p className="font-semibold text-sm truncate text-foreground">{mant.nombreEquipo || 'Equipo sin nombre'}</p>
-                        <p className="text-xs text-muted-foreground">Ficha {mant.ficha}</p>
-                        <p className="text-xs text-muted-foreground mt-1">{mant.tipoMantenimiento}</p>
+                        <p className="font-medium text-xs truncate text-foreground">{mant.nombreEquipo || 'Equipo sin nombre'}</p>
+                        <p className="text-[0.6rem] text-muted-foreground">Ficha {mant.ficha}</p>
                       </div>
-                      <div className="flex flex-col items-end gap-1 flex-shrink-0">
-                        <Badge variant="outline" className="text-[0.65rem] border-primary/30 text-primary max-w-[120px] truncate">
-                          {formatRemainingLabel(mant.horasKmRestante, mant.tipoMantenimiento === 'Kilómetros' ? 'km' : 'horas')}
-                        </Badge>
-                      </div>
+                      <Badge variant="outline" className="text-[0.6rem] h-5 border-primary/30 text-primary max-w-[90px] truncate">
+                        {formatRemainingLabel(mant.horasKmRestante, mant.tipoMantenimiento === 'Kilómetros' ? 'km' : 'horas')}
+                      </Badge>
                     </div>
                   </button>
                 ))}
               </div>
               {mantenimientosProximosList.length > 5 && (
-                <div className="p-3 pt-0">
+                <div className="p-2 pt-0">
                   <Button
                     variant="outline"
                     size="sm"
-                    className="w-full gap-2 border-primary/30 text-primary hover:bg-primary/10"
+                    className="w-full gap-2 h-8 text-xs border-primary/30 text-primary hover:bg-primary/10"
                     onClick={() => setProximosSheetOpen(true)}
                   >
                     Ver todos ({mantenimientosProximosList.length})
-                    <ExternalLink className="h-3.5 w-3.5" />
+                    <ExternalLink className="h-3 w-3" />
                   </Button>
                 </div>
               )}
@@ -503,41 +485,37 @@ export function DashboardMobile({
           )}
 
           {/* Accesos Rápidos */}
-          <div className="grid grid-cols-1 gap-3">
-            <MobileCard variant="glass" className="p-0 overflow-hidden">
-              <div className="p-4 border-b border-border/50">
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-2">
-                    <Activity className="h-4 w-4 text-primary" />
-                    <span className="font-semibold text-sm">Acceso Rápido</span>
-                  </div>
-                </div>
+          <MobileCard variant="glass" className="p-0 overflow-hidden">
+            <div className="p-2.5 border-b border-border/50">
+              <div className="flex items-center gap-2">
+                <Activity className="h-3.5 w-3.5 text-primary" />
+                <span className="font-semibold text-xs">Acceso Rápido</span>
               </div>
-              <div className="grid grid-cols-3 divide-x divide-border/50 text-center">
-                <button
-                  onClick={() => navigate('/asistente')}
-                  className="flex flex-col items-center justify-center gap-1.5 p-3 hover:bg-muted/50 transition-colors active:bg-muted"
-                >
-                  <Sparkles className="h-4 w-4 text-purple-500" />
-                  <span className="text-[0.6rem] sm:text-[0.65rem] font-medium">Asistente IA</span>
-                </button>
-                <button
-                  onClick={() => navigate('/reportes')}
-                  className="flex flex-col items-center justify-center gap-1.5 p-3 hover:bg-muted/50 transition-colors active:bg-muted"
-                >
-                  <Zap className="h-4 w-4 text-amber-500" />
-                  <span className="text-[0.65rem] font-medium">Reportes</span>
-                </button>
-                <button
-                  onClick={() => navigate('/listas-personalizadas')}
-                  className="flex flex-col items-center justify-center gap-1.5 p-3 hover:bg-muted/50 transition-colors active:bg-muted"
-                >
-                  <CheckCircle2 className="h-4 w-4 text-green-500" />
-                  <span className="text-[0.65rem] font-medium">Listas</span>
-                </button>
-              </div>
-            </MobileCard>
-          </div>
+            </div>
+            <div className="grid grid-cols-3 divide-x divide-border/50 text-center">
+              <button
+                onClick={() => navigate('/asistente')}
+                className="flex flex-col items-center justify-center gap-1 py-3 hover:bg-muted/50 transition-colors active:bg-muted"
+              >
+                <Sparkles className="h-4 w-4 text-purple-500" />
+                <span className="text-[0.6rem] font-medium">Asistente IA</span>
+              </button>
+              <button
+                onClick={() => navigate('/reportes')}
+                className="flex flex-col items-center justify-center gap-1 py-3 hover:bg-muted/50 transition-colors active:bg-muted"
+              >
+                <Zap className="h-4 w-4 text-amber-500" />
+                <span className="text-[0.6rem] font-medium">Reportes</span>
+              </button>
+              <button
+                onClick={() => navigate('/listas-personalizadas')}
+                className="flex flex-col items-center justify-center gap-1 py-3 hover:bg-muted/50 transition-colors active:bg-muted"
+              >
+                <CheckCircle2 className="h-4 w-4 text-green-500" />
+                <span className="text-[0.6rem] font-medium">Listas</span>
+              </button>
+            </div>
+          </MobileCard>
         </div>
       </MobileLayout>
 
