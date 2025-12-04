@@ -53,7 +53,6 @@ import { useUserRoles } from '@/hooks/useUserRoles';
 import { useToast } from '@/hooks/use-toast';
 import { useNotificaciones } from '@/hooks/useNotificaciones';
 import { formatDistanceToNow } from 'date-fns';
-import type { Notificacion } from '@/types/historial';
 import { es } from 'date-fns/locale';
 
 interface MobileLayoutProps {
@@ -165,7 +164,7 @@ export function MobileLayout({
     }
   };
 
-  const handleNotificacionClick = (notif: Notificacion) => {
+  const handleNotificacionClick = (notif: any) => {
     marcarComoLeida(notif.id);
     if (notif.accionUrl) {
       setNotificacionesOpen(false);
@@ -191,34 +190,34 @@ export function MobileLayout({
   };
 
   return (
-    <div className="flex min-h-[100dvh] h-[100dvh] flex-col overflow-hidden bg-background/95 supports-[backdrop-filter]:bg-background/60">
-      {/* Header móvil premium - Fully Responsive */}
-      <header className="sticky top-0 z-50 glass-panel border-b-0 shadow-sm flex-shrink-0">
-        <div className="flex min-h-[48px] h-[clamp(48px,12vw,56px)] items-center justify-between px-[clamp(0.5rem,3vw,1rem)] pt-safe">
-          {/* Logo animado - Responsive */}
-          <Link to="/" className="flex items-center gap-[clamp(0.25rem,2vw,0.5rem)] active:scale-95 transition-transform flex-shrink-0">
+    <div className="flex h-screen flex-col overflow-hidden bg-background/95 supports-[backdrop-filter]:bg-background/60">
+      {/* Header móvil premium - Responsive */}
+      <header className="sticky top-0 z-50 glass-panel border-b-0 shadow-sm">
+        <div className="flex h-12 sm:h-14 items-center justify-between px-3 sm:px-4 pt-safe">
+          {/* Logo animado */}
+          <Link to="/" className="flex items-center gap-2 active:scale-95 transition-transform">
             <div className="relative">
               <div className="absolute inset-0 bg-primary/20 blur-lg rounded-full" />
-              <img src="/favicon.ico" alt="Logo" className="relative h-[clamp(24px,7vw,32px)] w-[clamp(24px,7vw,32px)] object-contain" />
+              <img src="/favicon.ico" alt="Logo" className="relative h-7 sm:h-8 w-7 sm:w-8 object-contain" />
             </div>
             <div className="flex flex-col leading-tight">
-              <span className="text-[clamp(0.6rem,2vw,0.75rem)] font-bold tracking-wider text-foreground/90">ALITO</span>
-              <span className="text-[clamp(0.5rem,1.5vw,0.65rem)] text-muted-foreground font-medium">SRL</span>
+              <span className="text-[0.65rem] sm:text-xs font-bold tracking-wider text-foreground/90">ALITO</span>
+              <span className="text-[0.55rem] sm:text-[0.65rem] text-muted-foreground font-medium">SRL</span>
             </div>
           </Link>
 
-          {/* Título con fade - Fluid */}
-          <h1 className="flex-1 truncate text-center text-[clamp(0.7rem,3vw,0.875rem)] font-semibold text-foreground/90 animate-fade-in px-[clamp(0.25rem,2vw,0.5rem)]">
+          {/* Título con fade - Responsive */}
+          <h1 className="flex-1 truncate text-center text-xs sm:text-sm font-semibold text-foreground/90 animate-fade-in px-2">
             {title}
           </h1>
 
-          {/* Acciones header - Touch friendly */}
-          <div className="flex items-center gap-[clamp(0.125rem,1vw,0.25rem)] flex-shrink-0">
+          {/* Acciones header */}
+          <div className="flex items-center gap-1">
             {headerActions}
             <Sheet>
               <SheetTrigger asChild>
-                <Button variant="ghost" size="icon" className="h-[clamp(36px,10vw,44px)] w-[clamp(36px,10vw,44px)] min-h-[44px] min-w-[44px] rounded-full hover:bg-primary/10 active:scale-90 transition-all">
-                  <Menu className="h-[clamp(18px,5vw,22px)] w-[clamp(18px,5vw,22px)] text-foreground/80" />
+                <Button variant="ghost" size="icon" className="h-9 w-9 rounded-full hover:bg-primary/10 active:scale-90 transition-all">
+                  <Menu className="h-5 w-5 text-foreground/80" />
                 </Button>
               </SheetTrigger>
               <SheetContent side="right" className="w-[85vw] sm:w-80 p-0 border-l-0 bg-background">
@@ -441,32 +440,33 @@ export function MobileLayout({
         </div>
       </header>
 
-      {/* Contenido principal con padding bottom DINÁMICO */}
+      {/* Contenido principal con padding bottom CONSISTENTE */}
       <ScrollArea
         className={cn(
           "flex-1 bg-slate-50/50 dark:bg-slate-950/50",
+          // Padding bottom FIJO para todos los módulos
           showBottomNav && "pb-safe"
         )}
       >
         <main
           className={cn(
-            "container mx-auto p-[clamp(0.5rem,3vw,1rem)] animate-fade-in max-w-screen-xl",
-            // Margen bottom dinámico basado en viewport
-            showBottomNav && "mb-[clamp(70px,20vw,96px)]"
+            "container mx-auto p-3 sm:p-4 animate-fade-in max-w-screen-xl",
+            // Margen bottom aumentado para evitar que botones se oculten
+            showBottomNav && "mb-24"
           )}
         >
           {children}
         </main>
       </ScrollArea>
 
-      {/* Bottom navigation bar flotante - Fully Responsive */}
+      {/* Bottom navigation bar flotante - CONSISTENTE */}
       {showBottomNav && (
         <nav className="fixed bottom-0 left-0 right-0 z-50 glass-panel border-t-0 shadow-[0_-4px_20px_-5px_rgba(0,0,0,0.1)]">
           <div
             className={cn(
-              "flex min-h-[56px] h-[clamp(56px,15vw,64px)] items-center justify-around px-[clamp(0.25rem,2vw,0.5rem)]",
-              // Safe area con fallback para dispositivos sin notch
-              "pb-[max(env(safe-area-inset-bottom,0px),0.25rem)]"
+              "flex h-14 sm:h-16 items-center justify-around px-1 sm:px-2",
+              // Safe area para dispositivos con notch
+              "pb-safe"
             )}
           >
             {bottomNavItems.map(({ path, icon: Icon, label }) => {
@@ -477,25 +477,25 @@ export function MobileLayout({
                   key={path}
                   to={path}
                   className={cn(
-                    "group flex flex-1 flex-col items-center justify-center gap-[clamp(0.125rem,1vw,0.25rem)] py-[clamp(0.25rem,1vw,0.5rem)] transition-all duration-300 touch-callout-none select-none min-h-[44px]",
+                    "group flex flex-1 flex-col items-center justify-center gap-1 py-1 transition-all duration-300 touch-callout-none select-none",
                     isActive ? "text-primary" : "text-muted-foreground hover:text-foreground"
                   )}
                 >
                   <div className={cn(
-                    "relative rounded-2xl p-[clamp(0.25rem,1.5vw,0.375rem)] transition-all duration-300 group-active:scale-90",
-                    isActive && "bg-primary/10 -translate-y-0.5 shadow-glow-primary"
+                    "relative rounded-2xl p-1 sm:p-1.5 transition-all duration-300 group-active:scale-90",
+                    isActive && "bg-primary/10 -translate-y-1 shadow-glow-primary"
                   )}>
                     <Icon className={cn(
-                      "h-[clamp(16px,5vw,20px)] w-[clamp(16px,5vw,20px)] transition-all duration-300",
+                      "h-4 sm:h-5 w-4 sm:w-5 transition-all duration-300",
                       isActive ? "stroke-[2.5px]" : "stroke-2"
                     )} />
                     {isActive && (
-                      <span className="absolute -bottom-0.5 left-1/2 h-1 w-1 -translate-x-1/2 rounded-full bg-primary" />
+                      <span className="absolute -bottom-1 left-1/2 h-1 w-1 -translate-x-1/2 rounded-full bg-primary" />
                     )}
                   </div>
                   <span className={cn(
-                    "text-[clamp(0.55rem,2vw,0.65rem)] font-medium transition-all duration-300 text-center leading-tight",
-                    isActive ? "opacity-100 font-semibold" : "opacity-70"
+                    "text-[0.6rem] sm:text-[0.65rem] font-medium transition-all duration-300",
+                    isActive ? "opacity-100 font-semibold translate-y-0" : "opacity-70 translate-y-1"
                   )}>
                     {label}
                   </span>
