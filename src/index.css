@@ -470,13 +470,41 @@ All colors MUST be HSL.
 }
 
 
-/* Safe Area Utilities */
+/* Safe Area Utilities con fallbacks */
 .pb-safe {
-  padding-bottom: env(safe-area-inset-bottom);
+  padding-bottom: max(env(safe-area-inset-bottom, 0px), 0.5rem);
 }
 
 .pt-safe {
-  padding-top: env(safe-area-inset-top);
+  padding-top: max(env(safe-area-inset-top, 0px), 0px);
+}
+
+/* Dynamic Viewport Height para móviles */
+@supports (height: 100dvh) {
+  .h-dvh {
+    height: 100dvh;
+  }
+  .min-h-dvh {
+    min-height: 100dvh;
+  }
+}
+
+/* Fallback para navegadores sin dvh */
+@supports not (height: 100dvh) {
+  .h-dvh {
+    height: 100vh;
+    height: -webkit-fill-available;
+  }
+  .min-h-dvh {
+    min-height: 100vh;
+    min-height: -webkit-fill-available;
+  }
+}
+
+/* Touch target mínimo accesible (WCAG 44x44) */
+.touch-target {
+  min-height: 44px;
+  min-width: 44px;
 }
 
 /* Premium Shadows */
