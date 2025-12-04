@@ -27,3 +27,8 @@ dist-ssr
 # Temporary files
 temp/
 .vercel
+
+# Android
+android/app/build/
+android/.gradle/
+android/capacitor-cordova-android-plugins/build/
