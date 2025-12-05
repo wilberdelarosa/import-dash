@@ -6,7 +6,7 @@ import { useState, useEffect, useCallback } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/context/AuthContext';
 
-export type AppRole = 'admin' | 'supervisor' | 'user';
+export type AppRole = 'admin' | 'supervisor' | 'mechanic' | 'user';
 
 interface UserWithRole {
   id: string;
@@ -20,6 +20,7 @@ interface UseUserRolesReturn {
   currentUserRole: AppRole | null;
   isAdmin: boolean;
   isSupervisor: boolean;
+  isMechanic: boolean;
   isUser: boolean;
   canEdit: boolean;
   canViewDashboard: boolean;
@@ -184,6 +185,7 @@ export function useUserRoles(): UseUserRolesReturn {
   // Permisos derivados
   const isAdmin = currentUserRole === 'admin';
   const isSupervisor = currentUserRole === 'supervisor';
+  const isMechanic = currentUserRole === 'mechanic';
   const isUser = currentUserRole === 'user';
   
   // Permisos de edición: solo admin
@@ -199,6 +201,7 @@ export function useUserRoles(): UseUserRolesReturn {
     currentUserRole,
     isAdmin,
     isSupervisor,
+    isMechanic,
     isUser,
     canEdit,
     canViewDashboard,
