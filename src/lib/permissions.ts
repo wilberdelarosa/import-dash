@@ -28,7 +28,7 @@ export const MODULES: ModuleConfig[] = [
   { id: 'notificaciones', name: 'Notificaciones', description: 'Centro de notificaciones', icon: 'Bell' },
 ];
 
-export type AppRole = 'admin' | 'supervisor' | 'user';
+export type AppRole = 'admin' | 'supervisor' | 'mechanic' | 'user';
 
 // Permisos por defecto para cada rol
 export const DEFAULT_ROLE_PERMISSIONS: Record<AppRole, Record<string, ModulePermission[]>> = {
@@ -63,6 +63,22 @@ export const DEFAULT_ROLE_PERMISSIONS: Record<AppRole, Record<string, ModulePerm
     admin: [],
     importar: [],
     notificaciones: ['read', 'write'],
+  },
+  mechanic: {
+    dashboard: ['read'],
+    equipos: ['read'],
+    inventario: ['read'],
+    mantenimiento: [],
+    planificador: [],
+    planes: [],
+    kits: [],
+    historial: ['read'],
+    reportes: [],
+    asistente: [],
+    configuraciones: [],
+    admin: [],
+    importar: [],
+    notificaciones: ['read'],
   },
   user: {
     dashboard: ['read'],
@@ -129,6 +145,8 @@ export function getRoleLabel(role: AppRole | null): string {
       return 'Administrador';
     case 'supervisor':
       return 'Supervisor';
+    case 'mechanic':
+      return 'Mecánico';
     case 'user':
       return 'Usuario';
     default:
@@ -143,6 +161,8 @@ export function getRoleBadgeColor(role: AppRole | null): string {
       return 'bg-red-500/10 text-red-600 border-red-500/20';
     case 'supervisor':
       return 'bg-amber-500/10 text-amber-600 border-amber-500/20';
+    case 'mechanic':
+      return 'bg-green-500/10 text-green-600 border-green-500/20';
     case 'user':
       return 'bg-blue-500/10 text-blue-600 border-blue-500/20';
     default:
