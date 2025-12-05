@@ -490,6 +490,78 @@ export type Database = {
         }
         Relationships: []
       }
+      maintenance_submissions: {
+        Row: {
+          admin_feedback: string | null
+          created_at: string | null
+          created_by: string
+          descripcion_trabajo: string | null
+          equipo_id: number
+          fecha_mantenimiento: string
+          horas_km_actuales: number
+          id: string
+          linked_maintenance_id: number | null
+          observaciones: string | null
+          partes_usadas: Json | null
+          reviewed_at: string | null
+          reviewed_by: string | null
+          status: string
+          tipo_mantenimiento: string | null
+          updated_at: string | null
+        }
+        Insert: {
+          admin_feedback?: string | null
+          created_at?: string | null
+          created_by: string
+          descripcion_trabajo?: string | null
+          equipo_id: number
+          fecha_mantenimiento?: string
+          horas_km_actuales: number
+          id?: string
+          linked_maintenance_id?: number | null
+          observaciones?: string | null
+          partes_usadas?: Json | null
+          reviewed_at?: string | null
+          reviewed_by?: string | null
+          status?: string
+          tipo_mantenimiento?: string | null
+          updated_at?: string | null
+        }
+        Update: {
+          admin_feedback?: string | null
+          created_at?: string | null
+          created_by?: string
+          descripcion_trabajo?: string | null
+          equipo_id?: number
+          fecha_mantenimiento?: string
+          horas_km_actuales?: number
+          id?: string
+          linked_maintenance_id?: number | null
+          observaciones?: string | null
+          partes_usadas?: Json | null
+          reviewed_at?: string | null
+          reviewed_by?: string | null
+          status?: string
+          tipo_mantenimiento?: string | null
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "maintenance_submissions_equipo_id_fkey"
+            columns: ["equipo_id"]
+            isOneToOne: false
+            referencedRelation: "equipos"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "maintenance_submissions_linked_maintenance_id_fkey"
+            columns: ["linked_maintenance_id"]
+            isOneToOne: false
+            referencedRelation: "mantenimientos_programados"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       mantenimientos_programados: {
         Row: {
           activo: boolean
@@ -764,6 +836,44 @@ export type Database = {
         }
         Relationships: []
       }
+      submission_attachments: {
+        Row: {
+          created_at: string | null
+          file_size: number | null
+          filename: string
+          id: string
+          mime_type: string | null
+          storage_path: string
+          submission_id: string
+        }
+        Insert: {
+          created_at?: string | null
+          file_size?: number | null
+          filename: string
+          id?: string
+          mime_type?: string | null
+          storage_path: string
+          submission_id: string
+        }
+        Update: {
+          created_at?: string | null
+          file_size?: number | null
+          filename?: string
+          id?: string
+          mime_type?: string | null
+          storage_path?: string
+          submission_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "submission_attachments_submission_id_fkey"
+            columns: ["submission_id"]
+            isOneToOne: false
+            referencedRelation: "maintenance_submissions"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       user_roles: {
         Row: {
           created_at: string
@@ -790,6 +900,10 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      approve_and_integrate_submission: {
+        Args: { p_admin_feedback?: string; p_submission_id: string }
+        Returns: Json
+      }
       calcular_proximo_mantenimiento: {
         Args: { p_horas_actuales: number; p_plan_id: number }
         Returns: {
@@ -819,9 +933,13 @@ export type Database = {
         }
         Returns: boolean
       }
+      reject_submission: {
+        Args: { p_feedback: string; p_submission_id: string }
+        Returns: Json
+      }
     }
     Enums: {
-      app_role: "admin" | "user" | "supervisor"
+      app_role: "admin" | "user" | "supervisor" | "mechanic"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -949,7 +1067,7 @@ export type CompositeTypes<
 export const Constants = {
   public: {
     Enums: {
-      app_role: ["admin", "user", "supervisor"],
+      app_role: ["admin", "user", "supervisor", "mechanic"],
     },
   },
 } as const
