@@ -53,26 +53,40 @@ export function useUserRoles(): UseUserRolesReturn {
         return;
       }
 
-      // Developer/local override: allow simulating roles for specific emails
-      // MECHANIC: wilber.alitoeirl@gmail.com
-      // SUPERVISOR: warly.wey@gmail.com
-      // Methods to enable:
-      //  - localStorage.setItem('simulateRoleMechanic','1') or localStorage.setItem('simulateRoleSupervisor','1')
-      //  - Add query param ?simulateMechanic=1 or ?simulateSupervisor=1 to the URL
-      //  - Or emails are auto-detected and assigned their test roles
+      // Emails para testing (fallback si no hay rol en BD)
+      const mechanicEmail = 'wilber.alitoeirl@gmail.com';
+      const supervisorEmail = 'warly.wey@gmail.com';
+
       try {
-        const mechanicEmail = 'wilber.alitoeirl@gmail.com';
-        const supervisorEmail = 'warly.wey@gmail.com';
+        // 1. PRIMERO: Intentar obtener rol de la base de datos
+        const { data, error: roleError } = await supabase
+          .from('user_roles')
+          .select('role')
+          .eq('user_id', user.id)
+          .single();
+
+        if (!roleError && data?.role) {
+          // ✓ Rol encontrado en BD - usar ese
+          console.log(`[useUserRoles] Rol desde BD: ${data.role}`);
+          setCurrentUserRole(data.role as AppRole);
+          setLoading(false);
+          return;
+        }
+
+        // 2. FALLBACK: Si no hay rol en BD, usar simulación para emails de prueba
+        // Esto permite testing sin necesidad de asignar roles manualmente
+        console.log('[useUserRoles] No hay rol en BD, verificando fallback de testing...');
         
+        // Verificar localStorage o query params para simulación manual
         let simulateMechanic = false;
         let simulateSupervisor = false;
         
         if (typeof window !== 'undefined') {
           try {
             const ls = window.localStorage;
-            simulateMechanic = ls?.getItem('simulateRoleMechanic') === '1' || ls?.getItem('simulatRoleMechanic') === '1';
-            simulateSupervisor = ls?.getItem('simulateRoleSupervisor') === '1' || ls?.getItem('simulatRoleSupervisor') === '1';
-          } catch (_) {
+            simulateMechanic = ls?.getItem('simulateRoleMechanic') === '1';
+            simulateSupervisor = ls?.getItem('simulateRoleSupervisor') === '1';
+          } catch {
             // ignore localStorage read errors
           }
 
@@ -80,12 +94,12 @@ export function useUserRoles(): UseUserRolesReturn {
             const params = new URLSearchParams(window.location.search);
             simulateMechanic = simulateMechanic || params.get('simulateMechanic') === '1';
             simulateSupervisor = simulateSupervisor || params.get('simulateSupervisor') === '1';
-          } catch (_) {
+          } catch {
             // ignore
           }
         }
 
-        // Auto-assign roles based on email (for testing)
+        // Auto-assign roles para emails de testing (solo si no hay rol en BD)
         if (user.email === mechanicEmail) {
           simulateMechanic = true;
         }
@@ -94,36 +108,24 @@ export function useUserRoles(): UseUserRolesReturn {
         }
 
         if (simulateSupervisor && user.email === supervisorEmail) {
+          console.log('[useUserRoles] Usando rol SIMULADO: supervisor');
           setCurrentUserRole('supervisor');
           setLoading(false);
           return;
         }
         
         if (simulateMechanic && user.email === mechanicEmail) {
+          console.log('[useUserRoles] Usando rol SIMULADO: mechanic');
           setCurrentUserRole('mechanic');
           setLoading(false);
           return;
         }
-      } catch (e) {
-        // ignore any error in override detection
-      }
 
-      try {
-        const { data, error: roleError } = await supabase
-          .from('user_roles')
-          .select('role')
-          .eq('user_id', user.id)
-          .single();
-
-        if (roleError) {
-          console.error('Error loading user role:', roleError);
-          // Si no tiene rol, asignar 'user' por defecto
-          setCurrentUserRole('user');
-        } else {
-          setCurrentUserRole(data?.role as AppRole || 'user');
-        }
+        // 3. Si no hay rol en BD ni es email de testing, asignar 'user' por defecto
+        console.log('[useUserRoles] Sin rol asignado, usando: user');
+        setCurrentUserRole('user');
       } catch (err) {
-        console.error('Error:', err);
+        console.error('[useUserRoles] Error:', err);
         setCurrentUserRole('user');
       } finally {
         setLoading(false);

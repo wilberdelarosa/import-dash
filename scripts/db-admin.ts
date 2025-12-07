@@ -129,14 +129,38 @@ async function checkStatus() {
   
   // Verificar funciones RPC
   console.log('\n🔧 Verificando funciones RPC:\n');
-  const rpcs = ['has_role', 'approve_and_integrate_submission', 'reject_submission'];
-  for (const rpc of rpcs) {
-    const { error } = await supabase.rpc(rpc as any, { _user_id: '00000000-0000-0000-0000-000000000000', _role: 'user' });
-    if (error?.message?.includes('does not exist') || error?.message?.includes('function')) {
-      console.log(`   ${colors.red}✗${colors.reset} ${rpc}: NO EXISTE`);
-    } else {
-      console.log(`   ${colors.green}✓${colors.reset} ${rpc}: OK`);
-    }
+  
+  // has_role - usa parámetros _user_id y _role
+  const { error: hasRoleErr } = await supabase.rpc('has_role', { 
+    _user_id: '00000000-0000-0000-0000-000000000000', 
+    _role: 'user' 
+  });
+  if (hasRoleErr?.message?.includes('does not exist')) {
+    console.log(`   ${colors.red}✗${colors.reset} has_role: NO EXISTE`);
+  } else {
+    console.log(`   ${colors.green}✓${colors.reset} has_role: OK`);
+  }
+  
+  // approve_and_integrate_submission - usa p_submission_id y p_admin_feedback
+  const { error: approveErr } = await supabase.rpc('approve_and_integrate_submission', { 
+    p_submission_id: '00000000-0000-0000-0000-000000000000', 
+    p_admin_feedback: 'test' 
+  });
+  if (approveErr?.message?.includes('does not exist') || approveErr?.message?.includes('function')) {
+    console.log(`   ${colors.red}✗${colors.reset} approve_and_integrate_submission: NO EXISTE`);
+  } else {
+    console.log(`   ${colors.green}✓${colors.reset} approve_and_integrate_submission: OK`);
+  }
+  
+  // reject_submission - usa p_submission_id y p_feedback
+  const { error: rejectErr } = await supabase.rpc('reject_submission', { 
+    p_submission_id: '00000000-0000-0000-0000-000000000000', 
+    p_feedback: 'test' 
+  });
+  if (rejectErr?.message?.includes('does not exist') || rejectErr?.message?.includes('function')) {
+    console.log(`   ${colors.red}✗${colors.reset} reject_submission: NO EXISTE`);
+  } else {
+    console.log(`   ${colors.green}✓${colors.reset} reject_submission: OK`);
   }
 }
 
@@ -221,7 +245,13 @@ async function assignRole(email: string, role: AppRole) {
     return;
   }
   
-  const user = users?.find((u: any) => u.email === email);
+  interface UserRecord {
+    id: string;
+    email: string;
+    last_sign_in_at?: string;
+  }
+  
+  const user = (users as UserRecord[] | null)?.find((u) => u.email === email);
   
   if (!user) {
     log.error(`Usuario no encontrado: ${email}`);
