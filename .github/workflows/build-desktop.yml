@@ -1,0 +1,106 @@
+name: Build and Release Desktop App
+
+on:
+  push:
+    branches:
+      - main
+    paths-ignore:
+      - '*.md'
+      - 'docs/**'
+  workflow_dispatch:  # Permite ejecutar manualmente
+
+jobs:
+  release:
+    runs-on: windows-latest
+    
+    permissions:
+      contents: write
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Install Electron dependencies
+        run: |
+          npm install --save-dev electron electron-builder concurrently cross-env wait-on
+          npm install electron-updater
+
+      - name: Build web app
+        run: npm run build
+
+      - name: Build Electron app
+        run: npm run electron:build
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Get version and increment patch
+        id: version
+        run: |
+          $pkg = Get-Content package.json | ConvertFrom-Json
+          $currentVersion = $pkg.version
+          $versionParts = $currentVersion.Split('.')
+          $major = [int]$versionParts[0]
+          $minor = [int]$versionParts[1]
+          $patch = [int]$versionParts[2] + 1
+          $newVersion = "$major.$minor.$patch"
+          
+          # Actualizar package.json con nueva versión
+          $pkg.version = $newVersion
+          $pkg | ConvertTo-Json -Depth 100 | Set-Content package.json
+          
+          echo "VERSION=$newVersion" >> $env:GITHUB_OUTPUT
+          echo "Nueva versión: $newVersion"
+
+      - name: Check for existing release files
+        id: check_files
+        run: |
+          if (Test-Path "release/*.exe") {
+            echo "HAS_FILES=true" >> $env:GITHUB_OUTPUT
+          } else {
+            echo "HAS_FILES=false" >> $env:GITHUB_OUTPUT
+          }
+
+      - name: Create Release
+        if: steps.check_files.outputs.HAS_FILES == 'true'
+        uses: softprops/action-gh-release@v1
+        with:
+          tag_name: v${{ steps.version.outputs.VERSION }}
+          name: ALITO Mantenimiento v${{ steps.version.outputs.VERSION }}
+          draft: false
+          prerelease: false
+          files: |
+            release/*.exe
+            release/*.exe.blockmap
+            release/latest.yml
+          body: |
+            ## ALITO Mantenimiento v${{ steps.version.outputs.VERSION }}
+            
+            ### Instalación
+            1. Descarga el archivo `ALITO-Mantenimiento-Setup-${{ steps.version.outputs.VERSION }}.exe`
+            2. Ejecuta el instalador
+            3. La app se actualizará automáticamente en futuras versiones
+            
+            ### Auto-actualización
+            Si ya tienes instalada una versión anterior, la app detectará esta actualización y te notificará para instalarla.
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Commit version bump
+        if: steps.check_files.outputs.HAS_FILES == 'true'
+        run: |
+          git config user.name "GitHub Action"
+          git config user.email "action@github.com"
+          git add package.json
+          git commit -m "chore: bump version to ${{ steps.version.outputs.VERSION }}" || echo "No changes to commit"
+          git push origin main || echo "Push failed, may need manual intervention"

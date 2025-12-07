@@ -6,8 +6,8 @@ import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Switch } from '@/components/ui/switch';
 import { Textarea } from '@/components/ui/textarea';
-import { Plus, Edit } from 'lucide-react';
-import { Equipo } from '@/types/equipment';
+import { Plus, Edit, Building2 } from 'lucide-react';
+import { Equipo, EMPRESAS_DISPONIBLES } from '@/types/equipment';
 
 interface EquipoDialogProps {
   equipo?: Equipo;
@@ -19,6 +19,9 @@ interface EquipoDialogProps {
   initialData?: Equipo;
 }
 
+// Categorías de equipos disponibles
+// AC-XXX: Equipos de construcción/maquinaria pesada
+// VP-XXX: Vehículos personales (nuevo)
 const categorias = [
   'Vehículo transporte',
   'Excavadora',
@@ -28,7 +31,9 @@ const categorias = [
   'Rodillos',
   'Telehandler',
   'Miniretro',
-  'Vehículo personal'
+  'Vehículo personal',
+  // Nueva categoría para vehículos personales (VP-XXX)
+  'Vehículo Personal (VP)',
 ];
 
 export function EquipoDialog({
@@ -54,6 +59,7 @@ export function EquipoDialog({
     numeroSerie: equipoData?.numeroSerie || '',
     placa: equipoData?.placa || '',
     categoria: equipoData?.categoria || '',
+    empresa: equipoData?.empresa || 'ALITO GROUP SRL' as const,
     activo: equipoData?.activo ?? true,
     motivoInactividad: equipoData?.motivoInactividad || '',
   });
@@ -69,6 +75,7 @@ export function EquipoDialog({
         numeroSerie: data.numeroSerie || '',
         placa: data.placa || '',
         categoria: data.categoria || '',
+        empresa: data.empresa || 'ALITO GROUP SRL',
         activo: data.activo ?? true,
         motivoInactividad: data.motivoInactividad || '',
       });
@@ -162,7 +169,7 @@ export function EquipoDialog({
               placeholder="ABC-123"
             />
           </div>
-          <div className="md:col-span-2">
+          <div>
             <Label htmlFor="categoria">Categoría</Label>
             <Select value={formData.categoria} onValueChange={(value) => setFormData({ ...formData, categoria: value })}>
               <SelectTrigger className="w-full">
@@ -171,6 +178,22 @@ export function EquipoDialog({
               <SelectContent>
                 {categorias.map((cat) => (
                   <SelectItem key={cat} value={cat}>{cat}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+          <div>
+            <Label htmlFor="empresa" className="flex items-center gap-2">
+              <Building2 className="w-4 h-4" />
+              Empresa
+            </Label>
+            <Select value={formData.empresa} onValueChange={(value: typeof formData.empresa) => setFormData({ ...formData, empresa: value })}>
+              <SelectTrigger className="w-full">
+                <SelectValue placeholder="Seleccionar empresa" />
+              </SelectTrigger>
+              <SelectContent>
+                {EMPRESAS_DISPONIBLES.map((emp) => (
+                  <SelectItem key={emp} value={emp}>{emp}</SelectItem>
                 ))}
               </SelectContent>
             </Select>

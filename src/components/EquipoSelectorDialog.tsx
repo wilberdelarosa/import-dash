@@ -47,7 +47,11 @@ export function EquipoSelectorDialog({
   const getCategoriaIcon = (categoria?: string) => {
     if (!categoria) return <HardHat className="w-5 h-5" />;
     const cat = categoria.toLowerCase();
-    if (cat.includes('vehículo') || cat.includes('camion')) {
+    // VP-XXX: Vehículos Personales - icono especial
+    if (cat.includes('vp') || cat.includes('personal')) {
+      return <Truck className="w-5 h-5" />;
+    }
+    if (cat.includes('vehículo') || cat.includes('camion') || cat.includes('transporte')) {
       return <Truck className="w-5 h-5" />;
     }
     return <HardHat className="w-5 h-5" />;
@@ -56,12 +60,15 @@ export function EquipoSelectorDialog({
   const getCategoriaColor = (categoria?: string) => {
     if (!categoria) return 'bg-gray-100 text-gray-800';
     const cat = categoria.toLowerCase();
+    // VP-XXX: Vehículos Personales - color distintivo (rosa/fucsia)
+    if (cat.includes('vp') || cat.includes('personal')) return 'bg-pink-100 text-pink-800';
     if (cat.includes('excavadora')) return 'bg-amber-100 text-amber-800';
-    if (cat.includes('vehículo')) return 'bg-blue-100 text-blue-800';
+    if (cat.includes('vehículo') || cat.includes('transporte')) return 'bg-blue-100 text-blue-800';
     if (cat.includes('camion')) return 'bg-green-100 text-green-800';
-    if (cat.includes('rodillo')) return 'bg-purple-100 text-purple-800';
+    if (cat.includes('rodillo') || cat.includes('compactador')) return 'bg-purple-100 text-purple-800';
     if (cat.includes('retro')) return 'bg-orange-100 text-orange-800';
-    if (cat.includes('cargador')) return 'bg-cyan-100 text-cyan-800';
+    if (cat.includes('cargador') || cat.includes('minicargador')) return 'bg-cyan-100 text-cyan-800';
+    if (cat.includes('telehandler')) return 'bg-indigo-100 text-indigo-800';
     return 'bg-gray-100 text-gray-800';
   };
 

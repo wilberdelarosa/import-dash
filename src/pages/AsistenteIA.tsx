@@ -256,14 +256,269 @@ const buildChatContext = (data: DatabaseData | null, config: SystemConfig | null
   };
 };
 
+/**
+ * BASE DE CONOCIMIENTO COMPLETA DEL SISTEMA IMPORT-DASH
+ * Esta constante contiene toda la información que el asistente IA debe conocer
+ */
+const KNOWLEDGE_BASE = `
+## INFORMACIÓN DE LA EMPRESA
+El sistema gestiona equipos de DOS empresas:
+- **ALITO GROUP SRL** - Empresa principal de maquinaria pesada y construcción
+- **ALITO EIRL** - Empresa hermana con equipos adicionales
+
+Sistema: Import-Dash - Plataforma de Gestión de Maquinaria y Flotas
+Propósito: Control integral de equipos, mantenimientos preventivos, inventarios y operaciones para ambas empresas
+
+## ARQUITECTURA DEL SISTEMA
+- Frontend: React 18 + Vite + TypeScript + Tailwind CSS + shadcn/ui
+- Backend: Supabase (Postgres, Auth, Storage, Edge Functions)
+- Móvil: Capacitor Android (APK generada con Android Studio)
+- IA: API de Groq con sistema de modelos prioritarios (llama3-70b, llama3-8b, mixtral-8x7b)
+
+## EMPRESAS Y ASIGNACIÓN DE EQUIPOS
+Cada equipo pertenece a una de las dos empresas:
+
+### ALITO GROUP SRL (Badge: GROUP - azul)
+- Empresa principal
+- Mayoría de maquinaria pesada de construcción
+- Identificación visual: Badge azul
+
+### ALITO EIRL (Badge: EIRL - verde)
+- Empresa complementaria
+- Equipos y vehículos adicionales
+- Identificación visual: Badge verde
+
+El sistema permite:
+- Filtrar equipos por empresa
+- Ver a qué empresa pertenece cada equipo
+- Generar reportes separados por empresa
+- Asignar nuevos equipos a cualquiera de las dos empresas
+
+## CATEGORÍAS DE EQUIPOS
+Los equipos se identifican con prefijos en su ficha:
+
+### Equipos de Construcción/Maquinaria (AC-XXX):
+- **Excavadoras**: Máquinas de excavación (Ej: AC-001 EXCAVADORA 320, AC-002 EXCAVADORA 330)
+- **Minicargadores**: Equipos compactos de carga (Ej: AC-051 MINICARGADOR 216B)
+- **Retropalas/Retroexcavadoras**: Máquinas versátiles con pala y retro (Ej: AC-008 RETROPALA 420F2)
+- **Camiones**: Vehículos de transporte pesado (Ej: AC-012 CAMION SINOTRUCK)
+- **Rodillos/Compactadores**: Equipos de compactación (Ej: AC-015 RODILLO CB10)
+- **Telehandlers**: Manipuladores telescópicos (Ej: AC-020 TELEHANDLER TL642)
+- **Miniretro**: Mini retroexcavadoras compactas
+- **Vehículo transporte**: Vehículos de transporte general
+
+### Vehículos Personales (VP-XXX) - NUEVA CATEGORÍA:
+- **Vehículo Personal (VP)**: Vehículos asignados a personal específico
+- Prefijo: VP-001, VP-002, etc.
+- Uso: Control de mantenimiento de vehículos particulares de la empresa
+- Mismo sistema de horas/km y mantenimientos preventivos
+
+## SISTEMA DE ROLES Y PERMISOS
+
+### Roles disponibles:
+1. **Admin (Administrador)**:
+   - Acceso completo a todos los módulos
+   - Puede crear, editar, eliminar cualquier registro
+   - Acceso al panel de administración de usuarios
+   - Puede aprobar/rechazar reportes de mecánicos
+   - Gestión de configuraciones del sistema
+
+2. **Supervisor**:
+   - Acceso de lectura a dashboard, equipos, inventario
+   - Puede ver mantenimientos, planificador, planes, kits
+   - Acceso al historial y reportes (solo lectura)
+   - Puede aprobar reportes de trabajo de mecánicos
+   - Gestión de notificaciones
+
+3. **Mechanic (Mecánico)**:
+   - Acceso limitado a dashboard (lectura)
+   - Vista de equipos e inventario (lectura)
+   - Puede crear reportes de trabajo con fotos
+   - Acceso al historial de sus propios trabajos
+   - Notificaciones de tareas asignadas
+
+4. **User (Usuario regular)**:
+   - Acceso de lectura a la mayoría de módulos
+   - No puede editar ni eliminar registros
+   - Vista general del sistema
+
+## MÓDULOS DEL SISTEMA
+
+### 1. Dashboard (/)
+- Panel principal con KPIs y estadísticas
+- Equipos activos/inactivos
+- Mantenimientos próximos y vencidos
+- Alertas de inventario bajo
+
+### 2. Equipos (/equipos)
+- CRUD completo de equipos
+- Campos: ficha, nombre, marca, modelo, número de serie, placa, categoría, EMPRESA, estado
+- Filtros avanzados por categoría, marca, empresa, estado
+- Búsqueda inteligente con sinónimos
+- Detalle de equipo con historial completo
+
+### 3. Inventario (/inventario)
+- Control de stock de repuestos y materiales
+- Campos: código, nombre, tipo, sistema, categoría de equipo, cantidad, stock mínimo
+- Movimientos de entrada/salida con trazabilidad
+- Alertas de stock bajo
+- Compatibilidad con marcas y modelos
+
+### 4. Control de Mantenimiento (/control-mantenimiento)
+- Vista de mantenimientos programados
+- Horas/KM actuales y restantes para cada plan
+- Estados: A tiempo (verde), Próximo (amarillo), Vencido (rojo), Crítico (rojo oscuro)
+- Registro de mantenimientos realizados
+- Filtros por estado, equipo, tipo
+
+### 5. Planificador Inteligente (/planificador-inteligente)
+- Algoritmo de optimización de rutas
+- Agrupa mantenimientos por proximidad
+- Sugiere kits de mantenimiento
+- Calcula carga de trabajo
+- Exportación de planes
+
+### 6. Planes de Mantenimiento (/planes-mantenimiento)
+- Definición de planes por tipo de mantenimiento
+- Intervalos en horas/km
+- Tareas asociadas a cada plan
+- Asignación a equipos
+
+### 7. Kits de Mantenimiento (/kits)
+- Agrupación de repuestos frecuentes
+- Kits predefinidos por tipo de servicio
+- Control de stock de kits
+
+### 8. Historial (/historial)
+- Registro de todas las acciones del sistema
+- Filtros por fecha, equipo, usuario
+- Exportación de datos
+- Auditoría completa
+
+### 9. Reportes (/reportes)
+- Generación de reportes PDF
+- Informes por equipo, período, tipo
+- Estadísticas de mantenimiento
+- Costos y tendencias
+
+### 10. Asistente IA (/asistente-ia)
+- Chat inteligente con contexto del sistema
+- Respuestas en tablas Markdown
+- Análisis de datos en tiempo real
+- Sugerencias de mantenimiento
+
+### 11. Configuraciones (/configuraciones)
+- Ajustes del sistema
+- Umbrales de alerta
+- Preferencias de notificación
+- Importación/exportación de datos
+
+### 12. Admin (/admin)
+- Gestión de usuarios
+- Asignación de roles
+- Aprobación de reportes de mecánicos
+- Configuración avanzada
+
+### 13. Notificaciones (/notificaciones)
+- Centro de notificaciones
+- Alertas de mantenimiento
+- Mensajes del sistema
+- Tareas pendientes
+
+## FLUJO DE TRABAJO DE MECÁNICOS
+
+1. **Asignación de tarea**: Admin/Supervisor asigna equipo al mecánico
+2. **Inicio de trabajo**: Mecánico marca inicio de trabajo
+3. **Registro fotográfico**: 
+   - Fotos ANTES del trabajo
+   - Fotos de componentes
+   - Fotos DESPUÉS del trabajo
+4. **Documentación**: 
+   - Descripción del trabajo realizado
+   - Repuestos utilizados (descuenta de inventario)
+   - Observaciones
+5. **Envío para revisión**: Mecánico envía reporte
+6. **Aprobación**: Supervisor/Admin revisa y aprueba/rechaza
+
+## ESTRUCTURA DE DATOS
+
+### Equipos (tabla: equipos)
+- id, ficha, nombre, marca, modelo, numero_serie, placa, categoria, activo, motivo_inactividad
+
+### Mantenimientos Programados (tabla: mantenimientos_programados)
+- id, ficha, nombre_equipo, tipo_mantenimiento, horas_km_actuales, horas_km_restante, fecha_ultimo_servicio
+
+### Inventarios (tabla: inventarios)
+- id, nombre, numero_parte, tipo, sistema, categoria_equipo, cantidad, stock_minimo, codigo_identificacion
+
+### Historial de Eventos
+- Actualizaciones de horas/km
+- Mantenimientos realizados
+- Movimientos de inventario
+- Acciones de usuarios
+
+## MARCAS DE EQUIPOS COMUNES
+- Caterpillar (CAT)
+- Komatsu
+- John Deere
+- Volvo
+- Sinotruck
+- Hino
+- Mitsubishi
+
+## TIPOS DE MANTENIMIENTO
+- MP (Mantenimiento Preventivo): 250h, 500h, 1000h, 2000h, etc.
+- Cambio de aceite motor
+- Cambio de filtros (aceite, combustible, aire, hidráulico)
+- Revisión de frenos
+- Engrase general
+- Revisión eléctrica
+- Mantenimiento de transmisión
+
+## COMANDOS ÚTILES PARA USUARIOS
+- "Mostrar equipos activos": Lista todos los equipos en operación
+- "Equipos con mantenimiento vencido": Muestra equipos que requieren atención urgente
+- "Stock bajo de repuestos": Lista inventarios por debajo del mínimo
+- "Historial de [ficha]": Muestra todo el historial de un equipo
+- "Próximos mantenimientos": Lista mantenimientos programados próximos
+
+## UMBRALES Y ALERTAS
+- Mantenimiento a tiempo: > 50 horas/km restantes (verde)
+- Próximo a vencer: 1-50 horas/km restantes (amarillo)
+- Vencido: 0 o menos horas/km (rojo)
+- Crítico: < -100 horas/km (rojo oscuro)
+- Stock bajo: cantidad < stock_minimo (alerta)
+
+## FUNCIONALIDADES MÓVILES
+- Acceso completo desde dispositivos Android
+- Diseño responsive mobile-first
+- Captura de fotos integrada
+- Notificaciones push
+- Modo offline parcial
+- Acceso admin desde móvil para administradores
+
+## NOTAS IMPORTANTES
+- El sistema trabaja en tiempo real con Supabase
+- Los datos de demo se usan cuando no hay conexión
+- Las fichas son identificadores únicos de equipos
+- El historial es inmutable y auditable
+- Los reportes PDF se generan con jsPDF
+`;
 
 const buildSystemPrompt = (contextSummary: string) => `Eres ALITO BOT, el asistente virtual de soporte de la plataforma de gestión de maquinaria de ALITO GROUP SRL. Tu rol es responder SIEMPRE en español con un tono profesional y empático.
+
+=== BASE DE CONOCIMIENTO DEL SISTEMA ===
+${KNOWLEDGE_BASE}
+
+=== INSTRUCCIONES DE RESPUESTA ===
 
 Instrucciones clave:
 - Usa únicamente la información más reciente proporcionada en el contexto si está disponible. Si necesitas un dato que no aparece, indica de forma transparente que no se encuentra en la base actual.
 - Propón pasos concretos y accionables basados en el estado de los equipos, mantenimientos e inventarios.
 - Si detectas riesgos (por ejemplo, equipos con horas/km por debajo del umbral crítico o repuestos con stock bajo) resáltalos y sugiere cómo mitigarlos.
 - Cuando el usuario pida ayuda fuera del ámbito de la flota o sin relación con los datos proporcionados, responde brevemente y redirígelo a la información disponible.
+- Si el usuario pregunta sobre funcionalidades del sistema, módulos, roles o procesos, usa la base de conocimiento anterior para responder con precisión.
+- Si el usuario pregunta cómo hacer algo específico en el sistema, guíalo paso a paso.
 
 IMPORTANTE - Formateo de respuestas con tablas:
 - Cuando el usuario solicite listas o información tabular (por ejemplo: "lista de equipos Caterpillar", "muestra todos los rodillos con más de 1000 horas"), genera las respuestas en formato de tabla Markdown.
@@ -271,20 +526,22 @@ IMPORTANTE - Formateo de respuestas con tablas:
 
 | Nombre | Ficha | Modelo | Horas Actuales |
 |--------|-------|--------|----------------|
-| Excavadora 320 | EX-001 | 320 | 1,250 |
-| Rodillo CB10 | RD-003 | CB10 | 890 |
+| Excavadora 320 | AC-001 | 320 | 1,250 |
+| Rodillo CB10 | AC-015 | CB10 | 890 |
 
 - Las tablas deben incluir las columnas relevantes solicitadas por el usuario.
 - Ordena y filtra los datos según los criterios especificados por el usuario.
 - Si el usuario pide filtros complejos (ej: "equipos que no son Caterpillar y ficha > AC-44"), aplica todos los filtros correctamente.
+- Para equipos VP-XXX (Vehículos Personales), usa el mismo formato pero identifica la categoría.
 
 Ejemplos de consultas que deben generar tablas:
 - "lista de nombre, ficha, modelo de todos los equipos Caterpillar"
 - "muéstrame los equipos con mantenimiento vencido"
 - "dame una tabla de repuestos con stock bajo"
 - "equipos activos con más de 2000 horas"
+- "vehículos personales registrados"
 
-Contexto actualizado del negocio:
+=== DATOS OPERATIVOS EN TIEMPO REAL ===
 ${contextSummary}
 
 Siempre que entregues listados, utiliza tablas Markdown o viñetas claras. Refiérete a los equipos por su nombre comercial y ficha cuando sea posible.`;

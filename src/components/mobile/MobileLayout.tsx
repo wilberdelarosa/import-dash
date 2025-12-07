@@ -63,13 +63,42 @@ interface MobileLayoutProps {
   headerActions?: ReactNode;
 }
 
-// NAVEGACIÓN BOTTOM BAR - 5 ítems principales más usados
+// NAVEGACIÓN BOTTOM BAR - 5 ítems principales más usados (para admin/user)
 const bottomNavItems = [
   { path: '/', icon: LayoutDashboard, label: 'Inicio' },
   { path: '/equipos', icon: Truck, label: 'Equipos' },
   { path: '/mantenimiento', icon: Wrench, label: 'Mant.' },
   { path: '/inventario', icon: Package, label: 'Inventario' },
   { path: '/asistente', icon: Sparkles, label: 'Asistente' },
+];
+
+// NAVEGACIÓN BOTTOM BAR PARA MECÁNICO - Flujo específico
+const mechanicBottomNavItems = [
+  { path: '/mechanic', icon: LayoutDashboard, label: 'Inicio' },
+  { path: '/mechanic/pendientes', icon: AlertTriangle, label: 'Pendientes' },
+  { path: '/mechanic/reportar', icon: ClipboardList, label: 'Reportar' },
+  { path: '/mechanic/historial', icon: History, label: 'Historial' },
+  { path: '/inventario', icon: Package, label: 'Partes' },
+];
+
+// MENÚ LATERAL PARA MECÁNICO
+const mechanicSideMenuSections = [
+  {
+    title: 'Mi Trabajo',
+    items: [
+      { path: '/mechanic', icon: LayoutDashboard, label: 'Mi Dashboard' },
+      { path: '/mechanic/pendientes', icon: AlertTriangle, label: 'Equipos Pendientes' },
+      { path: '/mechanic/reportar', icon: ClipboardList, label: 'Reportar Trabajo' },
+      { path: '/mechanic/historial', icon: History, label: 'Mi Historial' },
+    ],
+  },
+  {
+    title: 'Consulta',
+    items: [
+      { path: '/equipos', icon: Truck, label: 'Ver Equipos' },
+      { path: '/inventario', icon: Package, label: 'Partes/Inventario' },
+    ],
+  },
 ];
 
 // MENÚ LATERAL - Todos los módulos organizados
@@ -110,6 +139,16 @@ const sideMenuSections = [
   },
 ];
 
+// SECCIÓN ADMIN - Solo visible para administradores
+const adminMenuSection = {
+  title: 'Administración',
+  items: [
+    { path: '/admin', icon: ShieldCheck, label: 'Panel Admin' },
+    { path: '/admin/usuarios', icon: User, label: 'Gestión Usuarios' },
+    { path: '/admin/submissions', icon: ClipboardList, label: 'Aprobar Reportes' },
+  ],
+};
+
 export function MobileLayout({
   children,
   title,
@@ -136,12 +175,34 @@ export function MobileLayout({
   // Verificar si la ruta actual coincide (incluyendo rutas parciales como /planificador*)
   const isRouteActive = (path: string) => {
     if (path === '/') return location.pathname === '/';
+    if (path === '/mechanic') return location.pathname === '/mechanic';
     return location.pathname.startsWith(path);
   };
 
   const isAdmin = currentUserRole === 'admin';
+  const isMechanic = currentUserRole === 'mechanic';
+  const isSupervisor = currentUserRole === 'supervisor';
   const email = user?.email || 'Usuario';
   const initials = email.substring(0, 2).toUpperCase();
+
+  // Obtener etiqueta y estilo del rol
+  const getRoleBadge = () => {
+    if (isAdmin) return { label: 'Admin', variant: 'default' as const, icon: ShieldCheck };
+    if (isSupervisor) return { label: 'Supervisor', variant: 'secondary' as const, icon: ShieldCheck };
+    if (isMechanic) return { label: 'Mecánico', variant: 'outline' as const, icon: Wrench };
+    return { label: 'Usuario', variant: 'secondary' as const, icon: User };
+  };
+  const roleBadge = getRoleBadge();
+
+  // Seleccionar navegación según el rol
+  const activeBottomNavItems = isMechanic ? mechanicBottomNavItems : bottomNavItems;
+  
+  // Agregar sección admin al menú si el usuario es admin
+  const activeSideMenuSections = isMechanic 
+    ? mechanicSideMenuSections 
+    : isAdmin 
+      ? [...sideMenuSections, adminMenuSection]
+      : sideMenuSections;
 
   const getIconoNivel = (nivel: string) => {
     switch (nivel) {
@@ -234,11 +295,11 @@ export function MobileLayout({
                     )}>
                       <Avatar className={cn(
                         "h-10 w-10 border-2",
-                        isAdmin ? "border-primary/40" : "border-border"
+                        isAdmin ? "border-primary/40" : isSupervisor ? "border-blue-400" : "border-border"
                       )}>
                         <AvatarFallback className={cn(
                           "text-sm font-bold",
-                          isAdmin ? "bg-primary/20 text-primary" : "bg-muted text-muted-foreground"
+                          isAdmin ? "bg-primary/20 text-primary" : isSupervisor ? "bg-blue-100 text-blue-700 dark:bg-blue-900 dark:text-blue-300" : "bg-muted text-muted-foreground"
                         )}>
                           {initials}
                         </AvatarFallback>
@@ -248,14 +309,16 @@ export function MobileLayout({
                           {email}
                         </span>
                         <Badge 
-                          variant={isAdmin ? "default" : "secondary"} 
+                          variant={roleBadge.variant} 
                           className={cn(
                             "w-fit gap-1 text-[10px] px-1.5 py-0 mt-1",
-                            isAdmin ? "bg-primary/90" : ""
+                            isAdmin && "bg-primary/90",
+                            isSupervisor && "bg-blue-600 text-white",
+                            isMechanic && "bg-amber-600 text-white"
                           )}
                         >
-                          {isAdmin ? <ShieldCheck className="h-2.5 w-2.5" /> : <User className="h-2.5 w-2.5" />}
-                          {isAdmin ? 'Admin' : 'Usuario'}
+                          <roleBadge.icon className="h-2.5 w-2.5" />
+                          {roleBadge.label}
                         </Badge>
                       </div>
                       <ThemeToggle />
@@ -376,7 +439,7 @@ export function MobileLayout({
                   {/* Menú scrollable */}
                   <ScrollArea className="flex-1">
                     <div className="px-4 py-4 space-y-6">
-                      {sideMenuSections.map((section) => (
+                      {activeSideMenuSections.map((section) => (
                         <div key={section.title}>
                           <h3 className="px-3 mb-2 text-xs font-semibold text-muted-foreground uppercase tracking-wider">
                             {section.title}
@@ -470,7 +533,7 @@ export function MobileLayout({
               "pb-safe"
             )}
           >
-            {bottomNavItems.map(({ path, icon: Icon, label }) => {
+            {activeBottomNavItems.map(({ path, icon: Icon, label }) => {
               const isActive = isRouteActive(path);
 
               return (

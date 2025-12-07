@@ -2,7 +2,7 @@
  * Formulario de Reporte de Trabajo - Mecánico
  * Mobile-first design para pantallas pequeñas
  */
-import { useState, useEffect, useMemo } from 'react';
+import { useState, useEffect, useMemo, useRef } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { MobileLayout } from '@/components/mobile/MobileLayout';
 import { MobileCard } from '@/components/mobile/MobileCard';
@@ -20,6 +20,7 @@ import {
 } from '@/components/ui/select';
 import { useSupabaseDataContext } from '@/context/SupabaseDataContext';
 import { useMechanicSubmissions, PartUsada } from '@/hooks/useMechanicSubmissions';
+import { useSubmissionAttachments } from '@/hooks/useSubmissionAttachments';
 import { useToast } from '@/hooks/use-toast';
 import {
   Truck,
@@ -31,6 +32,9 @@ import {
   X,
   Send,
   AlertCircle,
+  Camera,
+  Image,
+  Loader2,
 } from 'lucide-react';
 import { format } from 'date-fns';
 import {
@@ -39,6 +43,12 @@ import {
   SheetHeader,
   SheetTitle,
 } from '@/components/ui/sheet';
+import { cn } from '@/lib/utils';
+
+interface PhotoPreview {
+  file: File;
+  preview: string;
+}
 
 export function MechanicSubmissionForm() {
   const navigate = useNavigate();
@@ -49,6 +59,8 @@ export function MechanicSubmissionForm() {
   const mantenimientos = data.mantenimientosProgramados;
   const inventarios = data.inventarios;
   const { createSubmission } = useMechanicSubmissions();
+  const { uploadAttachments, uploading: uploadingPhotos } = useSubmissionAttachments();
+  const photoInputRef = useRef<HTMLInputElement>(null);
 
   // Estado del formulario
   const [selectedEquipoId, setSelectedEquipoId] = useState<number | null>(null);
@@ -60,6 +72,10 @@ export function MechanicSubmissionForm() {
   const [partesUsadas, setPartesUsadas] = useState<PartUsada[]>([]);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [showPartsSheet, setShowPartsSheet] = useState(false);
+  
+  // Estado de fotos
+  const [photos, setPhotos] = useState<PhotoPreview[]>([]);
+  const MAX_PHOTOS = 5;
 
   // Parte temporal para agregar
   const [tempPartNombre, setTempPartNombre] = useState('');
@@ -144,6 +160,52 @@ export function MechanicSubmissionForm() {
     setShowPartsSheet(false);
   };
 
+  // Funciones para manejo de fotos
+  const handlePhotoSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const files = e.target.files;
+    if (!files) return;
+
+    const remainingSlots = MAX_PHOTOS - photos.length;
+    const newPhotos: PhotoPreview[] = [];
+
+    for (let i = 0; i < Math.min(files.length, remainingSlots); i++) {
+      const file = files[i];
+      if (!file.type.startsWith('image/')) continue;
+      if (file.size > 10 * 1024 * 1024) {
+        toast({ title: 'Error', description: `${file.name} excede 10MB`, variant: 'destructive' });
+        continue;
+      }
+      newPhotos.push({
+        file,
+        preview: URL.createObjectURL(file),
+      });
+    }
+
+    if (newPhotos.length > 0) {
+      setPhotos(prev => [...prev, ...newPhotos]);
+    }
+    e.target.value = '';
+  };
+
+  const handleRemovePhoto = (index: number) => {
+    setPhotos(prev => {
+      URL.revokeObjectURL(prev[index].preview);
+      return prev.filter((_, i) => i !== index);
+    });
+  };
+
+  const openCamera = () => {
+    if (photoInputRef.current) {
+      photoInputRef.current.setAttribute('capture', 'environment');
+      photoInputRef.current.click();
+      setTimeout(() => photoInputRef.current?.removeAttribute('capture'), 100);
+    }
+  };
+
+  const openGallery = () => {
+    photoInputRef.current?.click();
+  };
+
   const handleSubmit = async () => {
     // Validaciones
     if (!selectedEquipoId) {
@@ -161,6 +223,7 @@ export function MechanicSubmissionForm() {
 
     setIsSubmitting(true);
     try {
+      // 1. Crear el submission
       const submissionId = await createSubmission({
         equipo_id: selectedEquipoId,
         fecha_mantenimiento: fechaMantenimiento,
@@ -172,6 +235,15 @@ export function MechanicSubmissionForm() {
       });
 
       if (submissionId) {
+        // 2. Subir fotos si hay
+        if (photos.length > 0) {
+          const filesToUpload = photos.map(p => p.file);
+          await uploadAttachments(filesToUpload, submissionId);
+        }
+        
+        // Limpiar previews
+        photos.forEach(p => URL.revokeObjectURL(p.preview));
+        
         navigate('/mechanic/historial');
       }
     } finally {
@@ -328,6 +400,84 @@ export function MechanicSubmissionForm() {
           )}
         </MobileCard>
 
+        {/* Fotos del trabajo */}
+        <MobileCard className="p-3">
+          <div className="flex items-center justify-between mb-2">
+            <Label className="text-xs flex items-center gap-1.5">
+              <Camera className="h-3.5 w-3.5" />
+              Fotos del trabajo (opcional)
+            </Label>
+            <Badge variant="secondary" className="text-[10px]">
+              {photos.length}/{MAX_PHOTOS}
+            </Badge>
+          </div>
+
+          {/* Input oculto para seleccionar fotos */}
+          <input
+            ref={photoInputRef}
+            type="file"
+            accept="image/*"
+            multiple
+            onChange={handlePhotoSelect}
+            className="hidden"
+          />
+
+          {/* Botones de cámara y galería */}
+          {photos.length < MAX_PHOTOS && (
+            <div className="flex gap-2 mb-3">
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                onClick={openCamera}
+                className="flex-1 h-9 text-xs gap-1.5"
+              >
+                <Camera className="h-3.5 w-3.5" />
+                Cámara
+              </Button>
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                onClick={openGallery}
+                className="flex-1 h-9 text-xs gap-1.5"
+              >
+                <Image className="h-3.5 w-3.5" />
+                Galería
+              </Button>
+            </div>
+          )}
+
+          {/* Grid de previews */}
+          {photos.length === 0 ? (
+            <p className="text-xs text-muted-foreground text-center py-2">
+              Añade fotos del trabajo realizado
+            </p>
+          ) : (
+            <div className="grid grid-cols-3 gap-1.5">
+              {photos.map((photo, index) => (
+                <div
+                  key={index}
+                  className="relative aspect-square rounded-lg overflow-hidden bg-muted"
+                >
+                  <img
+                    src={photo.preview}
+                    alt={`Foto ${index + 1}`}
+                    className="w-full h-full object-cover"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => handleRemovePhoto(index)}
+                    className="absolute top-1 right-1 p-1 rounded-full bg-destructive text-destructive-foreground shadow-sm"
+                  >
+                    <X className="h-3 w-3" />
+                  </button>
+                </div>
+              ))}
+            </div>
+          )}
+        </MobileCard>
+
         {/* Observaciones */}
         <div className="space-y-1.5">
           <Label className="text-xs">Observaciones adicionales</Label>
@@ -345,10 +495,19 @@ export function MechanicSubmissionForm() {
         <Button
           className="w-full h-11 text-sm gap-2"
           onClick={handleSubmit}
-          disabled={isSubmitting}
+          disabled={isSubmitting || uploadingPhotos}
         >
-          <Send className="h-4 w-4" />
-          {isSubmitting ? 'Enviando...' : 'Enviar para Aprobación'}
+          {isSubmitting || uploadingPhotos ? (
+            <>
+              <Loader2 className="h-4 w-4 animate-spin" />
+              {uploadingPhotos ? 'Subiendo fotos...' : 'Enviando...'}
+            </>
+          ) : (
+            <>
+              <Send className="h-4 w-4" />
+              Enviar para Aprobación
+            </>
+          )}
         </Button>
         <p className="text-[10px] text-muted-foreground text-center mt-1.5">
           <AlertCircle className="h-3 w-3 inline mr-1" />

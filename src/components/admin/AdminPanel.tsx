@@ -4,6 +4,7 @@
 import { useState, useEffect } from 'react';
 import { useUserRoles } from '@/hooks/useUserRoles';
 import { UserManagement } from './UserManagement';
+import { AdminSubmissions } from './AdminSubmissions';
 import { RoleGuard } from './RoleGuard';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
@@ -15,7 +16,8 @@ import { supabase } from '@/integrations/supabase/client';
 import { 
   Users, Settings, Activity, Shield, ShieldCheck, 
   Database, Bell, Lock, UserCog, RefreshCw, CheckCircle2,
-  AlertTriangle, Server, Key, FileText, BarChart3, Eye
+  AlertTriangle, Server, Key, FileText, BarChart3, Eye,
+  Wrench, ClipboardList
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { MODULES, DEFAULT_ROLE_PERMISSIONS } from '@/lib/permissions';
@@ -23,36 +25,43 @@ import { MODULES, DEFAULT_ROLE_PERMISSIONS } from '@/lib/permissions';
 interface SystemStats {
   totalUsers: number;
   adminUsers: number;
+  mechanicUsers: number;
+  supervisorUsers: number;
   regularUsers: number;
   totalEquipos: number;
   totalMantenimientos: number;
   totalInventario: number;
+  pendingSubmissions: number;
 }
 
 export function AdminPanel() {
   const { currentUserRole, isAdmin, loading } = useUserRoles();
-  const [activeTab, setActiveTab] = useState('usuarios');
+  const [activeTab, setActiveTab] = useState('submissions');
   const [stats, setStats] = useState<SystemStats | null>(null);
   const [loadingStats, setLoadingStats] = useState(false);
 
   const fetchStats = async () => {
     setLoadingStats(true);
     try {
-      const [usersRes, equiposRes, mantRes, invRes] = await Promise.all([
+      const [usersRes, equiposRes, mantRes, invRes, submissionsRes] = await Promise.all([
         supabase.from('user_roles').select('role'),
         supabase.from('equipos').select('id', { count: 'exact', head: true }),
         supabase.from('mantenimientos_programados').select('id', { count: 'exact', head: true }),
         supabase.from('inventarios').select('id', { count: 'exact', head: true }),
+        supabase.from('maintenance_submissions').select('id', { count: 'exact', head: true }).eq('status', 'pending'),
       ]);
 
       const roles = usersRes.data || [];
       setStats({
         totalUsers: roles.length,
         adminUsers: roles.filter(r => r.role === 'admin').length,
+        mechanicUsers: roles.filter(r => r.role === 'mechanic').length,
+        supervisorUsers: roles.filter(r => r.role === 'supervisor').length,
         regularUsers: roles.filter(r => r.role === 'user').length,
         totalEquipos: equiposRes.count || 0,
         totalMantenimientos: mantRes.count || 0,
         totalInventario: invRes.count || 0,
+        pendingSubmissions: submissionsRes.count || 0,
       });
     } catch (error) {
       console.error('Error fetching stats:', error);
@@ -89,7 +98,7 @@ export function AdminPanel() {
 
         {/* Stats Cards */}
         {stats && (
-          <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+          <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-5">
             <Card className="border-l-4 border-l-primary">
               <CardHeader className="pb-2">
                 <CardDescription className="flex items-center gap-2">
@@ -99,7 +108,22 @@ export function AdminPanel() {
                 <CardTitle className="text-3xl">{stats.totalUsers}</CardTitle>
               </CardHeader>
               <CardContent className="text-xs text-muted-foreground">
-                {stats.adminUsers} admins, {stats.regularUsers} usuarios
+                {stats.adminUsers} admin, {stats.mechanicUsers} mecánicos, {stats.supervisorUsers} supervisores
+              </CardContent>
+            </Card>
+            <Card className={cn(
+              "border-l-4",
+              stats.pendingSubmissions > 0 ? "border-l-amber-500 bg-amber-500/5" : "border-l-emerald-500"
+            )}>
+              <CardHeader className="pb-2">
+                <CardDescription className="flex items-center gap-2">
+                  <ClipboardList className="h-4 w-4" />
+                  Reportes Pendientes
+                </CardDescription>
+                <CardTitle className="text-3xl">{stats.pendingSubmissions}</CardTitle>
+              </CardHeader>
+              <CardContent className="text-xs text-muted-foreground">
+                {stats.pendingSubmissions > 0 ? 'Requieren revisión' : 'Todo al día'}
               </CardContent>
             </Card>
             <Card className="border-l-4 border-l-emerald-500">
@@ -143,7 +167,16 @@ export function AdminPanel() {
 
         {/* Tabs de administración */}
         <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-4">
-          <TabsList className="grid w-full grid-cols-4 lg:w-auto lg:inline-grid">
+          <TabsList className="grid w-full grid-cols-5 lg:w-auto lg:inline-grid">
+            <TabsTrigger value="submissions" className="gap-2 relative">
+              <ClipboardList className="h-4 w-4" />
+              <span className="hidden sm:inline">Reportes</span>
+              {stats && stats.pendingSubmissions > 0 && (
+                <Badge variant="destructive" className="absolute -top-1 -right-1 h-5 w-5 p-0 flex items-center justify-center text-[10px]">
+                  {stats.pendingSubmissions}
+                </Badge>
+              )}
+            </TabsTrigger>
             <TabsTrigger value="usuarios" className="gap-2">
               <Users className="h-4 w-4" />
               <span className="hidden sm:inline">Usuarios</span>
@@ -161,6 +194,10 @@ export function AdminPanel() {
               <span className="hidden sm:inline">Sistema</span>
             </TabsTrigger>
           </TabsList>
+
+          <TabsContent value="submissions" className="space-y-4">
+            <AdminSubmissions />
+          </TabsContent>
 
           <TabsContent value="usuarios" className="space-y-4">
             <UserManagement />
@@ -191,6 +228,18 @@ export function AdminPanel() {
                         </th>
                         <th className="text-center p-2 font-semibold">
                           <div className="flex items-center justify-center gap-1">
+                            <Eye className="h-4 w-4 text-amber-500" />
+                            Supervisor
+                          </div>
+                        </th>
+                        <th className="text-center p-2 font-semibold">
+                          <div className="flex items-center justify-center gap-1">
+                            <Wrench className="h-4 w-4 text-green-500" />
+                            Mecánico
+                          </div>
+                        </th>
+                        <th className="text-center p-2 font-semibold">
+                          <div className="flex items-center justify-center gap-1">
                             <UserCog className="h-4 w-4 text-blue-500" />
                             Usuario
                           </div>
@@ -200,7 +249,23 @@ export function AdminPanel() {
                     <tbody>
                       {MODULES.map(module => {
                         const adminPerms = DEFAULT_ROLE_PERMISSIONS.admin[module.id] || [];
+                        const supervisorPerms = DEFAULT_ROLE_PERMISSIONS.supervisor[module.id] || [];
+                        const mechanicPerms = DEFAULT_ROLE_PERMISSIONS.mechanic[module.id] || [];
                         const userPerms = DEFAULT_ROLE_PERMISSIONS.user[module.id] || [];
+                        
+                        const renderPerms = (perms: string[]) => {
+                          if (perms.length === 0) {
+                            return <Badge variant="secondary" className="text-[10px]">Sin acceso</Badge>;
+                          }
+                          return (
+                            <div className="flex flex-wrap justify-center gap-0.5">
+                              {perms.includes('read') && <Badge variant="outline" className="text-[10px] bg-emerald-500/10 text-emerald-600 border-emerald-500/30">Ver</Badge>}
+                              {perms.includes('write') && <Badge variant="outline" className="text-[10px] bg-blue-500/10 text-blue-600 border-blue-500/30">Editar</Badge>}
+                              {perms.includes('delete') && <Badge variant="outline" className="text-[10px] bg-red-500/10 text-red-600 border-red-500/30">Eliminar</Badge>}
+                              {perms.includes('admin') && <Badge variant="outline" className="text-[10px] bg-primary/10 text-primary border-primary/30">Admin</Badge>}
+                            </div>
+                          );
+                        };
                         
                         return (
                           <tr key={module.id} className="border-b hover:bg-muted/50">
@@ -210,27 +275,10 @@ export function AdminPanel() {
                               </div>
                               <span className="text-xs text-muted-foreground">{module.description}</span>
                             </td>
-                            <td className="p-2 text-center">
-                              <div className="flex flex-wrap justify-center gap-1">
-                                {adminPerms.includes('read') && <Badge variant="outline" className="text-xs bg-emerald-500/10 text-emerald-600 border-emerald-500/30">Ver</Badge>}
-                                {adminPerms.includes('write') && <Badge variant="outline" className="text-xs bg-blue-500/10 text-blue-600 border-blue-500/30">Editar</Badge>}
-                                {adminPerms.includes('delete') && <Badge variant="outline" className="text-xs bg-red-500/10 text-red-600 border-red-500/30">Eliminar</Badge>}
-                                {adminPerms.includes('admin') && <Badge variant="outline" className="text-xs bg-primary/10 text-primary border-primary/30">Admin</Badge>}
-                              </div>
-                            </td>
-                            <td className="p-2 text-center">
-                              <div className="flex flex-wrap justify-center gap-1">
-                                {userPerms.length === 0 ? (
-                                  <Badge variant="secondary" className="text-xs">Sin acceso</Badge>
-                                ) : (
-                                  <>
-                                    {userPerms.includes('read') && <Badge variant="outline" className="text-xs bg-emerald-500/10 text-emerald-600 border-emerald-500/30">Ver</Badge>}
-                                    {userPerms.includes('write') && <Badge variant="outline" className="text-xs bg-blue-500/10 text-blue-600 border-blue-500/30">Editar</Badge>}
-                                    {userPerms.includes('delete') && <Badge variant="outline" className="text-xs bg-red-500/10 text-red-600 border-red-500/30">Eliminar</Badge>}
-                                  </>
-                                )}
-                              </div>
-                            </td>
+                            <td className="p-2 text-center">{renderPerms(adminPerms)}</td>
+                            <td className="p-2 text-center">{renderPerms(supervisorPerms)}</td>
+                            <td className="p-2 text-center">{renderPerms(mechanicPerms)}</td>
+                            <td className="p-2 text-center">{renderPerms(userPerms)}</td>
                           </tr>
                         );
                       })}
@@ -240,10 +288,12 @@ export function AdminPanel() {
 
                 <Alert className="mt-4">
                   <Eye className="h-4 w-4" />
-                  <AlertTitle>Nota sobre permisos</AlertTitle>
-                  <AlertDescription>
-                    Los usuarios con rol "Usuario" solo pueden ver información. No pueden crear, editar ni eliminar registros.
-                    Solo los administradores tienen control total del sistema.
+                  <AlertTitle>Roles del Sistema</AlertTitle>
+                  <AlertDescription className="space-y-1">
+                    <p><strong>Admin:</strong> Control total del sistema, aprueba reportes de mecánicos.</p>
+                    <p><strong>Supervisor:</strong> Solo lectura en todos los módulos principales.</p>
+                    <p><strong>Mecánico:</strong> Puede reportar mantenimientos y ver sus propios reportes.</p>
+                    <p><strong>Usuario:</strong> Acceso básico de consulta.</p>
                   </AlertDescription>
                 </Alert>
               </CardContent>
@@ -317,9 +367,35 @@ export function AdminPanel() {
                       <ul className="text-sm text-muted-foreground space-y-1 ml-8">
                         <li>• Acceso completo al sistema</li>
                         <li>• Gestión de usuarios y roles</li>
+                        <li>• Aprobar/rechazar reportes de mecánicos</li>
                         <li>• Crear, editar y eliminar registros</li>
                         <li>• Configuración del sistema</li>
-                        <li>• Importación/exportación de datos</li>
+                      </ul>
+                    </div>
+                    <div className="p-4 rounded-lg border bg-amber-500/5 border-amber-500/20">
+                      <div className="flex items-center gap-3 mb-2">
+                        <Eye className="h-5 w-5 text-amber-600" />
+                        <span className="font-semibold">Supervisor</span>
+                      </div>
+                      <ul className="text-sm text-muted-foreground space-y-1 ml-8">
+                        <li>• Solo lectura en todos los módulos</li>
+                        <li>• Ver dashboard y estadísticas</li>
+                        <li>• Consultar equipos y mantenimientos</li>
+                        <li>• Ver planes y estado del sistema</li>
+                        <li>• Sin acceso a administración</li>
+                      </ul>
+                    </div>
+                    <div className="p-4 rounded-lg border bg-green-500/5 border-green-500/20">
+                      <div className="flex items-center gap-3 mb-2">
+                        <Wrench className="h-5 w-5 text-green-600" />
+                        <span className="font-semibold">Mecánico</span>
+                      </div>
+                      <ul className="text-sm text-muted-foreground space-y-1 ml-8">
+                        <li>• Ver equipos pendientes de mantenimiento</li>
+                        <li>• Reportar trabajos realizados</li>
+                        <li>• Ver historial de sus reportes</li>
+                        <li>• Registrar partes utilizadas</li>
+                        <li>• Adjuntar fotos de evidencia</li>
                       </ul>
                     </div>
                     <div className="p-4 rounded-lg border bg-blue-500/5 border-blue-500/20">
@@ -328,7 +404,7 @@ export function AdminPanel() {
                         <span className="font-semibold">Usuario</span>
                       </div>
                       <ul className="text-sm text-muted-foreground space-y-1 ml-8">
-                        <li>• Solo lectura en todos los módulos</li>
+                        <li>• Solo lectura en módulos básicos</li>
                         <li>• Consultar equipos e inventario</li>
                         <li>• Ver mantenimientos y planes</li>
                         <li>• Usar asistente IA</li>

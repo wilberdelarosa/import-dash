@@ -20,16 +20,18 @@ export const useSMSService = () => {
     setError(null);
 
     try {
-      // En desarrollo, simular el envío
-      if (import.meta.env.DEV) {
-        console.log(`📱 SMS enviado a ${options.phoneNumber}: ${options.message}`);
-        return {
-          success: true,
-          messageId: `dev-${Date.now()}`,
-        };
-      }
+      // BYPASS TEMPORAL: Siempre simular el envío hasta implementar SMS real
+      // TODO: Remover este bypass cuando se configure Twilio/SMS en producción
+      console.log(`📱 [SIMULADO] SMS enviado a ${options.phoneNumber}: ${options.message}`);
+      console.log(`   💡 Código de verificación hardcodeado: 2510`);
+      return {
+        success: true,
+        messageId: `simulated-${Date.now()}`,
+      };
 
+      // CÓDIGO ORIGINAL (desactivado temporalmente):
       // En producción, usar Supabase Function para enviar con Twilio
+      /*
       const response = await fetch(
         `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/send-sms`,
         {
@@ -49,6 +51,7 @@ export const useSMSService = () => {
 
       const data = await response.json();
       return { success: true, messageId: data.messageId };
+      */
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : 'Error al enviar SMS';
       setError(errorMessage);

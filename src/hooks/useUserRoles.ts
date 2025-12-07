@@ -53,6 +53,61 @@ export function useUserRoles(): UseUserRolesReturn {
         return;
       }
 
+      // Developer/local override: allow simulating roles for specific emails
+      // MECHANIC: wilber.alitoeirl@gmail.com
+      // SUPERVISOR: warly.wey@gmail.com
+      // Methods to enable:
+      //  - localStorage.setItem('simulateRoleMechanic','1') or localStorage.setItem('simulateRoleSupervisor','1')
+      //  - Add query param ?simulateMechanic=1 or ?simulateSupervisor=1 to the URL
+      //  - Or emails are auto-detected and assigned their test roles
+      try {
+        const mechanicEmail = 'wilber.alitoeirl@gmail.com';
+        const supervisorEmail = 'warly.wey@gmail.com';
+        
+        let simulateMechanic = false;
+        let simulateSupervisor = false;
+        
+        if (typeof window !== 'undefined') {
+          try {
+            const ls = window.localStorage;
+            simulateMechanic = ls?.getItem('simulateRoleMechanic') === '1' || ls?.getItem('simulatRoleMechanic') === '1';
+            simulateSupervisor = ls?.getItem('simulateRoleSupervisor') === '1' || ls?.getItem('simulatRoleSupervisor') === '1';
+          } catch (_) {
+            // ignore localStorage read errors
+          }
+
+          try {
+            const params = new URLSearchParams(window.location.search);
+            simulateMechanic = simulateMechanic || params.get('simulateMechanic') === '1';
+            simulateSupervisor = simulateSupervisor || params.get('simulateSupervisor') === '1';
+          } catch (_) {
+            // ignore
+          }
+        }
+
+        // Auto-assign roles based on email (for testing)
+        if (user.email === mechanicEmail) {
+          simulateMechanic = true;
+        }
+        if (user.email === supervisorEmail) {
+          simulateSupervisor = true;
+        }
+
+        if (simulateSupervisor && user.email === supervisorEmail) {
+          setCurrentUserRole('supervisor');
+          setLoading(false);
+          return;
+        }
+        
+        if (simulateMechanic && user.email === mechanicEmail) {
+          setCurrentUserRole('mechanic');
+          setLoading(false);
+          return;
+        }
+      } catch (e) {
+        // ignore any error in override detection
+      }
+
       try {
         const { data, error: roleError } = await supabase
           .from('user_roles')

@@ -1,6 +1,8 @@
 import { FormEvent, useEffect, useMemo, useState, useRef } from 'react';
 import { Layout } from '@/components/Layout';
 import { useSupabaseDataContext } from '@/context/SupabaseDataContext';
+import { useUserRoles } from '@/hooks/useUserRoles';
+import { ReadOnlyBanner } from '@/components/ui/ReadOnlyBanner';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Input } from '@/components/ui/input';
@@ -131,6 +133,10 @@ export default function ControlMantenimientoProfesional() {
     registrarMantenimientoRealizado,
   } = useSupabaseDataContext();
   const { toast } = useToast();
+  const { isSupervisor, isAdmin } = useUserRoles();
+  
+  // Supervisor es solo lectura - no puede editar
+  const isReadOnly = isSupervisor && !isAdmin;
 
   // ============================================
   // TODOS LOS HOOKS DEBEN IR ANTES DE CUALQUIER RETURN CONDICIONAL
@@ -829,6 +835,9 @@ export default function ControlMantenimientoProfesional() {
 
   return (
     <Layout title="Control de Mantenimiento">
+      {/* Banner de solo lectura para supervisores */}
+      {isReadOnly && <ReadOnlyBanner className="mb-4" />}
+      
       {/* Tabs para Mantenimiento y Planificador */}
       <Tabs value={tabActivo} onValueChange={(v) => setTabActivo(v as 'mantenimiento' | 'planificador')} className="space-y-4">
         <TabsList className="grid w-full max-w-md grid-cols-2">
@@ -1062,9 +1071,9 @@ export default function ControlMantenimientoProfesional() {
                               />
                             </div>
 
-                            <Button type="submit" className="w-full h-9 text-sm" disabled={updating}>
+                            <Button type="submit" className="w-full h-9 text-sm" disabled={updating || isReadOnly}>
                               {updating ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : null}
-                              Guardar lectura
+                              {isReadOnly ? 'Solo lectura' : 'Guardar lectura'}
                             </Button>
                           </form>
                         </TabsContent>
@@ -1140,9 +1149,9 @@ export default function ControlMantenimientoProfesional() {
                               />
                             </div>
 
-                            <Button type="submit" className="w-full h-9 text-sm" disabled={registering}>
+                            <Button type="submit" className="w-full h-9 text-sm" disabled={registering || isReadOnly}>
                               {registering ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : <Wrench className="h-4 w-4 mr-2" />}
-                              Registrar mantenimiento
+                              {isReadOnly ? 'Solo lectura' : 'Registrar mantenimiento'}
                             </Button>
                           </form>
                         </TabsContent>
@@ -1403,13 +1412,15 @@ export default function ControlMantenimientoProfesional() {
                               <Button
                                 type="submit"
                                 className="w-full gap-2"
-                                disabled={updatingRapido}
+                                disabled={updatingRapido || isReadOnly}
                               >
                                 {updatingRapido ? (
                                   <>
                                     <Loader2 className="h-4 w-4 animate-spin" />
                                     Actualizando...
                                   </>
+                                ) : isReadOnly ? (
+                                  'Solo lectura'
                                 ) : (
                                   <>
                                     <CalendarCheck className="h-4 w-4" />

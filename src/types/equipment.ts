@@ -1,3 +1,8 @@
+// Empresas disponibles para asignar equipos
+export type EmpresaEquipo = 'ALITO GROUP SRL' | 'ALITO EIRL';
+
+export const EMPRESAS_DISPONIBLES: EmpresaEquipo[] = ['ALITO GROUP SRL', 'ALITO EIRL'];
+
 export interface Equipo {
   id: number;
   ficha: string;
@@ -7,6 +12,7 @@ export interface Equipo {
   numeroSerie: string;
   placa: string;
   categoria: string;
+  empresa: EmpresaEquipo;
   activo: boolean;
   motivoInactividad: string | null;
 }
