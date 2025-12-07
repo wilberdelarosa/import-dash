@@ -13,6 +13,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
+import { ScrollArea } from '@/components/ui/scroll-area';
 import {
   Truck,
   Wrench,
@@ -26,6 +27,11 @@ import {
   Sparkles,
   ListChecks,
   X,
+  Gauge,
+  Building2,
+  AlertTriangle,
+  CheckCircle2,
+  Timer,
 } from 'lucide-react';
 import { format, formatDistanceToNow } from 'date-fns';
 import { es } from 'date-fns/locale';
@@ -35,6 +41,8 @@ import { useCaterpillarData } from '@/hooks/useCaterpillarData';
 import { useSugerenciaMantenimiento } from '@/hooks/useSugerenciaMantenimiento';
 import { usePlanes } from '@/hooks/usePlanes';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { isEquipoVendido } from '@/types/equipment';
+import { cn } from '@/lib/utils';
 
 interface Props {
   ficha: string | null;
@@ -70,16 +78,16 @@ export function EquipoDetalleUnificado({ ficha, open, onOpenChange }: Props) {
     return [...mantenimientos].sort((a, b) => a.horasKmRestante - b.horasKmRestante)[0];
   }, [mantenimientos]);
 
-  // Obtener último mantenimiento realizado
+  // Obtener último mantenimiento realizado (el primero del array ya ordenado desc)
   const ultimoMantenimientoRealizado = useMemo(() => {
     if (mantenimientosRealizadosData.length === 0) return null;
-    return mantenimientosRealizadosData[mantenimientosRealizadosData.length - 1];
+    return mantenimientosRealizadosData[0]; // Ya está ordenado de más reciente a más antiguo
   }, [mantenimientosRealizadosData]);
 
-  // Obtener última lectura de horas/km
+  // Obtener última lectura de horas/km (el primero del array ya ordenado desc)
   const ultimaLectura = useMemo(() => {
     if (actualizacionesHorasKmData.length === 0) return null;
-    return actualizacionesHorasKmData[actualizacionesHorasKmData.length - 1];
+    return actualizacionesHorasKmData[0]; // Ya está ordenado de más reciente a más antiguo
   }, [actualizacionesHorasKmData]);
 
   // Calcular horas actuales y horas del último mantenimiento
@@ -196,20 +204,22 @@ export function EquipoDetalleUnificado({ ficha, open, onOpenChange }: Props) {
         setInventariosRelacionados(inventarios);
       }
 
-      // Filtrar historial del equipo
-      const historial = eventos.filter(e => e.fichaEquipo === ficha);
+      // Filtrar historial del equipo - ORDENAR DE MÁS RECIENTE A MÁS ANTIGUO
+      const historial = eventos
+        .filter(e => e.fichaEquipo === ficha)
+        .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
       setHistorialEquipo(historial);
 
-      // Mantenimientos realizados
+      // Mantenimientos realizados - ORDENAR DE MÁS RECIENTE A MÁS ANTIGUO
       const realizados = data.mantenimientosRealizados
         .filter(m => m.ficha === ficha)
-        .sort((a, b) => new Date(a.fechaMantenimiento).getTime() - new Date(b.fechaMantenimiento).getTime());
+        .sort((a, b) => new Date(b.fechaMantenimiento).getTime() - new Date(a.fechaMantenimiento).getTime());
       setMantenimientosRealizadosData(realizados);
 
-      // Actualizaciones de horas/km
+      // Actualizaciones de horas/km - ORDENAR DE MÁS RECIENTE A MÁS ANTIGUO
       const lecturas = data.actualizacionesHorasKm
         .filter(a => a.ficha === ficha)
-        .sort((a, b) => new Date(a.fecha).getTime() - new Date(b.fecha).getTime());
+        .sort((a, b) => new Date(b.fecha).getTime() - new Date(a.fecha).getTime());
       setActualizacionesHorasKmData(lecturas);
     }
   }, [ficha, open, data, eventos]);
@@ -218,34 +228,258 @@ export function EquipoDetalleUnificado({ ficha, open, onOpenChange }: Props) {
 
   const mantenimientoVencido = mantenimientos.some(m => m.horasKmRestante < 0);
   const mantenimientoProximo = mantenimientos.some(m => m.horasKmRestante > 0 && m.horasKmRestante <= 50);
+  const esVendido = isEquipoVendido(equipo.empresa);
+
+  // Timeline unificado: combina todos los eventos en una sola línea de tiempo
+  const timelineUnificado = useMemo(() => {
+    const items: Array<{
+      id: string;
+      tipo: 'evento' | 'mantenimiento' | 'lectura';
+      fecha: Date;
+      titulo: string;
+      descripcion: string;
+      icono: 'history' | 'wrench' | 'gauge';
+      badge?: string;
+      badgeVariant?: 'default' | 'secondary' | 'destructive' | 'outline';
+      detalles?: any;
+    }> = [];
+
+    // Agregar eventos del historial
+    historialEquipo.forEach(evento => {
+      items.push({
+        id: `evento-${evento.id}`,
+        tipo: 'evento',
+        fecha: new Date(evento.createdAt),
+        titulo: evento.etiquetaSubtipo ?? evento.etiquetaCategoria,
+        descripcion: evento.descripcion,
+        icono: 'history',
+        badge: evento.modulo,
+        badgeVariant: 'outline',
+        detalles: evento,
+      });
+    });
+
+    // Agregar mantenimientos realizados
+    mantenimientosRealizadosData.forEach(mant => {
+      items.push({
+        id: `mant-${mant.id}`,
+        tipo: 'mantenimiento',
+        fecha: new Date(mant.fechaMantenimiento),
+        titulo: 'Mantenimiento realizado',
+        descripcion: mant.observaciones || `Lectura: ${mant.horasKmAlMomento}`,
+        icono: 'wrench',
+        badge: `${mant.horasKmAlMomento} h`,
+        badgeVariant: 'default',
+        detalles: mant,
+      });
+    });
+
+    // Agregar actualizaciones de lectura
+    actualizacionesHorasKmData.forEach(lectura => {
+      items.push({
+        id: `lectura-${lectura.id}`,
+        tipo: 'lectura',
+        fecha: new Date(lectura.fecha),
+        titulo: 'Actualización de lectura',
+        descripcion: `Nueva lectura: ${lectura.horasKm} | Incremento: +${lectura.incremento}`,
+        icono: 'gauge',
+        badge: `${lectura.horasKm} h`,
+        badgeVariant: 'secondary',
+        detalles: lectura,
+      });
+    });
+
+    // Ordenar de más reciente a más antiguo
+    return items.sort((a, b) => b.fecha.getTime() - a.fecha.getTime());
+  }, [historialEquipo, mantenimientosRealizadosData, actualizacionesHorasKmData]);
+
+  // Calcular días desde última actividad
+  const diasDesdeUltimaActividad = useMemo(() => {
+    if (timelineUnificado.length === 0) return null;
+    const ultimaFecha = timelineUnificado[0].fecha;
+    const hoy = new Date();
+    return Math.floor((hoy.getTime() - ultimaFecha.getTime()) / (1000 * 60 * 60 * 24));
+  }, [timelineUnificado]);
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
-        <DialogHeader>
-          <div className="flex items-center justify-between">
-            <div>
-              <DialogTitle className="text-2xl flex items-center gap-2">
-                <Truck className="h-6 w-6" />
-                {equipo.nombre}
-              </DialogTitle>
-              <p className="text-muted-foreground mt-1">Ficha: {equipo.ficha}</p>
+      <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto p-0">
+        {/* Hero Section - Información crítica siempre visible */}
+        <div className={cn(
+          "sticky top-0 z-10 p-4 border-b",
+          esVendido 
+            ? "bg-orange-50 dark:bg-orange-950/30 border-orange-200 dark:border-orange-900"
+            : mantenimientoVencido 
+              ? "bg-destructive/5 border-destructive/20" 
+              : mantenimientoProximo 
+                ? "bg-amber-50 dark:bg-amber-950/20 border-amber-200 dark:border-amber-800"
+                : "bg-background border-border"
+        )}>
+          <DialogHeader>
+            <div className="flex items-start justify-between gap-4">
+              <div className="flex items-center gap-3">
+                <div className={cn(
+                  "p-2.5 rounded-xl",
+                  esVendido 
+                    ? "bg-orange-500/10"
+                    : mantenimientoVencido 
+                      ? "bg-destructive/10" 
+                      : "bg-primary/10"
+                )}>
+                  <Truck className={cn(
+                    "h-6 w-6",
+                    esVendido 
+                      ? "text-orange-600"
+                      : mantenimientoVencido 
+                        ? "text-destructive" 
+                        : "text-primary"
+                  )} />
+                </div>
+                <div>
+                  <DialogTitle className="text-xl font-bold">{equipo.nombre}</DialogTitle>
+                  <div className="flex items-center gap-2 mt-1 text-sm text-muted-foreground">
+                    <span className="font-mono font-medium">{equipo.ficha}</span>
+                    <span>•</span>
+                    <span>{equipo.marca} {equipo.modelo}</span>
+                  </div>
+                </div>
+              </div>
+              <div className="flex flex-col items-end gap-1.5">
+                {esVendido ? (
+                  <Badge variant="outline" className="border-orange-500/50 bg-orange-500/10 text-orange-700 dark:text-orange-400">
+                    ⚠️ VENDIDO
+                  </Badge>
+                ) : (
+                  <Badge variant={equipo.activo ? "default" : "secondary"}>
+                    {equipo.activo ? 'Activo' : 'Inactivo'}
+                  </Badge>
+                )}
+                {equipo.empresa && (
+                  <Badge 
+                    variant="outline" 
+                    className={cn(
+                      "text-xs",
+                      equipo.empresa === 'ALITO GROUP SRL' 
+                        ? 'border-blue-500/50 bg-blue-500/10 text-blue-700 dark:text-blue-400' 
+                        : equipo.empresa === 'VENDIDO'
+                          ? 'border-orange-500/50 bg-orange-500/10 text-orange-700 dark:text-orange-400'
+                          : 'border-emerald-500/50 bg-emerald-500/10 text-emerald-700 dark:text-emerald-400'
+                    )}
+                  >
+                    <Building2 className="h-3 w-3 mr-1" />
+                    {equipo.empresa === 'ALITO GROUP SRL' ? 'GROUP' : equipo.empresa === 'ALITO EIRL' ? 'EIRL' : equipo.empresa}
+                  </Badge>
+                )}
+              </div>
             </div>
-            <Badge variant={equipo.activo ? "default" : "secondary"}>
-              {equipo.activo ? 'Activo' : 'Inactivo'}
-            </Badge>
-          </div>
-        </DialogHeader>
+          </DialogHeader>
 
+          {/* Métricas clave en el hero - Siempre visibles */}
+          {!esVendido && (
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mt-4">
+              {/* Lectura actual */}
+              <div className="bg-background/80 rounded-lg p-3 border">
+                <div className="flex items-center gap-2 text-xs text-muted-foreground mb-1">
+                  <Gauge className="h-3.5 w-3.5" />
+                  Lectura actual
+                </div>
+                <p className="text-lg font-bold">
+                  {horasActuales.toLocaleString()}
+                  <span className="text-xs font-normal text-muted-foreground ml-1">
+                    {proximoMantenimiento?.tipoMantenimiento === 'Kilómetros' ? 'km' : 'h'}
+                  </span>
+                </p>
+              </div>
+
+              {/* Horas restantes */}
+              <div className={cn(
+                "rounded-lg p-3 border",
+                !proximoMantenimiento 
+                  ? "bg-background/80"
+                  : proximoMantenimiento.horasKmRestante <= 0
+                    ? "bg-destructive/10 border-destructive/30"
+                    : proximoMantenimiento.horasKmRestante <= 50
+                      ? "bg-amber-500/10 border-amber-500/30"
+                      : "bg-emerald-500/10 border-emerald-500/30"
+              )}>
+                <div className="flex items-center gap-2 text-xs text-muted-foreground mb-1">
+                  <Timer className="h-3.5 w-3.5" />
+                  {proximoMantenimiento?.horasKmRestante && proximoMantenimiento.horasKmRestante <= 0 ? 'Vencido por' : 'Restante'}
+                </div>
+                <p className={cn(
+                  "text-lg font-bold",
+                  !proximoMantenimiento
+                    ? "text-muted-foreground"
+                    : proximoMantenimiento.horasKmRestante <= 0
+                      ? "text-destructive"
+                      : proximoMantenimiento.horasKmRestante <= 50
+                        ? "text-amber-600 dark:text-amber-400"
+                        : "text-emerald-600 dark:text-emerald-400"
+                )}>
+                  {proximoMantenimiento 
+                    ? `${Math.abs(proximoMantenimiento.horasKmRestante).toLocaleString()}`
+                    : 'N/A'
+                  }
+                  {proximoMantenimiento && (
+                    <span className="text-xs font-normal ml-1">
+                      {proximoMantenimiento.tipoMantenimiento === 'Kilómetros' ? 'km' : 'h'}
+                    </span>
+                  )}
+                </p>
+              </div>
+
+              {/* Próximo MP */}
+              <div className="bg-background/80 rounded-lg p-3 border">
+                <div className="flex items-center gap-2 text-xs text-muted-foreground mb-1">
+                  <Wrench className="h-3.5 w-3.5" />
+                  Próximo MP
+                </div>
+                <p className="text-lg font-bold text-primary">
+                  {intervaloCodigo || proximoMantenimiento?.tipoMantenimiento || 'N/A'}
+                </p>
+              </div>
+
+              {/* Última actividad */}
+              <div className="bg-background/80 rounded-lg p-3 border">
+                <div className="flex items-center gap-2 text-xs text-muted-foreground mb-1">
+                  <Activity className="h-3.5 w-3.5" />
+                  Última actividad
+                </div>
+                <p className="text-sm font-medium">
+                  {diasDesdeUltimaActividad !== null 
+                    ? diasDesdeUltimaActividad === 0 
+                      ? 'Hoy'
+                      : diasDesdeUltimaActividad === 1
+                        ? 'Ayer'
+                        : `Hace ${diasDesdeUltimaActividad} días`
+                    : 'Sin actividad'
+                  }
+                </p>
+              </div>
+            </div>
+          )}
+
+          {/* Alerta de estado crítico */}
+          {mantenimientoVencido && !esVendido && (
+            <div className="flex items-center gap-2 mt-3 p-2 bg-destructive/10 rounded-lg border border-destructive/20">
+              <AlertTriangle className="h-4 w-4 text-destructive shrink-0" />
+              <span className="text-sm text-destructive font-medium">
+                ¡Mantenimiento vencido! Requiere atención inmediata.
+              </span>
+            </div>
+          )}
+        </div>
+
+        <div className="p-4">
         <Tabs defaultValue="general" className="w-full">
           <TabsList className="grid w-full grid-cols-4">
             <TabsTrigger value="general" className="gap-2">
               <Truck className="h-4 w-4" />
-              General
+              <span className="hidden sm:inline">General</span>
             </TabsTrigger>
             <TabsTrigger value="mantenimiento" className="gap-2">
               <Wrench className="h-4 w-4" />
-              Mantenimientos
+              <span className="hidden sm:inline">Mant.</span>
               {mantenimientoVencido && (
                 <Badge variant="destructive" className="ml-1 h-5 w-5 p-0 flex items-center justify-center">
                   !
@@ -254,11 +488,16 @@ export function EquipoDetalleUnificado({ ficha, open, onOpenChange }: Props) {
             </TabsTrigger>
             <TabsTrigger value="inventario" className="gap-2">
               <Package className="h-4 w-4" />
-              Repuestos
+              <span className="hidden sm:inline">Repuestos</span>
             </TabsTrigger>
             <TabsTrigger value="historial" className="gap-2">
               <HistoryIcon className="h-4 w-4" />
-              Historial
+              <span className="hidden sm:inline">Historial</span>
+              {timelineUnificado.length > 0 && (
+                <Badge variant="secondary" className="ml-1 h-5 min-w-5 px-1 flex items-center justify-center text-xs">
+                  {timelineUnificado.length}
+                </Badge>
+              )}
             </TabsTrigger>
           </TabsList>
 
@@ -747,7 +986,7 @@ export function EquipoDetalleUnificado({ ficha, open, onOpenChange }: Props) {
           </TabsContent>
 
           <TabsContent value="historial" className="space-y-4">
-            {historialEquipo.length === 0 ? (
+            {timelineUnificado.length === 0 ? (
               <Card>
                 <CardContent className="p-8 text-center">
                   <HistoryIcon className="h-12 w-12 mx-auto text-muted-foreground mb-2" />
@@ -757,33 +996,119 @@ export function EquipoDetalleUnificado({ ficha, open, onOpenChange }: Props) {
                 </CardContent>
               </Card>
             ) : (
-              historialEquipo.map((evento) => (
-                <Card key={evento.id}>
-                  <CardContent className="pt-6">
-                    <div className="flex items-start gap-3">
-                      <div className="p-2 rounded-full bg-primary/10 mt-1">
-                        <HistoryIcon className="h-4 w-4" />
-                      </div>
-                      <div className="flex-1">
-                        <div className="flex items-center gap-2 mb-2">
-                          <Badge>{evento.etiquetaSubtipo ?? evento.etiquetaCategoria}</Badge>
-                          <Badge variant="outline">{evento.modulo}</Badge>
+              <Card>
+                <CardHeader className="pb-3">
+                  <CardTitle className="flex items-center justify-between">
+                    <span className="flex items-center gap-2 text-lg">
+                      <Activity className="h-5 w-5" />
+                      Timeline de actividad
+                    </span>
+                    <Badge variant="secondary">{timelineUnificado.length} eventos</Badge>
+                  </CardTitle>
+                  <p className="text-sm text-muted-foreground">
+                    Historial completo ordenado del más reciente al más antiguo
+                  </p>
+                </CardHeader>
+                <CardContent>
+                  <ScrollArea className="h-[400px] pr-4">
+                    <div className="relative space-y-0">
+                      {/* Línea vertical del timeline */}
+                      <div className="absolute left-4 top-2 bottom-2 w-0.5 bg-border" />
+                      
+                      {timelineUnificado.map((item, index) => (
+                        <div 
+                          key={item.id} 
+                          className="relative pl-10 pb-6 last:pb-0"
+                        >
+                          {/* Punto del timeline */}
+                          <div className={cn(
+                            "absolute left-2.5 w-3.5 h-3.5 rounded-full border-2 border-background",
+                            item.tipo === 'mantenimiento' 
+                              ? "bg-amber-500"
+                              : item.tipo === 'lectura'
+                                ? "bg-sky-500"
+                                : "bg-primary"
+                          )} />
+                          
+                          <div className={cn(
+                            "rounded-lg border p-3 transition-all hover:shadow-md",
+                            item.tipo === 'mantenimiento' 
+                              ? "bg-amber-50/50 dark:bg-amber-950/20 border-amber-200/50 dark:border-amber-900/50"
+                              : item.tipo === 'lectura'
+                                ? "bg-sky-50/50 dark:bg-sky-950/20 border-sky-200/50 dark:border-sky-900/50"
+                                : "bg-card border-border"
+                          )}>
+                            <div className="flex items-start justify-between gap-2 mb-2">
+                              <div className="flex items-center gap-2">
+                                {item.tipo === 'mantenimiento' && <Wrench className="h-4 w-4 text-amber-600" />}
+                                {item.tipo === 'lectura' && <Gauge className="h-4 w-4 text-sky-600" />}
+                                {item.tipo === 'evento' && <HistoryIcon className="h-4 w-4 text-primary" />}
+                                <span className="font-medium text-sm">{item.titulo}</span>
+                              </div>
+                              <div className="flex items-center gap-1.5 shrink-0">
+                                {item.badge && (
+                                  <Badge 
+                                    variant={item.badgeVariant || 'outline'} 
+                                    className="text-xs"
+                                  >
+                                    {item.badge}
+                                  </Badge>
+                                )}
+                              </div>
+                            </div>
+                            
+                            <p className="text-sm text-muted-foreground mb-2">
+                              {item.descripcion}
+                            </p>
+                            
+                            <div className="flex items-center gap-3 text-xs text-muted-foreground">
+                              <span className="flex items-center gap-1">
+                                <Calendar className="h-3 w-3" />
+                                {format(item.fecha, 'dd MMM yyyy, HH:mm', { locale: es })}
+                              </span>
+                              <span>
+                                ({formatDistanceToNow(item.fecha, { addSuffix: true, locale: es })})
+                              </span>
+                              {item.detalles?.usuarioResponsable && (
+                                <span className="rounded-full bg-muted px-2 py-0.5 font-medium">
+                                  {item.detalles.usuarioResponsable}
+                                </span>
+                              )}
+                            </div>
+
+                            {/* Detalles adicionales según tipo */}
+                            {item.tipo === 'mantenimiento' && item.detalles?.filtrosUtilizados?.length > 0 && (
+                              <div className="mt-3 pt-2 border-t border-amber-200/50 dark:border-amber-900/50">
+                                <p className="text-xs font-medium text-amber-700 dark:text-amber-400 mb-1">
+                                  Insumos utilizados:
+                                </p>
+                                <div className="flex flex-wrap gap-1">
+                                  {item.detalles.filtrosUtilizados.map((filtro: any, idx: number) => (
+                                    <Badge key={idx} variant="outline" className="text-xs bg-white/50 dark:bg-black/20">
+                                      {filtro.nombre} ({filtro.cantidad})
+                                    </Badge>
+                                  ))}
+                                </div>
+                              </div>
+                            )}
+
+                            {item.tipo === 'lectura' && item.detalles?.incremento > 0 && (
+                              <div className="mt-2 flex items-center gap-1 text-xs text-sky-600 dark:text-sky-400">
+                                <TrendingUp className="h-3 w-3" />
+                                Incremento: +{item.detalles.incremento}
+                              </div>
+                            )}
+                          </div>
                         </div>
-                        <p className="font-medium mb-1">{evento.descripcion}</p>
-                        <p className="text-xs text-muted-foreground">
-                          {formatDistanceToNow(new Date(evento.createdAt), {
-                            addSuffix: true,
-                            locale: es,
-                          })} • {evento.usuarioResponsable}
-                        </p>
-                      </div>
+                      ))}
                     </div>
-                  </CardContent>
-                </Card>
-              ))
+                  </ScrollArea>
+                </CardContent>
+              </Card>
             )}
           </TabsContent>
         </Tabs>
+        </div>
       </DialogContent>
     </Dialog>
   );
