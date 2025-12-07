@@ -60,7 +60,7 @@ export function EquipoDialog({
     numeroSerie: equipoData?.numeroSerie || '',
     placa: equipoData?.placa || '',
     categoria: equipoData?.categoria || '',
-    empresa: equipoData?.empresa || 'ALITO GROUP SRL' as const,
+    empresa: equipoData?.empresa || 'ALITO EIRL' as const,
     activo: equipoData?.activo ?? true,
     motivoInactividad: equipoData?.motivoInactividad || '',
   });
@@ -76,7 +76,7 @@ export function EquipoDialog({
         numeroSerie: data.numeroSerie || '',
         placa: data.placa || '',
         categoria: data.categoria || '',
-        empresa: data.empresa || 'ALITO GROUP SRL',
+        empresa: data.empresa || 'ALITO EIRL',
         activo: data.activo ?? true,
         motivoInactividad: data.motivoInactividad || '',
       });

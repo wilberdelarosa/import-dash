@@ -146,6 +146,7 @@ const mapEquipoToRow = (equipo: EquipoPayload) => ({
   numero_serie: equipo.numeroSerie,
   placa: equipo.placa,
   categoria: equipo.categoria,
+  empresa: equipo.empresa,
   activo: equipo.activo,
   motivo_inactividad: equipo.motivoInactividad ?? null,
 });
@@ -498,7 +499,7 @@ export function useSupabaseData() {
           numeroSerie: e.numero_serie,
           placa: e.placa,
           categoria: e.categoria,
-          empresa: (e.empresa as 'ALITO GROUP SRL' | 'ALITO EIRL') ?? 'ALITO GROUP SRL',
+          empresa: (e.empresa as 'ALITO GROUP SRL' | 'ALITO EIRL' | 'VENDIDO') ?? 'ALITO EIRL',
           activo: e.activo,
           motivoInactividad: e.motivo_inactividad ?? null,
         })),
