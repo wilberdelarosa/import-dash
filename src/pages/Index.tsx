@@ -5,6 +5,7 @@ import { Badge } from '@/components/ui/badge';
 import { useSupabaseDataContext } from '@/context/SupabaseDataContext';
 import { useNotificaciones } from '@/hooks/useNotificaciones';
 import { useHistorial } from '@/hooks/useHistorial';
+import { isEquipoDisponible } from '@/types/equipment';
 import { 
   TrendingUp, 
   TrendingDown, 
@@ -26,13 +27,16 @@ export default function Index() {
   const { notificaciones } = useNotificaciones();
   const { eventos } = useHistorial();
 
-  // KPIs calculados dinámicamente
+  // KPIs calculados dinámicamente (excluyendo equipos vendidos)
   const kpis = useMemo(() => {
-    const equiposActivos = data.equipos.filter(e => e.activo).length;
-    const equiposInactivos = data.equipos.filter(e => !e.activo).length;
+    // Filtrar equipos disponibles (no vendidos)
+    const equiposDisponibles = data.equipos.filter(isEquipoDisponible);
+    const equiposActivos = equiposDisponibles.filter(e => e.activo).length;
+    const equiposInactivos = equiposDisponibles.filter(e => !e.activo).length;
+    const equiposVendidos = data.equipos.filter(e => !isEquipoDisponible(e)).length;
     
-    // Filtrar mantenimientos solo de equipos activos
-    const fichasEquiposActivos = new Set(data.equipos.filter(e => e.activo).map(e => e.ficha));
+    // Filtrar mantenimientos solo de equipos activos y disponibles
+    const fichasEquiposActivos = new Set(equiposDisponibles.filter(e => e.activo).map(e => e.ficha));
     
     const mantenimientosVencidos = data.mantenimientosProgramados.filter(
       m => m.activo && m.horasKmRestante < 0 && fichasEquiposActivos.has(m.ficha)
@@ -56,7 +60,7 @@ export default function Index() {
       return fechaEvento.toDateString() === hoy.toDateString();
     }).length;
 
-    // Calcular eficiencia de mantenimiento (solo equipos activos)
+    // Calcular eficiencia de mantenimiento (solo equipos activos y disponibles)
     const totalMantenimientos = data.mantenimientosProgramados.filter(m => m.activo && fichasEquiposActivos.has(m.ficha)).length;
     const mantenimientosAlDia = totalMantenimientos - mantenimientosVencidos;
     const eficienciaMantenimiento = totalMantenimientos > 0 
@@ -66,21 +70,22 @@ export default function Index() {
     return {
       equiposActivos,
       equiposInactivos,
+      equiposVendidos,
       mantenimientosVencidos,
       mantenimientosProximos,
       stockBajo,
       notificacionesCriticas,
       eventosHoy,
       eficienciaMantenimiento,
-      totalEquipos: data.equipos.length,
+      totalEquipos: equiposDisponibles.length,
       totalMantenimientos
     };
   }, [data, notificaciones, eventos]);
 
-  // Agrupar equipos por categoría
+  // Agrupar equipos por categoría (solo disponibles y activos)
   const equiposPorCategoria = useMemo(() => {
     const categorias = new Map<string, number>();
-    data.equipos.forEach(equipo => {
+    data.equipos.filter(isEquipoDisponible).forEach(equipo => {
       if (equipo.activo) {
         const count = categorias.get(equipo.categoria) || 0;
         categorias.set(equipo.categoria, count + 1);

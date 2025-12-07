@@ -4,6 +4,7 @@ import { Navigation } from '@/components/Navigation';
 import { useSupabaseDataContext } from '@/context/SupabaseDataContext';
 import { EquipoLink } from '@/components/EquipoLink';
 import type { MantenimientoProgramado } from '@/types/equipment';
+import { isEquipoDisponible } from '@/types/equipment';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
@@ -1486,7 +1487,7 @@ export default function Mantenimiento() {
                           placeholder="Ej. EQ-001"
                           onBlur={(event) => {
                             field.onBlur();
-                            const equipo = data.equipos.filter(e => e.activo).find((eq) => eq.ficha === event.target.value);
+                            const equipo = data.equipos.filter(e => isEquipoDisponible(e) && e.activo).find((eq) => eq.ficha === event.target.value);
                             if (equipo) {
                               form.setValue('nombreEquipo', equipo.nombre, { shouldValidate: true });
                             }
@@ -1648,7 +1649,7 @@ export default function Mantenimiento() {
             </form>
           </Form>
           <datalist id="fichas-disponibles">
-            {data.equipos.filter(e => e.activo).map((equipo) => (
+            {data.equipos.filter(e => isEquipoDisponible(e) && e.activo).map((equipo) => (
               <option key={equipo.id} value={equipo.ficha}>
                 {equipo.ficha} - {equipo.nombre}
               </option>

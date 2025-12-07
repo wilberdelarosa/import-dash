@@ -24,7 +24,7 @@ import { cn } from '@/lib/utils';
 import { formatRemainingLabel } from '@/lib/maintenanceUtils';
 import { getStaticCaterpillarData } from '@/data/caterpillarMaintenance';
 import type { Equipo, MantenimientoProgramado } from '@/types/equipment';
-import { EMPRESAS_DISPONIBLES } from '@/types/equipment';
+import { EMPRESAS_DISPONIBLES, isEquipoVendido } from '@/types/equipment';
 import {
     Sheet,
     SheetContent,
@@ -150,6 +150,10 @@ export function ListasPersonalizadasMobile() {
 
     const filteredEquipos = useMemo(() => {
         return enrichedEquipos.filter((equipo) => {
+            // Excluir equipos vendidos por defecto (a menos que se filtre específicamente por empresa=VENDIDO)
+            if (!selectedEmpresas.includes('VENDIDO') && isEquipoVendido(equipo.empresa)) {
+                return false;
+            }
             if (selectedCategorias.length > 0 && !selectedCategorias.includes(equipo.categoria)) {
                 return false;
             }
@@ -177,7 +181,7 @@ export function ListasPersonalizadasMobile() {
             }
             return true;
         });
-    }, [enrichedEquipos, selectedCategorias, searchTerm]);
+    }, [enrichedEquipos, selectedCategorias, selectedEmpresas, searchTerm]);
 
     const selectedEquipos = filteredEquipos.filter((e) => selectedFichas.includes(e.ficha));
 

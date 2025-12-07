@@ -2,6 +2,7 @@ import { useState, useMemo, useEffect } from 'react';
 import { useSupabaseDataContext } from '@/context/SupabaseDataContext';
 import { usePlanes } from '@/hooks/usePlanes';
 import { useKits } from '@/hooks/useKits';
+import { isEquipoDisponible } from '@/types/equipment';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -149,10 +150,10 @@ export function Planificador() {
     };
   };
 
-  // Generar planificaciones automáticas basadas en equipos activos
+  // Generar planificaciones automáticas basadas en equipos activos y disponibles (no vendidos)
   const planificacionesEquipos = useMemo<PlanificacionEquipo[]>(() => {
     return data.equipos
-      .filter(e => e.activo)
+      .filter(e => isEquipoDisponible(e) && e.activo)
       .map(equipo => {
         // Buscar si ya tiene una planificación guardada
         const planificacionGuardada = planificacionesGuardadas.find(p => p.fichaEquipo === equipo.ficha);

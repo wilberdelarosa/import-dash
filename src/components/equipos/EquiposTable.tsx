@@ -15,8 +15,8 @@ import {
 } from '@/components/ui/sheet';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { cn } from '@/lib/utils';
-import { Trash2, Edit, Search, Filter, ZoomIn, ZoomOut, Sparkles, Lock, Building2 } from 'lucide-react';
-import { Equipo, EMPRESAS_DISPONIBLES } from '@/types/equipment';
+import { Trash2, Edit, Search, Filter, ZoomIn, ZoomOut, Sparkles, Lock, Building2, Tag } from 'lucide-react';
+import { Equipo, EMPRESAS_DISPONIBLES, isEquipoVendido } from '@/types/equipment';
 import { EquipoDialog } from './EquipoDialog';
 import { EquipoLink } from '@/components/EquipoLink';
 import { usePermissions } from '@/hooks/usePermissions';
@@ -60,7 +60,8 @@ export function EquiposTable({ equipos, onEdit, onDelete, onVerDetalle }: Equipo
   const [smartQuery, setSmartQuery] = useState('');
   const [filterCategoria, setFilterCategoria] = useState('all');
   const [filterEmpresa, setFilterEmpresa] = useState('all');
-  const [filterActivo, setFilterActivo] = useState('all');
+  // Por defecto mostrar solo activos (oculta vendidos e inactivos)
+  const [filterActivo, setFilterActivo] = useState('activo');
   const [tableScale, setTableScale] = useState(1);
   
   const { canEdit, canDelete } = usePermissions();
@@ -225,9 +226,36 @@ export function EquiposTable({ equipos, onEdit, onDelete, onVerDetalle }: Equipo
 
       const matchesCategoria = filterCategoria === 'all' || equipo.categoria === filterCategoria;
       const matchesEmpresa = filterEmpresa === 'all' || equipo.empresa === filterEmpresa;
-      const matchesActivo = filterActivo === 'all' ||
-        (filterActivo === 'activo' && equipo.activo) ||
-        (filterActivo === 'inactivo' && !equipo.activo);
+      
+      // Lógica de filtro por estado (incluye vendidos)
+      const esVendido = isEquipoVendido(equipo.empresa);
+      let matchesActivo = false;
+      
+      switch (filterActivo) {
+        case 'all':
+          // Todos excepto vendidos (para ver vendidos usar 'vendido')
+          matchesActivo = !esVendido;
+          break;
+        case 'activo':
+          // Solo activos y no vendidos
+          matchesActivo = equipo.activo && !esVendido;
+          break;
+        case 'inactivo':
+          // Solo inactivos pero no vendidos
+          matchesActivo = !equipo.activo && !esVendido;
+          break;
+        case 'vendido':
+          // Solo vendidos
+          matchesActivo = esVendido;
+          break;
+        case 'todo':
+          // Absolutamente todos (incluyendo vendidos)
+          matchesActivo = true;
+          break;
+        default:
+          matchesActivo = true;
+      }
+      
       const matchesSmart = smartFilters.predicate ? smartFilters.predicate(equipo) : true;
 
       return matchesSearch && matchesCategoria && matchesEmpresa && matchesActivo && matchesSmart;
@@ -299,13 +327,15 @@ export function EquiposTable({ equipos, onEdit, onDelete, onVerDetalle }: Equipo
           </SelectContent>
         </Select>
         <Select value={filterActivo} onValueChange={setFilterActivo}>
-          <SelectTrigger className="w-full sm:w-[150px]">
+          <SelectTrigger className="w-full sm:w-[180px]">
             <SelectValue placeholder="Estado" />
           </SelectTrigger>
           <SelectContent>
-            <SelectItem value="all">Todos</SelectItem>
+            <SelectItem value="all">Todos (sin vendidos)</SelectItem>
             <SelectItem value="activo">Activos</SelectItem>
             <SelectItem value="inactivo">Inactivos</SelectItem>
+            <SelectItem value="vendido" className="text-orange-600">⚠️ Vendidos</SelectItem>
+            <SelectItem value="todo" className="text-muted-foreground">📋 Absolutamente todos</SelectItem>
           </SelectContent>
         </Select>
       </div>
@@ -419,12 +449,14 @@ export function EquiposTable({ equipos, onEdit, onDelete, onVerDetalle }: Equipo
                         variant="outline" 
                         className={cn(
                           "text-xs font-semibold whitespace-nowrap",
-                          equipo.empresa === 'ALITO GROUP SRL' 
-                            ? 'border-blue-500/50 bg-blue-500/10 text-blue-700 dark:text-blue-400' 
-                            : 'border-emerald-500/50 bg-emerald-500/10 text-emerald-700 dark:text-emerald-400'
+                          equipo.empresa === 'VENDIDO'
+                            ? 'border-orange-500/50 bg-orange-500/10 text-orange-700 dark:text-orange-400'
+                            : equipo.empresa === 'ALITO GROUP SRL' 
+                              ? 'border-blue-500/50 bg-blue-500/10 text-blue-700 dark:text-blue-400' 
+                              : 'border-emerald-500/50 bg-emerald-500/10 text-emerald-700 dark:text-emerald-400'
                         )}
                       >
-                        {equipo.empresa === 'ALITO GROUP SRL' ? 'GROUP' : 'EIRL'}
+                        {equipo.empresa === 'VENDIDO' ? '⚠️ VENDIDO' : equipo.empresa === 'ALITO GROUP SRL' ? 'GROUP' : 'EIRL'}
                       </Badge>
                     </TableCell>
                     <TableCell>{equipo.marca}</TableCell>
@@ -433,9 +465,15 @@ export function EquiposTable({ equipos, onEdit, onDelete, onVerDetalle }: Equipo
                     <TableCell>{equipo.categoria}</TableCell>
                     <TableCell>{equipo.placa}</TableCell>
                     <TableCell>
-                      <Badge variant={equipo.activo ? "default" : "secondary"}>
-                        {equipo.activo ? 'Activo' : 'Inactivo'}
-                      </Badge>
+                      {isEquipoVendido(equipo.empresa) ? (
+                        <Badge variant="outline" className="border-orange-500/50 bg-orange-500/10 text-orange-700 dark:text-orange-400">
+                          Vendido
+                        </Badge>
+                      ) : (
+                        <Badge variant={equipo.activo ? "default" : "secondary"}>
+                          {equipo.activo ? 'Activo' : 'Inactivo'}
+                        </Badge>
+                      )}
                     </TableCell>
                     <TableCell>
                       <div className="flex space-x-2">

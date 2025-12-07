@@ -6,8 +6,9 @@ import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Switch } from '@/components/ui/switch';
 import { Textarea } from '@/components/ui/textarea';
-import { Plus, Edit, Building2 } from 'lucide-react';
-import { Equipo, EMPRESAS_DISPONIBLES } from '@/types/equipment';
+import { Alert, AlertDescription } from '@/components/ui/alert';
+import { Plus, Edit, Building2, AlertTriangle } from 'lucide-react';
+import { Equipo, EMPRESAS_DISPONIBLES, isEquipoVendido, EmpresaEquipo } from '@/types/equipment';
 
 interface EquipoDialogProps {
   equipo?: Equipo;
@@ -82,10 +83,35 @@ export function EquipoDialog({
     }
   }, [initialData, equipo]);
 
+  // Auto-marcar como inactivo cuando se selecciona VENDIDO
+  const handleEmpresaChange = (value: EmpresaEquipo) => {
+    if (isEquipoVendido(value)) {
+      // Si se marca como VENDIDO, automáticamente se desactiva
+      setFormData({
+        ...formData,
+        empresa: value,
+        activo: false,
+        motivoInactividad: formData.motivoInactividad || 'Equipo vendido',
+      });
+    } else {
+      setFormData({ ...formData, empresa: value });
+    }
+  };
+
+  // Verificar si el equipo está vendido (no se puede reactivar)
+  const isVendido = isEquipoVendido(formData.empresa);
+
   const handleSave = async () => {
+    // Si está vendido, forzar inactivo
+    const finalActivo = isVendido ? false : formData.activo;
+    const finalMotivo = isVendido 
+      ? (formData.motivoInactividad || 'Equipo vendido')
+      : (formData.activo ? null : formData.motivoInactividad.trim() || null);
+
     const payload = {
       ...formData,
-      motivoInactividad: formData.activo ? null : formData.motivoInactividad.trim() || null,
+      activo: finalActivo,
+      motivoInactividad: finalMotivo,
     };
 
     const equipoDataToSave = equipoData ? { ...payload, id: equipoData.id } : payload;
@@ -185,26 +211,44 @@ export function EquipoDialog({
           <div>
             <Label htmlFor="empresa" className="flex items-center gap-2">
               <Building2 className="w-4 h-4" />
-              Empresa
+              Empresa / Estado
             </Label>
-            <Select value={formData.empresa} onValueChange={(value: typeof formData.empresa) => setFormData({ ...formData, empresa: value })}>
+            <Select value={formData.empresa} onValueChange={handleEmpresaChange}>
               <SelectTrigger className="w-full">
                 <SelectValue placeholder="Seleccionar empresa" />
               </SelectTrigger>
               <SelectContent>
                 {EMPRESAS_DISPONIBLES.map((emp) => (
-                  <SelectItem key={emp} value={emp}>{emp}</SelectItem>
+                  <SelectItem key={emp} value={emp}>
+                    {emp === 'VENDIDO' ? '🏷️ VENDIDO (Equipo vendido)' : emp}
+                  </SelectItem>
                 ))}
               </SelectContent>
             </Select>
           </div>
+
+          {/* Alerta si el equipo está marcado como vendido */}
+          {isVendido && (
+            <Alert variant="destructive" className="md:col-span-2">
+              <AlertTriangle className="h-4 w-4" />
+              <AlertDescription>
+                Los equipos marcados como <strong>VENDIDO</strong> se desactivan automáticamente 
+                y no aparecerán en el sistema (mantenimientos, reportes, etc.) a menos que 
+                se filtren específicamente en la página de Equipos.
+              </AlertDescription>
+            </Alert>
+          )}
+
           <div className="flex items-center space-x-2 md:col-span-2">
             <Switch
               id="activo"
               checked={formData.activo}
               onCheckedChange={(checked) => setFormData({ ...formData, activo: checked })}
+              disabled={isVendido}
             />
-            <Label htmlFor="activo">Equipo activo</Label>
+            <Label htmlFor="activo" className={isVendido ? 'text-muted-foreground' : ''}>
+              Equipo activo {isVendido && '(desactivado automáticamente por estar vendido)'}
+            </Label>
           </div>
           {!formData.activo && (
             <div className="md:col-span-2">

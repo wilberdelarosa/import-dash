@@ -16,6 +16,7 @@ import jsPDF from 'jspdf';
 import 'jspdf-autotable';
 import { useDeviceDetection } from '@/hooks/useDeviceDetection';
 import { ReportesMobile } from '@/pages/mobile/ReportesMobile';
+import { isEquipoDisponible } from '@/types/equipment';
 
 export default function Reportes() {
   const { data, loading } = useSupabaseDataContext();
@@ -32,7 +33,8 @@ export default function Reportes() {
   });
   const [estadoMantenimiento, setEstadoMantenimiento] = useState<'todos' | 'normal' | 'proximo' | 'vencido'>('todos');
 
-  const equiposActivos = data.equipos.filter(e => e.activo);
+  // Equipos disponibles (no vendidos) y activos
+  const equiposActivos = data.equipos.filter(e => isEquipoDisponible(e) && e.activo);
 
   const categorias = [...new Set(equiposActivos.map(e => e.categoria))];
   const marcas = [...new Set(equiposActivos.map(e => e.marca))];

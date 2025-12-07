@@ -18,7 +18,7 @@ import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Search, ArrowLeft, Wrench, Zap, CheckCircle2, TrendingUp } from 'lucide-react';
 import { cn } from '@/lib/utils';
-import { Equipo } from '@/types/equipment';
+import { Equipo, isEquipoDisponible } from '@/types/equipment';
 import { PlanConIntervalos } from '@/types/maintenance-plans';
 
 interface MPSugerido {
@@ -59,14 +59,15 @@ export function PlanificadorMobile({
 }: PlanificadorMobileProps) {
     const [searchTerm, setSearchTerm] = useState('');
 
-    // Estadísticas de equipos
+    // Estadísticas de equipos (solo disponibles)
+    const equiposDisponibles = equipos.filter(isEquipoDisponible);
     const stats = useMemo(() => ({
-        total: equipos.length,
-        conPlan: equipos.filter(eq => planManualOverride[eq.ficha]).length,
-        sinPlan: equipos.filter(eq => !planManualOverride[eq.ficha]).length,
-    }), [equipos, planManualOverride]);
+        total: equiposDisponibles.length,
+        conPlan: equiposDisponibles.filter(eq => planManualOverride[eq.ficha]).length,
+        sinPlan: equiposDisponibles.filter(eq => !planManualOverride[eq.ficha]).length,
+    }), [equiposDisponibles, planManualOverride]);
 
-    const equiposFiltrados = equipos.filter(eq =>
+    const equiposFiltrados = equiposDisponibles.filter(eq =>
         eq.nombre.toLowerCase().includes(searchTerm.toLowerCase()) ||
         eq.ficha.toLowerCase().includes(searchTerm.toLowerCase())
     );

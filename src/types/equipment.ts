@@ -1,7 +1,19 @@
 // Empresas disponibles para asignar equipos
-export type EmpresaEquipo = 'ALITO GROUP SRL' | 'ALITO EIRL';
+// VENDIDO: El equipo fue vendido y no debe aparecer en el sistema (se marca inactivo automáticamente)
+export type EmpresaEquipo = 'ALITO GROUP SRL' | 'ALITO EIRL' | 'VENDIDO';
 
-export const EMPRESAS_DISPONIBLES: EmpresaEquipo[] = ['ALITO GROUP SRL', 'ALITO EIRL'];
+export const EMPRESAS_DISPONIBLES: EmpresaEquipo[] = ['ALITO GROUP SRL', 'ALITO EIRL', 'VENDIDO'];
+
+// Empresas operativas (excluye VENDIDO para selectores normales)
+export const EMPRESAS_OPERATIVAS: EmpresaEquipo[] = ['ALITO GROUP SRL', 'ALITO EIRL'];
+
+// Helper para verificar si un equipo está vendido
+export const isEquipoVendido = (empresa: EmpresaEquipo | string): boolean => empresa === 'VENDIDO';
+
+// Helper para verificar si un equipo debe mostrarse en el sistema (no vendido o inactivo)
+export const isEquipoDisponible = (equipo: { empresa: EmpresaEquipo | string; activo: boolean }): boolean => {
+  return equipo.activo && !isEquipoVendido(equipo.empresa);
+};
 
 export interface Equipo {
   id: number;

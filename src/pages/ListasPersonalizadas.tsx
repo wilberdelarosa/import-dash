@@ -29,7 +29,7 @@ import { formatRemainingLabel } from '@/lib/maintenanceUtils';
 import { cn } from '@/lib/utils';
 import { getStaticCaterpillarData } from '@/data/caterpillarMaintenance';
 import type { Equipo, MantenimientoProgramado, EmpresaEquipo } from '@/types/equipment';
-import { EMPRESAS_DISPONIBLES } from '@/types/equipment';
+import { EMPRESAS_DISPONIBLES, isEquipoDisponible, isEquipoVendido } from '@/types/equipment';
 import { useDeviceDetection } from '@/hooks/useDeviceDetection';
 import { ListasPersonalizadasMobile } from '@/pages/mobile/ListasPersonalizadasMobile';
 
@@ -348,6 +348,10 @@ export default function ListasPersonalizadas() {
 
   const filteredEquipos = useMemo(() => {
     return enrichedEquipos.filter((equipo) => {
+      // Excluir equipos vendidos por defecto (a menos que se filtre específicamente por empresa=VENDIDO)
+      if (!selectedEmpresas.includes('VENDIDO') && isEquipoVendido(equipo.empresa)) {
+        return false;
+      }
       if (selectedCategorias.length > 0 && !selectedCategorias.includes(equipo.categoria)) {
         return false;
       }

@@ -22,7 +22,7 @@ import {
     AlertTriangle
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
-import { MantenimientoProgramado, MantenimientoRealizado, Equipo } from '@/types/equipment';
+import { MantenimientoProgramado, MantenimientoRealizado, Equipo, isEquipoDisponible } from '@/types/equipment';
 import { formatRemainingLabel, getRemainingVariant } from '@/lib/maintenanceUtils';
 import { useToast } from '@/hooks/use-toast';
 import { useCaterpillarData } from '@/hooks/useCaterpillarData';

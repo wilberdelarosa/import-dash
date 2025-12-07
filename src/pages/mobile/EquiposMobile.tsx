@@ -4,7 +4,7 @@
  * Características:
  * - Lista vertical con cards compactos
  * - Búsqueda con debounce
- * - Filtros rápidos (activos/inactivos)
+ * - Filtros rápidos (activos/inactivos/vendidos)
  * - Vista detalle fullscreen
  * - FAB para agregar equipo
  * - Gestos táctiles
@@ -32,7 +32,7 @@ import {
 } from 'lucide-react';
 import { useUserRoles } from '@/hooks/useUserRoles';
 import { cn } from '@/lib/utils';
-import { Equipo } from '@/types/equipment';
+import { Equipo, isEquipoDisponible, isEquipoVendido } from '@/types/equipment';
 import {
   Sheet,
   SheetContent,
@@ -56,7 +56,7 @@ interface EquiposMobileProps {
   onAdd: () => void;
 }
 
-type FilterType = 'all' | 'active' | 'inactive';
+type FilterType = 'all' | 'active' | 'inactive' | 'vendido' | 'todo';
 
 export function EquiposMobile({
   equipos,
@@ -71,22 +71,38 @@ export function EquiposMobile({
   const { currentUserRole } = useUserRoles();
   const isAdmin = currentUserRole === 'admin';
 
-  // Estadísticas
-  const stats = useMemo(() => ({
-    total: equipos.length,
-    activos: equipos.filter(e => e.activo).length,
-    inactivos: equipos.filter(e => !e.activo).length,
-  }), [equipos]);
+  // Estadísticas (excluyendo vendidos por defecto)
+  const stats = useMemo(() => {
+    const disponibles = equipos.filter(isEquipoDisponible);
+    return {
+      total: disponibles.length,
+      activos: disponibles.filter(e => e.activo).length,
+      inactivos: disponibles.filter(e => !e.activo).length,
+      vendidos: equipos.filter(e => !isEquipoDisponible(e)).length,
+    };
+  }, [equipos]);
 
   // Filtrado y búsqueda
   const equiposFiltrados = useMemo(() => {
     let filtered = equipos;
 
-    // Filtro por estado
-    if (filter === 'active') {
-      filtered = filtered.filter(e => e.activo);
-    } else if (filter === 'inactive') {
-      filtered = filtered.filter(e => !e.activo);
+    // Filtro por estado (excluyendo vendidos por defecto)
+    switch (filter) {
+      case 'all':
+        filtered = filtered.filter(isEquipoDisponible);
+        break;
+      case 'active':
+        filtered = filtered.filter(e => isEquipoDisponible(e) && e.activo);
+        break;
+      case 'inactive':
+        filtered = filtered.filter(e => isEquipoDisponible(e) && !e.activo);
+        break;
+      case 'vendido':
+        filtered = filtered.filter(e => !isEquipoDisponible(e));
+        break;
+      case 'todo':
+        // Mostrar absolutamente todos
+        break;
     }
 
     // Búsqueda
@@ -143,7 +159,7 @@ export function EquiposMobile({
                   <Truck className="h-4 w-4" />
                 </div>
                 <div className="flex flex-1 items-center justify-between">
-                  <span>Todos los equipos</span>
+                  <span>Todos (sin vendidos)</span>
                   <Badge variant="secondary" className="bg-background/20 text-foreground">{stats.total}</Badge>
                 </div>
               </Button>
@@ -187,6 +203,28 @@ export function EquiposMobile({
                   <Badge variant="secondary" className="bg-background/20 text-foreground">{stats.inactivos}</Badge>
                 </div>
               </Button>
+
+              {stats.vendidos > 0 && (
+                <Button
+                  variant={filter === 'vendido' ? 'default' : 'outline'}
+                  className={cn(
+                    "w-full justify-start gap-3 h-14 text-base rounded-xl transition-all",
+                    filter === 'vendido' && "bg-orange-600 hover:bg-orange-700 shadow-lg shadow-orange-600/25 border-orange-600"
+                  )}
+                  onClick={() => {
+                    setFilter('vendido');
+                    setFiltersOpen(false);
+                  }}
+                >
+                  <div className="flex h-8 w-8 items-center justify-center rounded-full bg-background/20">
+                    <span className="text-lg">⚠️</span>
+                  </div>
+                  <div className="flex flex-1 items-center justify-between">
+                    <span>Equipos Vendidos</span>
+                    <Badge variant="secondary" className="bg-background/20 text-foreground">{stats.vendidos}</Badge>
+                  </div>
+                </Button>
+              )}
             </div>
           </SheetContent>
         </Sheet>
@@ -226,8 +264,13 @@ export function EquiposMobile({
             <div className="mt-2 flex items-center gap-2 animate-in slide-in-from-top-2 fade-in">
               <span className="text-xs text-muted-foreground">Filtrando por:</span>
               <Badge variant="secondary" className="gap-1 pl-1 pr-2 h-6">
-                <div className={cn("h-1.5 w-1.5 rounded-full", filter === 'active' ? "bg-emerald-500" : "bg-slate-500")} />
-                {filter === 'active' ? 'Activos' : 'Inactivos'}
+                <div className={cn(
+                  "h-1.5 w-1.5 rounded-full", 
+                  filter === 'active' ? "bg-emerald-500" : 
+                  filter === 'inactive' ? "bg-slate-500" : 
+                  filter === 'vendido' ? "bg-orange-500" : "bg-primary"
+                )} />
+                {filter === 'active' ? 'Activos' : filter === 'inactive' ? 'Inactivos' : filter === 'vendido' ? 'Vendidos' : 'Todos'}
                 <button onClick={() => setFilter('all')} className="ml-1 hover:text-foreground">×</button>
               </Badge>
             </div>
@@ -252,34 +295,41 @@ export function EquiposMobile({
           </div>
         ) : (
           <div className="space-y-3">
-            {equiposFiltrados.map((equipo, index) => (
-              <div
-                key={equipo.id}
-                className="relative group animate-in slide-in-from-bottom-4 fade-in fill-mode-backwards"
-                style={{ animationDelay: `${index * 0.05}s` }}
-              >
-                <MobileListCard
-                  title={equipo.ficha || 'Sin ficha'}
-                  subtitle={equipo.nombre || 'Sin nombre'}
-                  meta={`${equipo.marca || ''} ${equipo.modelo || ''}`.trim() || 'Sin marca/modelo'}
-                  icon={getCategoryIcon(equipo.categoria)}
-                  className="bg-card/50 backdrop-blur-sm border-border/50 hover:bg-accent/50 transition-all"
-                  badge={
-                    equipo.activo ? (
-                      <Badge variant="outline" className="text-[10px] h-5 border-emerald-500/30 text-emerald-600 bg-emerald-500/5">Activo</Badge>
-                    ) : (
-                      <Badge variant="outline" className="text-[10px] h-5 border-slate-500/30 text-slate-600 bg-slate-500/5">Inactivo</Badge>
-                    )
-                  }
-                  onClick={() => onVerDetalle(equipo.ficha || '')}
-                />
+            {equiposFiltrados.map((equipo, index) => {
+              const esVendido = isEquipoVendido(equipo.empresa);
+              return (
+                <div
+                  key={equipo.id}
+                  className="relative group animate-in slide-in-from-bottom-4 fade-in fill-mode-backwards"
+                  style={{ animationDelay: `${index * 0.05}s` }}
+                >
+                  <MobileListCard
+                    title={equipo.ficha || 'Sin ficha'}
+                    subtitle={equipo.nombre || 'Sin nombre'}
+                    meta={`${equipo.marca || ''} ${equipo.modelo || ''}`.trim() || 'Sin marca/modelo'}
+                    icon={getCategoryIcon(equipo.categoria)}
+                    className={cn(
+                      "bg-card/50 backdrop-blur-sm border-border/50 hover:bg-accent/50 transition-all",
+                      esVendido && "opacity-75 border-orange-500/30"
+                    )}
+                    badge={
+                      esVendido ? (
+                        <Badge variant="outline" className="text-[10px] h-5 border-orange-500/30 text-orange-600 bg-orange-500/5">⚠️ Vendido</Badge>
+                      ) : equipo.activo ? (
+                        <Badge variant="outline" className="text-[10px] h-5 border-emerald-500/30 text-emerald-600 bg-emerald-500/5">Activo</Badge>
+                      ) : (
+                        <Badge variant="outline" className="text-[10px] h-5 border-slate-500/30 text-slate-600 bg-slate-500/5">Inactivo</Badge>
+                      )
+                    }
+                    onClick={() => onVerDetalle(equipo.ficha || '')}
+                  />
 
-                {/* Menú de acciones flotante */}
-                <DropdownMenu>
-                  <DropdownMenuTrigger asChild>
-                    <Button
-                      variant="ghost"
-                      size="icon"
+                  {/* Menú de acciones flotante */}
+                  <DropdownMenu>
+                    <DropdownMenuTrigger asChild>
+                      <Button
+                        variant="ghost"
+                        size="icon"
                       className="absolute right-2 top-1/2 h-8 w-8 -translate-y-1/2 opacity-0 group-hover:opacity-100 transition-opacity focus:opacity-100 active:opacity-100 data-[state=open]:opacity-100"
                       onClick={(e) => e.stopPropagation()}
                     >
@@ -329,7 +379,8 @@ export function EquiposMobile({
                   </DropdownMenuContent>
                 </DropdownMenu>
               </div>
-            ))}
+              );
+            })}
           </div>
         )}
       </div>

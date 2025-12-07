@@ -22,6 +22,7 @@ import { useSupabaseDataContext } from '@/context/SupabaseDataContext';
 import { useMechanicSubmissions, PartUsada } from '@/hooks/useMechanicSubmissions';
 import { useSubmissionAttachments } from '@/hooks/useSubmissionAttachments';
 import { useToast } from '@/hooks/use-toast';
+import { isEquipoDisponible } from '@/types/equipment';
 import {
   Truck,
   Calendar,
@@ -275,7 +276,7 @@ export function MechanicSubmissionForm() {
                 <SelectValue placeholder="Selecciona un equipo" />
               </SelectTrigger>
               <SelectContent>
-                {equipos.filter(e => e.activo).map((equipo) => (
+                {equipos.filter(e => isEquipoDisponible(e) && e.activo).map((equipo) => (
                   <SelectItem key={equipo.id} value={equipo.id.toString()}>
                     {equipo.ficha} - {equipo.nombre}
                   </SelectItem>

@@ -8,7 +8,7 @@ import { useSupabaseDataContext } from '@/context/SupabaseDataContext';
 import { useDeviceDetection } from '@/hooks/useDeviceDetection';
 import { usePermissions } from '@/hooks/usePermissions';
 import { EquiposMobile } from '@/pages/mobile/EquiposMobile';
-import { Equipo } from '@/types/equipment';
+import { Equipo, isEquipoDisponible } from '@/types/equipment';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { ConfirmDialog } from '@/components/ConfirmDialog';
 import { Skeleton } from '@/components/ui/skeleton';
@@ -121,8 +121,11 @@ export default function Equipos() {
     );
   }
 
-  const equiposActivos = data.equipos.filter(e => e.activo).length;
-  const equiposInactivos = data.equipos.filter(e => !e.activo).length;
+  // Equipos disponibles (excluir vendidos)
+  const equiposDisponibles = data.equipos.filter(isEquipoDisponible);
+  const equiposActivos = equiposDisponibles.filter(e => e.activo).length;
+  const equiposInactivos = equiposDisponibles.filter(e => !e.activo).length;
+  const equiposVendidos = data.equipos.filter(e => !isEquipoDisponible(e)).length;
 
   // Renderizar versión móvil
   if (isMobile) {
