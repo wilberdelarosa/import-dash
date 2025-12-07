@@ -185,6 +185,7 @@ const diffEquipo = (current: Equipo, incoming: EquipoPayload) => {
   maybe('Número de serie', current.numeroSerie, incoming.numeroSerie);
   maybe('Placa', current.placa, incoming.placa);
   maybe('Categoría', current.categoria, incoming.categoria);
+  maybe('Empresa', current.empresa, incoming.empresa);
   maybe('Estado', current.activo ? 'Activo' : 'Inactivo', incoming.activo ? 'Activo' : 'Inactivo');
   maybe('Motivo inactividad', current.motivoInactividad, incoming.motivoInactividad ?? null);
 
