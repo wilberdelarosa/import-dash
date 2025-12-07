@@ -257,6 +257,7 @@ export type Database = {
           activo: boolean
           categoria: string
           created_at: string | null
+          empresa: string
           ficha: string
           id: number
           marca: string
@@ -270,6 +271,7 @@ export type Database = {
           activo?: boolean
           categoria: string
           created_at?: string | null
+          empresa?: string
           ficha: string
           id?: number
           marca: string
@@ -283,6 +285,7 @@ export type Database = {
           activo?: boolean
           categoria?: string
           created_at?: string | null
+          empresa?: string
           ficha?: string
           id?: number
           marca?: string
