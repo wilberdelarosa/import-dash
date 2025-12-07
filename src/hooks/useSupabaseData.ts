@@ -242,6 +242,7 @@ const toEquipoPayload = (equipo: Equipo): EquipoPayload => ({
   numeroSerie: equipo.numeroSerie,
   placa: equipo.placa,
   categoria: equipo.categoria,
+  empresa: equipo.empresa,
   activo: equipo.activo,
   motivoInactividad: equipo.motivoInactividad ?? null,
 });
@@ -497,6 +498,7 @@ export function useSupabaseData() {
           numeroSerie: e.numero_serie,
           placa: e.placa,
           categoria: e.categoria,
+          empresa: (e.empresa as 'ALITO GROUP SRL' | 'ALITO EIRL') ?? 'ALITO GROUP SRL',
           activo: e.activo,
           motivoInactividad: e.motivo_inactividad ?? null,
         })),

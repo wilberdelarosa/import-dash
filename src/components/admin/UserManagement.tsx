@@ -93,9 +93,15 @@ export function UserManagement() {
         u.id === userId ? { ...u, role: newRole } : u
       ));
 
+      const roleNames: Record<AppRole, string> = {
+        admin: 'Administrador',
+        supervisor: 'Supervisor',
+        mechanic: 'Mecánico',
+        user: 'Usuario'
+      };
       toast({
         title: 'Rol actualizado',
-        description: `El usuario ahora tiene el rol "${newRole === 'admin' ? 'Administrador' : 'Usuario'}"`,
+        description: `El usuario ahora tiene el rol "${roleNames[newRole]}"`,
       });
     } catch (err) {
       console.error('Error updating role:', err);
@@ -173,30 +179,39 @@ export function UserManagement() {
         </div>
 
         {/* Resumen de roles */}
-        <div className="grid grid-cols-2 md:grid-cols-3 gap-4 mb-6">
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
           <div className="p-4 rounded-lg bg-accent/50 border">
             <div className="flex items-center gap-2 mb-2">
               <Users className="h-4 w-4 text-muted-foreground" />
-              <span className="text-sm font-medium">Total Usuarios</span>
+              <span className="text-sm font-medium">Total</span>
             </div>
             <p className="text-2xl font-bold">{users.length}</p>
           </div>
           <div className="p-4 rounded-lg bg-primary/10 border border-primary/20">
             <div className="flex items-center gap-2 mb-2">
               <ShieldCheck className="h-4 w-4 text-primary" />
-              <span className="text-sm font-medium">Administradores</span>
+              <span className="text-sm font-medium">Admin</span>
             </div>
             <p className="text-2xl font-bold text-primary">
               {users.filter(u => u.role === 'admin').length}
             </p>
           </div>
+          <div className="p-4 rounded-lg bg-amber-500/10 border border-amber-500/20">
+            <div className="flex items-center gap-2 mb-2">
+              <Shield className="h-4 w-4 text-amber-600" />
+              <span className="text-sm font-medium">Supervisor</span>
+            </div>
+            <p className="text-2xl font-bold text-amber-600">
+              {users.filter(u => u.role === 'supervisor').length}
+            </p>
+          </div>
           <div className="p-4 rounded-lg bg-blue-500/10 border border-blue-500/20">
             <div className="flex items-center gap-2 mb-2">
               <UserCog className="h-4 w-4 text-blue-600" />
-              <span className="text-sm font-medium">Usuarios</span>
+              <span className="text-sm font-medium">Mecánico</span>
             </div>
             <p className="text-2xl font-bold text-blue-600">
-              {users.filter(u => u.role === 'user').length}
+              {users.filter(u => u.role === 'mechanic').length}
             </p>
           </div>
         </div>
@@ -250,15 +265,19 @@ export function UserManagement() {
                         variant={user.role === 'admin' ? 'default' : 'secondary'}
                         className={cn(
                           user.role === 'admin' && 'bg-primary',
+                          user.role === 'supervisor' && 'bg-amber-600',
+                          user.role === 'mechanic' && 'bg-blue-600',
                           "gap-1"
                         )}
                       >
-                        {user.role === 'admin' ? (
-                          <ShieldCheck className="h-3 w-3" />
-                        ) : (
-                          <UserCog className="h-3 w-3" />
-                        )}
-                        {user.role === 'admin' ? 'Administrador' : 'Usuario'}
+                        {user.role === 'admin' && <ShieldCheck className="h-3 w-3" />}
+                        {user.role === 'supervisor' && <Shield className="h-3 w-3" />}
+                        {user.role === 'mechanic' && <UserCog className="h-3 w-3" />}
+                        {user.role === 'user' && <Users className="h-3 w-3" />}
+                        {user.role === 'admin' && 'Administrador'}
+                        {user.role === 'supervisor' && 'Supervisor'}
+                        {user.role === 'mechanic' && 'Mecánico'}
+                        {user.role === 'user' && 'Usuario'}
                       </Badge>
                     </TableCell>
                     <TableCell className="hidden md:table-cell">
@@ -293,9 +312,21 @@ export function UserManagement() {
                               Administrador
                             </div>
                           </SelectItem>
+                          <SelectItem value="supervisor">
+                            <div className="flex items-center gap-2">
+                              <Shield className="h-4 w-4 text-amber-600" />
+                              Supervisor
+                            </div>
+                          </SelectItem>
+                          <SelectItem value="mechanic">
+                            <div className="flex items-center gap-2">
+                              <UserCog className="h-4 w-4 text-blue-600" />
+                              Mecánico
+                            </div>
+                          </SelectItem>
                           <SelectItem value="user">
                             <div className="flex items-center gap-2">
-                              <UserCog className="h-4 w-4" />
+                              <Users className="h-4 w-4" />
                               Usuario
                             </div>
                           </SelectItem>
