@@ -1,6 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
 import { Layout } from '@/components/Layout';
-import { Navigation } from '@/components/Navigation';
 import { useSupabaseDataContext } from '@/context/SupabaseDataContext';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -12,20 +11,25 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Separator } from '@/components/ui/separator';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import {
+  Building2,
   Download,
   Filter,
   LayoutTemplate,
   ListChecks,
   Palette,
   Search,
+  Settings2,
   Sparkles,
   Tag,
+  Wrench,
 } from 'lucide-react';
 import { formatRemainingLabel } from '@/lib/maintenanceUtils';
 import { cn } from '@/lib/utils';
 import { getStaticCaterpillarData } from '@/data/caterpillarMaintenance';
-import type { Equipo, MantenimientoProgramado } from '@/types/equipment';
+import type { Equipo, MantenimientoProgramado, EmpresaEquipo } from '@/types/equipment';
+import { EMPRESAS_DISPONIBLES } from '@/types/equipment';
 import { useDeviceDetection } from '@/hooks/useDeviceDetection';
 import { ListasPersonalizadasMobile } from '@/pages/mobile/ListasPersonalizadasMobile';
 
@@ -33,6 +37,7 @@ interface ColumnOption {
   key: string;
   label: string;
   description: string;
+  group: 'basico' | 'mantenimiento' | 'avanzado';
   accessor: (equipo: EnrichedEquipo) => string;
 }
 
@@ -45,7 +50,8 @@ interface EnrichedEquipo extends Equipo {
   tareasClave: string;
 }
 
-const DEFAULT_COLUMNS = ['ficha', 'nombre', 'modelo', 'categoria', 'estadoMantenimiento', 'kitRecomendado'];
+// Columnas por defecto: información básica del equipo
+const DEFAULT_COLUMNS = ['ficha', 'nombre', 'marca', 'numeroSerie', 'placa'];
 
 const COLOR_THEMES: Record<string, { name: string; header: string; badge: string; rowHover: string; }> = {
   emerald: {
@@ -88,84 +94,130 @@ const resolveIntervaloCodigo = (mantenimiento: MantenimientoProgramado | undefin
   return '';
 };
 
+// Columnas agrupadas por categoría para mejor organización
 const buildColumnOptions = (): ColumnOption[] => [
+  // ═══════════════════════════════════════════════════════════════════════════
+  // GRUPO: BÁSICO - Identificación del equipo
+  // ═══════════════════════════════════════════════════════════════════════════
   {
     key: 'ficha',
     label: 'Ficha',
     description: 'Identificador interno del equipo.',
+    group: 'basico',
     accessor: (equipo) => equipo.ficha,
   },
   {
     key: 'nombre',
     label: 'Nombre',
     description: 'Nombre comercial o alias operativo.',
+    group: 'basico',
     accessor: (equipo) => equipo.nombre,
   },
   {
     key: 'marca',
     label: 'Marca',
     description: 'Fabricante registrado del equipo.',
+    group: 'basico',
     accessor: (equipo) => equipo.marca,
   },
   {
     key: 'modelo',
     label: 'Modelo',
     description: 'Modelo exacto según ficha técnica.',
+    group: 'basico',
     accessor: (equipo) => equipo.modelo,
   },
   {
     key: 'numeroSerie',
-    label: 'N° de serie',
+    label: 'N° de Serie',
     description: 'Número de serie físico reportado en la placa.',
+    group: 'basico',
     accessor: (equipo) => equipo.numeroSerie,
-  },
-  {
-    key: 'categoria',
-    label: 'Categoría',
-    description: 'Categoría operativa utilizada para agrupar el equipo.',
-    accessor: (equipo) => equipo.categoria,
   },
   {
     key: 'placa',
     label: 'Placa',
-    description: 'Placa o código de activo fijo.',
+    description: 'Placa vehicular o código de activo fijo.',
+    group: 'basico',
     accessor: (equipo) => equipo.placa,
   },
   {
+    key: 'categoria',
+    label: 'Categoría',
+    description: 'Categoría operativa para agrupar equipos.',
+    group: 'basico',
+    accessor: (equipo) => equipo.categoria,
+  },
+  {
+    key: 'empresa',
+    label: 'Empresa',
+    description: 'Empresa propietaria del equipo.',
+    group: 'basico',
+    accessor: (equipo) => equipo.empresa || 'Sin asignar',
+  },
+  {
+    key: 'activo',
+    label: 'Estado',
+    description: 'Si el equipo está activo u operativo.',
+    group: 'basico',
+    accessor: (equipo) => equipo.activo ? 'Activo' : 'Inactivo',
+  },
+  
+  // ═══════════════════════════════════════════════════════════════════════════
+  // GRUPO: MANTENIMIENTO - Estado y programación
+  // ═══════════════════════════════════════════════════════════════════════════
+  {
     key: 'horasKmActualesLabel',
-    label: 'Lectura actual',
-    description: 'Lectura de horas o kilómetros registrada en el último mantenimiento programado.',
+    label: 'Lectura Actual',
+    description: 'Horas o kilómetros registrados.',
+    group: 'mantenimiento',
     accessor: (equipo) => equipo.horasKmActualesLabel,
   },
   {
     key: 'estadoMantenimiento',
-    label: 'Estado de mantenimiento',
+    label: 'Estado Mant.',
     description: 'Situación del mantenimiento (al día, próximo o vencido).',
+    group: 'mantenimiento',
     accessor: (equipo) => equipo.estadoMantenimiento,
   },
   {
     key: 'proximoIntervalo',
-    label: 'Intervalo próximo',
+    label: 'Intervalo PM',
     description: 'Intervalo PM asociado al próximo servicio.',
+    group: 'mantenimiento',
     accessor: (equipo) => equipo.proximoIntervalo,
   },
+  
+  // ═══════════════════════════════════════════════════════════════════════════
+  // GRUPO: AVANZADO - Información técnica detallada
+  // ═══════════════════════════════════════════════════════════════════════════
   {
     key: 'proximoIntervaloDescripcion',
-    label: 'Descripción del intervalo',
-    description: 'Resumen de las tareas sugeridas por Caterpillar.',
+    label: 'Descripción Intervalo',
+    description: 'Resumen de las tareas sugeridas.',
+    group: 'avanzado',
     accessor: (equipo) => equipo.proximoIntervaloDescripcion,
   },
   {
     key: 'kitRecomendado',
-    label: 'Kit recomendado',
-    description: 'Filtros y repuestos sugeridos para la intervención.',
+    label: 'Kit Recomendado',
+    description: 'Filtros y repuestos sugeridos.',
+    group: 'avanzado',
     accessor: (equipo) => equipo.kitRecomendado,
   },
   {
     key: 'tareasClave',
-    label: 'Tareas clave',
-    description: 'Actividades críticas incluidas en el kit.',
+    label: 'Tareas Clave',
+    description: 'Actividades críticas del mantenimiento.',
+    group: 'avanzado',
     accessor: (equipo) => equipo.tareasClave,
+  },
+  {
+    key: 'motivoInactividad',
+    label: 'Motivo Inactividad',
+    description: 'Razón si el equipo está inactivo.',
+    group: 'avanzado',
+    accessor: (equipo) => equipo.motivoInactividad || 'N/A',
   },
 ];
 
@@ -177,10 +229,13 @@ export default function ListasPersonalizadas() {
   const [selectedCategorias, setSelectedCategorias] = useState<string[]>([]);
   const [selectedMarcas, setSelectedMarcas] = useState<string[]>([]);
   const [selectedModelos, setSelectedModelos] = useState<string[]>([]);
+  const [selectedEmpresas, setSelectedEmpresas] = useState<string[]>([]);
   const [searchTerm, setSearchTerm] = useState('');
   const [colorScheme, setColorScheme] = useState<'emerald' | 'amber' | 'sky' | 'slate'>('emerald');
   const [selectedFichas, setSelectedFichas] = useState<string[]>([]);
+  const [columnTab, setColumnTab] = useState<'basico' | 'mantenimiento' | 'avanzado'>('basico');
 
+  // Auto-detectar valores únicos disponibles en los datos
   const categoriasDisponibles = useMemo(
     () =>
       Array.from(new Set(data.equipos.map((equipo) => equipo.categoria).filter((categoria): categoria is string => Boolean(categoria)))).sort(),
@@ -199,6 +254,22 @@ export default function ListasPersonalizadas() {
         .sort(),
     [data.equipos],
   );
+
+  // Auto-detectar empresas disponibles en los datos
+  const empresasDisponibles = useMemo(() => {
+    const empresasEnDatos = new Set(data.equipos.map((e) => e.empresa).filter(Boolean));
+    // Combinar con las empresas definidas por si hay alguna sin equipos
+    return [...new Set([...EMPRESAS_DISPONIBLES, ...empresasEnDatos])].filter(Boolean).sort();
+  }, [data.equipos]);
+
+  // Agrupar columnas por grupo para mostrar en tabs
+  const columnsByGroup = useMemo(() => {
+    return {
+      basico: columnOptions.filter((c) => c.group === 'basico'),
+      mantenimiento: columnOptions.filter((c) => c.group === 'mantenimiento'),
+      avanzado: columnOptions.filter((c) => c.group === 'avanzado'),
+    };
+  }, [columnOptions]);
 
   const columnMap = useMemo(() => {
     return columnOptions.reduce<Record<string, ColumnOption>>((acc, option) => {
@@ -286,6 +357,9 @@ export default function ListasPersonalizadas() {
       if (selectedModelos.length > 0 && !selectedModelos.includes(equipo.modelo)) {
         return false;
       }
+      if (selectedEmpresas.length > 0 && !selectedEmpresas.includes(equipo.empresa)) {
+        return false;
+      }
       if (searchTerm) {
         const normalized = searchTerm.toLowerCase();
         const values = [
@@ -296,6 +370,7 @@ export default function ListasPersonalizadas() {
           equipo.marca,
           equipo.numeroSerie,
           equipo.placa,
+          equipo.empresa,
           equipo.estadoMantenimiento,
         ]
           .filter(Boolean)
@@ -307,7 +382,7 @@ export default function ListasPersonalizadas() {
       }
       return true;
     });
-  }, [enrichedEquipos, selectedCategorias, selectedMarcas, selectedModelos, searchTerm]);
+  }, [enrichedEquipos, selectedCategorias, selectedMarcas, selectedModelos, selectedEmpresas, searchTerm]);
 
   const filteredSelectedFichas = useMemo(() => {
     const fichasSet = new Set(filteredEquipos.map((equipo) => equipo.ficha));
@@ -389,6 +464,45 @@ export default function ListasPersonalizadas() {
       }
       return [...prev, modelo];
     });
+  };
+
+  const handleToggleEmpresa = (empresa: string) => {
+    setSelectedEmpresas((prev) => {
+      if (prev.includes(empresa)) {
+        return prev.filter((item) => item !== empresa);
+      }
+      return [...prev, empresa];
+    });
+  };
+
+  // Seleccionar todas las columnas de un grupo
+  const selectAllColumnsInGroup = (group: 'basico' | 'mantenimiento' | 'avanzado') => {
+    const groupColumns = columnsByGroup[group].map((c) => c.key);
+    setSelectedColumns((prev) => {
+      const withoutGroup = prev.filter((key) => !groupColumns.includes(key));
+      return [...withoutGroup, ...groupColumns];
+    });
+  };
+
+  // Deseleccionar todas las columnas de un grupo
+  const clearColumnsInGroup = (group: 'basico' | 'mantenimiento' | 'avanzado') => {
+    const groupColumns = columnsByGroup[group].map((c) => c.key);
+    setSelectedColumns((prev) => prev.filter((key) => !groupColumns.includes(key)));
+  };
+
+  // Preset: Solo columnas básicas por defecto
+  const applyPresetBasico = () => {
+    setSelectedColumns(DEFAULT_COLUMNS);
+  };
+
+  // Preset: Columnas para mantenimiento
+  const applyPresetMantenimiento = () => {
+    setSelectedColumns(['ficha', 'nombre', 'marca', 'horasKmActualesLabel', 'estadoMantenimiento', 'proximoIntervalo']);
+  };
+
+  // Preset: Todas las columnas
+  const applyPresetCompleto = () => {
+    setSelectedColumns(columnOptions.map((c) => c.key));
   };
 
   const handleExportCsv = () => {
@@ -478,12 +592,26 @@ export default function ListasPersonalizadas() {
       <div className="space-y-6 lg:space-y-8">
         <Alert className="border-primary/40 bg-primary/5">
           <Sparkles className="h-4 w-4" />
-          <AlertTitle>Nuevas vistas dinámicas</AlertTitle>
+          <AlertTitle>Generador de Listas Dinámicas</AlertTitle>
           <AlertDescription>
-            Selecciona las columnas, categorías y estilos visuales para generar listados a medida. Desde aquí puedes exportar las
-            vistas a CSV (Excel) o imprimirlas en PDF para compartir con tu equipo.
+            Crea listados personalizados seleccionando columnas, filtrando por empresa, categoría o marca. 
+            Exporta a CSV (Excel) o PDF para compartir con tu equipo.
           </AlertDescription>
         </Alert>
+
+        {/* Presets rápidos */}
+        <div className="flex flex-wrap items-center gap-2">
+          <span className="text-sm font-medium text-muted-foreground">Plantillas:</span>
+          <Button variant="outline" size="sm" onClick={applyPresetBasico}>
+            <Tag className="mr-1 h-3 w-3" /> Básico
+          </Button>
+          <Button variant="outline" size="sm" onClick={applyPresetMantenimiento}>
+            <Wrench className="mr-1 h-3 w-3" /> Mantenimiento
+          </Button>
+          <Button variant="outline" size="sm" onClick={applyPresetCompleto}>
+            <Settings2 className="mr-1 h-3 w-3" /> Completo
+          </Button>
+        </div>
 
         <section className="grid gap-4 xl:grid-cols-[380px_1fr]">
           <Card className="border border-border/60 bg-card/90">
@@ -519,6 +647,24 @@ export default function ListasPersonalizadas() {
                         onCheckedChange={() => handleToggleCategoria(categoria)}
                       />
                       <span>{categoria}</span>
+                    </label>
+                  ))}
+                </div>
+              </div>
+
+              {/* Filtro por Empresa */}
+              <div className="space-y-3">
+                <Label className="flex items-center gap-2 text-sm font-semibold">
+                  <Building2 className="h-4 w-4" /> Empresa
+                </Label>
+                <div className="grid grid-cols-1 gap-2">
+                  {empresasDisponibles.map((empresa) => (
+                    <label key={empresa} className="flex items-center gap-2 rounded-md border border-border/60 p-2 text-sm">
+                      <Checkbox
+                        checked={selectedEmpresas.includes(empresa)}
+                        onCheckedChange={() => handleToggleEmpresa(empresa)}
+                      />
+                      <span>{empresa}</span>
                     </label>
                   ))}
                 </div>
@@ -632,22 +778,100 @@ export default function ListasPersonalizadas() {
 
               <div className="space-y-3">
                 <Label className="flex items-center gap-2 text-sm font-semibold">
-                  <Sparkles className="h-4 w-4" /> Columnas mostradas
+                  <Settings2 className="h-4 w-4" /> Columnas mostradas
                 </Label>
-                <div className="grid max-h-[280px] grid-cols-1 gap-2 overflow-y-auto border border-border/60 p-2 sm:grid-cols-2">
-                  {columnOptions.map((option) => (
-                    <label key={option.key} className="flex items-start gap-2 rounded-md bg-muted/40 p-2 text-xs">
-                      <Checkbox
-                        checked={selectedColumns.includes(option.key)}
-                        onCheckedChange={() => handleToggleColumn(option.key)}
-                      />
-                      <div className="space-y-1">
-                        <span className="font-medium">{option.label}</span>
-                        <p className="text-muted-foreground leading-snug">{option.description}</p>
-                      </div>
-                    </label>
-                  ))}
-                </div>
+                <p className="text-xs text-muted-foreground">
+                  Selecciona las columnas organizadas por categoría.
+                </p>
+                
+                <Tabs value={columnTab} onValueChange={(v) => setColumnTab(v as 'basico' | 'mantenimiento' | 'avanzado')}>
+                  <TabsList className="grid w-full grid-cols-3">
+                    <TabsTrigger value="basico" className="text-xs">
+                      Básico ({columnsByGroup.basico.filter(c => selectedColumns.includes(c.key)).length})
+                    </TabsTrigger>
+                    <TabsTrigger value="mantenimiento" className="text-xs">
+                      Mant. ({columnsByGroup.mantenimiento.filter(c => selectedColumns.includes(c.key)).length})
+                    </TabsTrigger>
+                    <TabsTrigger value="avanzado" className="text-xs">
+                      Avanzado ({columnsByGroup.avanzado.filter(c => selectedColumns.includes(c.key)).length})
+                    </TabsTrigger>
+                  </TabsList>
+                  
+                  <TabsContent value="basico" className="space-y-2">
+                    <div className="flex gap-2 mb-2">
+                      <Button size="sm" variant="ghost" onClick={() => selectAllColumnsInGroup('basico')} className="text-xs h-7">
+                        Todas
+                      </Button>
+                      <Button size="sm" variant="ghost" onClick={() => clearColumnsInGroup('basico')} className="text-xs h-7">
+                        Ninguna
+                      </Button>
+                    </div>
+                    <div className="grid max-h-[200px] grid-cols-1 gap-2 overflow-y-auto border border-border/60 rounded-md p-2">
+                      {columnsByGroup.basico.map((option) => (
+                        <label key={option.key} className="flex items-start gap-2 rounded-md bg-muted/40 p-2 text-xs">
+                          <Checkbox
+                            checked={selectedColumns.includes(option.key)}
+                            onCheckedChange={() => handleToggleColumn(option.key)}
+                          />
+                          <div className="space-y-0.5">
+                            <span className="font-medium">{option.label}</span>
+                            <p className="text-muted-foreground leading-snug text-[10px]">{option.description}</p>
+                          </div>
+                        </label>
+                      ))}
+                    </div>
+                  </TabsContent>
+                  
+                  <TabsContent value="mantenimiento" className="space-y-2">
+                    <div className="flex gap-2 mb-2">
+                      <Button size="sm" variant="ghost" onClick={() => selectAllColumnsInGroup('mantenimiento')} className="text-xs h-7">
+                        Todas
+                      </Button>
+                      <Button size="sm" variant="ghost" onClick={() => clearColumnsInGroup('mantenimiento')} className="text-xs h-7">
+                        Ninguna
+                      </Button>
+                    </div>
+                    <div className="grid max-h-[200px] grid-cols-1 gap-2 overflow-y-auto border border-border/60 rounded-md p-2">
+                      {columnsByGroup.mantenimiento.map((option) => (
+                        <label key={option.key} className="flex items-start gap-2 rounded-md bg-muted/40 p-2 text-xs">
+                          <Checkbox
+                            checked={selectedColumns.includes(option.key)}
+                            onCheckedChange={() => handleToggleColumn(option.key)}
+                          />
+                          <div className="space-y-0.5">
+                            <span className="font-medium">{option.label}</span>
+                            <p className="text-muted-foreground leading-snug text-[10px]">{option.description}</p>
+                          </div>
+                        </label>
+                      ))}
+                    </div>
+                  </TabsContent>
+                  
+                  <TabsContent value="avanzado" className="space-y-2">
+                    <div className="flex gap-2 mb-2">
+                      <Button size="sm" variant="ghost" onClick={() => selectAllColumnsInGroup('avanzado')} className="text-xs h-7">
+                        Todas
+                      </Button>
+                      <Button size="sm" variant="ghost" onClick={() => clearColumnsInGroup('avanzado')} className="text-xs h-7">
+                        Ninguna
+                      </Button>
+                    </div>
+                    <div className="grid max-h-[200px] grid-cols-1 gap-2 overflow-y-auto border border-border/60 rounded-md p-2">
+                      {columnsByGroup.avanzado.map((option) => (
+                        <label key={option.key} className="flex items-start gap-2 rounded-md bg-muted/40 p-2 text-xs">
+                          <Checkbox
+                            checked={selectedColumns.includes(option.key)}
+                            onCheckedChange={() => handleToggleColumn(option.key)}
+                          />
+                          <div className="space-y-0.5">
+                            <span className="font-medium">{option.label}</span>
+                            <p className="text-muted-foreground leading-snug text-[10px]">{option.description}</p>
+                          </div>
+                        </label>
+                      ))}
+                    </div>
+                  </TabsContent>
+                </Tabs>
               </div>
             </CardContent>
           </Card>
@@ -662,6 +886,12 @@ export default function ListasPersonalizadas() {
                 <div className="mt-2 flex flex-wrap gap-2 text-xs text-muted-foreground">
                   <Badge variant="outline">Columnas: {selectedColumns.length}</Badge>
                   <Badge variant="outline">Fichas marcadas: {selectedCount}</Badge>
+                  {selectedEmpresas.length > 0 && (
+                    <Badge variant="outline" className="bg-blue-50 text-blue-700">
+                      <Building2 className="mr-1 h-3 w-3" />
+                      {selectedEmpresas.join(', ')}
+                    </Badge>
+                  )}
                   <Badge variant="outline">Tema: {theme.name}</Badge>
                 </div>
               </div>

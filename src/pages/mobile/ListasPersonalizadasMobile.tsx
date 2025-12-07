@@ -18,11 +18,13 @@ import {
     ChevronUp,
     FileSpreadsheet,
     Sparkles,
+    Building2,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { formatRemainingLabel } from '@/lib/maintenanceUtils';
 import { getStaticCaterpillarData } from '@/data/caterpillarMaintenance';
 import type { Equipo, MantenimientoProgramado } from '@/types/equipment';
+import { EMPRESAS_DISPONIBLES } from '@/types/equipment';
 import {
     Sheet,
     SheetContent,
@@ -47,7 +49,8 @@ interface EnrichedEquipo extends Equipo {
     kitRecomendado: string;
 }
 
-const DEFAULT_COLUMNS = ['ficha', 'nombre', 'modelo', 'categoria', 'estadoMantenimiento'];
+// Columnas por defecto simplificadas: Ficha, Nombre, Marca, Serie, Placa
+const DEFAULT_COLUMNS = ['ficha', 'nombre', 'marca', 'numeroSerie', 'placa'];
 
 const resolveIntervaloCodigo = (mantenimiento: MantenimientoProgramado | undefined | null) => {
     if (!mantenimiento) return '';
@@ -61,15 +64,22 @@ const resolveIntervaloCodigo = (mantenimiento: MantenimientoProgramado | undefin
     return '';
 };
 
+// Columnas organizadas por grupo
 const COLUMN_OPTIONS = [
-    { key: 'ficha', label: 'Ficha' },
-    { key: 'nombre', label: 'Nombre' },
-    { key: 'marca', label: 'Marca' },
-    { key: 'modelo', label: 'Modelo' },
-    { key: 'categoria', label: 'Categoría' },
-    { key: 'estadoMantenimiento', label: 'Estado Mant.' },
-    { key: 'proximoIntervalo', label: 'Próximo PM' },
-    { key: 'kitRecomendado', label: 'Kit Rec.' },
+    // Básico
+    { key: 'ficha', label: 'Ficha', group: 'basico' },
+    { key: 'nombre', label: 'Nombre', group: 'basico' },
+    { key: 'marca', label: 'Marca', group: 'basico' },
+    { key: 'modelo', label: 'Modelo', group: 'basico' },
+    { key: 'numeroSerie', label: 'N° Serie', group: 'basico' },
+    { key: 'placa', label: 'Placa', group: 'basico' },
+    { key: 'categoria', label: 'Categoría', group: 'basico' },
+    { key: 'empresa', label: 'Empresa', group: 'basico' },
+    // Mantenimiento
+    { key: 'estadoMantenimiento', label: 'Estado Mant.', group: 'mantenimiento' },
+    { key: 'proximoIntervalo', label: 'Próximo PM', group: 'mantenimiento' },
+    { key: 'horasKmActualesLabel', label: 'Lectura Actual', group: 'mantenimiento' },
+    { key: 'kitRecomendado', label: 'Kit Rec.', group: 'avanzado' },
 ];
 
 const COLOR_THEMES = {
@@ -84,6 +94,7 @@ export function ListasPersonalizadasMobile() {
     const [searchTerm, setSearchTerm] = useState('');
     const [selectedColumns, setSelectedColumns] = useState<string[]>(DEFAULT_COLUMNS);
     const [selectedCategorias, setSelectedCategorias] = useState<string[]>([]);
+    const [selectedEmpresas, setSelectedEmpresas] = useState<string[]>([]);
     const [selectedFichas, setSelectedFichas] = useState<string[]>([]);
     const [colorScheme, setColorScheme] = useState<keyof typeof COLOR_THEMES>('emerald');
     const [expandedCardId, setExpandedCardId] = useState<number | null>(null);
@@ -131,9 +142,18 @@ export function ListasPersonalizadasMobile() {
         [data.equipos]
     );
 
+    // Auto-detectar empresas en los datos
+    const empresasDisponibles = useMemo(() => {
+        const empresasEnDatos = new Set(data.equipos.map((e) => e.empresa).filter(Boolean));
+        return [...new Set([...EMPRESAS_DISPONIBLES, ...empresasEnDatos])].filter(Boolean).sort();
+    }, [data.equipos]);
+
     const filteredEquipos = useMemo(() => {
         return enrichedEquipos.filter((equipo) => {
             if (selectedCategorias.length > 0 && !selectedCategorias.includes(equipo.categoria)) {
+                return false;
+            }
+            if (selectedEmpresas.length > 0 && !selectedEmpresas.includes(equipo.empresa)) {
                 return false;
             }
             if (searchTerm) {
@@ -143,6 +163,9 @@ export function ListasPersonalizadasMobile() {
                     equipo.ficha,
                     equipo.modelo,
                     equipo.categoria,
+                    equipo.empresa,
+                    equipo.numeroSerie,
+                    equipo.placa,
                     equipo.estadoMantenimiento,
                 ]
                     .filter(Boolean)
@@ -167,6 +190,12 @@ export function ListasPersonalizadasMobile() {
     const handleToggleCategoria = (categoria: string) => {
         setSelectedCategorias((prev) =>
             prev.includes(categoria) ? prev.filter((c) => c !== categoria) : [...prev, categoria]
+        );
+    };
+
+    const handleToggleEmpresa = (empresa: string) => {
+        setSelectedEmpresas((prev) =>
+            prev.includes(empresa) ? prev.filter((e) => e !== empresa) : [...prev, empresa]
         );
     };
 
@@ -212,9 +241,9 @@ export function ListasPersonalizadasMobile() {
                         onClick={() => setFilterSheetOpen(true)}
                     >
                         <Filter className="h-5 w-5" />
-                        {(selectedCategorias.length > 0 || searchTerm) && (
+                        {(selectedCategorias.length > 0 || selectedEmpresas.length > 0 || searchTerm) && (
                             <div className="absolute -top-1 -right-1 h-5 w-5 rounded-full bg-primary text-[10px] font-bold text-primary-foreground flex items-center justify-center">
-                                {selectedCategorias.length + (searchTerm ? 1 : 0)}
+                                {selectedCategorias.length + selectedEmpresas.length + (searchTerm ? 1 : 0)}
                             </div>
                         )}
                     </Button>
@@ -425,6 +454,28 @@ export function ListasPersonalizadasMobile() {
                                 </div>
                             </div>
 
+                            {/* Filtro por Empresa */}
+                            <div className="space-y-2">
+                                <label className="text-sm font-medium flex items-center gap-2">
+                                    <Building2 className="h-4 w-4" />
+                                    Empresa
+                                </label>
+                                <div className="space-y-2">
+                                    {empresasDisponibles.map((empresa) => (
+                                        <label
+                                            key={empresa}
+                                            className="flex items-center gap-2 rounded-lg border border-border/60 p-3 text-sm"
+                                        >
+                                            <Checkbox
+                                                checked={selectedEmpresas.includes(empresa)}
+                                                onCheckedChange={() => handleToggleEmpresa(empresa)}
+                                            />
+                                            <span>{empresa}</span>
+                                        </label>
+                                    ))}
+                                </div>
+                            </div>
+
                             <div className="space-y-2">
                                 <label className="text-sm font-medium">Tema de color</label>
                                 <Select
@@ -452,6 +503,7 @@ export function ListasPersonalizadasMobile() {
                             className="flex-1"
                             onClick={() => {
                                 setSelectedCategorias([]);
+                                setSelectedEmpresas([]);
                                 setSearchTerm('');
                             }}
                         >
