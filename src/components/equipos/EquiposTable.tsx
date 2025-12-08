@@ -68,8 +68,8 @@ export function EquiposTable({ equipos, onEdit, onDelete, onVerDetalle }: Equipo
   const canEditEquipos = canEdit('equipos');
   const canDeleteEquipos = canDelete('equipos');
 
-  const categorias = useMemo(() => [...new Set(equipos.map(eq => eq.categoria))], [equipos]);
-  const marcas = useMemo(() => [...new Set(equipos.map(eq => eq.marca))], [equipos]);
+  const categorias = useMemo(() => [...new Set(equipos.map(eq => eq.categoria))].filter(cat => cat && cat.trim() !== ''), [equipos]);
+  const marcas = useMemo(() => [...new Set(equipos.map(eq => eq.marca))].filter(marca => marca && marca.trim() !== ''), [equipos]);
 
   const categoriaLexicon = useMemo(() => {
     return categorias.map((categoria) => {

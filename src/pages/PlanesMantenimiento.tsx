@@ -176,13 +176,13 @@ export default function PlanesMantenimiento() {
 
   // 🎯 NUEVO: Obtener marcas únicas
   const marcasUnicas = useMemo(() => {
-    const marcas = new Set(planes.map(p => p.marca));
+    const marcas = new Set(planes.map(p => p.marca).filter(m => m && m.trim() !== ''));
     return Array.from(marcas).sort();
   }, [planes]);
 
   // 🎯 NUEVO: Obtener categorías únicas
   const categoriasUnicas = useMemo(() => {
-    const categorias = new Set(planes.map(p => p.categoria));
+    const categorias = new Set(planes.map(p => p.categoria).filter(c => c && c.trim() !== ''));
     return Array.from(categorias).sort();
   }, [planes]);
 

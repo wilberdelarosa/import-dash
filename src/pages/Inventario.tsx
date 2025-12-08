@@ -105,7 +105,7 @@ export default function Inventario() {
   const [isDeleting, setIsDeleting] = useState(false);
 
   const tipos = useMemo(
-    () => Array.from(new Set(inventarios.map((item) => item.tipo))).sort(),
+    () => Array.from(new Set(inventarios.map((item) => item.tipo))).filter(t => t && t.trim() !== '').sort(),
     [inventarios],
   );
 

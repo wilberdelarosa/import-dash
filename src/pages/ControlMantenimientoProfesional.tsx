@@ -326,7 +326,7 @@ export default function ControlMantenimientoProfesional() {
   }, [selectedFicha, selected]);
 
   const categorias = useMemo(() => {
-    const cats = new Set(activeEquipos.map(eq => eq.categoria).filter(Boolean));
+    const cats = new Set(activeEquipos.map(eq => eq.categoria).filter(c => c && c.trim() !== ''));
     return Array.from(cats).sort();
   }, [activeEquipos]);
 

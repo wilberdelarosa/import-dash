@@ -75,7 +75,7 @@ export function PlanesAsignadosMobile() {
 
   // Técnicos únicos
   const tecnicos = useMemo(() => {
-    const tecnicosSet = new Set(planes.map((p) => p.tecnico_responsable));
+    const tecnicosSet = new Set(planes.map((p) => p.tecnico_responsable).filter(t => t && t.trim() !== ''));
     return Array.from(tecnicosSet).sort();
   }, [planes]);
 
