@@ -723,6 +723,57 @@ export type Database = {
           },
         ]
       }
+      overrides_planes: {
+        Row: {
+          activo: boolean
+          created_at: string
+          ficha_equipo: string
+          id: number
+          motivo: string
+          plan_forzado_id: number
+          plan_original_id: number | null
+          updated_at: string
+          usuario_email: string
+        }
+        Insert: {
+          activo?: boolean
+          created_at?: string
+          ficha_equipo: string
+          id?: number
+          motivo?: string
+          plan_forzado_id: number
+          plan_original_id?: number | null
+          updated_at?: string
+          usuario_email?: string
+        }
+        Update: {
+          activo?: boolean
+          created_at?: string
+          ficha_equipo?: string
+          id?: number
+          motivo?: string
+          plan_forzado_id?: number
+          plan_original_id?: number | null
+          updated_at?: string
+          usuario_email?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "overrides_planes_plan_forzado_id_fkey"
+            columns: ["plan_forzado_id"]
+            isOneToOne: false
+            referencedRelation: "planes_mantenimiento"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "overrides_planes_plan_original_id_fkey"
+            columns: ["plan_original_id"]
+            isOneToOne: false
+            referencedRelation: "planes_mantenimiento"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       plan_intervalo_kits: {
         Row: {
           created_at: string | null
@@ -900,7 +951,36 @@ export type Database = {
       }
     }
     Views: {
-      [_ in never]: never
+      equipos_con_overrides: {
+        Row: {
+          ficha_equipo: string | null
+          motivo: string | null
+          override_fecha: string | null
+          plan_forzado_id: number | null
+          plan_forzado_nombre: string | null
+          plan_marca: string | null
+          plan_modelo: string | null
+          plan_original_id: number | null
+          plan_original_nombre: string | null
+          usuario_email: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "overrides_planes_plan_forzado_id_fkey"
+            columns: ["plan_forzado_id"]
+            isOneToOne: false
+            referencedRelation: "planes_mantenimiento"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "overrides_planes_plan_original_id_fkey"
+            columns: ["plan_original_id"]
+            isOneToOne: false
+            referencedRelation: "planes_mantenimiento"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
     }
     Functions: {
       approve_and_integrate_submission: {
