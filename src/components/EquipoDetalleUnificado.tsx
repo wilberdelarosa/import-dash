@@ -303,10 +303,10 @@ export function EquipoDetalleUnificado({ ficha, open, onOpenChange }: Props) {
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto p-0">
+      <DialogContent className="max-w-4xl w-[95vw] sm:w-full max-h-[95vh] sm:max-h-[90vh] overflow-y-auto p-0">
         {/* Hero Section - Información crítica siempre visible */}
         <div className={cn(
-          "sticky top-0 z-10 p-4 border-b",
+          "sticky top-0 z-10 p-3 sm:p-4 border-b",
           esVendido 
             ? "bg-orange-50 dark:bg-orange-950/30 border-orange-200 dark:border-orange-900"
             : mantenimientoVencido 
@@ -316,10 +316,10 @@ export function EquipoDetalleUnificado({ ficha, open, onOpenChange }: Props) {
                 : "bg-background border-border"
         )}>
           <DialogHeader>
-            <div className="flex items-start justify-between gap-4">
-              <div className="flex items-center gap-3">
+            <div className="flex items-start justify-between gap-2 sm:gap-4">
+              <div className="flex items-center gap-2 sm:gap-3 min-w-0">
                 <div className={cn(
-                  "p-2.5 rounded-xl",
+                  "p-2 sm:p-2.5 rounded-xl shrink-0",
                   esVendido 
                     ? "bg-orange-500/10"
                     : mantenimientoVencido 
@@ -327,7 +327,7 @@ export function EquipoDetalleUnificado({ ficha, open, onOpenChange }: Props) {
                       : "bg-primary/10"
                 )}>
                   <Truck className={cn(
-                    "h-6 w-6",
+                    "h-5 w-5 sm:h-6 sm:w-6",
                     esVendido 
                       ? "text-orange-600"
                       : mantenimientoVencido 
@@ -335,22 +335,22 @@ export function EquipoDetalleUnificado({ ficha, open, onOpenChange }: Props) {
                         : "text-primary"
                   )} />
                 </div>
-                <div>
-                  <DialogTitle className="text-xl font-bold">{equipo.nombre}</DialogTitle>
-                  <div className="flex items-center gap-2 mt-1 text-sm text-muted-foreground">
+                <div className="min-w-0">
+                  <DialogTitle className="text-base sm:text-xl font-bold truncate">{equipo.nombre}</DialogTitle>
+                  <div className="flex items-center gap-1 sm:gap-2 mt-0.5 sm:mt-1 text-xs sm:text-sm text-muted-foreground">
                     <span className="font-mono font-medium">{equipo.ficha}</span>
-                    <span>•</span>
-                    <span>{equipo.marca} {equipo.modelo}</span>
+                    <span className="hidden sm:inline">•</span>
+                    <span className="hidden sm:inline truncate">{equipo.marca} {equipo.modelo}</span>
                   </div>
                 </div>
               </div>
-              <div className="flex flex-col items-end gap-1.5">
+              <div className="flex flex-col items-end gap-1 shrink-0">
                 {esVendido ? (
-                  <Badge variant="outline" className="border-orange-500/50 bg-orange-500/10 text-orange-700 dark:text-orange-400">
+                  <Badge variant="outline" className="text-xs border-orange-500/50 bg-orange-500/10 text-orange-700 dark:text-orange-400">
                     ⚠️ VENDIDO
                   </Badge>
                 ) : (
-                  <Badge variant={equipo.activo ? "default" : "secondary"}>
+                  <Badge variant={equipo.activo ? "default" : "secondary"} className="text-xs">
                     {equipo.activo ? 'Activo' : 'Inactivo'}
                   </Badge>
                 )}
@@ -358,7 +358,7 @@ export function EquipoDetalleUnificado({ ficha, open, onOpenChange }: Props) {
                   <Badge 
                     variant="outline" 
                     className={cn(
-                      "text-xs",
+                      "text-[10px] sm:text-xs",
                       equipo.empresa === 'ALITO GROUP SRL' 
                         ? 'border-blue-500/50 bg-blue-500/10 text-blue-700 dark:text-blue-400' 
                         : equipo.empresa === 'VENDIDO'
@@ -376,16 +376,16 @@ export function EquipoDetalleUnificado({ ficha, open, onOpenChange }: Props) {
 
           {/* Métricas clave en el hero - Siempre visibles */}
           {!esVendido && (
-            <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mt-4">
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 sm:gap-3 mt-3 sm:mt-4">
               {/* Lectura actual */}
-              <div className="bg-background/80 rounded-lg p-3 border">
-                <div className="flex items-center gap-2 text-xs text-muted-foreground mb-1">
-                  <Gauge className="h-3.5 w-3.5" />
-                  Lectura actual
+              <div className="bg-background/80 rounded-lg p-2 sm:p-3 border">
+                <div className="flex items-center gap-1 sm:gap-2 text-[10px] sm:text-xs text-muted-foreground mb-0.5 sm:mb-1">
+                  <Gauge className="h-3 w-3 sm:h-3.5 sm:w-3.5" />
+                  <span className="truncate">Lectura</span>
                 </div>
-                <p className="text-lg font-bold">
+                <p className="text-base sm:text-lg font-bold">
                   {horasActuales.toLocaleString()}
-                  <span className="text-xs font-normal text-muted-foreground ml-1">
+                  <span className="text-[10px] sm:text-xs font-normal text-muted-foreground ml-0.5 sm:ml-1">
                     {proximoMantenimiento?.tipoMantenimiento === 'Kilómetros' ? 'km' : 'h'}
                   </span>
                 </p>
@@ -393,7 +393,7 @@ export function EquipoDetalleUnificado({ ficha, open, onOpenChange }: Props) {
 
               {/* Horas restantes */}
               <div className={cn(
-                "rounded-lg p-3 border",
+                "rounded-lg p-2 sm:p-3 border",
                 !proximoMantenimiento 
                   ? "bg-background/80"
                   : proximoMantenimiento.horasKmRestante <= 0
@@ -402,12 +402,12 @@ export function EquipoDetalleUnificado({ ficha, open, onOpenChange }: Props) {
                       ? "bg-amber-500/10 border-amber-500/30"
                       : "bg-emerald-500/10 border-emerald-500/30"
               )}>
-                <div className="flex items-center gap-2 text-xs text-muted-foreground mb-1">
-                  <Timer className="h-3.5 w-3.5" />
-                  {proximoMantenimiento?.horasKmRestante && proximoMantenimiento.horasKmRestante <= 0 ? 'Vencido por' : 'Restante'}
+                <div className="flex items-center gap-1 sm:gap-2 text-[10px] sm:text-xs text-muted-foreground mb-0.5 sm:mb-1">
+                  <Timer className="h-3 w-3 sm:h-3.5 sm:w-3.5" />
+                  <span className="truncate">{proximoMantenimiento?.horasKmRestante && proximoMantenimiento.horasKmRestante <= 0 ? 'Vencido' : 'Restante'}</span>
                 </div>
                 <p className={cn(
-                  "text-lg font-bold",
+                  "text-base sm:text-lg font-bold",
                   !proximoMantenimiento
                     ? "text-muted-foreground"
                     : proximoMantenimiento.horasKmRestante <= 0
@@ -421,7 +421,7 @@ export function EquipoDetalleUnificado({ ficha, open, onOpenChange }: Props) {
                     : 'N/A'
                   }
                   {proximoMantenimiento && (
-                    <span className="text-xs font-normal ml-1">
+                    <span className="text-[10px] sm:text-xs font-normal ml-0.5 sm:ml-1">
                       {proximoMantenimiento.tipoMantenimiento === 'Kilómetros' ? 'km' : 'h'}
                     </span>
                   )}
@@ -429,30 +429,30 @@ export function EquipoDetalleUnificado({ ficha, open, onOpenChange }: Props) {
               </div>
 
               {/* Próximo MP */}
-              <div className="bg-background/80 rounded-lg p-3 border">
-                <div className="flex items-center gap-2 text-xs text-muted-foreground mb-1">
-                  <Wrench className="h-3.5 w-3.5" />
-                  Próximo MP
+              <div className="bg-background/80 rounded-lg p-2 sm:p-3 border">
+                <div className="flex items-center gap-1 sm:gap-2 text-[10px] sm:text-xs text-muted-foreground mb-0.5 sm:mb-1">
+                  <Wrench className="h-3 w-3 sm:h-3.5 sm:w-3.5" />
+                  <span className="truncate">Próximo</span>
                 </div>
-                <p className="text-lg font-bold text-primary">
+                <p className="text-base sm:text-lg font-bold text-primary truncate">
                   {intervaloCodigo || proximoMantenimiento?.tipoMantenimiento || 'N/A'}
                 </p>
               </div>
 
               {/* Última actividad */}
-              <div className="bg-background/80 rounded-lg p-3 border">
-                <div className="flex items-center gap-2 text-xs text-muted-foreground mb-1">
-                  <Activity className="h-3.5 w-3.5" />
-                  Última actividad
+              <div className="bg-background/80 rounded-lg p-2 sm:p-3 border">
+                <div className="flex items-center gap-1 sm:gap-2 text-[10px] sm:text-xs text-muted-foreground mb-0.5 sm:mb-1">
+                  <Activity className="h-3 w-3 sm:h-3.5 sm:w-3.5" />
+                  <span className="truncate">Actividad</span>
                 </div>
-                <p className="text-sm font-medium">
+                <p className="text-xs sm:text-sm font-medium">
                   {diasDesdeUltimaActividad !== null 
                     ? diasDesdeUltimaActividad === 0 
                       ? 'Hoy'
                       : diasDesdeUltimaActividad === 1
                         ? 'Ayer'
-                        : `Hace ${diasDesdeUltimaActividad} días`
-                    : 'Sin actividad'
+                        : `${diasDesdeUltimaActividad}d`
+                    : 'N/A'
                   }
                 </p>
               </div>
@@ -461,40 +461,40 @@ export function EquipoDetalleUnificado({ ficha, open, onOpenChange }: Props) {
 
           {/* Alerta de estado crítico */}
           {mantenimientoVencido && !esVendido && (
-            <div className="flex items-center gap-2 mt-3 p-2 bg-destructive/10 rounded-lg border border-destructive/20">
+            <div className="flex items-center gap-2 mt-2 sm:mt-3 p-2 bg-destructive/10 rounded-lg border border-destructive/20">
               <AlertTriangle className="h-4 w-4 text-destructive shrink-0" />
-              <span className="text-sm text-destructive font-medium">
-                ¡Mantenimiento vencido! Requiere atención inmediata.
+              <span className="text-xs sm:text-sm text-destructive font-medium">
+                ¡Mantenimiento vencido!
               </span>
             </div>
           )}
         </div>
 
-        <div className="p-4">
+        <div className="p-3 sm:p-4">
         <Tabs defaultValue="general" className="w-full">
-          <TabsList className="grid w-full grid-cols-4">
-            <TabsTrigger value="general" className="gap-2">
-              <Truck className="h-4 w-4" />
+          <TabsList className="grid w-full grid-cols-4 h-auto">
+            <TabsTrigger value="general" className="gap-1 sm:gap-2 text-xs sm:text-sm py-2">
+              <Truck className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
               <span className="hidden sm:inline">General</span>
             </TabsTrigger>
-            <TabsTrigger value="mantenimiento" className="gap-2">
-              <Wrench className="h-4 w-4" />
+            <TabsTrigger value="mantenimiento" className="gap-1 sm:gap-2 text-xs sm:text-sm py-2">
+              <Wrench className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
               <span className="hidden sm:inline">Mant.</span>
               {mantenimientoVencido && (
-                <Badge variant="destructive" className="ml-1 h-5 w-5 p-0 flex items-center justify-center">
+                <Badge variant="destructive" className="ml-0.5 sm:ml-1 h-4 w-4 sm:h-5 sm:w-5 p-0 flex items-center justify-center text-[10px] sm:text-xs">
                   !
                 </Badge>
               )}
             </TabsTrigger>
-            <TabsTrigger value="inventario" className="gap-2">
-              <Package className="h-4 w-4" />
+            <TabsTrigger value="inventario" className="gap-1 sm:gap-2 text-xs sm:text-sm py-2">
+              <Package className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
               <span className="hidden sm:inline">Repuestos</span>
             </TabsTrigger>
-            <TabsTrigger value="historial" className="gap-2">
-              <HistoryIcon className="h-4 w-4" />
+            <TabsTrigger value="historial" className="gap-1 sm:gap-2 text-xs sm:text-sm py-2">
+              <HistoryIcon className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
               <span className="hidden sm:inline">Historial</span>
               {timelineUnificado.length > 0 && (
-                <Badge variant="secondary" className="ml-1 h-5 min-w-5 px-1 flex items-center justify-center text-xs">
+                <Badge variant="secondary" className="ml-0.5 sm:ml-1 h-4 sm:h-5 min-w-4 sm:min-w-5 px-0.5 sm:px-1 flex items-center justify-center text-[10px] sm:text-xs">
                   {timelineUnificado.length}
                 </Badge>
               )}
@@ -988,29 +988,29 @@ export function EquipoDetalleUnificado({ ficha, open, onOpenChange }: Props) {
           <TabsContent value="historial" className="space-y-4">
             {timelineUnificado.length === 0 ? (
               <Card>
-                <CardContent className="p-8 text-center">
-                  <HistoryIcon className="h-12 w-12 mx-auto text-muted-foreground mb-2" />
-                  <p className="text-muted-foreground">
+                <CardContent className="p-4 sm:p-8 text-center">
+                  <HistoryIcon className="h-10 w-10 sm:h-12 sm:w-12 mx-auto text-muted-foreground mb-2" />
+                  <p className="text-sm sm:text-base text-muted-foreground">
                     No hay eventos registrados para este equipo
                   </p>
                 </CardContent>
               </Card>
             ) : (
               <Card>
-                <CardHeader className="pb-3">
+                <CardHeader className="p-3 sm:p-6 pb-2 sm:pb-3">
                   <CardTitle className="flex items-center justify-between">
-                    <span className="flex items-center gap-2 text-lg">
-                      <Activity className="h-5 w-5" />
-                      Timeline de actividad
+                    <span className="flex items-center gap-2 text-base sm:text-lg">
+                      <Activity className="h-4 w-4 sm:h-5 sm:w-5" />
+                      Timeline
                     </span>
-                    <Badge variant="secondary">{timelineUnificado.length} eventos</Badge>
+                    <Badge variant="secondary" className="text-xs">{timelineUnificado.length}</Badge>
                   </CardTitle>
-                  <p className="text-sm text-muted-foreground">
-                    Historial completo ordenado del más reciente al más antiguo
+                  <p className="text-xs sm:text-sm text-muted-foreground">
+                    Más reciente primero
                   </p>
                 </CardHeader>
-                <CardContent>
-                  <ScrollArea className="h-[400px] pr-4">
+                <CardContent className="p-3 sm:p-6 pt-0 sm:pt-0">
+                  <ScrollArea className="h-[280px] sm:h-[400px] pr-2 sm:pr-4">
                     <div className="relative space-y-0">
                       {/* Línea vertical del timeline */}
                       <div className="absolute left-4 top-2 bottom-2 w-0.5 bg-border" />
