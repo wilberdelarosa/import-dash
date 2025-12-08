@@ -15,6 +15,7 @@ import { Activity, AlertTriangle, CalendarClock, Clock, Users, ExternalLink, Spa
 import { Skeleton } from '@/components/ui/skeleton';
 import { EquipoDetalleUnificado } from '@/components/EquipoDetalleUnificado';
 import { EquipoLink } from '@/components/EquipoLink';
+import { AlertasProximidad } from '@/components/AlertasProximidad';
 import { useNavigate } from 'react-router-dom';
 import { formatRemainingLabel, getRemainingVariant } from '@/lib/maintenanceUtils';
 import { Link } from 'react-router-dom';
@@ -473,7 +474,10 @@ export default function Dashboard() {
           </Card>
         </section>
 
+        {/* Panel de Alertas Inteligentes */}
         <section className="grid gap-6 xl:grid-cols-2">
+          <AlertasProximidad />
+
           <Card className="flex flex-col">
             <CardHeader>
               <CardTitle>Actividad reciente</CardTitle>

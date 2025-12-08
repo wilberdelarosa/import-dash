@@ -1,0 +1,21 @@
+@startuml sequence_open_equipo
+title Secuencia: Abrir detalle de equipo
+actor Usuario
+participant EquiposPage
+participant EquipoDetalleUnificado
+participant SupabaseDataContext
+participant useHistorial
+participant useCaterpillarData
+
+Usuario -> EquiposPage: Click en fila / ver detalle
+EquiposPage -> SupabaseDataContext: setFichaSeleccionada(ficha)
+SupabaseDataContext -> EquiposPage: ficha (datos de equipo)
+EquiposPage -> EquipoDetalleUnificado: abrir(ficha)
+EquipoDetalleUnificado -> useHistorial: obtener eventos(ficha)
+EquipoDetalleUnificado -> useCaterpillarData: consultar datos de catálogo(modelo, serie)
+useHistorial -> SupabaseDataContext: read eventos cache / fetch
+SupabaseDataContext --> useHistorial: eventos
+EquipoDetalleUnificado -> EquipoDetalleUnificado: calcular métricas, timeline
+EquipoDetalleUnificado --> Usuario: mostrar modal con datos y timeline
+
+@enduml

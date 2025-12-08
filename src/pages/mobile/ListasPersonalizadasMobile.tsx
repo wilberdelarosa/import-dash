@@ -233,6 +233,66 @@ export function ListasPersonalizadasMobile() {
         URL.revokeObjectURL(url);
     };
 
+    const handleExportPdf = () => {
+        const source = selectedEquipos.length > 0 ? selectedEquipos : filteredEquipos;
+        if (source.length === 0 || selectedColumns.length === 0) return;
+
+        const columnLabels: Record<string, string> = {
+            ficha: 'Ficha',
+            nombre: 'Nombre',
+            marca: 'Marca',
+            modelo: 'Modelo',
+            numeroSerie: 'N° Serie',
+            placa: 'Placa',
+            categoria: 'Categoría',
+            empresa: 'Empresa',
+            estadoMantenimiento: 'Estado Mant.',
+            proximoIntervalo: 'Próximo PM',
+            horasKmActualesLabel: 'Lectura Actual',
+            kitRecomendado: 'Kit Rec.',
+        };
+
+        const header = selectedColumns.map((key) => columnLabels[key] ?? key);
+        const rows = source.map((equipo) =>
+            selectedColumns
+                .map((key) => `<td style="padding:8px;border:1px solid #ddd;font-size:12px;">${String(equipo[key as keyof EnrichedEquipo] ?? '').replace(/\n/g, '<br/>')}</td>`)
+                .join('')
+        );
+
+        const tableHtml = `
+            <html>
+                <head>
+                    <title>Lista personalizada</title>
+                    <style>
+                        body { font-family: 'Inter', system-ui, sans-serif; padding: 24px; color: #111827; }
+                        table { border-collapse: collapse; width: 100%; }
+                        th { background: #0f172a; color: white; padding: 10px; text-align: left; font-size: 13px; }
+                        td { vertical-align: top; }
+                    </style>
+                </head>
+                <body>
+                    <h2>Lista personalizada de equipos</h2>
+                    <p style="color:#666;">Generado el ${new Date().toLocaleDateString('es-ES')} - ${source.length} equipos</p>
+                    <table>
+                        <thead>
+                            <tr>${header.map((label) => `<th>${label}</th>`).join('')}</tr>
+                        </thead>
+                        <tbody>
+                            ${rows.map((row) => `<tr>${row}</tr>`).join('')}
+                        </tbody>
+                    </table>
+                </body>
+            </html>
+        `;
+
+        const printWindow = window.open('', '_blank');
+        if (!printWindow) return;
+        printWindow.document.write(tableHtml);
+        printWindow.document.close();
+        printWindow.focus();
+        printWindow.print();
+    };
+
     return (
         <MobileLayout
             title="Listas Personalizadas"
@@ -269,14 +329,14 @@ export function ListasPersonalizadasMobile() {
                 </MobileCard>
 
                 {/* Controles principales */}
-                <div className="grid grid-cols-2 gap-2">
+                <div className="grid grid-cols-3 gap-2">
                     <Button
                         variant="outline"
                         className="gap-2"
                         onClick={() => setColumnsSheetOpen(true)}
                     >
                         <ListChecks className="h-4 w-4" />
-                        Columnas ({selectedColumns.length})
+                        <span className="hidden xs:inline">Columnas</span> ({selectedColumns.length})
                     </Button>
                     <Button
                         variant="outline"
@@ -285,7 +345,16 @@ export function ListasPersonalizadasMobile() {
                         disabled={selectedColumns.length === 0}
                     >
                         <Download className="h-4 w-4" />
-                        Exportar
+                        CSV
+                    </Button>
+                    <Button
+                        variant="default"
+                        className="gap-2 bg-primary"
+                        onClick={handleExportPdf}
+                        disabled={selectedColumns.length === 0}
+                    >
+                        <FileSpreadsheet className="h-4 w-4" />
+                        PDF
                     </Button>
                 </div>
 

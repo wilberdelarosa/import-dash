@@ -38,8 +38,8 @@ import { es } from 'date-fns/locale';
 import { CaterpillarDataCard } from './CaterpillarDataCard';
 import { formatRemainingLabel, getRemainingVariant } from '@/lib/maintenanceUtils';
 import { useCaterpillarData } from '@/hooks/useCaterpillarData';
-import { useSugerenciaMantenimiento } from '@/hooks/useSugerenciaMantenimiento';
-import { usePlanes } from '@/hooks/usePlanes';
+import { useSugerenciaMantenimientoExtendida } from '@/hooks/useSugerenciaMantenimiento';
+import { usePlanAsignado, useIntervaloActual } from '@/hooks/usePlanAsignado';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { isEquipoVendido } from '@/types/equipment';
 import { cn } from '@/lib/utils';
@@ -53,7 +53,6 @@ interface Props {
 export function EquipoDetalleUnificado({ ficha, open, onOpenChange }: Props) {
   const { data } = useSupabaseDataContext();
   const { eventos } = useHistorial();
-  const { planes } = usePlanes();
   const [equipo, setEquipo] = useState<any>(null);
   const [mantenimientos, setMantenimientos] = useState<any[]>([]);
   const [inventariosRelacionados, setInventariosRelacionados] = useState<any[]>([]);
@@ -71,6 +70,18 @@ export function EquipoDetalleUnificado({ ficha, open, onOpenChange }: Props) {
     esCaterpillar ? equipo?.modelo ?? '' : '',
     esCaterpillar ? equipo?.numeroSerie ?? '' : '',
   );
+
+  // ========================================
+  // USAR HOOK DE PLAN ASIGNADO (sincronizado con Planificador)
+  // ========================================
+  const { 
+    planAsignado, 
+    esOverride, 
+    motivoOverride, 
+    razonSeleccion,
+    intervalos: intervalosDelPlan,
+    loading: loadingPlan 
+  } = usePlanAsignado(equipo);
 
   // Obtener próximo mantenimiento (necesario para calcular horas actuales)
   const proximoMantenimiento = useMemo(() => {
@@ -94,8 +105,8 @@ export function EquipoDetalleUnificado({ ficha, open, onOpenChange }: Props) {
   const horasActuales = ultimaLectura?.horasKm || proximoMantenimiento?.horasKmActuales || 0;
   const horasUltimoMantenimiento = ultimoMantenimientoRealizado?.horasKmAlMomento || 0;
 
-  // Usar hook de sugerencia de mantenimiento
-  const sugerencia = useSugerenciaMantenimiento(
+  // Usar hook extendido de sugerencia con información del ciclo
+  const sugerencia = useSugerenciaMantenimientoExtendida(
     equipo?.marca,
     equipo?.modelo,
     equipo?.categoria,
@@ -103,18 +114,14 @@ export function EquipoDetalleUnificado({ ficha, open, onOpenChange }: Props) {
     horasUltimoMantenimiento
   );
 
-  // Determinar plan disponible para este equipo
-  const planDisponible = useMemo(() => {
-    if (!equipo?.marca || !equipo?.modelo || !equipo?.categoria) return null;
-    
-    return planes.find((plan) => {
-      const marcaCoincide = plan.marca.toLowerCase() === equipo.marca.toLowerCase();
-      const modeloCoincide = plan.modelo?.toLowerCase() === equipo.modelo.toLowerCase();
-      const categoriaCoincide = plan.categoria.toLowerCase() === equipo.categoria.toLowerCase();
-      
-      return marcaCoincide && modeloCoincide && categoriaCoincide && plan.activo;
-    });
-  }, [planes, equipo]);
+  // Datos del ciclo calculados dinámicamente (reemplaza valores fijos)
+  const horasRestantesCiclo = sugerencia.horasParaProximo;
+  const estadoAlertaCiclo = sugerencia.estadoAlerta;
+  const cicloActual = sugerencia.cicloActual;
+  const porcentajeCiclo = sugerencia.porcentajeCiclo;
+
+  // Plan disponible viene del hook usePlanAsignado (sincronizado con Planificador)
+  const planDisponible = planAsignado;
 
   // Intervalo actual a mostrar (sugerido o seleccionado manualmente)
   const intervaloActual = useMemo(() => {
@@ -143,17 +150,27 @@ export function EquipoDetalleUnificado({ ficha, open, onOpenChange }: Props) {
   }, [intervaloActual, proximoMantenimiento]);
 
   const piezasSugeridas = useMemo(() => {
+    // 1. Prioridad: Kit del intervalo de BD
     if (intervaloActual && intervaloActual.kits && intervaloActual.kits.length > 0) {
-      // Obtener piezas de los kits vinculados al intervalo
       return intervaloActual.kits.flatMap(kitLink => {
         const kit = kitLink.kit;
-        // Asumimos que el kit tiene piezas cargadas
         return (kit as any).piezas || [];
       });
     }
+    
+    // 2. Si hay kit recomendado del ciclo (datos estáticos Caterpillar/Volvo)
+    if (sugerencia.kitRecomendado && sugerencia.kitRecomendado.piezas.length > 0) {
+      return sugerencia.kitRecomendado.piezas.map(pieza => ({
+        numero_parte: pieza.numeroParte,
+        descripcion: pieza.descripcion,
+        cantidad: pieza.cantidad,
+      }));
+    }
+    
+    // 3. Fallback a datos Caterpillar estáticos por código de intervalo
     if (!intervaloCodigo || !caterpillarData?.piezasPorIntervalo) return [];
     return caterpillarData.piezasPorIntervalo[intervaloCodigo] ?? [];
-  }, [intervaloActual, intervaloCodigo, caterpillarData]);
+  }, [intervaloActual, intervaloCodigo, caterpillarData, sugerencia.kitRecomendado]);
 
   const tareasSugeridas = useMemo(() => {
     if (intervaloActual && intervaloActual.tareas && intervaloActual.tareas.length > 0) {
@@ -223,12 +240,6 @@ export function EquipoDetalleUnificado({ ficha, open, onOpenChange }: Props) {
       setActualizacionesHorasKmData(lecturas);
     }
   }, [ficha, open, data, eventos]);
-
-  if (!equipo) return null;
-
-  const mantenimientoVencido = mantenimientos.some(m => m.horasKmRestante < 0);
-  const mantenimientoProximo = mantenimientos.some(m => m.horasKmRestante > 0 && m.horasKmRestante <= 50);
-  const esVendido = isEquipoVendido(equipo.empresa);
 
   // Timeline unificado: combina todos los eventos en una sola línea de tiempo
   const timelineUnificado = useMemo(() => {
@@ -300,6 +311,13 @@ export function EquipoDetalleUnificado({ ficha, open, onOpenChange }: Props) {
     const hoy = new Date();
     return Math.floor((hoy.getTime() - ultimaFecha.getTime()) / (1000 * 60 * 60 * 24));
   }, [timelineUnificado]);
+
+  // Early return DESPUÉS de todos los hooks
+  if (!equipo) return null;
+
+  const mantenimientoVencido = mantenimientos.some(m => m.horasKmRestante < 0);
+  const mantenimientoProximo = mantenimientos.some(m => m.horasKmRestante > 0 && m.horasKmRestante <= 50);
+  const esVendido = isEquipoVendido(equipo.empresa);
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -504,25 +522,50 @@ export function EquipoDetalleUnificado({ ficha, open, onOpenChange }: Props) {
           <TabsContent value="general" className="space-y-4">
             {/* Sección de sugerencia de mantenimiento inteligente */}
             {(intervaloActual || planDisponible) && (
-              <Card className="border border-primary/30 bg-primary/5">
+              <Card className={cn(
+                "border-2 transition-colors",
+                esOverride 
+                  ? "border-amber-500/50 bg-amber-50/50 dark:bg-amber-950/20" 
+                  : "border-primary/30 bg-primary/5"
+              )}>
                 <CardHeader className="space-y-3">
                   <div className="flex flex-col gap-3 lg:flex-row lg:items-start lg:justify-between">
                     <div className="space-y-1 flex-1">
-                      <CardTitle className="text-lg flex items-center gap-2 text-primary">
-                        <Sparkles className="h-5 w-5" /> Próxima intervención programada
+                      <CardTitle className={cn(
+                        "text-lg flex items-center gap-2",
+                        esOverride ? "text-amber-700 dark:text-amber-400" : "text-primary"
+                      )}>
+                        <Sparkles className="h-5 w-5" /> 
+                        Próxima intervención programada
+                        {esOverride && (
+                          <Badge variant="outline" className="ml-2 border-amber-500 bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400">
+                            Plan Manual
+                          </Badge>
+                        )}
                       </CardTitle>
                       <p className="text-sm text-muted-foreground">
-                        {sugerencia.razon}
+                        {esOverride ? motivoOverride || razonSeleccion : sugerencia.razon}
                       </p>
                       {planDisponible && (
-                        <p className="text-xs text-muted-foreground/80">
-                          Plan: {planDisponible.nombre}
-                        </p>
+                        <div className="flex items-center gap-2 mt-1">
+                          <p className="text-xs text-muted-foreground/80">
+                            Plan: <span className="font-medium">{planDisponible.nombre}</span>
+                          </p>
+                          {esOverride && (
+                            <Badge variant="outline" className="text-[10px] h-4 px-1.5 border-amber-400/50">
+                              Asignado desde Planificador
+                            </Badge>
+                          )}
+                        </div>
                       )}
                     </div>
                     <div className="flex flex-wrap items-center gap-2">
                       {intervaloCodigo && (
-                        <Badge variant="outline" className="border-primary/40 bg-primary/10 text-primary">
+                        <Badge variant="outline" className={cn(
+                          esOverride 
+                            ? "border-amber-500/40 bg-amber-100/50 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400"
+                            : "border-primary/40 bg-primary/10 text-primary"
+                        )}>
                           {intervaloCodigo}
                         </Badge>
                       )}
@@ -590,7 +633,7 @@ export function EquipoDetalleUnificado({ ficha, open, onOpenChange }: Props) {
                         </div>
                       )}
                     </div>
-                    <div className="rounded-md border border-primary/20 bg-white/70 p-3 text-xs text-muted-foreground dark:bg-background">
+                    <div className="rounded-md border border-primary/20 bg-slate-50 p-3 text-xs text-muted-foreground dark:bg-slate-900">
                       <p className="font-semibold text-primary mb-3">Estado del equipo</p>
                       <div className="space-y-3">
                         <div className="bg-primary/5 rounded p-2.5 border border-primary/10">
@@ -607,50 +650,64 @@ export function EquipoDetalleUnificado({ ficha, open, onOpenChange }: Props) {
                             </p>
                           )}
                         </div>
-                        {proximoMantenimiento && (
-                          <div className={`rounded p-2.5 border ${
-                            proximoMantenimiento.horasKmRestante <= 0 
-                              ? 'bg-destructive/5 border-destructive/20' 
-                              : proximoMantenimiento.horasKmRestante <= 50
-                              ? 'bg-amber-50 dark:bg-amber-950/20 border-amber-200 dark:border-amber-900'
-                              : 'bg-emerald-50 dark:bg-emerald-950/20 border-emerald-200 dark:border-emerald-900'
+                        {/* Estado del ciclo calculado dinámicamente */}
+                        <div className={`rounded p-2.5 border ${
+                          estadoAlertaCiclo === 'vencido' 
+                            ? 'bg-destructive/5 border-destructive/20' 
+                            : estadoAlertaCiclo === 'urgente'
+                            ? 'bg-red-50 dark:bg-red-950/20 border-red-200 dark:border-red-900'
+                            : estadoAlertaCiclo === 'alerta'
+                            ? 'bg-amber-50 dark:bg-amber-950/20 border-amber-200 dark:border-amber-900'
+                            : 'bg-emerald-50 dark:bg-emerald-950/20 border-emerald-200 dark:border-emerald-900'
+                        }`}>
+                          <p className="text-xs text-muted-foreground uppercase tracking-wide mb-1">
+                            {estadoAlertaCiclo === 'vencido' ? 'Vencido por' : 'Restante para próximo servicio'}
+                          </p>
+                          <p className={`text-xl font-bold ${
+                            estadoAlertaCiclo === 'vencido'
+                              ? 'text-destructive'
+                              : estadoAlertaCiclo === 'urgente'
+                              ? 'text-red-600 dark:text-red-400'
+                              : estadoAlertaCiclo === 'alerta'
+                              ? 'text-amber-600 dark:text-amber-400'
+                              : 'text-emerald-600 dark:text-emerald-400'
                           }`}>
-                            <p className="text-xs text-muted-foreground uppercase tracking-wide mb-1">
-                              {proximoMantenimiento.horasKmRestante <= 0 ? 'Vencido por' : 'Restante'}
+                            {Math.abs(horasRestantesCiclo).toLocaleString()}
+                            <span className="text-sm font-normal ml-1">h</span>
+                          </p>
+                          <div className="flex items-center gap-2 mt-1">
+                            <p className="text-xs text-muted-foreground">
+                              Ciclo #{cicloActual}
                             </p>
-                            <p className={`text-xl font-bold ${
-                              proximoMantenimiento.horasKmRestante <= 0
-                                ? 'text-destructive'
-                                : proximoMantenimiento.horasKmRestante <= 50
-                                ? 'text-amber-600 dark:text-amber-400'
-                                : 'text-emerald-600 dark:text-emerald-400'
-                            }`}>
-                              {Math.abs(proximoMantenimiento.horasKmRestante).toLocaleString()}
-                              <span className="text-sm font-normal ml-1">
-                                {proximoMantenimiento.tipoMantenimiento === 'Kilómetros' ? 'km' : 'h'}
-                              </span>
-                            </p>
-                            <p className="text-xs text-muted-foreground mt-1">
-                              Próximo en: {proximoMantenimiento.proximoMantenimiento.toLocaleString()}{' '}
-                              {proximoMantenimiento.tipoMantenimiento === 'Kilómetros' ? 'km' : 'h'}
+                            <span className="text-muted-foreground/50">•</span>
+                            <p className="text-xs text-muted-foreground">
+                              {porcentajeCiclo.toFixed(0)}% del ciclo
                             </p>
                           </div>
-                        )}
+                          {/* Barra de progreso del ciclo */}
+                          <div className="mt-2 h-1.5 w-full bg-muted rounded-full overflow-hidden">
+                            <div 
+                              className={`h-full transition-all ${
+                                estadoAlertaCiclo === 'vencido' ? 'bg-destructive' :
+                                estadoAlertaCiclo === 'urgente' ? 'bg-red-500' :
+                                estadoAlertaCiclo === 'alerta' ? 'bg-amber-500' :
+                                'bg-emerald-500'
+                              }`}
+                              style={{ width: `${Math.min(100, porcentajeCiclo)}%` }}
+                            />
+                          </div>
+                        </div>
                         <div className="pt-2 border-t border-primary/10">
                           <p className="text-xs text-muted-foreground">
                             Último mant.: <span className="font-medium text-foreground">{horasUltimoMantenimiento.toLocaleString() || 'N/A'}</span>
-                            {horasUltimoMantenimiento > 0 && proximoMantenimiento && (
-                              <span className="ml-1">
-                                {proximoMantenimiento.tipoMantenimiento === 'Kilómetros' ? 'km' : 'h'}
-                              </span>
-                            )}
+                            {horasUltimoMantenimiento > 0 && <span className="ml-1">h</span>}
                           </p>
                         </div>
                       </div>
                     </div>
                   </div>
                   <div className="space-y-4">
-                    <div className="rounded-md border border-primary/20 bg-white/80 p-3 dark:bg-background">
+                    <div className="rounded-md border border-primary/20 bg-slate-50 p-3 dark:bg-slate-900">
                       <p className="flex items-center gap-2 text-xs font-semibold uppercase tracking-wide text-primary/80">
                         <Package className="h-4 w-4" /> Kit sugerido
                       </p>
@@ -673,7 +730,7 @@ export function EquipoDetalleUnificado({ ficha, open, onOpenChange }: Props) {
                         </p>
                       )}
                     </div>
-                    <div className="rounded-md border border-primary/20 bg-white/80 p-3 dark:bg-background">
+                    <div className="rounded-md border border-primary/20 bg-slate-50 p-3 dark:bg-slate-900">
                       <p className="flex items-center gap-2 text-xs font-semibold uppercase tracking-wide text-primary/80">
                         <ListChecks className="h-4 w-4" /> Tareas clave
                       </p>

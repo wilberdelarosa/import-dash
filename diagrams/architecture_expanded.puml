@@ -1,0 +1,120 @@
+@startuml architecture_expanded
+' Expanded architecture diagram for import-dash
+skinparam componentStyle rectangle
+
+title import-dash - Arquitectura Detallada
+
+package "Frontend (src)" {
+  package "Pages" {
+    [Index]
+    [Dashboard]
+    [Equipos]
+    [Mantenimiento]
+    [Planificador]
+    [PlanificadorInteligente]
+    [ImportarDatosCaterpillar]
+    [Reportes]
+    [KitsMantenimiento]
+    [PlanesMantenimiento]
+    [Inventario]
+    [Historial]
+    [Auth]
+    [Admin]
+    [AsistenteIA]
+    [Configuraciones]
+    [ControlMantenimientoProfesional]
+    [Notificaciones]
+    [ListasPersonalizadas]
+  }
+
+  package "Components" {
+    package "UI" {
+      [ui/*]
+    }
+    package "Mobile" {
+      [MobileLayout]
+      [MobileCard]
+      [QuickActions]
+    }
+    package "Admin" {
+      [AdminPanel]
+      [PermissionsMatrix]
+    }
+    package "Equipos" {
+      [EquiposTable]
+      [EquipoDetalleUnificado]
+      [EquipoDialog]
+    }
+    [CaterpillarDataCard]
+    [NotificationCenter]
+    [Navigation]
+    [Layout]
+  }
+
+  package "Hooks" {
+    [useHistorial]
+    [useCaterpillarData]
+    [useSugerenciaMantenimiento]
+    [usePlanes]
+    [useSupabaseData]
+    [useMechanicSubmissions]
+    [useMantenimientosPaginados]
+    [useUserRoles]
+    [useNotifications]
+    [useKits]
+  }
+
+  package "Context" {
+    [SupabaseDataContext]
+    [AuthContext]
+    [SystemConfigContext]
+  }
+
+  package "Types & Lib" {
+    [types/*]
+    [lib/*]
+  }
+}
+
+package "Integrations & Runtime" {
+  [Supabase]
+  [Caterpillar Data (external)]
+  [Capacitor / Electron]
+  [PlantUML Server]
+}
+
+' Relationships
+Pages --> Components : usa
+Pages --> Hooks : usa
+Components --> Hooks : usa
+Hooks --> Supabase : consulta
+Hooks --> "Caterpillar Data (external)" : fetch
+Context --> Supabase : sincroniza
+Components --> Context : consume
+Pages --> Capacitor / Electron : mobile build
+
+' Highlight key nodes
+[Equipos] -down-> [EquiposTable]
+[EquiposTable] -down-> [EquipoDetalleUnificado]
+[EquipoDetalleUnificado] --> [useHistorial]
+[EquipoDetalleUnificado] --> [useCaterpillarData]
+[EquipoDetalleUnificado] --> [SupabaseDataContext]
+
+[ImportarDatosCaterpillar] --> [useCaterpillarData]
+[PlanificadorInteligente] --> [usePlanes]
+[PlanificadorInteligente] --> [useRutasPredictivas]
+[ControlMantenimientoProfesional] --> [useMechanicSubmissions]
+
+' Notes for maintainers
+note right of SupabaseDataContext
+  - Mantiene caches: equipos, mantenimientosProgramados,
+    mantenimientosRealizados, actualizacionesHorasKm, inventarios
+  - Fuente principal: Supabase
+end note
+
+note bottom of Hooks
+  - Hooks encapsulan fetch y lógica de negocio reutilizable
+  - Ej: calculo de sugerencias, paginacion, sincronizacion
+end note
+
+@enduml

@@ -1,6 +1,8 @@
 import { useMemo } from 'react';
 import { usePlanes } from './usePlanes';
 import type { PlanConIntervalos, IntervaloConKits } from '@/types/maintenance-plans';
+import { useCicloMantenimiento, KitRecomendado } from './useCicloMantenimiento';
+import { calcularEstadoCiclo, INTERVALOS_ESTANDAR } from '@/lib/maintenanceCycleLogic';
 
 interface SugerenciaMantenimiento {
   intervaloSugerido: IntervaloConKits | null;
@@ -9,10 +11,23 @@ interface SugerenciaMantenimiento {
 }
 
 /**
+ * Interfaz extendida que incluye información del ciclo de mantenimiento
+ */
+export interface SugerenciaMantenimientoExtendida extends SugerenciaMantenimiento {
+  cicloActual: number;
+  horasParaProximo: number;
+  estadoAlerta: 'normal' | 'proximo' | 'urgente' | 'vencido';
+  kitRecomendado: KitRecomendado | null;
+  porcentajeCiclo: number;
+}
+
+/**
  * Hook para determinar el próximo mantenimiento sugerido basado en:
  * - Marca, modelo y categoría del equipo
  * - Horas/km actuales del equipo
  * - Último mantenimiento realizado
+ * 
+ * MEJORADO: Ahora usa la lógica de ciclo que simula la ruta desde 0 horas
  */
 export function useSugerenciaMantenimiento(
   marca: string | null | undefined,
@@ -22,6 +37,15 @@ export function useSugerenciaMantenimiento(
   horasUltimoMantenimiento: number
 ): SugerenciaMantenimiento {
   const { planes } = usePlanes();
+  
+  // Usar la nueva lógica de ciclo de mantenimiento
+  const cicloInfo = useCicloMantenimiento({
+    marca,
+    modelo,
+    categoria,
+    horasActuales,
+    horasAlerta: 50,
+  });
 
   const sugerencia = useMemo(() => {
     // Si no hay datos suficientes, no podemos hacer sugerencia
@@ -33,74 +57,105 @@ export function useSugerenciaMantenimiento(
       };
     }
 
-    // Buscar plan que coincida con marca, modelo y categoría
+    // Buscar plan en base de datos que coincida con marca, modelo y categoría
     const planEncontrado = planes.find((plan) => {
-      const marcaCoincide = plan.marca.toLowerCase() === marca.toLowerCase();
-      const modeloCoincide = plan.modelo?.toLowerCase() === modelo.toLowerCase();
+      const marcaCoincide = plan.marca.toLowerCase() === marca.toLowerCase() ||
+        plan.marca.toLowerCase().includes(marca.toLowerCase().replace(/\s/g, ''));
+      const modeloCoincide = plan.modelo?.toLowerCase().includes(modelo.toLowerCase().replace(/[^a-z0-9]/g, '')) ||
+        modelo.toLowerCase().includes(plan.modelo?.toLowerCase().replace(/[^a-z0-9]/g, '') || '');
       const categoriaCoincide = plan.categoria.toLowerCase() === categoria.toLowerCase();
       
-      return marcaCoincide && modeloCoincide && categoriaCoincide && plan.activo;
+      return marcaCoincide && (modeloCoincide || categoriaCoincide) && plan.activo;
     });
 
-    if (!planEncontrado) {
-      return {
-        intervaloSugerido: null,
-        planEncontrado: null,
-        razon: `No se encontró plan de mantenimiento para ${marca} ${modelo} (${categoria})`,
-      };
-    }
+    // Si encontramos plan en BD, usar sus intervalos
+    if (planEncontrado && planEncontrado.intervalos.length > 0) {
+      const intervalosOrdenados = [...planEncontrado.intervalos].sort(
+        (a, b) => a.horas_intervalo - b.horas_intervalo
+      );
 
-    // Calcular horas desde último mantenimiento
-    const horasDesdeUltimo = horasActuales - horasUltimoMantenimiento;
+      // Usar la lógica de ciclo mejorada
+      const estadoCiclo = calcularEstadoCiclo(
+        horasActuales,
+        intervalosOrdenados.map(int => ({
+          codigo: int.codigo,
+          nombre: int.nombre,
+          horasIntervalo: int.horas_intervalo,
+          descripcion: int.descripcion || undefined,
+        }))
+      );
 
-    // Obtener intervalos ordenados por horas
-    const intervalosOrdenados = [...planEncontrado.intervalos].sort(
-      (a, b) => a.horas_intervalo - b.horas_intervalo
-    );
+      // Encontrar el intervalo correspondiente al próximo del ciclo
+      const intervaloSugerido = intervalosOrdenados.find(
+        int => int.codigo === estadoCiclo.intervaloProximo?.codigo
+      ) || intervalosOrdenados[0];
 
-    // Encontrar el intervalo apropiado
-    // 1. Si han pasado más horas que el intervalo más alto, sugerir el más alto
-    const intervaloMaximo = intervalosOrdenados[intervalosOrdenados.length - 1];
-    if (horasDesdeUltimo >= intervaloMaximo.horas_intervalo) {
-      return {
-        intervaloSugerido: intervaloMaximo,
-        planEncontrado,
-        razon: `Han transcurrido ${horasDesdeUltimo} horas desde el último mantenimiento. Se sugiere ${intervaloMaximo.nombre}`,
-      };
-    }
-
-    // 2. Encontrar el intervalo inmediatamente superior o igual a las horas transcurridas
-    const intervaloSugerido = intervalosOrdenados.find(
-      (intervalo) => horasDesdeUltimo <= intervalo.horas_intervalo && horasDesdeUltimo >= intervalo.horas_intervalo - 50
-    ) || intervalosOrdenados.find(
-      (intervalo) => horasDesdeUltimo < intervalo.horas_intervalo
-    );
-
-    if (intervaloSugerido) {
-      const horasFaltantes = intervaloSugerido.horas_intervalo - horasDesdeUltimo;
       return {
         intervaloSugerido,
         planEncontrado,
-        razon: horasFaltantes <= 0
-          ? `El mantenimiento ${intervaloSugerido.nombre} está vencido`
-          : `Faltan aproximadamente ${horasFaltantes} horas para ${intervaloSugerido.nombre}`,
+        razon: cicloInfo.descripcionEstado,
       };
     }
 
-    // 3. Si no encontramos intervalo apropiado, sugerir el primero
-    const primerIntervalo = intervalosOrdenados[0];
+    // Si no hay plan en BD pero tenemos datos estáticos (Caterpillar/Volvo)
+    if (cicloInfo.planEncontrado && cicloInfo.intervaloProximo) {
+      return {
+        intervaloSugerido: null, // No tenemos IntervaloConKits de BD
+        planEncontrado: null,
+        razon: `${cicloInfo.descripcionEstado} (datos estáticos ${cicloInfo.fuenteDatos})`,
+      };
+    }
+
+    // Plan genérico usando intervalos estándar
+    const estadoCicloGenerico = calcularEstadoCiclo(horasActuales, INTERVALOS_ESTANDAR);
+    
     return {
-      intervaloSugerido: primerIntervalo,
-      planEncontrado,
-      razon: `Equipo recién agregado o sin suficientes horas. Se sugiere ${primerIntervalo.nombre}`,
+      intervaloSugerido: null,
+      planEncontrado: null,
+      razon: `No se encontró plan específico para ${marca} ${modelo}. ` +
+        `Usando ciclo estándar: ${estadoCicloGenerico.intervaloProximo?.codigo || 'PM1'} ` +
+        `en ${Math.max(0, estadoCicloGenerico.horasParaProximo).toFixed(0)}h`,
     };
-  }, [planes, marca, modelo, categoria, horasActuales, horasUltimoMantenimiento]);
+  }, [planes, marca, modelo, categoria, horasActuales, cicloInfo]);
 
   return sugerencia;
 }
 
 /**
- * Variante simplificada que solo busca por horasActuales sin considerar último mantenimiento
+ * Hook extendido que incluye toda la información del ciclo
+ */
+export function useSugerenciaMantenimientoExtendida(
+  marca: string | null | undefined,
+  modelo: string | null | undefined,
+  categoria: string | null | undefined,
+  horasActuales: number,
+  horasUltimoMantenimiento: number
+): SugerenciaMantenimientoExtendida {
+  const sugerenciaBase = useSugerenciaMantenimiento(
+    marca, modelo, categoria, horasActuales, horasUltimoMantenimiento
+  );
+  
+  const cicloInfo = useCicloMantenimiento({
+    marca,
+    modelo,
+    categoria,
+    horasActuales,
+    horasAlerta: 50,
+  });
+
+  return {
+    ...sugerenciaBase,
+    cicloActual: cicloInfo.cicloActual,
+    horasParaProximo: cicloInfo.horasParaProximo,
+    estadoAlerta: cicloInfo.estadoAlerta,
+    kitRecomendado: cicloInfo.kitRecomendado,
+    porcentajeCiclo: cicloInfo.porcentajeCiclo,
+  };
+}
+
+/**
+ * Variante simplificada que solo busca por horasActuales sin considerar último mantenimiento.
+ * MEJORADO: Ahora usa la lógica de ciclo que simula la ruta desde 0 horas.
  */
 export function useSugerenciaMantenimientoSimple(
   marca: string | null | undefined,
@@ -108,64 +163,6 @@ export function useSugerenciaMantenimientoSimple(
   categoria: string | null | undefined,
   horasActuales: number
 ): SugerenciaMantenimiento {
-  const { planes } = usePlanes();
-
-  const sugerencia = useMemo(() => {
-    if (!marca || !modelo || !categoria) {
-      return {
-        intervaloSugerido: null,
-        planEncontrado: null,
-        razon: 'Faltan datos del equipo',
-      };
-    }
-
-    const planEncontrado = planes.find((plan) => {
-      const marcaCoincide = plan.marca.toLowerCase() === marca.toLowerCase();
-      const modeloCoincide = plan.modelo?.toLowerCase() === modelo.toLowerCase();
-      const categoriaCoincide = plan.categoria.toLowerCase() === categoria.toLowerCase();
-      
-      return marcaCoincide && modeloCoincide && categoriaCoincide && plan.activo;
-    });
-
-    if (!planEncontrado) {
-      return {
-        intervaloSugerido: null,
-        planEncontrado: null,
-        razon: 'No hay plan disponible',
-      };
-    }
-
-    // Encontrar el intervalo más cercano a las horas actuales
-    const intervalosOrdenados = [...planEncontrado.intervalos].sort(
-      (a, b) => a.horas_intervalo - b.horas_intervalo
-    );
-
-    // Buscar el próximo intervalo basado en ciclo total
-    const intervaloActual = intervalosOrdenados.find(
-      (int) => horasActuales < int.horas_intervalo
-    );
-
-    if (intervaloActual) {
-      return {
-        intervaloSugerido: intervaloActual,
-        planEncontrado,
-        razon: `Próximo mantenimiento: ${intervaloActual.nombre}`,
-      };
-    }
-
-    // Si excede todos los intervalos, calcular el próximo ciclo
-    const intervaloMaximo = intervalosOrdenados[intervalosOrdenados.length - 1];
-    const ciclosCompletos = Math.floor(horasActuales / intervaloMaximo.horas_intervalo);
-    const proximoIntervalo = intervalosOrdenados.find(
-      (int) => horasActuales < (ciclosCompletos + 1) * int.horas_intervalo
-    ) || intervaloMaximo;
-
-    return {
-      intervaloSugerido: proximoIntervalo,
-      planEncontrado,
-      razon: `Ciclo ${ciclosCompletos + 1}: ${proximoIntervalo.nombre}`,
-    };
-  }, [planes, marca, modelo, categoria, horasActuales]);
-
-  return sugerencia;
+  // Simplemente usar la función principal con horasUltimoMantenimiento = 0
+  return useSugerenciaMantenimiento(marca, modelo, categoria, horasActuales, 0);
 }

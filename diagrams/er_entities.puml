@@ -1,0 +1,64 @@
+@startuml er_entities
+title ER simplificado - import-dash
+entity equipos {
+  * ficha : string
+  --
+  numeroSerie
+  marca
+  modelo
+  categoria
+  empresa
+}
+entity mantenimientos_programados {
+  * id
+  --
+  ficha
+  tipoMantenimiento
+  frecuencia
+  horasKmRestante
+  fechaUltimaActualizacion
+}
+entity mantenimientos_realizados {
+  * id
+  --
+  ficha
+  fechaMantenimiento
+  horasKmAlMomento
+  observaciones
+}
+entity actualizaciones_horas_km {
+  * id
+  --
+  ficha
+  fecha
+  horasKm
+  incremento
+}
+entity inventarios {
+  * id
+  --
+  categoriaEquipo
+  pieza
+  cantidad
+}
+entity usuarios {
+  * id
+  --
+  nombre
+  email
+}
+entity roles {
+  * id
+  --
+  nombre
+}
+
+equipos ||--o{ mantenimientos_programados : "tiene"
+equipos ||--o{ mantenimientos_realizados : "historial"
+equipos ||--o{ actualizaciones_horas_km : "lecturas"
+equipos ||--o{ inventarios : "categoria"
+usuarios ||--o{ mantenimientos_realizados : "registrado_por"
+usuarios ||--o{ actualizaciones_horas_km : "registrado_por"
+usuarios ||--o{ roles : "tiene"
+
+@enduml

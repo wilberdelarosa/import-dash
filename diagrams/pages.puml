@@ -1,0 +1,25 @@
+@startuml pages
+skinparam componentStyle rectangle
+title Pages - import-dash
+package "Pages" {
+  [Index]
+  [Dashboard]
+  [Equipos]
+  [Mantenimiento]
+  [Planificador]
+  [PlanificadorInteligente]
+  [ImportarDatosCaterpillar]
+  [Reportes]
+  [KitsMantenimiento]
+  [PlanesMantenimiento]
+  [Inventario]
+  [Historial]
+  [Auth]
+  [Admin]
+  [AsistenteIA]
+  [Configuraciones]
+  [ControlMantenimientoProfesional]
+  [Notificaciones]
+  [ListasPersonalizadas]
+}
+@enduml

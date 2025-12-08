@@ -1,0 +1,16 @@
+@startuml types
+skinparam componentStyle rectangle
+title Types & Lib - import-dash
+package "Types" {
+  [equipment.ts]
+  [maintenance-plans.ts]
+  [historial.ts]
+  [caterpillar.ts]
+  [planificacion.ts]
+  [config.ts]
+}
+package "Lib" {
+  [maintenanceUtils]
+  [format]
+}
+@enduml

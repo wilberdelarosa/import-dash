@@ -1,0 +1,32 @@
+@startuml views
+title Vistas y Navegación - import-dash
+skinparam componentStyle rectangle
+
+package "Vistas (Pages)" {
+  [Index]
+  [Dashboard]
+  [Equipos]
+  [EquipoDetalleUnificado]
+  [Mantenimiento]
+  [Planificador]
+  [PlanificadorInteligente]
+  [ImportarDatosCaterpillar]
+  [Reportes]
+  [Inventario]
+}
+
+Index --> Dashboard
+Index --> Equipos
+Equipos --> EquipoDetalleUnificado : "abrir modal"
+Equipos --> Mantenimiento
+Dashboard --> Reportes
+Planificador --> PlanificadorInteligente
+ImportarDatosCaterpillar --> Inventario
+
+note right of EquipoDetalleUnificado
+  - Modal con tabs (General, Mant., Repuestos, Historial)
+  - Hero metrics (horas restantes, próximo MP, última actividad)
+  - Timeline unificado
+end note
+
+@enduml

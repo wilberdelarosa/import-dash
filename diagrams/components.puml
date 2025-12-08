@@ -1,0 +1,27 @@
+@startuml components
+skinparam componentStyle rectangle
+title Components - import-dash
+package "Components" {
+  package "UI" {
+    [ui/*]
+  }
+  package "Mobile" {
+    [MobileLayout]
+    [MobileCard]
+    [QuickActions]
+  }
+  package "Admin" {
+    [AdminPanel]
+    [PermissionsMatrix]
+  }
+  package "Equipos" {
+    [EquiposTable]
+    [EquipoDetalleUnificado]
+    [EquipoDialog]
+  }
+  [CaterpillarDataCard]
+  [NotificationCenter]
+  [Navigation]
+  [Layout]
+}
+@enduml

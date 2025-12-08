@@ -1,0 +1,18 @@
+@startuml hooks
+skinparam componentStyle rectangle
+title Hooks - import-dash
+package "Hooks" {
+  [useHistorial]
+  [useCaterpillarData]
+  [useSugerenciaMantenimiento]
+  [usePlanes]
+  [useSupabaseData]
+  [useMechanicSubmissions]
+  [useMantenimientosPaginados]
+  [useUserRoles]
+  [useNotifications]
+  [useKits]
+  [useRutasPredictivas]
+  [useSugerenciaMantenimiento]
+}
+@enduml

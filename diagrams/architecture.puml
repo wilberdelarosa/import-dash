@@ -1,0 +1,60 @@
+@startuml architecture
+' High-level architecture diagram for import-dash
+skinparam componentStyle rectangle
+
+title import-dash - Arquitectura (resumen)
+
+package "Frontend (src)" {
+  [pages/*] as Pages
+  [components/*] as Components
+  [hooks/*] as Hooks
+  [context/*] as Context
+  [lib/*] as Lib
+  [types/*] as Types
+}
+
+package "Integrations & Tools" {
+  [Supabase] as Supabase
+  [Electron/Capacitor] as Native
+  [Caterpillar Data Provider] as CaterpillarAPI
+}
+
+' Key pages and components
+Pages --> Components : usa
+Pages --> Hooks : usa
+Components --> Hooks : usa
+Components --> Types : usa
+Pages --> Types : usa
+Hooks --> Supabase : consulta
+Components --> Supabase : consulta
+Context --> Supabase : mantiene datos
+Lib --> Pages : utilidades
+
+' Examples of important nodes
+Pages -[#0000FF]-> "Equipos (src/pages/Equipos.tsx)"
+Pages -[#0000FF]-> "Mobile: src/pages/mobile/EquiposMobile.tsx"
+Pages -[#0000FF]-> "Mantenimiento, Planificador, Dashboard, ImportarDatosCaterpillar"
+Components -[#008000]-> "EquipoDetalleUnificado (src/components/EquipoDetalleUnificado.tsx)"
+Components -[#008000]-> "CaterpillarDataCard (src/components/CaterpillarDataCard.tsx)"
+Hooks -[#800080]-> "useHistorial, useCaterpillarData, useSugerenciaMantenimiento, usePlanes, useUserRoles"
+Context -[#AA5500]-> "SupabaseDataContext (src/context/SupabaseDataContext)"
+Types -[#666666]-> "src/types/* (equipment, otros)"
+
+' External libraries
+[React/Vite/Tailwind] as FrontendStack
+FrontendStack -[hidden]-> Pages
+FrontendStack ..> Components : proporciona UI
+Supabase ..> Pages : API
+CaterpillarAPI ..> Hooks : datos de catálogo
+Native ..> Pages : mobile build (capacitor/electron)
+
+' Legend
+note as N1
+- Pages: rutas y vistas
+- Components: UI reutilizable
+- Hooks: lógica compartida y fetch
+- Context: estado global (datos supabase)
+- Lib: utilidades (maintenanceUtils, format, etc.)
+end note
+
+@enduml

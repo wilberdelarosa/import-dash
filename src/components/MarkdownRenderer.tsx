@@ -169,56 +169,61 @@ export function MarkdownRenderer({ content }: MarkdownRendererProps) {
   return <div className="space-y-2 text-sm leading-relaxed text-foreground">{renderContent()}</div>;
 }
 
-// Componente de tabla responsiva con scroll horizontal y navegación
+// Componente de tabla responsiva con scroll horizontal y navegación mejorada para móvil
 function ResponsiveTable({ headers, rows }: { headers: string[]; rows: string[][] }) {
   const [scrollPosition, setScrollPosition] = useState(0);
+  const [maxScroll, setMaxScroll] = useState(0);
+  const [showScrollHint, setShowScrollHint] = useState(true);
 
   const handleScroll = (e: React.UIEvent<HTMLDivElement>) => {
     const target = e.target as HTMLDivElement;
     setScrollPosition(target.scrollLeft);
-  };
-
-  const canScrollLeft = scrollPosition > 0;
-  const canScrollRight = true; // Simplified - always show if content might overflow
-
-  const scrollLeft = () => {
-    const container = document.getElementById('table-scroll-container');
-    if (container) {
-      container.scrollBy({ left: -200, behavior: 'smooth' });
+    setMaxScroll(target.scrollWidth - target.clientWidth);
+    // Ocultar hint después de que el usuario empiece a hacer scroll
+    if (target.scrollLeft > 10) {
+      setShowScrollHint(false);
     }
   };
 
-  const scrollRight = () => {
-    const container = document.getElementById('table-scroll-container');
-    if (container) {
-      container.scrollBy({ left: 200, behavior: 'smooth' });
-    }
-  };
+  const canScrollLeft = scrollPosition > 5;
+  const canScrollRight = scrollPosition < maxScroll - 5;
 
   return (
-    <div className="my-3 relative group">
-      {/* Indicador de scroll */}
-      <div className="absolute -left-1 top-0 bottom-0 w-6 bg-gradient-to-r from-background to-transparent z-10 pointer-events-none opacity-0 group-hover:opacity-100 transition-opacity" style={{ display: canScrollLeft ? 'block' : 'none' }} />
-      <div className="absolute -right-1 top-0 bottom-0 w-6 bg-gradient-to-l from-background to-transparent z-10 pointer-events-none" />
-      
-      {/* Botones de navegación para móvil */}
-      <div className="sm:hidden flex items-center justify-between mb-2 px-1">
-        <span className="text-[0.65rem] text-muted-foreground">Desliza para ver más →</span>
-      </div>
+    <div className="my-3 relative">
+      {/* Indicadores de scroll en los lados */}
+      {canScrollLeft && (
+        <div className="absolute left-0 top-0 bottom-0 w-8 bg-gradient-to-r from-background via-background/80 to-transparent z-10 pointer-events-none flex items-center justify-start pl-1">
+          <ChevronLeft className="h-4 w-4 text-muted-foreground animate-pulse" />
+        </div>
+      )}
+      {canScrollRight && (
+        <div className="absolute right-0 top-0 bottom-0 w-8 bg-gradient-to-l from-background via-background/80 to-transparent z-10 pointer-events-none flex items-center justify-end pr-1">
+          <ChevronRight className="h-4 w-4 text-muted-foreground animate-pulse" />
+        </div>
+      )}
 
-      {/* Contenedor de tabla con scroll */}
-      <div 
-        id="table-scroll-container"
-        className="overflow-x-auto rounded-lg border border-border/60 bg-card/50 backdrop-blur-sm scrollbar-thin scrollbar-thumb-primary/20 scrollbar-track-transparent"
+      {/* Indicador de scroll para móvil - más visible */}
+      {showScrollHint && headers.length > 3 && (
+        <div className="sm:hidden flex items-center justify-center gap-2 mb-2 py-1.5 px-3 bg-primary/10 rounded-lg border border-primary/20 animate-pulse">
+          <ChevronLeft className="h-3 w-3 text-primary" />
+          <span className="text-[0.7rem] font-medium text-primary">Desliza horizontalmente</span>
+          <ChevronRight className="h-3 w-3 text-primary" />
+        </div>
+      )}
+
+      {/* Contenedor de tabla con scroll mejorado */}
+      <div
+        className="overflow-x-auto rounded-lg border border-border/60 bg-card/50 backdrop-blur-sm touch-pan-x"
         onScroll={handleScroll}
+        style={{ WebkitOverflowScrolling: 'touch' }}
       >
-        <table className="w-full border-collapse text-xs sm:text-sm">
+        <table className="w-full border-collapse text-[0.7rem] sm:text-sm min-w-max">
           <thead>
             <tr className="bg-primary/5 dark:bg-primary/10">
               {headers.map((header, i) => (
                 <th
                   key={`header-${i}`}
-                  className="border-b border-border/60 px-2 sm:px-3 py-2 text-left font-semibold text-foreground whitespace-nowrap"
+                  className="border-b border-border/60 px-2 sm:px-3 py-1.5 sm:py-2 text-left font-semibold text-foreground whitespace-nowrap min-w-[80px]"
                 >
                   {header}
                 </th>
@@ -237,7 +242,8 @@ function ResponsiveTable({ headers, rows }: { headers: string[]; rows: string[][
                 {row.map((cell, cellIndex) => (
                   <td
                     key={`cell-${rowIndex}-${cellIndex}`}
-                    className="border-b border-border/30 px-2 sm:px-3 py-2 text-foreground"
+                    className="border-b border-border/30 px-2 sm:px-3 py-1.5 sm:py-2 text-foreground max-w-[150px] sm:max-w-none truncate"
+                    title={cell}
                   >
                     {cell}
                   </td>
@@ -247,15 +253,22 @@ function ResponsiveTable({ headers, rows }: { headers: string[]; rows: string[][
           </tbody>
         </table>
       </div>
-      
-      {/* Contador de filas */}
+
+      {/* Contador de filas y indicador de scroll */}
       <div className="flex items-center justify-between mt-1.5 px-1">
         <span className="text-[0.6rem] text-muted-foreground">
           {rows.length} {rows.length === 1 ? 'registro' : 'registros'}
         </span>
-        <span className="text-[0.6rem] text-muted-foreground">
-          {headers.length} columnas
-        </span>
+        <div className="flex items-center gap-2">
+          {headers.length > 3 && (
+            <span className="text-[0.6rem] text-primary/70 sm:hidden">
+              {Math.round((scrollPosition / Math.max(maxScroll, 1)) * 100)}%
+            </span>
+          )}
+          <span className="text-[0.6rem] text-muted-foreground">
+            {headers.length} columnas
+          </span>
+        </div>
       </div>
     </div>
   );

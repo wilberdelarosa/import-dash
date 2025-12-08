@@ -21,7 +21,7 @@ export default function Equipos() {
   const { isMobile } = useDeviceDetection();
   const { canEdit } = usePermissions();
   const canEditEquipos = canEdit('equipos');
-  
+
   const [fichaSeleccionada, setFichaSeleccionada] = useState<string | null>(null);
   const [detalleAbierto, setDetalleAbierto] = useState(false);
   const [confirmOpen, setConfirmOpen] = useState(false);
@@ -146,12 +146,15 @@ export default function Equipos() {
           onOpenChange={setDetalleAbierto}
         />
 
-        {dialogOpen && (
-          <EquipoDialog
-            equipo={equipoToEdit || undefined}
-            onSave={equipoToEdit ? handleEditEquipo : handleAddEquipo}
-          />
-        )}
+        <EquipoDialog
+          equipo={equipoToEdit || undefined}
+          onSave={equipoToEdit ? handleEditEquipo : handleAddEquipo}
+          open={dialogOpen}
+          onOpenChange={(open) => {
+            setDialogOpen(open);
+            if (!open) setEquipoToEdit(null);
+          }}
+        />
 
         <ConfirmDialog
           open={confirmOpen}
@@ -213,36 +216,36 @@ export default function Equipos() {
 
         <Card className="overflow-hidden shadow-lg border-t-4 border-t-primary/30">
           <CardHeader className="bg-gradient-to-r from-primary/5 via-transparent to-transparent">
-              <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-                <div className="space-y-1.5">
-                  <CardTitle className="flex items-center gap-2.5 text-xl font-bold tracking-tight">
-                    <div className="rounded-lg bg-primary/10 p-2">
-                      <Truck className="h-5 w-5 text-primary" />
-                    </div>
-                    Catálogo de Equipos y Maquinaria
-                  </CardTitle>
-                  <CardDescription className="text-sm">
-                    Administra tu inventario completo de equipos, maquinaria y vehículos
-                  </CardDescription>
-                </div>
-                {canEditEquipos ? (
-                  <EquipoDialog onSave={handleAddEquipo} />
-                ) : (
-                  <TooltipProvider>
-                    <Tooltip>
-                      <TooltipTrigger asChild>
-                        <Button variant="outline" disabled className="gap-2 opacity-50">
-                          <Lock className="h-4 w-4" />
-                          Agregar Equipo
-                        </Button>
-                      </TooltipTrigger>
-                      <TooltipContent>
-                        <p>Solo administradores pueden agregar equipos</p>
-                      </TooltipContent>
-                    </Tooltip>
-                  </TooltipProvider>
-                )}
+            <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+              <div className="space-y-1.5">
+                <CardTitle className="flex items-center gap-2.5 text-xl font-bold tracking-tight">
+                  <div className="rounded-lg bg-primary/10 p-2">
+                    <Truck className="h-5 w-5 text-primary" />
+                  </div>
+                  Catálogo de Equipos y Maquinaria
+                </CardTitle>
+                <CardDescription className="text-sm">
+                  Administra tu inventario completo de equipos, maquinaria y vehículos
+                </CardDescription>
               </div>
+              {canEditEquipos ? (
+                <EquipoDialog onSave={handleAddEquipo} />
+              ) : (
+                <TooltipProvider>
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <Button variant="outline" disabled className="gap-2 opacity-50">
+                        <Lock className="h-4 w-4" />
+                        Agregar Equipo
+                      </Button>
+                    </TooltipTrigger>
+                    <TooltipContent>
+                      <p>Solo administradores pueden agregar equipos</p>
+                    </TooltipContent>
+                  </Tooltip>
+                </TooltipProvider>
+              )}
+            </div>
           </CardHeader>
           <CardContent className="px-0 sm:px-6 pb-6">
             <EquiposTable

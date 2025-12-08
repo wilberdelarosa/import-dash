@@ -1,0 +1,17 @@
+@startuml sequence_login
+title Secuencia: Login / Autenticación
+actor Usuario
+participant AuthPage
+participant AuthContext
+participant Supabase
+
+Usuario -> AuthPage: enviar credenciales
+AuthPage -> Supabase: signIn(email,password)
+Supabase --> AuthPage: token / user
+AuthPage -> AuthContext: setUser(user,token)
+AuthContext -> SupabaseDataContext: iniciar sincronización de datos (fetch inicial)
+SupabaseDataContext -> Supabase: fetch equipos, mantenimientos, inventarios
+Supabase --> SupabaseDataContext: datasets
+AuthContext --> Usuario: redirigir a `Index` / Dashboard
+
+@enduml

@@ -242,7 +242,7 @@ export default function PlanificadorInteligente() {
   }, [equipo, mantenimientoProgramado, ultimoMantenimientoRealizado, mpAsignadoManualmente]);
 
   // Hook de rutas predictivas
-  const { rutas, estadisticas } = useRutasPredictivas(equipoSeleccionado || '', planActual?.id || null);
+  const { rutas, estadisticas, guardarRutas } = useRutasPredictivas(equipoSeleccionado || '', planActual?.id || null);
 
   // Kits asociados al plan actual
   const kitsDelPlanActual = useMemo(() => {
@@ -1176,6 +1176,62 @@ export default function PlanificadorInteligente() {
                           </div>
                         </div>
                       )}
+
+                      {/* Botón para guardar rutas */}
+                      <div className="flex justify-end gap-2 pt-4 border-t">
+                        <Button
+                          variant="outline"
+                          onClick={() => {
+                            toast({
+                              title: '📄 Vista Previa',
+                              description: `${rutas.length} rutas generadas para ${equipo?.nombre}. Haz clic en "Guardar Rutas" para confirmar.`,
+                            });
+                          }}
+                        >
+                          <Info className="h-4 w-4 mr-2" />
+                          Vista Previa
+                        </Button>
+                        <Button
+                          onClick={async () => {
+                            if (!planActual) {
+                              toast({
+                                title: '❌ Error',
+                                description: 'No hay plan seleccionado',
+                                variant: 'destructive',
+                              });
+                              return;
+                            }
+                            try {
+                              // Usar el hook de rutas predictivas para guardar
+                              toast({
+                                title: '⏳ Guardando rutas...',
+                                description: 'Por favor espera mientras se guardan las planificaciones',
+                              });
+
+                              // Llamar a guardarRutas del hook
+                              await guardarRutas(rutas, {
+                                horasAlerta: 50,
+                                esOverride: mpSugerido?.esManual || false,
+                              });
+
+                              toast({
+                                title: '✅ Rutas guardadas',
+                                description: `Se guardaron ${rutas.length} planificaciones para ${equipo?.nombre}`,
+                              });
+                            } catch (error) {
+                              toast({
+                                title: '❌ Error',
+                                description: 'No se pudieron guardar las rutas',
+                                variant: 'destructive',
+                              });
+                            }
+                          }}
+                          className="bg-green-600 hover:bg-green-700"
+                        >
+                          <CheckCircle2 className="h-4 w-4 mr-2" />
+                          Guardar Rutas ({rutas.length})
+                        </Button>
+                      </div>
                     </CardContent>
                   </Card>
                 )}
