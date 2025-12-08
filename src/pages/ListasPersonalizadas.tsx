@@ -13,25 +13,64 @@ import { Separator } from '@/components/ui/separator';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import {
-  Building2,
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/ui/dialog';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu';
+import { ScrollArea } from '@/components/ui/scroll-area';
+import {
+  Check,
+  ChevronDown,
   Download,
-  Filter,
+  Edit2,
+  FileJson,
+  FileSpreadsheet,
+  FileText,
+  FolderOpen,
   LayoutTemplate,
   ListChecks,
   Palette,
+  Plus,
+  RefreshCw,
+  Save,
   Search,
   Settings2,
-  Sparkles,
-  Tag,
-  Wrench,
+  Trash2,
+  X,
 } from 'lucide-react';
 import { formatRemainingLabel } from '@/lib/maintenanceUtils';
 import { cn } from '@/lib/utils';
 import { getStaticCaterpillarData } from '@/data/caterpillarMaintenance';
-import type { Equipo, MantenimientoProgramado, EmpresaEquipo } from '@/types/equipment';
-import { EMPRESAS_DISPONIBLES, isEquipoDisponible, isEquipoVendido } from '@/types/equipment';
+import type { Equipo, MantenimientoProgramado } from '@/types/equipment';
+import { isEquipoVendido } from '@/types/equipment';
 import { useDeviceDetection } from '@/hooks/useDeviceDetection';
 import { ListasPersonalizadasMobile } from '@/pages/mobile/ListasPersonalizadasMobile';
+import { toast } from 'sonner';
+
+// ═══════════════════════════════════════════════════════════════════════════
+// TIPOS
+// ═══════════════════════════════════════════════════════════════════════════
+
+interface ListaGuardada {
+  id: string;
+  nombre: string;
+  descripcion?: string;
+  fichas: string[];
+  columnas: string[];
+  colorScheme: string;
+  createdAt: string;
+  updatedAt: string;
+}
 
 interface ColumnOption {
   key: string;
@@ -50,42 +89,48 @@ interface EnrichedEquipo extends Equipo {
   tareasClave: string;
 }
 
-// Columnas por defecto: información básica del equipo
-const DEFAULT_COLUMNS = ['ficha', 'nombre', 'marca', 'numeroSerie', 'placa'];
+// ═══════════════════════════════════════════════════════════════════════════
+// CONSTANTES
+// ═══════════════════════════════════════════════════════════════════════════
 
-const COLOR_THEMES: Record<string, { name: string; header: string; badge: string; rowHover: string; }> = {
+const STORAGE_KEY = 'import-dash-listas-guardadas';
+const DEFAULT_COLUMNS = ['ficha', 'nombre', 'marca', 'modelo', 'numeroSerie', 'placa'];
+
+const COLOR_THEMES: Record<string, { name: string; header: string; badge: string; rowHover: string }> = {
   emerald: {
     name: 'Esmeralda',
-    header: 'bg-emerald-50 text-emerald-800',
-    badge: 'border-emerald-200 bg-emerald-50 text-emerald-700',
-    rowHover: 'hover:bg-emerald-50/60',
+    header: 'bg-emerald-50 text-emerald-800 dark:bg-emerald-900/30 dark:text-emerald-200',
+    badge: 'border-emerald-200 bg-emerald-50 text-emerald-700 dark:border-emerald-700 dark:bg-emerald-900/50 dark:text-emerald-300',
+    rowHover: 'hover:bg-emerald-50/60 dark:hover:bg-emerald-900/20',
   },
   amber: {
     name: 'Ámbar',
-    header: 'bg-amber-50 text-amber-800',
-    badge: 'border-amber-200 bg-amber-50 text-amber-700',
-    rowHover: 'hover:bg-amber-50/60',
+    header: 'bg-amber-50 text-amber-800 dark:bg-amber-900/30 dark:text-amber-200',
+    badge: 'border-amber-200 bg-amber-50 text-amber-700 dark:border-amber-700 dark:bg-amber-900/50 dark:text-amber-300',
+    rowHover: 'hover:bg-amber-50/60 dark:hover:bg-amber-900/20',
   },
   sky: {
     name: 'Cielo',
-    header: 'bg-sky-50 text-sky-800',
-    badge: 'border-sky-200 bg-sky-50 text-sky-700',
-    rowHover: 'hover:bg-sky-50/60',
+    header: 'bg-sky-50 text-sky-800 dark:bg-sky-900/30 dark:text-sky-200',
+    badge: 'border-sky-200 bg-sky-50 text-sky-700 dark:border-sky-700 dark:bg-sky-900/50 dark:text-sky-300',
+    rowHover: 'hover:bg-sky-50/60 dark:hover:bg-sky-900/20',
   },
   slate: {
     name: 'Grafito',
     header: 'bg-slate-900 text-slate-50 dark:bg-slate-800 dark:text-slate-100',
     badge: 'border-slate-300 bg-slate-800 text-slate-100 dark:border-slate-600',
-    rowHover: 'hover:bg-slate-800/60 dark:hover:bg-slate-700/50',
+    rowHover: 'hover:bg-slate-100 dark:hover:bg-slate-800/50',
   },
 };
+
+// ═══════════════════════════════════════════════════════════════════════════
+// HELPERS
+// ═══════════════════════════════════════════════════════════════════════════
 
 const resolveIntervaloCodigo = (mantenimiento: MantenimientoProgramado | undefined | null) => {
   if (!mantenimiento) return '';
   const match = mantenimiento.tipoMantenimiento?.match(/(PM\d)/i);
-  if (match?.[1]) {
-    return match[1].toUpperCase();
-  }
+  if (match?.[1]) return match[1].toUpperCase();
   if (!mantenimiento.frecuencia) return '';
   if (mantenimiento.frecuencia <= 250) return 'PM1';
   if (mantenimiento.frecuencia <= 500) return 'PM2';
@@ -94,893 +139,395 @@ const resolveIntervaloCodigo = (mantenimiento: MantenimientoProgramado | undefin
   return '';
 };
 
-// Columnas agrupadas por categoría para mejor organización
 const buildColumnOptions = (): ColumnOption[] => [
-  // ═══════════════════════════════════════════════════════════════════════════
-  // GRUPO: BÁSICO - Identificación del equipo
-  // ═══════════════════════════════════════════════════════════════════════════
-  {
-    key: 'ficha',
-    label: 'Ficha',
-    description: 'Identificador interno del equipo.',
-    group: 'basico',
-    accessor: (equipo) => equipo.ficha,
-  },
-  {
-    key: 'nombre',
-    label: 'Nombre',
-    description: 'Nombre comercial o alias operativo.',
-    group: 'basico',
-    accessor: (equipo) => equipo.nombre,
-  },
-  {
-    key: 'marca',
-    label: 'Marca',
-    description: 'Fabricante registrado del equipo.',
-    group: 'basico',
-    accessor: (equipo) => equipo.marca,
-  },
-  {
-    key: 'modelo',
-    label: 'Modelo',
-    description: 'Modelo exacto según ficha técnica.',
-    group: 'basico',
-    accessor: (equipo) => equipo.modelo,
-  },
-  {
-    key: 'numeroSerie',
-    label: 'N° de Serie',
-    description: 'Número de serie físico reportado en la placa.',
-    group: 'basico',
-    accessor: (equipo) => equipo.numeroSerie,
-  },
-  {
-    key: 'placa',
-    label: 'Placa',
-    description: 'Placa vehicular o código de activo fijo.',
-    group: 'basico',
-    accessor: (equipo) => equipo.placa,
-  },
-  {
-    key: 'categoria',
-    label: 'Categoría',
-    description: 'Categoría operativa para agrupar equipos.',
-    group: 'basico',
-    accessor: (equipo) => equipo.categoria,
-  },
-  {
-    key: 'empresa',
-    label: 'Empresa',
-    description: 'Empresa propietaria del equipo.',
-    group: 'basico',
-    accessor: (equipo) => equipo.empresa || 'Sin asignar',
-  },
-  {
-    key: 'activo',
-    label: 'Estado',
-    description: 'Si el equipo está activo u operativo.',
-    group: 'basico',
-    accessor: (equipo) => equipo.activo ? 'Activo' : 'Inactivo',
-  },
-  
-  // ═══════════════════════════════════════════════════════════════════════════
-  // GRUPO: MANTENIMIENTO - Estado y programación
-  // ═══════════════════════════════════════════════════════════════════════════
-  {
-    key: 'horasKmActualesLabel',
-    label: 'Lectura Actual',
-    description: 'Horas o kilómetros registrados.',
-    group: 'mantenimiento',
-    accessor: (equipo) => equipo.horasKmActualesLabel,
-  },
-  {
-    key: 'estadoMantenimiento',
-    label: 'Estado Mant.',
-    description: 'Situación del mantenimiento (al día, próximo o vencido).',
-    group: 'mantenimiento',
-    accessor: (equipo) => equipo.estadoMantenimiento,
-  },
-  {
-    key: 'proximoIntervalo',
-    label: 'Intervalo PM',
-    description: 'Intervalo PM asociado al próximo servicio.',
-    group: 'mantenimiento',
-    accessor: (equipo) => equipo.proximoIntervalo,
-  },
-  
-  // ═══════════════════════════════════════════════════════════════════════════
-  // GRUPO: AVANZADO - Información técnica detallada
-  // ═══════════════════════════════════════════════════════════════════════════
-  {
-    key: 'proximoIntervaloDescripcion',
-    label: 'Descripción Intervalo',
-    description: 'Resumen de las tareas sugeridas.',
-    group: 'avanzado',
-    accessor: (equipo) => equipo.proximoIntervaloDescripcion,
-  },
-  {
-    key: 'kitRecomendado',
-    label: 'Kit Recomendado',
-    description: 'Filtros y repuestos sugeridos.',
-    group: 'avanzado',
-    accessor: (equipo) => equipo.kitRecomendado,
-  },
-  {
-    key: 'tareasClave',
-    label: 'Tareas Clave',
-    description: 'Actividades críticas del mantenimiento.',
-    group: 'avanzado',
-    accessor: (equipo) => equipo.tareasClave,
-  },
-  {
-    key: 'motivoInactividad',
-    label: 'Motivo Inactividad',
-    description: 'Razón si el equipo está inactivo.',
-    group: 'avanzado',
-    accessor: (equipo) => equipo.motivoInactividad || 'N/A',
-  },
+  { key: 'ficha', label: 'Ficha', description: 'Identificador interno', group: 'basico', accessor: (e) => e.ficha },
+  { key: 'nombre', label: 'Nombre', description: 'Nombre del equipo', group: 'basico', accessor: (e) => e.nombre },
+  { key: 'marca', label: 'Marca', description: 'Fabricante', group: 'basico', accessor: (e) => e.marca },
+  { key: 'modelo', label: 'Modelo', description: 'Modelo exacto', group: 'basico', accessor: (e) => e.modelo },
+  { key: 'numeroSerie', label: 'N° Serie', description: 'Número de serie', group: 'basico', accessor: (e) => e.numeroSerie },
+  { key: 'placa', label: 'Placa', description: 'Placa vehicular', group: 'basico', accessor: (e) => e.placa },
+  { key: 'categoria', label: 'Categoría', description: 'Tipo de equipo', group: 'basico', accessor: (e) => e.categoria },
+  { key: 'empresa', label: 'Empresa', description: 'Empresa propietaria', group: 'basico', accessor: (e) => e.empresa || 'Sin asignar' },
+  { key: 'activo', label: 'Estado', description: 'Activo/Inactivo', group: 'basico', accessor: (e) => (e.activo ? 'Activo' : 'Inactivo') },
+  { key: 'horasKmActualesLabel', label: 'Lectura Actual', description: 'Horas o km registrados', group: 'mantenimiento', accessor: (e) => e.horasKmActualesLabel },
+  { key: 'estadoMantenimiento', label: 'Estado Mant.', description: 'Estado del mantenimiento', group: 'mantenimiento', accessor: (e) => e.estadoMantenimiento },
+  { key: 'proximoIntervalo', label: 'Intervalo PM', description: 'Próximo PM', group: 'mantenimiento', accessor: (e) => e.proximoIntervalo },
+  { key: 'proximoIntervaloDescripcion', label: 'Descripción Intervalo', description: 'Tareas sugeridas', group: 'avanzado', accessor: (e) => e.proximoIntervaloDescripcion },
+  { key: 'kitRecomendado', label: 'Kit Recomendado', description: 'Repuestos sugeridos', group: 'avanzado', accessor: (e) => e.kitRecomendado },
+  { key: 'tareasClave', label: 'Tareas Clave', description: 'Actividades críticas', group: 'avanzado', accessor: (e) => e.tareasClave },
+  { key: 'motivoInactividad', label: 'Motivo Inactividad', description: 'Razón si inactivo', group: 'avanzado', accessor: (e) => e.motivoInactividad || 'N/A' },
 ];
+
+const generateId = () => `lista_${Date.now()}_${Math.random().toString(36).slice(2, 9)}`;
+
+// ═══════════════════════════════════════════════════════════════════════════
+// COMPONENTE PRINCIPAL
+// ═══════════════════════════════════════════════════════════════════════════
 
 export default function ListasPersonalizadas() {
   const { isMobile } = useDeviceDetection();
-  const { data } = useSupabaseDataContext();
+  const { data, loadData } = useSupabaseDataContext();
   const columnOptions = useMemo(() => buildColumnOptions(), []);
+
+  const [listasGuardadas, setListasGuardadas] = useState<ListaGuardada[]>([]);
+  const [listaActiva, setListaActiva] = useState<ListaGuardada | null>(null);
   const [selectedColumns, setSelectedColumns] = useState<string[]>(DEFAULT_COLUMNS);
-  const [selectedCategorias, setSelectedCategorias] = useState<string[]>([]);
-  const [selectedMarcas, setSelectedMarcas] = useState<string[]>([]);
-  const [selectedModelos, setSelectedModelos] = useState<string[]>([]);
-  const [selectedEmpresas, setSelectedEmpresas] = useState<string[]>([]);
-  const [searchTerm, setSearchTerm] = useState('');
-  const [colorScheme, setColorScheme] = useState<'emerald' | 'amber' | 'sky' | 'slate'>('emerald');
   const [selectedFichas, setSelectedFichas] = useState<string[]>([]);
+  const [colorScheme, setColorScheme] = useState<keyof typeof COLOR_THEMES>('emerald');
   const [columnTab, setColumnTab] = useState<'basico' | 'mantenimiento' | 'avanzado'>('basico');
+  const [searchFichas, setSearchFichas] = useState('');
+  const [dropdownOpen, setDropdownOpen] = useState(false);
+  const [showSaveDialog, setShowSaveDialog] = useState(false);
+  const [showDeleteDialog, setShowDeleteDialog] = useState(false);
+  const [nombreNuevaLista, setNombreNuevaLista] = useState('');
+  const [descripcionNuevaLista, setDescripcionNuevaLista] = useState('');
+  const [editingListaId, setEditingListaId] = useState<string | null>(null);
 
-  // Auto-detectar valores únicos disponibles en los datos
-  const categoriasDisponibles = useMemo(
-    () =>
-      Array.from(new Set(data.equipos.map((equipo) => equipo.categoria).filter((categoria): categoria is string => Boolean(categoria)))).sort(),
-    [data.equipos],
-  );
+  useEffect(() => {
+    try {
+      const saved = localStorage.getItem(STORAGE_KEY);
+      if (saved) setListasGuardadas(JSON.parse(saved) as ListaGuardada[]);
+    } catch (error) {
+      console.error('Error cargando listas:', error);
+    }
+  }, []);
 
-  const marcasDisponibles = useMemo(
-    () =>
-      Array.from(new Set(data.equipos.map((equipo) => equipo.marca).filter((marca): marca is string => Boolean(marca)))).sort(),
-    [data.equipos],
-  );
-
-  const modelosDisponibles = useMemo(
-    () =>
-      Array.from(new Set(data.equipos.map((equipo) => equipo.modelo).filter((modelo): modelo is string => Boolean(modelo))))
-        .sort(),
-    [data.equipos],
-  );
-
-  // Auto-detectar empresas disponibles en los datos
-  const empresasDisponibles = useMemo(() => {
-    const empresasEnDatos = new Set(data.equipos.map((e) => e.empresa).filter(Boolean));
-    // Combinar con las empresas definidas por si hay alguna sin equipos
-    return [...new Set([...EMPRESAS_DISPONIBLES, ...empresasEnDatos])].filter(Boolean).sort();
-  }, [data.equipos]);
-
-  // Agrupar columnas por grupo para mostrar en tabs
-  const columnsByGroup = useMemo(() => {
-    return {
-      basico: columnOptions.filter((c) => c.group === 'basico'),
-      mantenimiento: columnOptions.filter((c) => c.group === 'mantenimiento'),
-      avanzado: columnOptions.filter((c) => c.group === 'avanzado'),
-    };
-  }, [columnOptions]);
-
-  const columnMap = useMemo(() => {
-    return columnOptions.reduce<Record<string, ColumnOption>>((acc, option) => {
-      acc[option.key] = option;
-      return acc;
-    }, {});
-  }, [columnOptions]);
+  useEffect(() => {
+    try {
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(listasGuardadas));
+    } catch (error) {
+      console.error('Error guardando listas:', error);
+    }
+  }, [listasGuardadas]);
 
   const enrichedEquipos = useMemo<EnrichedEquipo[]>(() => {
     const cache = new Map<string, ReturnType<typeof getStaticCaterpillarData> | null>();
-
     const resolveCatData = (modelo: string) => {
       if (!modelo) return null;
-      if (!cache.has(modelo)) {
-        cache.set(modelo, getStaticCaterpillarData(modelo));
-      }
+      if (!cache.has(modelo)) cache.set(modelo, getStaticCaterpillarData(modelo));
       return cache.get(modelo) ?? null;
     };
-
     return data.equipos.map((equipo) => {
-      const mantenimientos = data.mantenimientosProgramados
-        .filter((mant) => mant.ficha === equipo.ficha)
-        .sort((a, b) => a.horasKmRestante - b.horasKmRestante);
-
-      const proximoMantenimiento = mantenimientos[0];
-      const horasActuales = proximoMantenimiento?.horasKmActuales ?? null;
-      const intervaloCodigo = resolveIntervaloCodigo(proximoMantenimiento);
+      const mantenimientos = data.mantenimientosProgramados.filter((m) => m.ficha === equipo.ficha).sort((a, b) => a.horasKmRestante - b.horasKmRestante);
+      const prox = mantenimientos[0];
+      const horas = prox?.horasKmActuales ?? null;
+      const codigo = resolveIntervaloCodigo(prox);
       const marcaLower = equipo.marca?.toLowerCase() ?? '';
-      const catData =
-        marcaLower.includes('cat') || marcaLower.includes('caterpillar')
-          ? resolveCatData(equipo.modelo ?? '')
-          : null;
-
-      const piezas = intervaloCodigo && catData?.piezasPorIntervalo?.[intervaloCodigo]
-        ? catData.piezasPorIntervalo[intervaloCodigo]
-        : [];
-
-      const tareas = intervaloCodigo && catData?.tareasPorIntervalo?.[intervaloCodigo]
-        ? catData.tareasPorIntervalo[intervaloCodigo]
-        : [];
-
-      const estadoMantenimiento = proximoMantenimiento
-        ? formatRemainingLabel(proximoMantenimiento.horasKmRestante, 'horas/km')
-        : 'Sin programacion activa';
-
+      const catData = marcaLower.includes('cat') || marcaLower.includes('caterpillar') ? resolveCatData(equipo.modelo ?? '') : null;
+      const piezas = codigo && catData?.piezasPorIntervalo?.[codigo] ? catData.piezasPorIntervalo[codigo] : [];
+      const tareas = codigo && catData?.tareasPorIntervalo?.[codigo] ? catData.tareasPorIntervalo[codigo] : [];
       return {
         ...equipo,
-        horasKmActualesLabel:
-          horasActuales !== null && horasActuales !== undefined ? `${horasActuales} horas/km` : 'Sin dato',
-        estadoMantenimiento,
-        proximoIntervalo: intervaloCodigo || 'No asignado',
-        proximoIntervaloDescripcion:
-          intervaloCodigo && catData?.intervalos?.find((intervalo) => intervalo.codigo === intervaloCodigo)?.descripcion
-            ? catData.intervalos.find((intervalo) => intervalo.codigo === intervaloCodigo)!.descripcion
-            : 'Sin detalle disponible para el modelo registrado.',
-        kitRecomendado: piezas.length
-          ? piezas
-            .map((pieza) => `${pieza.pieza.numero_parte} — ${pieza.pieza.descripcion}`)
-            .join(' \n')
-          : 'No hay kit sugerido para este modelo.',
-        tareasClave: tareas.length ? tareas.join(' \n') : 'Sin tareas recomendadas en el catalogo.',
+        horasKmActualesLabel: horas !== null ? `${horas} horas/km` : 'Sin dato',
+        estadoMantenimiento: prox ? formatRemainingLabel(prox.horasKmRestante, 'horas/km') : 'Sin programación',
+        proximoIntervalo: codigo || 'No asignado',
+        proximoIntervaloDescripcion: codigo && catData?.intervalos?.find((i) => i.codigo === codigo)?.descripcion || 'Sin detalle',
+        kitRecomendado: piezas.length ? piezas.map((p) => `${p.pieza.numero_parte} — ${p.pieza.descripcion}`).join('\n') : 'No hay kit',
+        tareasClave: tareas.length ? tareas.join('\n') : 'Sin tareas',
       } satisfies EnrichedEquipo;
     });
   }, [data.equipos, data.mantenimientosProgramados]);
 
-  const equiposPorFicha = useMemo(() => {
-    return enrichedEquipos.reduce<Map<string, EnrichedEquipo>>((acc, equipo) => {
-      acc.set(equipo.ficha, equipo);
-      return acc;
-    }, new Map());
-  }, [enrichedEquipos]);
+  const equiposPorFicha = useMemo(() => new Map(enrichedEquipos.map((e) => [e.ficha, e])), [enrichedEquipos]);
 
-  useEffect(() => {
-    setSelectedFichas((prev) => prev.filter((ficha) => equiposPorFicha.has(ficha)));
-  }, [equiposPorFicha]);
+  const fichasDisponibles = useMemo(() => {
+    const terms = searchFichas.toLowerCase().trim().split(',').map((t) => t.trim()).filter(Boolean);
+    return enrichedEquipos
+      .filter((eq) => {
+        if (isEquipoVendido(eq.empresa)) return false;
+        if (terms.length === 0) return true;
+        const text = [eq.ficha, eq.nombre, eq.marca, eq.modelo, eq.categoria, eq.numeroSerie, eq.placa, eq.empresa].filter(Boolean).join(' ').toLowerCase();
+        return terms.some((t) => text.includes(t));
+      })
+      .sort((a, b) => a.ficha.localeCompare(b.ficha, 'es', { numeric: true }));
+  }, [enrichedEquipos, searchFichas]);
 
-  const filteredEquipos = useMemo(() => {
-    return enrichedEquipos.filter((equipo) => {
-      // Excluir equipos vendidos por defecto (a menos que se filtre específicamente por empresa=VENDIDO)
-      if (!selectedEmpresas.includes('VENDIDO') && isEquipoVendido(equipo.empresa)) {
-        return false;
-      }
-      if (selectedCategorias.length > 0 && !selectedCategorias.includes(equipo.categoria)) {
-        return false;
-      }
-      if (selectedMarcas.length > 0 && !selectedMarcas.includes(equipo.marca)) {
-        return false;
-      }
-      if (selectedModelos.length > 0 && !selectedModelos.includes(equipo.modelo)) {
-        return false;
-      }
-      if (selectedEmpresas.length > 0 && !selectedEmpresas.includes(equipo.empresa)) {
-        return false;
-      }
-      if (searchTerm) {
-        const normalized = searchTerm.toLowerCase();
-        const values = [
-          equipo.nombre,
-          equipo.ficha,
-          equipo.modelo,
-          equipo.categoria,
-          equipo.marca,
-          equipo.numeroSerie,
-          equipo.placa,
-          equipo.empresa,
-          equipo.estadoMantenimiento,
-        ]
-          .filter(Boolean)
-          .join(' ')
-          .toLowerCase();
-        if (!values.includes(normalized)) {
-          return false;
-        }
-      }
-      return true;
-    });
-  }, [enrichedEquipos, selectedCategorias, selectedMarcas, selectedModelos, selectedEmpresas, searchTerm]);
+  const selectedEquipos = useMemo(() => selectedFichas.map((f) => equiposPorFicha.get(f)).filter(Boolean) as EnrichedEquipo[], [selectedFichas, equiposPorFicha]);
+  const columnMap = useMemo(() => columnOptions.reduce<Record<string, ColumnOption>>((acc, o) => ({ ...acc, [o.key]: o }), {}), [columnOptions]);
+  const columnsByGroup = useMemo(() => ({ basico: columnOptions.filter((c) => c.group === 'basico'), mantenimiento: columnOptions.filter((c) => c.group === 'mantenimiento'), avanzado: columnOptions.filter((c) => c.group === 'avanzado') }), [columnOptions]);
+  const theme = COLOR_THEMES[colorScheme];
 
-  const filteredSelectedFichas = useMemo(() => {
-    const fichasSet = new Set(filteredEquipos.map((equipo) => equipo.ficha));
-    return selectedFichas.filter((ficha) => fichasSet.has(ficha));
-  }, [filteredEquipos, selectedFichas]);
+  const handleToggleFicha = (ficha: string) => setSelectedFichas((prev) => (prev.includes(ficha) ? prev.filter((f) => f !== ficha) : [...prev, ficha]));
+  const handleRemoveFicha = (ficha: string) => setSelectedFichas((prev) => prev.filter((f) => f !== ficha));
+  const handleToggleColumn = (key: string) => setSelectedColumns((prev) => (prev.includes(key) ? prev.filter((c) => c !== key) : [...prev, key]));
+  const handleSelectAllColumnsInGroup = (group: 'basico' | 'mantenimiento' | 'avanzado') => { const cols = columnsByGroup[group].map((c) => c.key); setSelectedColumns((prev) => [...new Set([...prev, ...cols])]); };
+  const handleClearColumnsInGroup = (group: 'basico' | 'mantenimiento' | 'avanzado') => { const cols = columnsByGroup[group].map((c) => c.key); setSelectedColumns((prev) => prev.filter((k) => !cols.includes(k))); };
 
-  const selectedCount = filteredSelectedFichas.length;
-
-  const selectedEquipos = useMemo(
-    () => filteredEquipos.filter((equipo) => selectedFichas.includes(equipo.ficha)),
-    [filteredEquipos, selectedFichas],
-  );
-
-  const selectionSummary = useMemo(() => {
-    const resumen = new Map<string, { count: number; categoria: string }>();
-    selectedFichas.forEach((ficha) => {
-      const equipo = equiposPorFicha.get(ficha);
-      if (!equipo) return;
-      const current = resumen.get(equipo.categoria) ?? { count: 0, categoria: equipo.categoria };
-      current.count += 1;
-      resumen.set(equipo.categoria, current);
-    });
-    return Array.from(resumen.values());
-  }, [selectedFichas, equiposPorFicha]);
-
-  const toggleFicha = (ficha: string) => {
-    setSelectedFichas((prev) =>
-      prev.includes(ficha) ? prev.filter((item) => item !== ficha) : [...prev, ficha],
-    );
-  };
-
-  const toggleAllFiltered = (checked: boolean) => {
-    if (checked) {
-      setSelectedFichas((prev) => {
-        const current = new Set(prev);
-        filteredEquipos.forEach((equipo) => current.add(equipo.ficha));
-        return Array.from(current);
-      });
+  const handleSaveLista = () => {
+    if (!nombreNuevaLista.trim()) { toast.error('El nombre es requerido'); return; }
+    if (selectedFichas.length === 0) { toast.error('Selecciona al menos una ficha'); return; }
+    const now = new Date().toISOString();
+    if (editingListaId) {
+      setListasGuardadas((prev) => prev.map((l) => l.id === editingListaId ? { ...l, nombre: nombreNuevaLista.trim(), descripcion: descripcionNuevaLista.trim(), fichas: selectedFichas, columnas: selectedColumns, colorScheme, updatedAt: now } : l));
+      toast.success('Lista actualizada');
     } else {
-      setSelectedFichas((prev) => prev.filter((ficha) => !filteredSelectedFichas.includes(ficha)));
+      const nueva: ListaGuardada = { id: generateId(), nombre: nombreNuevaLista.trim(), descripcion: descripcionNuevaLista.trim(), fichas: selectedFichas, columnas: selectedColumns, colorScheme, createdAt: now, updatedAt: now };
+      setListasGuardadas((prev) => [...prev, nueva]);
+      setListaActiva(nueva);
+      toast.success('Lista guardada');
     }
+    setShowSaveDialog(false);
+    setNombreNuevaLista('');
+    setDescripcionNuevaLista('');
+    setEditingListaId(null);
   };
 
-  const clearSelection = () => {
-    setSelectedFichas((prev) => prev.filter((ficha) => !filteredSelectedFichas.includes(ficha)));
+  const handleLoadLista = (lista: ListaGuardada) => {
+    setListaActiva(lista);
+    setSelectedFichas(lista.fichas.filter((f) => equiposPorFicha.has(f)));
+    setSelectedColumns(lista.columnas);
+    setColorScheme(lista.colorScheme as keyof typeof COLOR_THEMES);
+    toast.success(`Lista "${lista.nombre}" cargada`);
   };
 
-  const handleToggleColumn = (key: string) => {
-    setSelectedColumns((prev) => {
-      if (prev.includes(key)) {
-        return prev.filter((column) => column !== key);
-      }
-      return [...prev, key];
-    });
+  const handleDeleteLista = () => {
+    if (!listaActiva) return;
+    setListasGuardadas((prev) => prev.filter((l) => l.id !== listaActiva.id));
+    setListaActiva(null);
+    setSelectedFichas([]);
+    setShowDeleteDialog(false);
+    toast.success('Lista eliminada');
   };
 
-  const handleToggleCategoria = (categoria: string) => {
-    setSelectedCategorias((prev) => {
-      if (prev.includes(categoria)) {
-        return prev.filter((item) => item !== categoria);
-      }
-      return [...prev, categoria];
-    });
+  const handleNewLista = () => { setListaActiva(null); setSelectedFichas([]); setSelectedColumns(DEFAULT_COLUMNS); setColorScheme('emerald'); };
+
+  const handleRegenerar = async () => {
+    toast.info('Actualizando datos...');
+    await loadData(false);
+    setSelectedFichas((prev) => prev.filter((f) => equiposPorFicha.has(f)));
+    toast.success('Datos actualizados');
   };
 
-  const handleToggleMarca = (marca: string) => {
-    setSelectedMarcas((prev) => {
-      if (prev.includes(marca)) {
-        return prev.filter((item) => item !== marca);
-      }
-      return [...prev, marca];
-    });
+  const handleOpenSaveDialog = (isEdit = false) => {
+    if (isEdit && listaActiva) { setNombreNuevaLista(listaActiva.nombre); setDescripcionNuevaLista(listaActiva.descripcion || ''); setEditingListaId(listaActiva.id); }
+    else { setNombreNuevaLista(''); setDescripcionNuevaLista(''); setEditingListaId(null); }
+    setShowSaveDialog(true);
   };
 
-  const handleToggleModelo = (modelo: string) => {
-    setSelectedModelos((prev) => {
-      if (prev.includes(modelo)) {
-        return prev.filter((item) => item !== modelo);
-      }
-      return [...prev, modelo];
-    });
-  };
-
-  const handleToggleEmpresa = (empresa: string) => {
-    setSelectedEmpresas((prev) => {
-      if (prev.includes(empresa)) {
-        return prev.filter((item) => item !== empresa);
-      }
-      return [...prev, empresa];
-    });
-  };
-
-  // Seleccionar todas las columnas de un grupo
-  const selectAllColumnsInGroup = (group: 'basico' | 'mantenimiento' | 'avanzado') => {
-    const groupColumns = columnsByGroup[group].map((c) => c.key);
-    setSelectedColumns((prev) => {
-      const withoutGroup = prev.filter((key) => !groupColumns.includes(key));
-      return [...withoutGroup, ...groupColumns];
-    });
-  };
-
-  // Deseleccionar todas las columnas de un grupo
-  const clearColumnsInGroup = (group: 'basico' | 'mantenimiento' | 'avanzado') => {
-    const groupColumns = columnsByGroup[group].map((c) => c.key);
-    setSelectedColumns((prev) => prev.filter((key) => !groupColumns.includes(key)));
-  };
-
-  // Preset: Solo columnas básicas por defecto
-  const applyPresetBasico = () => {
-    setSelectedColumns(DEFAULT_COLUMNS);
-  };
-
-  // Preset: Columnas para mantenimiento
-  const applyPresetMantenimiento = () => {
-    setSelectedColumns(['ficha', 'nombre', 'marca', 'horasKmActualesLabel', 'estadoMantenimiento', 'proximoIntervalo']);
-  };
-
-  // Preset: Todas las columnas
-  const applyPresetCompleto = () => {
-    setSelectedColumns(columnOptions.map((c) => c.key));
-  };
-
-  const handleExportCsv = () => {
-    const source = selectedEquipos.length > 0 ? selectedEquipos : filteredEquipos;
-    if (source.length === 0 || selectedColumns.length === 0) return;
-    const header = selectedColumns.map((key) => columnMap[key]?.label ?? key);
-    const rows = source.map((equipo) =>
-      selectedColumns.map((key) => {
-        const value = columnMap[key]?.accessor(equipo) ?? '';
-        return `"${value.replace(/"/g, '""')}"`;
-      }).join(','),
-    );
-
-    const csvContent = [header.join(','), ...rows].join('\n');
-    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+  const downloadFile = (content: string, filename: string, type: string) => {
+    const blob = new Blob([content], { type: `${type};charset=utf-8;` });
     const url = URL.createObjectURL(blob);
     const link = document.createElement('a');
     link.href = url;
-    link.setAttribute('download', 'lista-personalizada.csv');
+    link.download = filename;
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
     URL.revokeObjectURL(url);
   };
 
-  const handleExportPdf = () => {
-    const source = selectedEquipos.length > 0 ? selectedEquipos : filteredEquipos;
-    if (source.length === 0 || selectedColumns.length === 0) return;
-    const header = selectedColumns.map((key) => columnMap[key]?.label ?? key);
-    const rows = source.map((equipo) =>
-      selectedColumns
-        .map((key) => `<td style="padding:8px;border:1px solid #ddd;font-size:12px;">${columnMap[key]?.accessor(equipo).replace(/\n/g, '<br/>') ?? ''
-          }</td>`)
-        .join(''),
-    );
-
-    const tableHtml = `
-      <html>
-        <head>
-          <title>Lista personalizada</title>
-          <style>
-            body { font-family: 'Inter', system-ui, sans-serif; padding: 24px; color: #111827; }
-            table { border-collapse: collapse; width: 100%; }
-            th { background: #0f172a; color: white; padding: 10px; text-align: left; font-size: 13px; }
-            td { vertical-align: top; }
-          </style>
-        </head>
-        <body>
-          <h2>Lista personalizada de equipos</h2>
-          <table>
-            <thead>
-              <tr>${header.map((label) => `<th>${label}</th>`).join('')}</tr>
-            </thead>
-            <tbody>
-              ${rows.map((row) => `<tr>${row}</tr>`).join('')}
-            </tbody>
-          </table>
-        </body>
-      </html>
-    `;
-
-    const printWindow = window.open('', '_blank');
-    if (!printWindow) return;
-    printWindow.document.write(tableHtml);
-    printWindow.document.close();
-    printWindow.focus();
-    printWindow.print();
+  const handleExportCsv = () => {
+    if (selectedEquipos.length === 0) return;
+    const header = selectedColumns.map((k) => columnMap[k]?.label ?? k);
+    const rows = selectedEquipos.map((e) => selectedColumns.map((k) => `"${(columnMap[k]?.accessor(e) ?? '').replace(/"/g, '""').replace(/\n/g, ' ')}"`).join(','));
+    downloadFile([header.join(','), ...rows].join('\n'), `${listaActiva?.nombre || 'lista'}.csv`, 'text/csv');
+    toast.success('Exportado a CSV');
   };
 
-  const theme = COLOR_THEMES[colorScheme];
-  const headerCheckboxState: boolean | 'indeterminate' = filteredEquipos.length === 0
-    ? false
-    : selectedCount === filteredEquipos.length
-      ? true
-      : selectedCount > 0
-        ? 'indeterminate'
-        : false;
+  const handleExportJson = () => {
+    if (selectedEquipos.length === 0) return;
+    const jsonData = selectedEquipos.map((e) => { const obj: Record<string, string> = {}; selectedColumns.forEach((k) => { obj[columnMap[k]?.label ?? k] = columnMap[k]?.accessor(e) ?? ''; }); return obj; });
+    downloadFile(JSON.stringify(jsonData, null, 2), `${listaActiva?.nombre || 'lista'}.json`, 'application/json');
+    toast.success('Exportado a JSON');
+  };
 
-  // Renderizar versión mobile
-  if (isMobile) {
-    return <ListasPersonalizadasMobile />;
-  }
+  const handleExportPdf = () => {
+    if (selectedEquipos.length === 0) return;
+    const header = selectedColumns.map((k) => columnMap[k]?.label ?? k);
+    const rows = selectedEquipos.map((e) => selectedColumns.map((k) => `<td style="padding:8px;border:1px solid #ddd;font-size:11px;">${(columnMap[k]?.accessor(e) ?? '').replace(/\n/g, '<br/>')}</td>`).join(''));
+    const html = `<html><head><title>${listaActiva?.nombre || 'Lista'}</title><style>body{font-family:system-ui,sans-serif;padding:20px}h2{margin-bottom:10px}p{color:#666;margin-bottom:20px}table{border-collapse:collapse;width:100%}th{background:#1e293b;color:white;padding:10px;text-align:left;font-size:12px}td{vertical-align:top}</style></head><body><h2>${listaActiva?.nombre || 'Lista de Equipos'}</h2><p>${selectedEquipos.length} equipos • Generado: ${new Date().toLocaleDateString('es-DO')}</p><table><thead><tr>${header.map((h) => `<th>${h}</th>`).join('')}</tr></thead><tbody>${rows.map((r) => `<tr>${r}</tr>`).join('')}</tbody></table></body></html>`;
+    const win = window.open('', '_blank');
+    if (win) { win.document.write(html); win.document.close(); win.focus(); win.print(); }
+  };
+
+  if (isMobile) return <ListasPersonalizadasMobile />;
 
   return (
-    <Layout title="Listas personalizadas">
-
-      <div className="space-y-6 lg:space-y-8">
-        <Alert className="border-primary/40 bg-primary/5">
-          <Sparkles className="h-4 w-4" />
-          <AlertTitle>Generador de Listas Dinámicas</AlertTitle>
-          <AlertDescription>
-            Crea listados personalizados seleccionando columnas, filtrando por empresa, categoría o marca. 
-            Exporta a CSV (Excel) o PDF para compartir con tu equipo.
-          </AlertDescription>
-        </Alert>
-
-        {/* Presets rápidos */}
-        <div className="flex flex-wrap items-center gap-2">
-          <span className="text-sm font-medium text-muted-foreground">Plantillas:</span>
-          <Button variant="outline" size="sm" onClick={applyPresetBasico}>
-            <Tag className="mr-1 h-3 w-3" /> Básico
-          </Button>
-          <Button variant="outline" size="sm" onClick={applyPresetMantenimiento}>
-            <Wrench className="mr-1 h-3 w-3" /> Mantenimiento
-          </Button>
-          <Button variant="outline" size="sm" onClick={applyPresetCompleto}>
-            <Settings2 className="mr-1 h-3 w-3" /> Completo
-          </Button>
+    <Layout title="Gestor de Listas">
+      <div className="space-y-6">
+        <div className="flex flex-wrap items-center justify-between gap-4">
+          <div>
+            <h1 className="text-2xl font-bold">Gestor de Listas</h1>
+            <p className="text-sm text-muted-foreground">Crea, guarda y exporta listas personalizadas de equipos</p>
+          </div>
+          <div className="flex items-center gap-2">
+            <Button variant="outline" onClick={handleNewLista}><Plus className="mr-2 h-4 w-4" /> Nueva Lista</Button>
+            {listasGuardadas.length > 0 && (
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button variant="outline"><FolderOpen className="mr-2 h-4 w-4" /> Mis Listas ({listasGuardadas.length})<ChevronDown className="ml-2 h-4 w-4" /></Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end" className="w-64">
+                  {listasGuardadas.map((lista) => (
+                    <DropdownMenuItem key={lista.id} onClick={() => handleLoadLista(lista)} className="flex flex-col items-start">
+                      <span className="font-medium">{lista.nombre}</span>
+                      <span className="text-xs text-muted-foreground">{lista.fichas.length} equipos • {new Date(lista.updatedAt).toLocaleDateString('es-DO')}</span>
+                    </DropdownMenuItem>
+                  ))}
+                </DropdownMenuContent>
+              </DropdownMenu>
+            )}
+          </div>
         </div>
 
-        <section className="grid gap-4 xl:grid-cols-[380px_1fr]">
-          <Card className="border border-border/60 bg-card/90">
+        {listaActiva && (
+          <Alert className="border-primary/40 bg-primary/5">
+            <ListChecks className="h-4 w-4" />
+            <AlertTitle className="flex items-center gap-2">{listaActiva.nombre}<Badge variant="secondary" className="text-xs">{selectedFichas.length} equipos</Badge></AlertTitle>
+            <AlertDescription className="flex items-center justify-between">
+              <span>{listaActiva.descripcion || 'Sin descripción'}</span>
+              <div className="flex gap-2">
+                <Button variant="ghost" size="sm" onClick={() => handleOpenSaveDialog(true)}><Edit2 className="mr-1 h-3 w-3" /> Editar</Button>
+                <Button variant="ghost" size="sm" onClick={handleRegenerar}><RefreshCw className="mr-1 h-3 w-3" /> Regenerar</Button>
+                <Button variant="ghost" size="sm" className="text-destructive" onClick={() => setShowDeleteDialog(true)}><Trash2 className="mr-1 h-3 w-3" /> Eliminar</Button>
+              </div>
+            </AlertDescription>
+          </Alert>
+        )}
+
+        <div className="grid gap-6 xl:grid-cols-[400px_1fr]">
+          <Card>
             <CardHeader>
-              <CardTitle className="flex items-center gap-2 text-lg">
-                <LayoutTemplate className="h-5 w-5" /> Configura tu lista
-              </CardTitle>
-              <CardDescription>
-                Define qué información necesitas antes de generar la tabla.
-              </CardDescription>
+              <CardTitle className="flex items-center gap-2"><Settings2 className="h-5 w-5" /> Configuración</CardTitle>
+              <CardDescription>Selecciona fichas y columnas para tu lista</CardDescription>
             </CardHeader>
             <CardContent className="space-y-6">
               <div className="space-y-3">
-                <Label className="flex items-center gap-2 text-sm font-semibold">
-                  <Search className="h-4 w-4" /> Búsqueda rápida
-                </Label>
-                <Input
-                  placeholder="Filtra por nombre, ficha, modelo o estado..."
-                  value={searchTerm}
-                  onChange={(event) => setSearchTerm(event.target.value)}
-                />
-              </div>
-
-              <div className="space-y-3">
-                <Label className="flex items-center gap-2 text-sm font-semibold">
-                  <Filter className="h-4 w-4" /> Categorías
-                </Label>
-                <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
-                  {categoriasDisponibles.map((categoria) => (
-                    <label key={categoria} className="flex items-center gap-2 rounded-md border border-border/60 p-2 text-sm">
-                      <Checkbox
-                        checked={selectedCategorias.includes(categoria)}
-                        onCheckedChange={() => handleToggleCategoria(categoria)}
-                      />
-                      <span>{categoria}</span>
-                    </label>
-                  ))}
+                <Label className="flex items-center gap-2 font-semibold"><ListChecks className="h-4 w-4" /> Seleccionar Fichas</Label>
+                <p className="text-xs text-muted-foreground">Busca por ficha, nombre, marca, modelo o categoría. Usa comas para múltiples términos.</p>
+                <div className="relative">
+                  <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+                  <Input placeholder="Ej: AC-023, Caterpillar, excavadora" value={searchFichas} onChange={(e) => setSearchFichas(e.target.value)} onFocus={() => setDropdownOpen(true)} className="pl-10" />
                 </div>
-              </div>
-
-              {/* Filtro por Empresa */}
-              <div className="space-y-3">
-                <Label className="flex items-center gap-2 text-sm font-semibold">
-                  <Building2 className="h-4 w-4" /> Empresa
-                </Label>
-                <div className="grid grid-cols-1 gap-2">
-                  {empresasDisponibles.map((empresa) => (
-                    <label key={empresa} className="flex items-center gap-2 rounded-md border border-border/60 p-2 text-sm">
-                      <Checkbox
-                        checked={selectedEmpresas.includes(empresa)}
-                        onCheckedChange={() => handleToggleEmpresa(empresa)}
-                      />
-                      <span>{empresa}</span>
-                    </label>
-                  ))}
-                </div>
-              </div>
-
-              <div className="space-y-3">
-                <Label className="flex items-center gap-2 text-sm font-semibold">
-                  <Tag className="h-4 w-4" /> Marcas
-                </Label>
-                <div className="grid max-h-[220px] grid-cols-1 gap-2 overflow-y-auto sm:grid-cols-2">
-                  {marcasDisponibles.map((marca) => (
-                    <label key={marca} className="flex items-center gap-2 rounded-md border border-border/60 p-2 text-sm">
-                      <Checkbox
-                        checked={selectedMarcas.includes(marca)}
-                        onCheckedChange={() => handleToggleMarca(marca)}
-                      />
-                      <span>{marca}</span>
-                    </label>
-                  ))}
-                </div>
-              </div>
-
-              <div className="space-y-3">
-                <Label className="flex items-center gap-2 text-sm font-semibold">
-                  <LayoutTemplate className="h-4 w-4" /> Modelos
-                </Label>
-                <div className="grid max-h-[220px] grid-cols-1 gap-2 overflow-y-auto sm:grid-cols-2">
-                  {modelosDisponibles.map((modelo) => (
-                    <label key={modelo} className="flex items-center gap-2 rounded-md border border-border/60 p-2 text-sm">
-                      <Checkbox
-                        checked={selectedModelos.includes(modelo)}
-                        onCheckedChange={() => handleToggleModelo(modelo)}
-                      />
-                      <span>{modelo}</span>
-                    </label>
-                  ))}
-                </div>
-              </div>
-
-              <div className="space-y-3">
-                <Label className="flex items-center gap-2 text-sm font-semibold">
-                  <ListChecks className="h-4 w-4" /> Selección manual de fichas
-                </Label>
-                <p className="text-xs text-muted-foreground">
-                  Marca fichas específicas para exportar listas enfocadas o preparar rutas por categoría.
-                </p>
-                <div className="flex flex-wrap items-center gap-2">
-                  <Button
-                    type="button"
-                    size="sm"
-                    variant="outline"
-                    onClick={() => toggleAllFiltered(true)}
-                    disabled={filteredEquipos.length === 0}
-                  >
-                    Seleccionar todo ({filteredEquipos.length})
-                  </Button>
-                  <Button
-                    type="button"
-                    size="sm"
-                    variant="ghost"
-                    onClick={clearSelection}
-                    disabled={selectedCount === 0}
-                  >
-                    Limpiar selección
-                  </Button>
-                  <Badge variant="secondary" className="text-xs">
-                    {selectedCount} en esta vista
-                  </Badge>
-                </div>
-                {selectionSummary.length > 0 ? (
-                  <div className="flex flex-wrap gap-2">
-                    {selectionSummary.map(({ categoria, count }) => (
-                      <Badge key={categoria} variant="outline" className="border-dashed text-xs">
-                        {categoria}: {count}
-                      </Badge>
-                    ))}
+                {dropdownOpen && (
+                  <div className="relative">
+                    <Card className="absolute z-50 w-full max-h-64 overflow-hidden shadow-lg">
+                      <ScrollArea className="h-64">
+                        <div className="p-2">
+                          {fichasDisponibles.length === 0 ? (
+                            <p className="p-4 text-center text-sm text-muted-foreground">No se encontraron equipos</p>
+                          ) : fichasDisponibles.map((equipo) => {
+                            const isSelected = selectedFichas.includes(equipo.ficha);
+                            return (
+                              <button key={equipo.ficha} onClick={() => handleToggleFicha(equipo.ficha)} className={cn('flex w-full items-center justify-between rounded-md px-3 py-2 text-left text-sm transition-colors hover:bg-muted', isSelected && 'bg-primary/10')}>
+                                <div className="flex-1 min-w-0">
+                                  <div className="flex items-center gap-2"><span className="font-mono font-semibold">{equipo.ficha}</span><span className="truncate text-muted-foreground">{equipo.nombre}</span></div>
+                                  <div className="text-xs text-muted-foreground">{equipo.marca} {equipo.modelo} • {equipo.categoria}</div>
+                                </div>
+                                {isSelected && <Check className="h-4 w-4 text-primary shrink-0" />}
+                              </button>
+                            );
+                          })}
+                        </div>
+                      </ScrollArea>
+                      <div className="border-t p-2"><Button variant="ghost" size="sm" className="w-full" onClick={() => setDropdownOpen(false)}>Cerrar</Button></div>
+                    </Card>
                   </div>
-                ) : (
-                  <p className="text-[11px] text-muted-foreground">
-                    No hay fichas marcadas todavía. Usa la columna de selección en la tabla para comenzar.
-                  </p>
                 )}
-                <p className="text-[11px] text-muted-foreground">
-                  {selectedEquipos.length > 0
-                    ? 'Las exportaciones y reportes usarán solamente las fichas marcadas en esta vista.'
-                    : 'Si no seleccionas fichas, exportaremos todos los equipos filtrados.'}
-                </p>
+                {selectedFichas.length > 0 && (
+                  <div className="space-y-2">
+                    <div className="flex items-center justify-between"><span className="text-sm font-medium">{selectedFichas.length} fichas seleccionadas</span><Button variant="ghost" size="sm" onClick={() => setSelectedFichas([])}>Limpiar todo</Button></div>
+                    <div className="flex flex-wrap gap-1 max-h-32 overflow-y-auto">
+                      {selectedFichas.map((ficha) => (<Badge key={ficha} variant="secondary" className="gap-1">{ficha}<button onClick={() => handleRemoveFicha(ficha)} className="ml-1 hover:text-destructive"><X className="h-3 w-3" /></button></Badge>))}
+                    </div>
+                  </div>
+                )}
               </div>
-
               <Separator />
-
               <div className="space-y-3">
-                <Label className="flex items-center gap-2 text-sm font-semibold">
-                  <Palette className="h-4 w-4" /> Estilo de tabla
-                </Label>
-                <Select value={colorScheme} onValueChange={(value: 'emerald' | 'amber' | 'sky' | 'slate') => setColorScheme(value)}>
-                  <SelectTrigger className="w-full">
-                    <SelectValue placeholder="Selecciona un tema" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {Object.entries(COLOR_THEMES).map(([key, config]) => (
-                      <SelectItem key={key} value={key}>
-                        {config.name}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-
-              <Separator />
-
-              <div className="space-y-3">
-                <Label className="flex items-center gap-2 text-sm font-semibold">
-                  <Settings2 className="h-4 w-4" /> Columnas mostradas
-                </Label>
-                <p className="text-xs text-muted-foreground">
-                  Selecciona las columnas organizadas por categoría.
-                </p>
-                
-                <Tabs value={columnTab} onValueChange={(v) => setColumnTab(v as 'basico' | 'mantenimiento' | 'avanzado')}>
-                  <TabsList className="grid w-full grid-cols-3">
-                    <TabsTrigger value="basico" className="text-xs">
-                      Básico ({columnsByGroup.basico.filter(c => selectedColumns.includes(c.key)).length})
-                    </TabsTrigger>
-                    <TabsTrigger value="mantenimiento" className="text-xs">
-                      Mant. ({columnsByGroup.mantenimiento.filter(c => selectedColumns.includes(c.key)).length})
-                    </TabsTrigger>
-                    <TabsTrigger value="avanzado" className="text-xs">
-                      Avanzado ({columnsByGroup.avanzado.filter(c => selectedColumns.includes(c.key)).length})
-                    </TabsTrigger>
-                  </TabsList>
-                  
-                  <TabsContent value="basico" className="space-y-2">
-                    <div className="flex gap-2 mb-2">
-                      <Button size="sm" variant="ghost" onClick={() => selectAllColumnsInGroup('basico')} className="text-xs h-7">
-                        Todas
-                      </Button>
-                      <Button size="sm" variant="ghost" onClick={() => clearColumnsInGroup('basico')} className="text-xs h-7">
-                        Ninguna
-                      </Button>
-                    </div>
-                    <div className="grid max-h-[200px] grid-cols-1 gap-2 overflow-y-auto border border-border/60 rounded-md p-2">
-                      {columnsByGroup.basico.map((option) => (
-                        <label key={option.key} className="flex items-start gap-2 rounded-md bg-muted/40 p-2 text-xs">
-                          <Checkbox
-                            checked={selectedColumns.includes(option.key)}
-                            onCheckedChange={() => handleToggleColumn(option.key)}
-                          />
-                          <div className="space-y-0.5">
-                            <span className="font-medium">{option.label}</span>
-                            <p className="text-muted-foreground leading-snug text-[10px]">{option.description}</p>
-                          </div>
-                        </label>
-                      ))}
-                    </div>
-                  </TabsContent>
-                  
-                  <TabsContent value="mantenimiento" className="space-y-2">
-                    <div className="flex gap-2 mb-2">
-                      <Button size="sm" variant="ghost" onClick={() => selectAllColumnsInGroup('mantenimiento')} className="text-xs h-7">
-                        Todas
-                      </Button>
-                      <Button size="sm" variant="ghost" onClick={() => clearColumnsInGroup('mantenimiento')} className="text-xs h-7">
-                        Ninguna
-                      </Button>
-                    </div>
-                    <div className="grid max-h-[200px] grid-cols-1 gap-2 overflow-y-auto border border-border/60 rounded-md p-2">
-                      {columnsByGroup.mantenimiento.map((option) => (
-                        <label key={option.key} className="flex items-start gap-2 rounded-md bg-muted/40 p-2 text-xs">
-                          <Checkbox
-                            checked={selectedColumns.includes(option.key)}
-                            onCheckedChange={() => handleToggleColumn(option.key)}
-                          />
-                          <div className="space-y-0.5">
-                            <span className="font-medium">{option.label}</span>
-                            <p className="text-muted-foreground leading-snug text-[10px]">{option.description}</p>
-                          </div>
-                        </label>
-                      ))}
-                    </div>
-                  </TabsContent>
-                  
-                  <TabsContent value="avanzado" className="space-y-2">
-                    <div className="flex gap-2 mb-2">
-                      <Button size="sm" variant="ghost" onClick={() => selectAllColumnsInGroup('avanzado')} className="text-xs h-7">
-                        Todas
-                      </Button>
-                      <Button size="sm" variant="ghost" onClick={() => clearColumnsInGroup('avanzado')} className="text-xs h-7">
-                        Ninguna
-                      </Button>
-                    </div>
-                    <div className="grid max-h-[200px] grid-cols-1 gap-2 overflow-y-auto border border-border/60 rounded-md p-2">
-                      {columnsByGroup.avanzado.map((option) => (
-                        <label key={option.key} className="flex items-start gap-2 rounded-md bg-muted/40 p-2 text-xs">
-                          <Checkbox
-                            checked={selectedColumns.includes(option.key)}
-                            onCheckedChange={() => handleToggleColumn(option.key)}
-                          />
-                          <div className="space-y-0.5">
-                            <span className="font-medium">{option.label}</span>
-                            <p className="text-muted-foreground leading-snug text-[10px]">{option.description}</p>
-                          </div>
-                        </label>
-                      ))}
-                    </div>
-                  </TabsContent>
+                <Label className="flex items-center gap-2 font-semibold"><LayoutTemplate className="h-4 w-4" /> Columnas</Label>
+                <Tabs value={columnTab} onValueChange={(v) => setColumnTab(v as typeof columnTab)}>
+                  <TabsList className="grid w-full grid-cols-3"><TabsTrigger value="basico" className="text-xs">Básico</TabsTrigger><TabsTrigger value="mantenimiento" className="text-xs">Mant.</TabsTrigger><TabsTrigger value="avanzado" className="text-xs">Avanzado</TabsTrigger></TabsList>
+                  {(['basico', 'mantenimiento', 'avanzado'] as const).map((group) => (
+                    <TabsContent key={group} value={group} className="space-y-2">
+                      <div className="flex gap-2"><Button size="sm" variant="ghost" onClick={() => handleSelectAllColumnsInGroup(group)} className="text-xs h-7">Todas</Button><Button size="sm" variant="ghost" onClick={() => handleClearColumnsInGroup(group)} className="text-xs h-7">Ninguna</Button></div>
+                      <div className="grid gap-2 max-h-40 overflow-y-auto">
+                        {columnsByGroup[group].map((col) => (<label key={col.key} className="flex items-center gap-2 rounded-md bg-muted/40 p-2 text-xs cursor-pointer"><Checkbox checked={selectedColumns.includes(col.key)} onCheckedChange={() => handleToggleColumn(col.key)} /><span className="font-medium">{col.label}</span></label>))}
+                      </div>
+                    </TabsContent>
+                  ))}
                 </Tabs>
               </div>
+              <Separator />
+              <div className="space-y-3">
+                <Label className="flex items-center gap-2 font-semibold"><Palette className="h-4 w-4" /> Tema</Label>
+                <Select value={colorScheme} onValueChange={(v) => setColorScheme(v as keyof typeof COLOR_THEMES)}>
+                  <SelectTrigger><SelectValue /></SelectTrigger>
+                  <SelectContent>{Object.entries(COLOR_THEMES).map(([key, t]) => (<SelectItem key={key} value={key}>{t.name}</SelectItem>))}</SelectContent>
+                </Select>
+              </div>
+              <Separator />
+              <div className="flex flex-col gap-2"><Button onClick={() => handleOpenSaveDialog(false)} disabled={selectedFichas.length === 0}><Save className="mr-2 h-4 w-4" /> Guardar Lista</Button></div>
             </CardContent>
           </Card>
 
-          <Card className="border border-border/60 bg-card/90">
-            <CardHeader className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
-              <div>
-                <CardTitle className="text-lg">Previsualización</CardTitle>
-                <CardDescription>
-                  {filteredEquipos.length} equipo{filteredEquipos.length === 1 ? '' : 's'} coinciden con los filtros aplicados.
-                </CardDescription>
-                <div className="mt-2 flex flex-wrap gap-2 text-xs text-muted-foreground">
-                  <Badge variant="outline">Columnas: {selectedColumns.length}</Badge>
-                  <Badge variant="outline">Fichas marcadas: {selectedCount}</Badge>
-                  {selectedEmpresas.length > 0 && (
-                    <Badge variant="outline" className="bg-blue-50 text-blue-700">
-                      <Building2 className="mr-1 h-3 w-3" />
-                      {selectedEmpresas.join(', ')}
-                    </Badge>
-                  )}
-                  <Badge variant="outline">Tema: {theme.name}</Badge>
-                </div>
-              </div>
-              <div className="flex flex-wrap items-center gap-2">
-                <Button variant="outline" size="sm" onClick={handleExportPdf} disabled={selectedColumns.length === 0}>
-                  <Download className="mr-2 h-4 w-4" /> Exportar PDF
-                </Button>
-                <Button size="sm" onClick={handleExportCsv} disabled={selectedColumns.length === 0}>
-                  <Download className="mr-2 h-4 w-4" /> Exportar Excel (CSV)
-                </Button>
-              </div>
+          <Card>
+            <CardHeader className="flex flex-row items-center justify-between">
+              <div><CardTitle>Vista Previa</CardTitle><CardDescription>{selectedEquipos.length} equipo{selectedEquipos.length !== 1 ? 's' : ''} • {selectedColumns.length} columnas</CardDescription></div>
+              {selectedEquipos.length > 0 && (
+                <DropdownMenu>
+                  <DropdownMenuTrigger asChild><Button><Download className="mr-2 h-4 w-4" /> Exportar<ChevronDown className="ml-2 h-4 w-4" /></Button></DropdownMenuTrigger>
+                  <DropdownMenuContent align="end">
+                    <DropdownMenuItem onClick={handleExportCsv}><FileSpreadsheet className="mr-2 h-4 w-4" /> Excel (CSV)</DropdownMenuItem>
+                    <DropdownMenuItem onClick={handleExportJson}><FileJson className="mr-2 h-4 w-4" /> JSON</DropdownMenuItem>
+                    <DropdownMenuSeparator />
+                    <DropdownMenuItem onClick={handleExportPdf}><FileText className="mr-2 h-4 w-4" /> PDF (Imprimir)</DropdownMenuItem>
+                  </DropdownMenuContent>
+                </DropdownMenu>
+              )}
             </CardHeader>
-            <CardContent className="overflow-hidden">
-              {filteredEquipos.length === 0 ? (
-                <div className="flex flex-col items-center justify-center gap-2 rounded-lg border border-dashed border-border/60 py-16 text-center">
-                  <Sparkles className="h-8 w-8 text-muted-foreground" />
-                  <p className="text-sm text-muted-foreground">Ajusta los filtros o las columnas para ver resultados.</p>
+            <CardContent>
+              {selectedEquipos.length === 0 ? (
+                <div className="flex flex-col items-center justify-center gap-3 rounded-lg border-2 border-dashed py-16 text-center">
+                  <ListChecks className="h-12 w-12 text-muted-foreground/50" />
+                  <div><p className="font-medium">No hay equipos seleccionados</p><p className="text-sm text-muted-foreground">Usa el buscador para agregar fichas a tu lista</p></div>
                 </div>
               ) : (
-                <div className="overflow-x-auto">
+                <div className="overflow-x-auto rounded-lg border">
                   <Table>
                     <TableHeader>
                       <TableRow className={theme.header}>
-                        <TableHead className="w-12">
-                          <Checkbox
-                            aria-label="Seleccionar todos los equipos visibles"
-                            checked={headerCheckboxState}
-                            onCheckedChange={(checked) => toggleAllFiltered(Boolean(checked))}
-                          />
-                        </TableHead>
-                        {selectedColumns.map((key) => (
-                          <TableHead key={key} className="text-xs font-semibold uppercase tracking-wide">
-                            {columnMap[key]?.label ?? key}
-                          </TableHead>
-                        ))}
+                        {selectedColumns.map((key) => (<TableHead key={key} className="text-xs font-semibold uppercase">{columnMap[key]?.label ?? key}</TableHead>))}
+                        <TableHead className="w-10" />
                       </TableRow>
                     </TableHeader>
                     <TableBody>
-                      {filteredEquipos.map((equipo) => {
-                        const isSelected = selectedFichas.includes(equipo.ficha);
-                        return (
-                          <TableRow
-                            key={equipo.id}
-                            className={cn(
-                              `${theme.rowHover} transition-colors`,
-                              isSelected && 'ring-1 ring-primary/40 bg-primary/5 dark:bg-primary/10',
-                            )}
-                          >
-                            <TableCell className="align-top">
-                              <Checkbox
-                                checked={isSelected}
-                                onCheckedChange={() => toggleFicha(equipo.ficha)}
-                                aria-label={`Seleccionar ${equipo.ficha}`}
-                              />
-                            </TableCell>
-                            {selectedColumns.map((key) => {
-                              const rawValue = columnMap[key]?.accessor(equipo) ?? '';
-                              const parts = rawValue.split('\n');
-                              return (
-                                <TableCell key={`${equipo.id}-${key}`} className="align-top text-sm">
-                                  {parts.map((part, index) => (
-                                    <span key={index} className="block">
-                                      {key === 'estadoMantenimiento' ? (
-                                        <Badge variant="outline" className={`${theme.badge} text-xs font-medium`}>
-                                          {part}
-                                        </Badge>
-                                      ) : (
-                                        part
-                                      )}
-                                    </span>
-                                  ))}
-                                </TableCell>
-                              );
-                            })}
-                          </TableRow>
-                        );
-                      })}
+                      {selectedEquipos.map((equipo) => (
+                        <TableRow key={equipo.id} className={theme.rowHover}>
+                          {selectedColumns.map((key) => {
+                            const value = columnMap[key]?.accessor(equipo) ?? '';
+                            return (<TableCell key={`${equipo.id}-${key}`} className="text-sm">{key === 'estadoMantenimiento' ? (<Badge variant="outline" className={cn(theme.badge, 'text-xs')}>{value}</Badge>) : value.split('\n').map((line, i) => (<span key={i} className="block">{line}</span>))}</TableCell>);
+                          })}
+                          <TableCell><Button variant="ghost" size="sm" onClick={() => handleRemoveFicha(equipo.ficha)}><X className="h-4 w-4" /></Button></TableCell>
+                        </TableRow>
+                      ))}
                     </TableBody>
                   </Table>
                 </div>
               )}
             </CardContent>
           </Card>
-        </section>
+        </div>
       </div>
+
+      <Dialog open={showSaveDialog} onOpenChange={setShowSaveDialog}>
+        <DialogContent>
+          <DialogHeader><DialogTitle>{editingListaId ? 'Editar Lista' : 'Guardar Nueva Lista'}</DialogTitle><DialogDescription>Dale un nombre a tu lista</DialogDescription></DialogHeader>
+          <div className="space-y-4 py-4">
+            <div className="space-y-2"><Label>Nombre *</Label><Input placeholder="Ej: Excavadoras Caterpillar" value={nombreNuevaLista} onChange={(e) => setNombreNuevaLista(e.target.value)} /></div>
+            <div className="space-y-2"><Label>Descripción</Label><Input placeholder="Ej: Lista para mantenimiento mensual" value={descripcionNuevaLista} onChange={(e) => setDescripcionNuevaLista(e.target.value)} /></div>
+            <div className="rounded-md bg-muted p-3 text-sm"><p><strong>{selectedFichas.length}</strong> equipos • <strong>{selectedColumns.length}</strong> columnas • Tema: <strong>{COLOR_THEMES[colorScheme].name}</strong></p></div>
+          </div>
+          <DialogFooter><Button variant="outline" onClick={() => setShowSaveDialog(false)}>Cancelar</Button><Button onClick={handleSaveLista}><Save className="mr-2 h-4 w-4" /> {editingListaId ? 'Actualizar' : 'Guardar'}</Button></DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={showDeleteDialog} onOpenChange={setShowDeleteDialog}>
+        <DialogContent>
+          <DialogHeader><DialogTitle>¿Eliminar lista?</DialogTitle><DialogDescription>Eliminarás permanentemente "{listaActiva?.nombre}".</DialogDescription></DialogHeader>
+          <DialogFooter><Button variant="outline" onClick={() => setShowDeleteDialog(false)}>Cancelar</Button><Button variant="destructive" onClick={handleDeleteLista}><Trash2 className="mr-2 h-4 w-4" /> Eliminar</Button></DialogFooter>
+        </DialogContent>
+      </Dialog>
     </Layout>
   );
 }

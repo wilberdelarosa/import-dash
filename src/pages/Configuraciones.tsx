@@ -10,7 +10,8 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Separator } from '@/components/ui/separator';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Settings2, Bell, MoonStar, Shield } from 'lucide-react';
+import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
+import { Settings2, Bell, MoonStar, Shield, Database, Download, AlertTriangle, Loader2 } from 'lucide-react';
 import { AdminSection } from '@/components/admin/AdminSection';
 import { useUserRoles } from '@/hooks/useUserRoles';
 import { useSystemConfig } from '@/context/SystemConfigContext';
@@ -19,6 +20,8 @@ import { useNotifications } from '@/hooks/useNotifications';
 import { useToast } from '@/hooks/use-toast';
 import { useDeviceDetection } from '@/hooks/useDeviceDetection';
 import { ConfiguracionesMobile } from '@/pages/mobile/ConfiguracionesMobile';
+import { useSupabaseDataContext } from '@/context/SupabaseDataContext';
+import { supabase } from '@/integrations/supabase/client';
 
 export default function Configuraciones() {
   const { config, loading, saving, updateConfig } = useSystemConfig();
@@ -28,6 +31,8 @@ export default function Configuraciones() {
   const { permission, supported, requestPermission } = useNotifications();
   const { toast } = useToast();
   const { isMobile } = useDeviceDetection();
+  const { data: contextData } = useSupabaseDataContext();
+  const [exportingDb, setExportingDb] = useState(false);
   const { isAdmin } = useUserRoles();
   const [activeTab, setActiveTab] = useState('general');
 
@@ -63,6 +68,61 @@ export default function Configuraciones() {
 
   const handleReset = () => {
     updateConfig(DEFAULT_SYSTEM_CONFIG);
+  };
+
+  // Exportar Base de Datos a JSON
+  const handleExportDatabase = async () => {
+    setExportingDb(true);
+    try {
+      const [
+        { data: equipos },
+        { data: mantenimientosProgramados },
+        { data: registrosMantenimiento },
+        { data: planesMantenimiento },
+        { data: intervalosMantenimiento },
+        { data: kitsMantenimiento },
+        { data: piezasKit },
+        { data: kitIntervalos },
+        { data: overridesPlanes },
+        { data: usuarios },
+        { data: userRoles },
+      ] = await Promise.all([
+        supabase.from('equipos').select('*'),
+        supabase.from('mantenimientos_programados').select('*'),
+        supabase.from('registros_mantenimiento').select('*'),
+        supabase.from('planes_mantenimiento').select('*'),
+        supabase.from('intervalos_mantenimiento').select('*'),
+        supabase.from('kits_mantenimiento').select('*'),
+        supabase.from('piezas_kit').select('*'),
+        supabase.from('kit_intervalos').select('*'),
+        supabase.from('overrides_planes').select('*'),
+        supabase.from('usuarios').select('*'),
+        supabase.from('user_roles').select('*'),
+      ]);
+
+      const exportData = {
+        metadata: { exportedAt: new Date().toISOString(), exportedBy: 'import-dash', version: '1.0.0' },
+        data: { equipos: equipos || [], mantenimientosProgramados: mantenimientosProgramados || [], registrosMantenimiento: registrosMantenimiento || [], planesMantenimiento: planesMantenimiento || [], intervalosMantenimiento: intervalosMantenimiento || [], kitsMantenimiento: kitsMantenimiento || [], piezasKit: piezasKit || [], kitIntervalos: kitIntervalos || [], overridesPlanes: overridesPlanes || [], usuarios: usuarios || [], userRoles: userRoles || [] },
+        summary: { equipos: equipos?.length || 0, mantenimientosProgramados: mantenimientosProgramados?.length || 0, registrosMantenimiento: registrosMantenimiento?.length || 0, planesMantenimiento: planesMantenimiento?.length || 0, intervalosMantenimiento: intervalosMantenimiento?.length || 0, kitsMantenimiento: kitsMantenimiento?.length || 0, piezasKit: piezasKit?.length || 0, kitIntervalos: kitIntervalos?.length || 0, overridesPlanes: overridesPlanes?.length || 0, usuarios: usuarios?.length || 0, userRoles: userRoles?.length || 0 },
+      };
+
+      const blob = new Blob([JSON.stringify(exportData, null, 2)], { type: 'application/json;charset=utf-8;' });
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = `import-dash-backup-${new Date().toISOString().split('T')[0]}.json`;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      URL.revokeObjectURL(url);
+
+      toast({ title: 'Exportación completada', description: `Se exportaron ${Object.values(exportData.summary).reduce((a, b) => a + b, 0)} registros.` });
+    } catch (error) {
+      console.error('Error exportando BD:', error);
+      toast({ title: 'Error al exportar', description: 'No se pudo exportar. Intenta de nuevo.', variant: 'destructive' });
+    } finally {
+      setExportingDb(false);
+    }
   };
 
   const deviceStatusMessage = useMemo(() => {
@@ -332,6 +392,42 @@ export default function Configuraciones() {
                   Restaurar valores por defecto
                 </Button>
               </div>
+            </CardContent>
+          </Card>
+
+          {/* Exportar Base de Datos */}
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <Database className="h-5 w-5 text-primary" /> Exportar Base de Datos
+              </CardTitle>
+              <CardDescription>
+                Descarga una copia completa de todos los datos del sistema en formato JSON.
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <Alert>
+                <AlertTriangle className="h-4 w-4" />
+                <AlertTitle>Recomendación de respaldo</AlertTitle>
+                <AlertDescription>
+                  <p className="mb-2">Se recomienda exportar la base de datos <strong>al menos una vez por semana</strong> o antes de cambios importantes.</p>
+                  <p className="text-xs text-muted-foreground">El archivo incluye: equipos, mantenimientos, planes, kits, piezas, usuarios y configuraciones.</p>
+                </AlertDescription>
+              </Alert>
+              <div className="flex items-center justify-between rounded-lg border p-4">
+                <div className="space-y-1">
+                  <p className="font-medium">Datos actuales en el sistema</p>
+                  <div className="flex flex-wrap gap-2 text-xs text-muted-foreground">
+                    <Badge variant="outline">{contextData.equipos.length} equipos</Badge>
+                    <Badge variant="outline">{contextData.mantenimientosProgramados.length} mant.</Badge>
+                    <Badge variant="outline">{contextData.registrosMantenimiento.length} registros</Badge>
+                  </div>
+                </div>
+                <Button onClick={handleExportDatabase} disabled={exportingDb} className="gap-2">
+                  {exportingDb ? (<><Loader2 className="h-4 w-4 animate-spin" /> Exportando...</>) : (<><Download className="h-4 w-4" /> Exportar JSON</>)}
+                </Button>
+              </div>
+              <p className="text-xs text-muted-foreground">El archivo se descargará como <code className="rounded bg-muted px-1">import-dash-backup-YYYY-MM-DD.json</code></p>
             </CardContent>
           </Card>
         </TabsContent>
