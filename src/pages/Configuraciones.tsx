@@ -418,9 +418,9 @@ export default function Configuraciones() {
                 <div className="space-y-1">
                   <p className="font-medium">Datos actuales en el sistema</p>
                   <div className="flex flex-wrap gap-2 text-xs text-muted-foreground">
-                    <Badge variant="outline">{contextData.equipos.length} equipos</Badge>
-                    <Badge variant="outline">{contextData.mantenimientosProgramados.length} mant.</Badge>
-                    <Badge variant="outline">{contextData.registrosMantenimiento.length} registros</Badge>
+                    <Badge variant="outline">{contextData?.equipos?.length ?? 0} equipos</Badge>
+                    <Badge variant="outline">{contextData?.mantenimientosProgramados?.length ?? 0} mant.</Badge>
+                    <Badge variant="outline">{contextData?.registrosMantenimiento?.length ?? 0} registros</Badge>
                   </div>
                 </div>
                 <Button onClick={handleExportDatabase} disabled={exportingDb} className="gap-2">
