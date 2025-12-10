@@ -656,7 +656,7 @@ export function EquipoDetalleUnificado({ ficha, open, onOpenChange }: Props) {
                             ? 'bg-destructive/5 border-destructive/20' 
                             : estadoAlertaCiclo === 'urgente'
                             ? 'bg-red-50 dark:bg-red-950/20 border-red-200 dark:border-red-900'
-                            : estadoAlertaCiclo === 'alerta'
+                            : estadoAlertaCiclo === 'proximo'
                             ? 'bg-amber-50 dark:bg-amber-950/20 border-amber-200 dark:border-amber-900'
                             : 'bg-emerald-50 dark:bg-emerald-950/20 border-emerald-200 dark:border-emerald-900'
                         }`}>
@@ -668,7 +668,7 @@ export function EquipoDetalleUnificado({ ficha, open, onOpenChange }: Props) {
                               ? 'text-destructive'
                               : estadoAlertaCiclo === 'urgente'
                               ? 'text-red-600 dark:text-red-400'
-                              : estadoAlertaCiclo === 'alerta'
+                              : estadoAlertaCiclo === 'proximo'
                               ? 'text-amber-600 dark:text-amber-400'
                               : 'text-emerald-600 dark:text-emerald-400'
                           }`}>
@@ -690,7 +690,7 @@ export function EquipoDetalleUnificado({ ficha, open, onOpenChange }: Props) {
                               className={`h-full transition-all ${
                                 estadoAlertaCiclo === 'vencido' ? 'bg-destructive' :
                                 estadoAlertaCiclo === 'urgente' ? 'bg-red-500' :
-                                estadoAlertaCiclo === 'alerta' ? 'bg-amber-500' :
+                                estadoAlertaCiclo === 'proximo' ? 'bg-amber-500' :
                                 'bg-emerald-500'
                               }`}
                               style={{ width: `${Math.min(100, porcentajeCiclo)}%` }}
