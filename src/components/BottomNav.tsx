@@ -47,7 +47,8 @@ export default function BottomNav() {
     { to: '/mechanic', label: 'Panel', icon: Home },
     { to: '/mechanic/pendientes', label: 'Pendientes', icon: ClipboardList },
     { to: '/mechanic/reportar', label: 'Reportar', icon: FileText },
-    { to: '/mechanic/historial', label: 'Historial', icon: History },
+    { to: '/mechanic/historial', label: 'Mis Rep.', icon: FileText },
+    { to: '/historial', label: 'General', icon: History },
   ];
 
   // Items para usuario normal

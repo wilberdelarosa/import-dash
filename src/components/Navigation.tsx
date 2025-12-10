@@ -52,7 +52,8 @@ const mechanicNavItems = [
   { path: '/mechanic', label: 'Inicio', icon: LayoutDashboard },
   { path: '/mechanic/pendientes', label: 'Equipos Pendientes', icon: Truck },
   { path: '/mechanic/reportar', label: 'Reportar Trabajo', icon: ClipboardCheck },
-  { path: '/mechanic/historial', label: 'Mis Reportes', icon: History },
+  { path: '/mechanic/historial', label: 'Mis Reportes', icon: FileText },
+  { path: '/historial', label: 'Historial General', icon: History },
 ];
 
 // Nav items for supervisor role
@@ -83,7 +84,7 @@ export function Navigation({ hideBrand = false }: NavigationProps) {
   // Primary items based on role
   const primaryPaths = useMemo(() => {
     if (currentUserRole === 'mechanic') {
-      return new Set(['/mechanic', '/mechanic/pendientes', '/mechanic/reportar', '/mechanic/historial']);
+      return new Set(['/mechanic', '/mechanic/pendientes', '/mechanic/reportar', '/mechanic/historial', '/historial']);
     }
     if (currentUserRole === 'supervisor') {
       return new Set(['/supervisor', '/supervisor/submissions', '/equipos', '/mantenimiento']);
