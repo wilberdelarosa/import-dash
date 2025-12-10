@@ -2,15 +2,17 @@
  * Dashboard del Supervisor - Mobile First
  * Vista general del estado de la flota y equipos
  */
-import { useMemo } from 'react';
+import { useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { MobileLayout } from '@/components/mobile/MobileLayout';
 import { MobileCard } from '@/components/mobile/MobileCard';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { useSupabaseDataContext } from '@/context/SupabaseDataContext';
 import { useAuth } from '@/context/AuthContext';
 import { useAdminSubmissions } from '@/hooks/useMechanicSubmissions';
+import { EquipoDetalleUnificado } from '@/components/EquipoDetalleUnificado';
 import {
   Truck,
   AlertTriangle,
@@ -23,6 +25,8 @@ import {
   ChevronRight,
   Bell,
   BarChart3,
+  Gauge,
+  ExternalLink,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { format } from 'date-fns';
@@ -36,6 +40,10 @@ export function SupervisorDashboard() {
   
   const equipos = data.equipos;
   const mantenimientos = data.mantenimientosProgramados;
+
+  // Estado para el detalle unificado
+  const [selectedFicha, setSelectedFicha] = useState<string | null>(null);
+  const [detalleOpen, setDetalleOpen] = useState(false);
 
   // Estadísticas de equipos
   const equiposStats = useMemo(() => {
@@ -57,13 +65,25 @@ export function SupervisorDashboard() {
     return submissions.filter(s => s.status === 'pending').slice(0, 5);
   }, [submissions]);
 
-  // Equipos críticos (vencidos + próximos)
-  const equiposCriticos = useMemo(() => {
+  // Lista completa de equipos vencidos
+  const equiposVencidos = useMemo(() => {
     return mantenimientos
-      .filter(m => m.activo && m.horasKmRestante <= 50)
-      .sort((a, b) => a.horasKmRestante - b.horasKmRestante)
-      .slice(0, 5);
+      .filter(m => m.activo && m.horasKmRestante < 0)
+      .sort((a, b) => a.horasKmRestante - b.horasKmRestante);
   }, [mantenimientos]);
+
+  // Lista completa de equipos próximos
+  const equiposProximos = useMemo(() => {
+    return mantenimientos
+      .filter(m => m.activo && m.horasKmRestante >= 0 && m.horasKmRestante <= 50)
+      .sort((a, b) => a.horasKmRestante - b.horasKmRestante);
+  }, [mantenimientos]);
+
+  // Abrir detalle de equipo
+  const handleOpenDetalle = (ficha: string) => {
+    setSelectedFicha(ficha);
+    setDetalleOpen(true);
+  };
 
   return (
     <MobileLayout title="Supervisor" showBottomNav={true}>
@@ -107,6 +127,114 @@ export function SupervisorDashboard() {
           </MobileCard>
         </div>
 
+        {/* Tabs de Vencidos y Próximos */}
+        <MobileCard className="p-3">
+          <h3 className="text-sm font-semibold mb-3 flex items-center gap-2">
+            <Truck className="h-4 w-4 text-primary" />
+            Estado de Equipos
+          </h3>
+          <Tabs defaultValue="vencidos" className="w-full">
+            <TabsList className="grid w-full grid-cols-2 mb-3">
+              <TabsTrigger value="vencidos" className="text-xs gap-1">
+                <AlertTriangle className="h-3 w-3" />
+                Vencidos ({equiposVencidos.length})
+              </TabsTrigger>
+              <TabsTrigger value="proximos" className="text-xs gap-1">
+                <Clock className="h-3 w-3" />
+                Próximos ({equiposProximos.length})
+              </TabsTrigger>
+            </TabsList>
+
+            <TabsContent value="vencidos" className="mt-0">
+              {equiposVencidos.length === 0 ? (
+                <div className="text-center py-6">
+                  <CheckCircle className="h-10 w-10 mx-auto text-green-500 mb-2" />
+                  <p className="text-sm font-medium text-green-600">¡Excelente!</p>
+                  <p className="text-xs text-muted-foreground">Sin mantenimientos vencidos</p>
+                </div>
+              ) : (
+                <div className="space-y-2 max-h-[250px] overflow-y-auto">
+                  {equiposVencidos.map((mant, index) => (
+                    <div
+                      key={mant.id}
+                      onClick={() => handleOpenDetalle(mant.ficha)}
+                      className={cn(
+                        "flex items-center justify-between p-2.5 rounded-lg border cursor-pointer transition-all",
+                        "border-destructive/30 bg-destructive/5 active:bg-destructive/10",
+                        "animate-in slide-in-from-left-2"
+                      )}
+                      style={{ animationDelay: `${index * 0.03}s` }}
+                    >
+                      <div className="flex items-center gap-2 min-w-0">
+                        <Truck className="h-4 w-4 text-destructive flex-shrink-0" />
+                        <div className="min-w-0">
+                          <p className="text-sm font-medium truncate">{mant.nombreEquipo}</p>
+                          <p className="text-[10px] text-muted-foreground flex items-center gap-1">
+                            <span>{mant.ficha}</span>
+                            <span>•</span>
+                            <Gauge className="h-2.5 w-2.5" />
+                            <span>{mant.horasKmActuales?.toLocaleString() || 0}h</span>
+                          </p>
+                        </div>
+                      </div>
+                      <div className="flex items-center gap-1.5 shrink-0">
+                        <Badge variant="destructive" className="text-[10px]">
+                          {Math.abs(mant.horasKmRestante)}h
+                        </Badge>
+                        <ExternalLink className="h-3 w-3 text-muted-foreground" />
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </TabsContent>
+
+            <TabsContent value="proximos" className="mt-0">
+              {equiposProximos.length === 0 ? (
+                <div className="text-center py-6">
+                  <CheckCircle className="h-10 w-10 mx-auto text-green-500 mb-2" />
+                  <p className="text-sm font-medium text-green-600">Todo en orden</p>
+                  <p className="text-xs text-muted-foreground">Sin mantenimientos próximos</p>
+                </div>
+              ) : (
+                <div className="space-y-2 max-h-[250px] overflow-y-auto">
+                  {equiposProximos.map((mant, index) => (
+                    <div
+                      key={mant.id}
+                      onClick={() => handleOpenDetalle(mant.ficha)}
+                      className={cn(
+                        "flex items-center justify-between p-2.5 rounded-lg border cursor-pointer transition-all",
+                        "border-amber-500/30 bg-amber-500/5 active:bg-amber-500/10",
+                        "animate-in slide-in-from-left-2"
+                      )}
+                      style={{ animationDelay: `${index * 0.03}s` }}
+                    >
+                      <div className="flex items-center gap-2 min-w-0">
+                        <Truck className="h-4 w-4 text-amber-600 flex-shrink-0" />
+                        <div className="min-w-0">
+                          <p className="text-sm font-medium truncate">{mant.nombreEquipo}</p>
+                          <p className="text-[10px] text-muted-foreground flex items-center gap-1">
+                            <span>{mant.ficha}</span>
+                            <span>•</span>
+                            <Gauge className="h-2.5 w-2.5" />
+                            <span>{mant.horasKmActuales?.toLocaleString() || 0}h</span>
+                          </p>
+                        </div>
+                      </div>
+                      <div className="flex items-center gap-1.5 shrink-0">
+                        <Badge className="text-[10px] bg-amber-500/10 text-amber-600 border-amber-500/20">
+                          {mant.horasKmRestante}h
+                        </Badge>
+                        <ExternalLink className="h-3 w-3 text-muted-foreground" />
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </TabsContent>
+          </Tabs>
+        </MobileCard>
+
         {/* Accesos rápidos */}
         <div className="grid grid-cols-2 gap-2">
           <Button
@@ -143,72 +271,6 @@ export function SupervisorDashboard() {
           </Button>
         </div>
 
-        {/* Equipos críticos */}
-        <MobileCard className="p-3">
-          <div className="flex items-center justify-between mb-3">
-            <h3 className="text-sm font-semibold flex items-center gap-2">
-              <AlertTriangle className="h-4 w-4 text-destructive" />
-              Equipos Críticos
-            </h3>
-            <Button
-              variant="ghost"
-              size="sm"
-              className="h-7 text-xs gap-1"
-              onClick={() => navigate('/mantenimiento')}
-            >
-              Ver todos
-              <ChevronRight className="h-3 w-3" />
-            </Button>
-          </div>
-
-          {equiposCriticos.length === 0 ? (
-            <div className="text-center py-4">
-              <CheckCircle className="h-8 w-8 mx-auto text-green-500 mb-2" />
-              <p className="text-sm text-muted-foreground">
-                Todos los equipos están al día
-              </p>
-            </div>
-          ) : (
-            <div className="space-y-2">
-              {equiposCriticos.map((mant, index) => (
-                <div
-                  key={mant.id}
-                  className={cn(
-                    "p-2 rounded-lg border transition-all animate-in slide-in-from-left-2",
-                    mant.horasKmRestante < 0 
-                      ? "bg-destructive/5 border-destructive/20" 
-                      : "bg-amber-500/5 border-amber-500/20"
-                  )}
-                  style={{ animationDelay: `${index * 0.05}s` }}
-                >
-                  <div className="flex items-center justify-between">
-                    <div className="flex items-center gap-2 min-w-0">
-                      <Truck className="h-4 w-4 text-muted-foreground flex-shrink-0" />
-                      <div className="min-w-0">
-                        <p className="text-sm font-medium truncate">{mant.nombreEquipo}</p>
-                        <p className="text-[10px] text-muted-foreground">{mant.ficha}</p>
-                      </div>
-                    </div>
-                    <Badge 
-                      className={cn(
-                        "text-[10px] shrink-0",
-                        mant.horasKmRestante < 0 
-                          ? "bg-destructive/10 text-destructive border-destructive/20"
-                          : "bg-amber-500/10 text-amber-600 border-amber-500/20"
-                      )}
-                    >
-                      {mant.horasKmRestante < 0 
-                        ? `Vencido ${Math.abs(mant.horasKmRestante)}h`
-                        : `${mant.horasKmRestante}h restantes`
-                      }
-                    </Badge>
-                  </div>
-                </div>
-              ))}
-            </div>
-          )}
-        </MobileCard>
-
         {/* Submissions pendientes para revisar */}
         <MobileCard className="p-3">
           <div className="flex items-center justify-between mb-3">
@@ -241,6 +303,7 @@ export function SupervisorDashboard() {
                   key={sub.id}
                   className="p-2 rounded-lg border bg-amber-500/5 border-amber-500/20 animate-in slide-in-from-left-2"
                   style={{ animationDelay: `${index * 0.05}s` }}
+                  onClick={() => navigate('/supervisor/submissions')}
                 >
                   <div className="flex items-center justify-between">
                     <div className="min-w-0">
@@ -260,6 +323,15 @@ export function SupervisorDashboard() {
                   </div>
                 </div>
               ))}
+              <Button
+                variant="ghost"
+                size="sm"
+                className="w-full text-xs mt-2"
+                onClick={() => navigate('/supervisor/submissions')}
+              >
+                Ver todos los reportes
+                <ChevronRight className="h-3 w-3 ml-1" />
+              </Button>
             </div>
           )}
         </MobileCard>
@@ -294,6 +366,13 @@ export function SupervisorDashboard() {
           </div>
         </MobileCard>
       </div>
+
+      {/* Dialog de Detalle Unificado */}
+      <EquipoDetalleUnificado
+        ficha={selectedFicha}
+        open={detalleOpen}
+        onOpenChange={setDetalleOpen}
+      />
     </MobileLayout>
   );
 }
