@@ -256,7 +256,7 @@ export default function Mantenimiento() {
     );
   }
 
-  const tipos = [...new Set(data.mantenimientosProgramados.map(m => m.tipoMantenimiento))];
+  const tipos = [...new Set(data.mantenimientosProgramados.map(m => m.tipoMantenimiento).filter(t => t && t.toString().trim() !== ''))];
 
   // Crear mapa de equipos por ficha para obtener categorías
   const equiposPorFicha = data.equipos.reduce((acc, equipo) => {
@@ -264,7 +264,7 @@ export default function Mantenimiento() {
     return acc;
   }, {} as Record<string, any>);
 
-  const categorias = [...new Set(data.equipos.map(e => e.categoria))];
+  const categorias = [...new Set(data.equipos.map(e => e.categoria).filter(c => c && c.toString().trim() !== ''))];
 
   // Recalcular próximo y restante según nueva lógica
   const mantenimientosConCalculos = data.mantenimientosProgramados.map(mant => {

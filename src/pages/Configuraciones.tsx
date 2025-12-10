@@ -77,33 +77,33 @@ export default function Configuraciones() {
       const [
         { data: equipos },
         { data: mantenimientosProgramados },
-        { data: registrosMantenimiento },
+        { data: historialEventos },
         { data: planesMantenimiento },
-        { data: intervalosMantenimiento },
+        { data: planIntervalos },
         { data: kitsMantenimiento },
-        { data: piezasKit },
-        { data: kitIntervalos },
+        { data: kitPiezas },
+        { data: planIntervaloKits },
         { data: overridesPlanes },
-        { data: usuarios },
+        { data: inventarios },
         { data: userRoles },
       ] = await Promise.all([
         supabase.from('equipos').select('*'),
         supabase.from('mantenimientos_programados').select('*'),
-        supabase.from('registros_mantenimiento').select('*'),
+        supabase.from('historial_eventos').select('*'),
         supabase.from('planes_mantenimiento').select('*'),
-        supabase.from('intervalos_mantenimiento').select('*'),
+        supabase.from('plan_intervalos').select('*'),
         supabase.from('kits_mantenimiento').select('*'),
-        supabase.from('piezas_kit').select('*'),
-        supabase.from('kit_intervalos').select('*'),
+        supabase.from('kit_piezas').select('*'),
+        supabase.from('plan_intervalo_kits').select('*'),
         supabase.from('overrides_planes').select('*'),
-        supabase.from('usuarios').select('*'),
+        supabase.from('inventarios').select('*'),
         supabase.from('user_roles').select('*'),
       ]);
 
       const exportData = {
         metadata: { exportedAt: new Date().toISOString(), exportedBy: 'import-dash', version: '1.0.0' },
-        data: { equipos: equipos || [], mantenimientosProgramados: mantenimientosProgramados || [], registrosMantenimiento: registrosMantenimiento || [], planesMantenimiento: planesMantenimiento || [], intervalosMantenimiento: intervalosMantenimiento || [], kitsMantenimiento: kitsMantenimiento || [], piezasKit: piezasKit || [], kitIntervalos: kitIntervalos || [], overridesPlanes: overridesPlanes || [], usuarios: usuarios || [], userRoles: userRoles || [] },
-        summary: { equipos: equipos?.length || 0, mantenimientosProgramados: mantenimientosProgramados?.length || 0, registrosMantenimiento: registrosMantenimiento?.length || 0, planesMantenimiento: planesMantenimiento?.length || 0, intervalosMantenimiento: intervalosMantenimiento?.length || 0, kitsMantenimiento: kitsMantenimiento?.length || 0, piezasKit: piezasKit?.length || 0, kitIntervalos: kitIntervalos?.length || 0, overridesPlanes: overridesPlanes?.length || 0, usuarios: usuarios?.length || 0, userRoles: userRoles?.length || 0 },
+        data: { equipos: equipos || [], mantenimientosProgramados: mantenimientosProgramados || [], historialEventos: historialEventos || [], planesMantenimiento: planesMantenimiento || [], planIntervalos: planIntervalos || [], kitsMantenimiento: kitsMantenimiento || [], kitPiezas: kitPiezas || [], planIntervaloKits: planIntervaloKits || [], overridesPlanes: overridesPlanes || [], inventarios: inventarios || [], userRoles: userRoles || [] },
+        summary: { equipos: equipos?.length || 0, mantenimientosProgramados: mantenimientosProgramados?.length || 0, historialEventos: historialEventos?.length || 0, planesMantenimiento: planesMantenimiento?.length || 0, planIntervalos: planIntervalos?.length || 0, kitsMantenimiento: kitsMantenimiento?.length || 0, kitPiezas: kitPiezas?.length || 0, planIntervaloKits: planIntervaloKits?.length || 0, overridesPlanes: overridesPlanes?.length || 0, inventarios: inventarios?.length || 0, userRoles: userRoles?.length || 0 },
       };
 
       const blob = new Blob([JSON.stringify(exportData, null, 2)], { type: 'application/json;charset=utf-8;' });
@@ -420,7 +420,7 @@ export default function Configuraciones() {
                   <div className="flex flex-wrap gap-2 text-xs text-muted-foreground">
                     <Badge variant="outline">{contextData?.equipos?.length ?? 0} equipos</Badge>
                     <Badge variant="outline">{contextData?.mantenimientosProgramados?.length ?? 0} mant.</Badge>
-                    <Badge variant="outline">{contextData?.registrosMantenimiento?.length ?? 0} registros</Badge>
+                    <Badge variant="outline">{contextData?.mantenimientosRealizados?.length ?? 0} registros</Badge>
                   </div>
                 </div>
                 <Button onClick={handleExportDatabase} disabled={exportingDb} className="gap-2">

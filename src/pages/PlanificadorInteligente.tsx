@@ -108,8 +108,8 @@ export default function PlanificadorInteligente() {
 
   // Categorías únicas
   const categorias = useMemo(() => {
-    const cats = new Set(data.equipos.map((e) => e.categoria));
-    return Array.from(cats).filter(Boolean).sort();
+    const cats = new Set(data.equipos.map((e) => e.categoria).filter(c => c && c.toString().trim() !== ''));
+    return Array.from(cats).sort();
   }, [data.equipos]);
 
   // Calcular score de similitud de plan
