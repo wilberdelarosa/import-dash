@@ -79,6 +79,7 @@ const App = () => (
                   <Route path="/mechanic/reportar" element={<ProtectedRoute><MechanicSubmissionFormRouter /></ProtectedRoute>} />
                   <Route path="/mechanic/reportar/:ficha" element={<ProtectedRoute><MechanicSubmissionFormRouter /></ProtectedRoute>} />
                   <Route path="/mechanic/historial" element={<ProtectedRoute><MechanicHistoryRouter /></ProtectedRoute>} />
+                  <Route path="/mechanic/historial/:id" element={<ProtectedRoute><MechanicHistoryRouter /></ProtectedRoute>} />
                   
                   {/* Supervisor routes */}
                   <Route path="/supervisor" element={<ProtectedRoute><SupervisorDashboardRouter /></ProtectedRoute>} />

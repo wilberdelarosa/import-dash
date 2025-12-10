@@ -96,7 +96,31 @@ export function useMechanicSubmissions() {
 
   useEffect(() => {
     fetchSubmissions();
-  }, [fetchSubmissions]);
+    
+    // Suscripción realtime para actualizaciones de status
+    if (user) {
+      const channel = supabase
+        .channel('mechanic-submissions-changes')
+        .on(
+          'postgres_changes',
+          {
+            event: '*',
+            schema: 'public',
+            table: 'maintenance_submissions',
+            filter: `created_by=eq.${user.id}`
+          },
+          (payload) => {
+            console.log('[useMechanicSubmissions] Realtime update:', payload);
+            fetchSubmissions();
+          }
+        )
+        .subscribe();
+
+      return () => {
+        supabase.removeChannel(channel);
+      };
+    }
+  }, [fetchSubmissions, user]);
 
   // Crear nuevo submission
   const createSubmission = useCallback(async (data: CreateSubmissionData): Promise<string | null> => {
@@ -260,6 +284,27 @@ export function useAdminSubmissions() {
 
   useEffect(() => {
     fetchAllSubmissions();
+    
+    // Suscripción realtime para actualizaciones
+    const channel = supabase
+      .channel('admin-submissions-changes')
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'maintenance_submissions'
+        },
+        (payload) => {
+          console.log('[useAdminSubmissions] Realtime update:', payload);
+          fetchAllSubmissions();
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
   }, [fetchAllSubmissions]);
 
   return {
