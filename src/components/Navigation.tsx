@@ -87,7 +87,7 @@ export function Navigation({ hideBrand = false }: NavigationProps) {
       return new Set(['/mechanic', '/mechanic/pendientes', '/mechanic/reportar', '/mechanic/historial', '/historial']);
     }
     if (currentUserRole === 'supervisor') {
-      return new Set(['/supervisor', '/supervisor/submissions', '/equipos', '/mantenimiento']);
+      return new Set(['/supervisor', '/supervisor/submissions', '/equipos', '/mantenimiento', '/historial']);
     }
     return new Set(['/', '/equipos', '/mantenimiento', '/control-mantenimiento', '/asistente']);
   }, [currentUserRole]);

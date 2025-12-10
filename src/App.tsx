@@ -35,10 +35,9 @@ const MechanicPendingListRouter = lazy(() => import("./pages/MechanicModule").th
 const MechanicSubmissionFormRouter = lazy(() => import("./pages/MechanicModule").then(m => ({ default: m.MechanicSubmissionFormRouter })));
 const MechanicHistoryRouter = lazy(() => import("./pages/MechanicModule").then(m => ({ default: m.MechanicHistoryRouter })));
 
-// Supervisor pages
-const SupervisorDashboard = lazy(() => import("./pages/mobile/SupervisorDashboard"));
-const SupervisorSubmissions = lazy(() => import("./pages/mobile/SupervisorSubmissions"));
-const SupervisorDesktop = lazy(() => import("./pages/SupervisorDesktop"));
+// Supervisor pages - with device detection routers
+const SupervisorDashboardRouter = lazy(() => import("./pages/SupervisorModule").then(m => ({ default: m.SupervisorDashboardRouter })));
+const SupervisorSubmissionsRouter = lazy(() => import("./pages/SupervisorModule").then(m => ({ default: m.SupervisorSubmissionsRouter })));
 
 // Admin pages
 const Admin = lazy(() => import("./pages/Admin"));
@@ -82,9 +81,9 @@ const App = () => (
                   <Route path="/mechanic/historial" element={<ProtectedRoute><MechanicHistoryRouter /></ProtectedRoute>} />
                   
                   {/* Supervisor routes */}
-                  <Route path="/supervisor" element={<ProtectedRoute><SupervisorDashboard /></ProtectedRoute>} />
-                  <Route path="/supervisor/reportes" element={<ProtectedRoute><SupervisorSubmissions /></ProtectedRoute>} />
-                  <Route path="/supervisor/submissions" element={<ProtectedRoute><SupervisorSubmissions /></ProtectedRoute>} />
+                  <Route path="/supervisor" element={<ProtectedRoute><SupervisorDashboardRouter /></ProtectedRoute>} />
+                  <Route path="/supervisor/reportes" element={<ProtectedRoute><SupervisorSubmissionsRouter /></ProtectedRoute>} />
+                  <Route path="/supervisor/submissions" element={<ProtectedRoute><SupervisorSubmissionsRouter /></ProtectedRoute>} />
                   
                   {/* Admin routes */}
                   <Route path="/admin" element={<ProtectedRoute><Admin /></ProtectedRoute>} />
