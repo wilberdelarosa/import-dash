@@ -34,10 +34,12 @@ const MechanicDashboard = lazy(() => import("./pages/mobile/MechanicDashboard"))
 const MechanicPendingList = lazy(() => import("./pages/mobile/MechanicPendingList"));
 const MechanicSubmissionForm = lazy(() => import("./pages/mobile/MechanicSubmissionForm"));
 const MechanicHistory = lazy(() => import("./pages/mobile/MechanicHistory"));
+const MechanicDesktop = lazy(() => import("./pages/MechanicDesktop"));
 
 // Supervisor pages
 const SupervisorDashboard = lazy(() => import("./pages/mobile/SupervisorDashboard"));
 const SupervisorSubmissions = lazy(() => import("./pages/mobile/SupervisorSubmissions"));
+const SupervisorDesktop = lazy(() => import("./pages/SupervisorDesktop"));
 
 // Admin pages
 const Admin = lazy(() => import("./pages/Admin"));
@@ -82,6 +84,7 @@ const App = () => (
                   {/* Supervisor routes */}
                   <Route path="/supervisor" element={<ProtectedRoute><SupervisorDashboard /></ProtectedRoute>} />
                   <Route path="/supervisor/reportes" element={<ProtectedRoute><SupervisorSubmissions /></ProtectedRoute>} />
+                  <Route path="/supervisor/submissions" element={<ProtectedRoute><SupervisorSubmissions /></ProtectedRoute>} />
                   
                   {/* Admin routes */}
                   <Route path="/admin" element={<ProtectedRoute><Admin /></ProtectedRoute>} />
