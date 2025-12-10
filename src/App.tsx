@@ -44,6 +44,7 @@ const SupervisorDesktop = lazy(() => import("./pages/SupervisorDesktop"));
 // Admin pages
 const Admin = lazy(() => import("./pages/Admin"));
 
+// QueryClient for data fetching
 const queryClient = new QueryClient();
 
 const App = () => (
