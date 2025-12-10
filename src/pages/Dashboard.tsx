@@ -52,14 +52,7 @@ export default function Dashboard() {
   const [dialogOpen, setDialogOpen] = useState(false);
   const [novedadesExpanded, setNovedadesExpanded] = useState(false);
 
-  // Si es mecánico o supervisor, mostrar su dashboard específico
-  if (!loadingRoles && isMechanic) {
-    return <MechanicDashboard />;
-  }
-
-  if (!loadingRoles && isSupervisor) {
-    return <SupervisorDashboard />;
-  }
+  // NOTA: Los returns condicionales están DESPUÉS de todos los hooks (línea ~130)
 
   // Memoizar estadísticas para evitar recálculos en cada render
   const estadisticas = useMemo(() => {
@@ -132,6 +125,15 @@ export default function Dashboard() {
     setFichaSeleccionada(ficha);
     setDialogOpen(true);
   };
+
+  // Si es mecánico o supervisor, mostrar su dashboard específico (después de todos los hooks)
+  if (!loadingRoles && isMechanic) {
+    return <MechanicDashboard />;
+  }
+
+  if (!loadingRoles && isSupervisor) {
+    return <SupervisorDashboard />;
+  }
 
   if (loading) {
     // Mostrar skeleton apropiado según dispositivo
