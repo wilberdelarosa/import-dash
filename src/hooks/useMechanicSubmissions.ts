@@ -110,18 +110,20 @@ export function useMechanicSubmissions() {
     }
 
     try {
+      const insertData = {
+        created_by: user.id,
+        equipo_id: data.equipo_id,
+        fecha_mantenimiento: data.fecha_mantenimiento,
+        horas_km_actuales: data.horas_km_actuales,
+        tipo_mantenimiento: data.tipo_mantenimiento || null,
+        descripcion_trabajo: data.descripcion_trabajo || null,
+        observaciones: data.observaciones || null,
+        partes_usadas: data.partes_usadas || [],
+      };
+      
       const { data: newSubmission, error: insertError } = await supabase
         .from('maintenance_submissions')
-        .insert({
-          created_by: user.id,
-          equipo_id: data.equipo_id,
-          fecha_mantenimiento: data.fecha_mantenimiento,
-          horas_km_actuales: data.horas_km_actuales,
-          tipo_mantenimiento: data.tipo_mantenimiento || null,
-          descripcion_trabajo: data.descripcion_trabajo || null,
-          observaciones: data.observaciones || null,
-          partes_usadas: JSON.stringify(data.partes_usadas || []),
-        })
+        .insert(insertData as any)
         .select()
         .single();
 
