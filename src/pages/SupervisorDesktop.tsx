@@ -2,16 +2,18 @@
  * Dashboard del Supervisor - Versión Desktop
  * Vista de solo lectura con métricas gerenciales
  */
-import { useMemo } from 'react';
+import { useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Layout } from '@/components/Layout';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Progress } from '@/components/ui/progress';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { useSupabaseDataContext } from '@/context/SupabaseDataContext';
 import { useMechanicSubmissions } from '@/hooks/useMechanicSubmissions';
 import { useAuth } from '@/context/AuthContext';
+import { EquipoDetalleUnificado } from '@/components/EquipoDetalleUnificado';
 import {
   Eye,
   Truck,
@@ -23,7 +25,10 @@ import {
   FileText,
   Shield,
   Activity,
+  ExternalLink,
+  Gauge,
 } from 'lucide-react';
+import { cn } from '@/lib/utils';
 
 export function SupervisorDesktop() {
   const navigate = useNavigate();
@@ -32,6 +37,10 @@ export function SupervisorDesktop() {
   const { submissions } = useMechanicSubmissions();
   const mantenimientos = data.mantenimientosProgramados;
   const equipos = data.equipos;
+
+  // Estado para el detalle unificado
+  const [selectedFicha, setSelectedFicha] = useState<string | null>(null);
+  const [detalleOpen, setDetalleOpen] = useState(false);
 
   // Estadísticas de flota
   const fleetStats = useMemo(() => {
@@ -64,13 +73,25 @@ export function SupervisorDesktop() {
     return { pending, approved, rejected, total: submissions.length };
   }, [submissions]);
 
-  // Equipos críticos
-  const equiposCriticos = useMemo(() => {
+  // Lista completa de equipos vencidos
+  const equiposVencidos = useMemo(() => {
     return mantenimientos
       .filter(m => m.activo && m.horasKmRestante < 0)
-      .sort((a, b) => a.horasKmRestante - b.horasKmRestante)
-      .slice(0, 5);
+      .sort((a, b) => a.horasKmRestante - b.horasKmRestante);
   }, [mantenimientos]);
+
+  // Lista completa de equipos próximos
+  const equiposProximos = useMemo(() => {
+    return mantenimientos
+      .filter(m => m.activo && m.horasKmRestante >= 0 && m.horasKmRestante <= 50)
+      .sort((a, b) => a.horasKmRestante - b.horasKmRestante);
+  }, [mantenimientos]);
+
+  // Abrir detalle de equipo
+  const handleOpenDetalle = (ficha: string) => {
+    setSelectedFicha(ficha);
+    setDetalleOpen(true);
+  };
 
   return (
     <Layout title="Panel del Supervisor">
@@ -171,49 +192,132 @@ export function SupervisorDesktop() {
           </Card>
         </div>
 
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-          {/* Equipos críticos */}
-          <Card>
-            <CardHeader className="pb-3">
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-2">
-                  <AlertTriangle className="h-5 w-5 text-destructive" />
-                  <CardTitle className="text-lg">Equipos Críticos</CardTitle>
-                </div>
-                <Badge variant="destructive">{equiposCriticos.length}</Badge>
-              </div>
-              <CardDescription>Mantenimientos vencidos que requieren atención inmediata</CardDescription>
-            </CardHeader>
-            <CardContent>
-              {equiposCriticos.length === 0 ? (
-                <div className="text-center py-8">
-                  <CheckCircle className="h-12 w-12 mx-auto text-green-500 mb-2" />
-                  <p className="text-sm text-muted-foreground">No hay equipos críticos</p>
-                </div>
-              ) : (
-                <div className="space-y-2 max-h-[300px] overflow-y-auto">
-                  {equiposCriticos.map((mant) => (
-                    <div
-                      key={mant.id}
-                      className="flex items-center justify-between p-3 rounded-lg border border-destructive/20 bg-destructive/5"
-                    >
-                      <div className="flex items-center gap-3">
-                        <Truck className="h-5 w-5 text-destructive" />
-                        <div>
-                          <p className="font-medium">{mant.nombreEquipo}</p>
-                          <p className="text-xs text-muted-foreground">Ficha: {mant.ficha}</p>
+        {/* Tabs de Vencidos y Próximos */}
+        <Card>
+          <CardHeader className="pb-2">
+            <CardTitle className="text-lg flex items-center gap-2">
+              <Truck className="h-5 w-5 text-primary" />
+              Estado de Equipos
+            </CardTitle>
+            <CardDescription>Click en un equipo para ver su detalle completo</CardDescription>
+          </CardHeader>
+          <CardContent>
+            <Tabs defaultValue="vencidos" className="w-full">
+              <TabsList className="grid w-full grid-cols-2 mb-4">
+                <TabsTrigger value="vencidos" className="gap-2">
+                  <AlertTriangle className="h-4 w-4" />
+                  Vencidos ({equiposVencidos.length})
+                </TabsTrigger>
+                <TabsTrigger value="proximos" className="gap-2">
+                  <Clock className="h-4 w-4" />
+                  Próximos ({equiposProximos.length})
+                </TabsTrigger>
+              </TabsList>
+
+              <TabsContent value="vencidos" className="mt-0">
+                {equiposVencidos.length === 0 ? (
+                  <div className="text-center py-12">
+                    <CheckCircle className="h-16 w-16 mx-auto text-green-500 mb-3" />
+                    <p className="text-lg font-medium text-green-600">¡Excelente!</p>
+                    <p className="text-sm text-muted-foreground">No hay equipos con mantenimiento vencido</p>
+                  </div>
+                ) : (
+                  <div className="space-y-2 max-h-[400px] overflow-y-auto pr-2">
+                    {equiposVencidos.map((mant, index) => (
+                      <div
+                        key={mant.id}
+                        onClick={() => handleOpenDetalle(mant.ficha)}
+                        className={cn(
+                          "flex items-center justify-between p-4 rounded-lg border cursor-pointer transition-all hover:shadow-md",
+                          "border-destructive/30 bg-destructive/5 hover:bg-destructive/10",
+                          "animate-in slide-in-from-left-2"
+                        )}
+                        style={{ animationDelay: `${index * 0.03}s` }}
+                      >
+                        <div className="flex items-center gap-4">
+                          <div className="h-12 w-12 rounded-lg bg-destructive/10 flex items-center justify-center">
+                            <Truck className="h-6 w-6 text-destructive" />
+                          </div>
+                          <div>
+                            <p className="font-semibold">{mant.nombreEquipo}</p>
+                            <div className="flex items-center gap-3 text-sm text-muted-foreground">
+                              <span className="font-mono">{mant.ficha}</span>
+                              <span>•</span>
+                              <span className="flex items-center gap-1">
+                                <Gauge className="h-3 w-3" />
+                                {mant.horasKmActuales?.toLocaleString() || 0}h
+                              </span>
+                              <span>•</span>
+                              <span>{mant.tipoMantenimiento}</span>
+                            </div>
+                          </div>
+                        </div>
+                        <div className="flex items-center gap-3">
+                          <Badge variant="destructive" className="text-sm px-3 py-1">
+                            {Math.abs(mant.horasKmRestante)}h vencido
+                          </Badge>
+                          <ExternalLink className="h-4 w-4 text-muted-foreground" />
                         </div>
                       </div>
-                      <Badge variant="destructive" className="text-xs">
-                        {Math.abs(mant.horasKmRestante)}h vencido
-                      </Badge>
-                    </div>
-                  ))}
-                </div>
-              )}
-            </CardContent>
-          </Card>
+                    ))}
+                  </div>
+                )}
+              </TabsContent>
 
+              <TabsContent value="proximos" className="mt-0">
+                {equiposProximos.length === 0 ? (
+                  <div className="text-center py-12">
+                    <CheckCircle className="h-16 w-16 mx-auto text-green-500 mb-3" />
+                    <p className="text-lg font-medium text-green-600">Todo en orden</p>
+                    <p className="text-sm text-muted-foreground">No hay equipos con mantenimiento próximo</p>
+                  </div>
+                ) : (
+                  <div className="space-y-2 max-h-[400px] overflow-y-auto pr-2">
+                    {equiposProximos.map((mant, index) => (
+                      <div
+                        key={mant.id}
+                        onClick={() => handleOpenDetalle(mant.ficha)}
+                        className={cn(
+                          "flex items-center justify-between p-4 rounded-lg border cursor-pointer transition-all hover:shadow-md",
+                          "border-amber-500/30 bg-amber-500/5 hover:bg-amber-500/10",
+                          "animate-in slide-in-from-left-2"
+                        )}
+                        style={{ animationDelay: `${index * 0.03}s` }}
+                      >
+                        <div className="flex items-center gap-4">
+                          <div className="h-12 w-12 rounded-lg bg-amber-500/10 flex items-center justify-center">
+                            <Truck className="h-6 w-6 text-amber-600" />
+                          </div>
+                          <div>
+                            <p className="font-semibold">{mant.nombreEquipo}</p>
+                            <div className="flex items-center gap-3 text-sm text-muted-foreground">
+                              <span className="font-mono">{mant.ficha}</span>
+                              <span>•</span>
+                              <span className="flex items-center gap-1">
+                                <Gauge className="h-3 w-3" />
+                                {mant.horasKmActuales?.toLocaleString() || 0}h
+                              </span>
+                              <span>•</span>
+                              <span>{mant.tipoMantenimiento}</span>
+                            </div>
+                          </div>
+                        </div>
+                        <div className="flex items-center gap-3">
+                          <Badge className="text-sm px-3 py-1 bg-amber-500/10 text-amber-600 border-amber-500/20">
+                            {mant.horasKmRestante}h restantes
+                          </Badge>
+                          <ExternalLink className="h-4 w-4 text-muted-foreground" />
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </TabsContent>
+            </Tabs>
+          </CardContent>
+        </Card>
+
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
           {/* Reportes de mecánicos */}
           <Card>
             <CardHeader className="pb-3">
@@ -253,36 +357,43 @@ export function SupervisorDesktop() {
               </p>
             </CardContent>
           </Card>
-        </div>
 
-        {/* Accesos rápidos */}
-        <Card>
-          <CardHeader className="pb-3">
-            <CardTitle className="text-lg">Accesos Rápidos</CardTitle>
-            <CardDescription>Navega a las diferentes secciones (solo lectura)</CardDescription>
-          </CardHeader>
-          <CardContent>
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-              <Button variant="outline" className="h-auto py-4 flex-col gap-2" onClick={() => navigate('/equipos')}>
-                <Truck className="h-6 w-6" />
-                <span>Equipos</span>
-              </Button>
-              <Button variant="outline" className="h-auto py-4 flex-col gap-2" onClick={() => navigate('/mantenimiento')}>
-                <TrendingUp className="h-6 w-6" />
-                <span>Mantenimiento</span>
-              </Button>
-              <Button variant="outline" className="h-auto py-4 flex-col gap-2" onClick={() => navigate('/historial')}>
-                <Clock className="h-6 w-6" />
-                <span>Historial</span>
-              </Button>
-              <Button variant="outline" className="h-auto py-4 flex-col gap-2" onClick={() => navigate('/supervisor/submissions')}>
-                <FileText className="h-6 w-6" />
-                <span>Submissions</span>
-              </Button>
-            </div>
-          </CardContent>
-        </Card>
+          {/* Accesos rápidos */}
+          <Card>
+            <CardHeader className="pb-3">
+              <CardTitle className="text-lg">Accesos Rápidos</CardTitle>
+              <CardDescription>Navega a las diferentes secciones (solo lectura)</CardDescription>
+            </CardHeader>
+            <CardContent>
+              <div className="grid grid-cols-2 gap-3">
+                <Button variant="outline" className="h-auto py-4 flex-col gap-2" onClick={() => navigate('/equipos')}>
+                  <Truck className="h-6 w-6" />
+                  <span>Equipos</span>
+                </Button>
+                <Button variant="outline" className="h-auto py-4 flex-col gap-2" onClick={() => navigate('/mantenimiento')}>
+                  <TrendingUp className="h-6 w-6" />
+                  <span>Mantenimiento</span>
+                </Button>
+                <Button variant="outline" className="h-auto py-4 flex-col gap-2" onClick={() => navigate('/historial')}>
+                  <Clock className="h-6 w-6" />
+                  <span>Historial</span>
+                </Button>
+                <Button variant="outline" className="h-auto py-4 flex-col gap-2" onClick={() => navigate('/supervisor/submissions')}>
+                  <FileText className="h-6 w-6" />
+                  <span>Reportes</span>
+                </Button>
+              </div>
+            </CardContent>
+          </Card>
+        </div>
       </div>
+
+      {/* Dialog de Detalle Unificado */}
+      <EquipoDetalleUnificado
+        ficha={selectedFicha}
+        open={detalleOpen}
+        onOpenChange={setDetalleOpen}
+      />
     </Layout>
   );
 }
