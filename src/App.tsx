@@ -29,12 +29,11 @@ const ImportarDatosCaterpillar = lazy(() => import("./pages/ImportarDatosCaterpi
 const Auth = lazy(() => import("./pages/Auth"));
 const NotificacionesPage = lazy(() => import("./pages/Notificaciones"));
 
-// Mechanic pages
-const MechanicDashboard = lazy(() => import("./pages/mobile/MechanicDashboard"));
-const MechanicPendingList = lazy(() => import("./pages/mobile/MechanicPendingList"));
-const MechanicSubmissionForm = lazy(() => import("./pages/mobile/MechanicSubmissionForm"));
-const MechanicHistory = lazy(() => import("./pages/mobile/MechanicHistory"));
-const MechanicDesktop = lazy(() => import("./pages/MechanicDesktop"));
+// Mechanic pages - with device detection routers
+const MechanicDashboardRouter = lazy(() => import("./pages/MechanicModule").then(m => ({ default: m.MechanicDashboardRouter })));
+const MechanicPendingListRouter = lazy(() => import("./pages/MechanicModule").then(m => ({ default: m.MechanicPendingListRouter })));
+const MechanicSubmissionFormRouter = lazy(() => import("./pages/MechanicModule").then(m => ({ default: m.MechanicSubmissionFormRouter })));
+const MechanicHistoryRouter = lazy(() => import("./pages/MechanicModule").then(m => ({ default: m.MechanicHistoryRouter })));
 
 // Supervisor pages
 const SupervisorDashboard = lazy(() => import("./pages/mobile/SupervisorDashboard"));
@@ -76,11 +75,11 @@ const App = () => (
                   <Route path="/notificaciones" element={<ProtectedRoute><NotificacionesPage /></ProtectedRoute>} />
                   
                   {/* Mechanic routes */}
-                  <Route path="/mechanic" element={<ProtectedRoute><MechanicDashboard /></ProtectedRoute>} />
-                  <Route path="/mechanic/pendientes" element={<ProtectedRoute><MechanicPendingList /></ProtectedRoute>} />
-                  <Route path="/mechanic/reportar" element={<ProtectedRoute><MechanicSubmissionForm /></ProtectedRoute>} />
-                  <Route path="/mechanic/reportar/:ficha" element={<ProtectedRoute><MechanicSubmissionForm /></ProtectedRoute>} />
-                  <Route path="/mechanic/historial" element={<ProtectedRoute><MechanicHistory /></ProtectedRoute>} />
+                  <Route path="/mechanic" element={<ProtectedRoute><MechanicDashboardRouter /></ProtectedRoute>} />
+                  <Route path="/mechanic/pendientes" element={<ProtectedRoute><MechanicPendingListRouter /></ProtectedRoute>} />
+                  <Route path="/mechanic/reportar" element={<ProtectedRoute><MechanicSubmissionFormRouter /></ProtectedRoute>} />
+                  <Route path="/mechanic/reportar/:ficha" element={<ProtectedRoute><MechanicSubmissionFormRouter /></ProtectedRoute>} />
+                  <Route path="/mechanic/historial" element={<ProtectedRoute><MechanicHistoryRouter /></ProtectedRoute>} />
                   
                   {/* Supervisor routes */}
                   <Route path="/supervisor" element={<ProtectedRoute><SupervisorDashboard /></ProtectedRoute>} />
