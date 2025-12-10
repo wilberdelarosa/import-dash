@@ -1275,9 +1275,9 @@ export default function ControlMantenimientoProfesional() {
                 <div
                   role="dialog"
                   aria-modal="false"
-                  className="pointer-events-auto w-[95vw] max-w-[1400px] overflow-hidden rounded-2xl border border-primary/20 bg-background/95 shadow-2xl backdrop-blur supports-[backdrop-filter]:backdrop-blur"
+                  className="pointer-events-auto w-[95vw] max-w-[1400px] rounded-2xl border border-primary/20 bg-background/95 shadow-2xl backdrop-blur supports-[backdrop-filter]:backdrop-blur flex flex-col max-h-[90vh]"
                 >
-                  <div className="drag-handle cursor-move flex items-start justify-between gap-4 border-b px-6 py-4 bg-slate-50 dark:bg-slate-900">
+                  <div className="drag-handle cursor-move flex items-start justify-between gap-4 border-b px-6 py-4 bg-slate-50 dark:bg-slate-900 flex-shrink-0">
                     <div className="flex items-center gap-2">
                       <GripVertical className="h-5 w-5 text-slate-400" />
                       <div>
@@ -1295,9 +1295,9 @@ export default function ControlMantenimientoProfesional() {
                     </Button>
                   </div>
 
-                  <div className="grid gap-6 lg:grid-cols-[400px,1fr] max-h-[80vh] overflow-hidden">
+                  <div className="grid gap-0 lg:grid-cols-[380px,1fr] flex-1 min-h-0 overflow-hidden">
                     {/* Columna Izquierda: Actualización Rápida */}
-                    <div className="border-r overflow-y-auto px-6 py-6 space-y-4 bg-slate-50/50 dark:bg-slate-900/50">
+                    <div className="border-r overflow-y-auto px-5 py-5 space-y-4 bg-slate-50/50 dark:bg-slate-900/50">
                       <div>
                         <h4 className="text-sm font-semibold mb-1 flex items-center gap-2">
                           <Gauge className="h-4 w-4 text-primary" />
@@ -1307,7 +1307,7 @@ export default function ControlMantenimientoProfesional() {
                       </div>
 
                       <div className="space-y-3">
-                        <div className="space-y-2">
+                        <div className="space-y-1.5">
                           <Label htmlFor="fichaRapida" className="text-xs font-semibold">Ficha del equipo</Label>
                           <Input
                             id="fichaRapida"
@@ -1330,12 +1330,12 @@ export default function ControlMantenimientoProfesional() {
                         )}
 
                         {equipoRapido && (
-                          <div className="space-y-4">
+                          <div className="space-y-3">
                             <Card className="border-primary/30 bg-white dark:bg-slate-950">
                               <CardContent className="p-3 space-y-2">
                                 <div>
-                                  <p className="font-semibold text-sm">{equipoRapido.nombreEquipo}</p>
-                                  <p className="text-xs text-muted-foreground">
+                                  <p className="font-semibold text-sm truncate">{equipoRapido.nombreEquipo}</p>
+                                  <p className="text-xs text-muted-foreground truncate">
                                     {equipoRapido.tipoMantenimiento}
                                   </p>
                                 </div>
@@ -1361,57 +1361,59 @@ export default function ControlMantenimientoProfesional() {
                               </CardContent>
                             </Card>
 
-                            <form onSubmit={handleActualizarRapido} className="space-y-3">
-                              <div className="space-y-2">
-                                <Label htmlFor="lecturaRapida" className="text-xs font-semibold">Nueva lectura *</Label>
-                                <Input
-                                  id="lecturaRapida"
-                                  type="number"
-                                  value={lecturaRapida}
-                                  onChange={(e) => setLecturaRapida(e.target.value)}
-                                  className="h-9 text-sm"
-                                  required
-                                />
+                            <form onSubmit={handleActualizarRapido} className="space-y-2.5">
+                              <div className="grid grid-cols-2 gap-2">
+                                <div className="space-y-1">
+                                  <Label htmlFor="lecturaRapida" className="text-xs font-semibold">Nueva lectura *</Label>
+                                  <Input
+                                    id="lecturaRapida"
+                                    type="number"
+                                    value={lecturaRapida}
+                                    onChange={(e) => setLecturaRapida(e.target.value)}
+                                    className="h-8 text-sm"
+                                    required
+                                  />
+                                </div>
+
+                                <div className="space-y-1">
+                                  <Label htmlFor="fechaRapida" className="text-xs font-semibold">Fecha *</Label>
+                                  <Input
+                                    id="fechaRapida"
+                                    type="date"
+                                    value={fechaRapida}
+                                    onChange={(e) => setFechaRapida(e.target.value)}
+                                    className="h-8 text-sm"
+                                    required
+                                  />
+                                </div>
                               </div>
 
-                              <div className="space-y-2">
-                                <Label htmlFor="fechaRapida" className="text-xs font-semibold">Fecha *</Label>
-                                <Input
-                                  id="fechaRapida"
-                                  type="date"
-                                  value={fechaRapida}
-                                  onChange={(e) => setFechaRapida(e.target.value)}
-                                  className="h-9 text-sm"
-                                  required
-                                />
-                              </div>
-
-                              <div className="space-y-2">
+                              <div className="space-y-1">
                                 <Label htmlFor="responsableRapido" className="text-xs font-semibold">Responsable</Label>
                                 <Input
                                   id="responsableRapido"
                                   placeholder="Nombre del responsable"
                                   value={responsableRapido}
                                   onChange={(e) => setResponsableRapido(e.target.value)}
-                                  className="h-9 text-sm"
+                                  className="h-8 text-sm"
                                 />
                               </div>
 
-                              <div className="space-y-2">
+                              <div className="space-y-1">
                                 <Label htmlFor="notasRapida" className="text-xs font-semibold">Observaciones</Label>
                                 <Textarea
                                   id="notasRapida"
                                   placeholder="Notas adicionales..."
                                   value={notasRapida}
                                   onChange={(e) => setNotasRapida(e.target.value)}
-                                  className="text-sm min-h-[60px]"
+                                  className="text-sm min-h-[50px] resize-none"
                                   rows={2}
                                 />
                               </div>
 
                               <Button
                                 type="submit"
-                                className="w-full gap-2"
+                                className="w-full gap-2 h-9"
                                 disabled={updatingRapido || isReadOnly}
                               >
                                 {updatingRapido ? (
@@ -1435,7 +1437,7 @@ export default function ControlMantenimientoProfesional() {
 
                       {/* Sección de Alertas de Actualización */}
                       {alertasActualizacion.length > 0 && (
-                        <div className="mt-6 space-y-3">
+                        <div className="pt-4 border-t space-y-3">
                           <div className="flex items-center justify-between">
                             <h5 className="text-xs font-semibold flex items-center gap-2">
                               <Bell className="h-3.5 w-3.5 text-amber-500" />
@@ -1451,15 +1453,15 @@ export default function ControlMantenimientoProfesional() {
                             </Button>
                           </div>
 
-                          <div className="space-y-2 max-h-64 overflow-y-auto">
+                          <div className="space-y-2 max-h-48 overflow-y-auto">
                             {alertasActualizacion.map((alerta) => (
                               <Alert key={alerta.id} className="py-2 bg-amber-50 dark:bg-amber-950/20 border-amber-200">
                                 <div className="flex items-start gap-2">
-                                  <Bell className="h-4 w-4 text-amber-600 mt-0.5" />
-                                  <div className="flex-1 space-y-1">
+                                  <Bell className="h-4 w-4 text-amber-600 mt-0.5 flex-shrink-0" />
+                                  <div className="flex-1 space-y-1 min-w-0">
                                     <div className="flex items-start justify-between">
-                                      <div>
-                                        <p className="text-xs font-semibold">{alerta.ficha} - {alerta.nombreEquipo}</p>
+                                      <div className="min-w-0">
+                                        <p className="text-xs font-semibold truncate">{alerta.ficha} - {alerta.nombreEquipo}</p>
                                         <p className="text-xs text-muted-foreground">
                                           {new Date(alerta.timestamp).toLocaleString('es-ES', {
                                             day: '2-digit',
@@ -1495,7 +1497,7 @@ export default function ControlMantenimientoProfesional() {
                     </div>
 
                     {/* Columna Derecha: Reportes */}
-                    <div className="overflow-y-auto px-6 py-6 space-y-6">
+                    <div className="overflow-y-auto px-5 py-5 space-y-5">
                       <div>
                         <h4 className="text-sm font-semibold mb-1 flex items-center gap-2">
                           <CalendarRange className="h-4 w-4 text-primary" />
@@ -1504,26 +1506,26 @@ export default function ControlMantenimientoProfesional() {
                         <p className="text-xs text-muted-foreground">Genera reportes de actualizaciones por período</p>
                       </div>
 
-                      <div className="space-y-4">
-                        <div className="grid gap-4 md:grid-cols-2">
-                          <div className="space-y-2">
-                            <Label htmlFor="reporteDesde" className="font-semibold text-sm">Desde</Label>
+                      <div className="space-y-3">
+                        <div className="grid gap-3 md:grid-cols-2">
+                          <div className="space-y-1">
+                            <Label htmlFor="reporteDesde" className="font-semibold text-xs">Desde</Label>
                             <Input
                               id="reporteDesde"
                               type="date"
                               value={reporteDesde}
                               onChange={(event) => setReporteDesde(event.target.value)}
-                              className="h-9"
+                              className="h-8"
                             />
                           </div>
-                          <div className="space-y-2">
-                            <Label htmlFor="reporteHasta" className="font-semibold text-sm">Hasta</Label>
+                          <div className="space-y-1">
+                            <Label htmlFor="reporteHasta" className="font-semibold text-xs">Hasta</Label>
                             <Input
                               id="reporteHasta"
                               type="date"
                               value={reporteHasta}
                               onChange={(event) => setReporteHasta(event.target.value)}
-                              className="h-9"
+                              className="h-8"
                             />
                           </div>
                         </div>
@@ -1533,6 +1535,7 @@ export default function ControlMantenimientoProfesional() {
                             type="button"
                             size="sm"
                             variant="secondary"
+                            className="h-7 text-xs"
                             onClick={() => {
                               const semana = obtenerSemanaActual();
                               setReporteDesde(semana.desde);
@@ -1547,6 +1550,7 @@ export default function ControlMantenimientoProfesional() {
                             type="button"
                             size="sm"
                             variant="secondary"
+                            className="h-7 text-xs"
                             onClick={() => {
                               const hoy = new Date();
                               const hace7dias = new Date(hoy);
@@ -1566,6 +1570,7 @@ export default function ControlMantenimientoProfesional() {
                             type="button"
                             size="sm"
                             variant="secondary"
+                            className="h-7 text-xs"
                             onClick={() => {
                               const hoy = new Date();
                               const primerDiaMes = new Date(hoy.getFullYear(), hoy.getMonth(), 1);
@@ -1583,12 +1588,12 @@ export default function ControlMantenimientoProfesional() {
                         </div>
 
                         <div className="flex gap-2">
-                          <Button type="button" onClick={handleGenerarReporte} className="flex-1 gap-2">
+                          <Button type="button" onClick={handleGenerarReporte} className="flex-1 gap-2 h-8" size="sm">
                             <CalendarCheck className="h-4 w-4" />
                             Generar reporte
                           </Button>
                           {reporteRango && (
-                            <Button type="button" onClick={handleLimpiarReporte} variant="outline" className="gap-2">
+                            <Button type="button" onClick={handleLimpiarReporte} variant="outline" className="gap-2 h-8" size="sm">
                               <X className="h-4 w-4" />
                               Limpiar
                             </Button>
@@ -1597,7 +1602,7 @@ export default function ControlMantenimientoProfesional() {
                       </div>
 
                       {resumenActualizaciones ? (
-                        <div className="space-y-6">
+                        <div className="space-y-5">
                           <div className="flex flex-wrap gap-3">
                             <Badge variant="secondary">
                               Actualizados: {resumenActualizaciones.actualizados.length}

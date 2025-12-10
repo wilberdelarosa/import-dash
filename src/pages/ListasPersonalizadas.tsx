@@ -48,6 +48,8 @@ import {
   Trash2,
   X,
 } from 'lucide-react';
+import jsPDF from 'jspdf';
+import 'jspdf-autotable';
 import { formatRemainingLabel } from '@/lib/maintenanceUtils';
 import { cn } from '@/lib/utils';
 import { getStaticCaterpillarData } from '@/data/caterpillarMaintenance';
@@ -333,11 +335,67 @@ export default function ListasPersonalizadas() {
 
   const handleExportPdf = () => {
     if (selectedEquipos.length === 0) return;
-    const header = selectedColumns.map((k) => columnMap[k]?.label ?? k);
-    const rows = selectedEquipos.map((e) => selectedColumns.map((k) => `<td style="padding:8px;border:1px solid #ddd;font-size:11px;">${(columnMap[k]?.accessor(e) ?? '').replace(/\n/g, '<br/>')}</td>`).join(''));
-    const html = `<html><head><title>${listaActiva?.nombre || 'Lista'}</title><style>body{font-family:system-ui,sans-serif;padding:20px}h2{margin-bottom:10px}p{color:#666;margin-bottom:20px}table{border-collapse:collapse;width:100%}th{background:#1e293b;color:white;padding:10px;text-align:left;font-size:12px}td{vertical-align:top}</style></head><body><h2>${listaActiva?.nombre || 'Lista de Equipos'}</h2><p>${selectedEquipos.length} equipos • Generado: ${new Date().toLocaleDateString('es-DO')}</p><table><thead><tr>${header.map((h) => `<th>${h}</th>`).join('')}</tr></thead><tbody>${rows.map((r) => `<tr>${r}</tr>`).join('')}</tbody></table></body></html>`;
-    const win = window.open('', '_blank');
-    if (win) { win.document.write(html); win.document.close(); win.focus(); win.print(); }
+    try {
+      // Decide orientation based on number of columns
+      const orientation: 'portrait' | 'landscape' = selectedColumns.length > 6 ? 'landscape' : 'portrait';
+      const doc = new jsPDF(orientation);
+
+      // Header
+      doc.setFontSize(16);
+      doc.setTextColor(34, 34, 34);
+      const title = listaActiva?.nombre || 'Lista de Equipos';
+      doc.text(title, 14, 20);
+
+      doc.setFontSize(10);
+      doc.setTextColor(100, 100, 100);
+      const subtitle = listaActiva?.descripcion ? `${listaActiva.descripcion} • ` : '';
+      doc.text(`${subtitle}${selectedEquipos.length} equipos • Generado: ${new Date().toLocaleDateString('es-ES')}`, 14, 26);
+
+      // Table headers and body
+      const head = [selectedColumns.map((k) => columnMap[k]?.label ?? k)];
+      const body = selectedEquipos.map((e) => selectedColumns.map((k) => {
+        const raw = columnMap[k]?.accessor(e) ?? '';
+        // replace newlines with spaces so autotable wraps correctly
+        return String(raw).replace(/\n/g, ' ');
+      }));
+
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      (doc as any).autoTable({
+        startY: 32,
+        head,
+        body,
+        theme: 'grid',
+        headStyles: { fillColor: [30, 41, 59], textColor: 255, fontStyle: 'bold' },
+        styles: { fontSize: 9, cellPadding: 3 },
+        columnStyles: (() => {
+          // Set some reasonable column widths based on number of columns
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
+          const styles: Record<number, any> = {};
+          const cols = selectedColumns.length;
+          const base = Math.floor(180 / Math.max(cols, 1));
+          for (let i = 0; i < cols; i++) styles[i] = { cellWidth: base };
+          return styles;
+        })(),
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        didDrawPage: (_data: any) => {
+          // Footer with page number
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
+          const pageCount = (doc as any).internal.getNumberOfPages();
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
+          const currentPage = (doc as any).internal.getCurrentPageInfo().pageNumber;
+          doc.setFontSize(8);
+          doc.setTextColor(120, 120, 120);
+          doc.text(`Página ${currentPage} / ${pageCount}`, doc.internal.pageSize.width - 40, doc.internal.pageSize.height - 10);
+        }
+      });
+
+      const filename = `${(listaActiva?.nombre || 'lista').replace(/[^a-z0-9-]/gi, '_')}-${new Date().toISOString().split('T')[0]}.pdf`;
+      doc.save(filename);
+      toast.success('PDF generado');
+    } catch (err) {
+      console.error('Error generando PDF:', err);
+      toast.error('Error generando PDF');
+    }
   };
 
   if (isMobile) return <ListasPersonalizadasMobile />;

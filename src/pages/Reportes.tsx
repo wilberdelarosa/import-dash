@@ -36,8 +36,8 @@ export default function Reportes() {
   // Equipos disponibles (no vendidos) y activos
   const equiposActivos = data.equipos.filter(e => isEquipoDisponible(e) && e.activo);
 
-  const categorias = [...new Set(equiposActivos.map(e => e.categoria))];
-  const marcas = [...new Set(equiposActivos.map(e => e.marca))];
+  const categorias = [...new Set(equiposActivos.map(e => e.categoria).filter(c => c && c.toString().trim() !== ''))];
+  const marcas = [...new Set(equiposActivos.map(e => e.marca).filter(m => m && m.toString().trim() !== ''))];
   const fichas = [...new Set(equiposActivos.map(e => e.ficha))].sort();
 
   const equiposConEstado = useMemo(() => (
