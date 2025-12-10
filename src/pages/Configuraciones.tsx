@@ -70,7 +70,7 @@ export default function Configuraciones() {
     updateConfig(DEFAULT_SYSTEM_CONFIG);
   };
 
-  // Exportar Base de Datos a JSON
+  // Exportar Base de Datos a JSON - COMPLETA con todas las tablas
   const handleExportDatabase = async () => {
     setExportingDb(true);
     try {
@@ -86,6 +86,16 @@ export default function Configuraciones() {
         { data: overridesPlanes },
         { data: inventarios },
         { data: userRoles },
+        { data: equipoPlanes },
+        { data: notificaciones },
+        { data: notificacionesSalientes },
+        { data: configuracionesSistema },
+        { data: maintenanceSubmissions },
+        { data: submissionAttachments },
+        { data: catModelos },
+        { data: catIntervalos },
+        { data: catCodigosPieza },
+        { data: catModeloIntervaloPiezas },
       ] = await Promise.all([
         supabase.from('equipos').select('*'),
         supabase.from('mantenimientos_programados').select('*'),
@@ -98,25 +108,86 @@ export default function Configuraciones() {
         supabase.from('overrides_planes').select('*'),
         supabase.from('inventarios').select('*'),
         supabase.from('user_roles').select('*'),
+        supabase.from('equipo_planes').select('*'),
+        supabase.from('notificaciones').select('*'),
+        supabase.from('notificaciones_salientes').select('*'),
+        supabase.from('configuraciones_sistema').select('*'),
+        supabase.from('maintenance_submissions').select('*'),
+        supabase.from('submission_attachments').select('*'),
+        supabase.from('cat_modelos').select('*'),
+        supabase.from('cat_intervalos_mantenimiento').select('*'),
+        supabase.from('cat_codigos_pieza').select('*'),
+        supabase.from('cat_modelo_intervalo_piezas').select('*'),
       ]);
 
       const exportData = {
-        metadata: { exportedAt: new Date().toISOString(), exportedBy: 'import-dash', version: '1.0.0' },
-        data: { equipos: equipos || [], mantenimientosProgramados: mantenimientosProgramados || [], historialEventos: historialEventos || [], planesMantenimiento: planesMantenimiento || [], planIntervalos: planIntervalos || [], kitsMantenimiento: kitsMantenimiento || [], kitPiezas: kitPiezas || [], planIntervaloKits: planIntervaloKits || [], overridesPlanes: overridesPlanes || [], inventarios: inventarios || [], userRoles: userRoles || [] },
-        summary: { equipos: equipos?.length || 0, mantenimientosProgramados: mantenimientosProgramados?.length || 0, historialEventos: historialEventos?.length || 0, planesMantenimiento: planesMantenimiento?.length || 0, planIntervalos: planIntervalos?.length || 0, kitsMantenimiento: kitsMantenimiento?.length || 0, kitPiezas: kitPiezas?.length || 0, planIntervaloKits: planIntervaloKits?.length || 0, overridesPlanes: overridesPlanes?.length || 0, inventarios: inventarios?.length || 0, userRoles: userRoles?.length || 0 },
+        metadata: { 
+          exportedAt: new Date().toISOString(), 
+          exportedBy: 'import-dash', 
+          version: '2.0.0',
+          description: 'Exportación completa de todas las tablas del sistema'
+        },
+        data: { 
+          equipos: equipos || [], 
+          mantenimientosProgramados: mantenimientosProgramados || [], 
+          historialEventos: historialEventos || [], 
+          planesMantenimiento: planesMantenimiento || [], 
+          planIntervalos: planIntervalos || [], 
+          kitsMantenimiento: kitsMantenimiento || [], 
+          kitPiezas: kitPiezas || [], 
+          planIntervaloKits: planIntervaloKits || [], 
+          overridesPlanes: overridesPlanes || [], 
+          inventarios: inventarios || [], 
+          userRoles: userRoles || [],
+          equipoPlanes: equipoPlanes || [],
+          notificaciones: notificaciones || [],
+          notificacionesSalientes: notificacionesSalientes || [],
+          configuracionesSistema: configuracionesSistema || [],
+          maintenanceSubmissions: maintenanceSubmissions || [],
+          submissionAttachments: submissionAttachments || [],
+          catModelos: catModelos || [],
+          catIntervalosMantenimiento: catIntervalos || [],
+          catCodigosPieza: catCodigosPieza || [],
+          catModeloIntervaloPiezas: catModeloIntervaloPiezas || [],
+        },
+        summary: { 
+          equipos: equipos?.length || 0, 
+          mantenimientosProgramados: mantenimientosProgramados?.length || 0, 
+          historialEventos: historialEventos?.length || 0, 
+          planesMantenimiento: planesMantenimiento?.length || 0, 
+          planIntervalos: planIntervalos?.length || 0, 
+          kitsMantenimiento: kitsMantenimiento?.length || 0, 
+          kitPiezas: kitPiezas?.length || 0, 
+          planIntervaloKits: planIntervaloKits?.length || 0, 
+          overridesPlanes: overridesPlanes?.length || 0, 
+          inventarios: inventarios?.length || 0, 
+          userRoles: userRoles?.length || 0,
+          equipoPlanes: equipoPlanes?.length || 0,
+          notificaciones: notificaciones?.length || 0,
+          notificacionesSalientes: notificacionesSalientes?.length || 0,
+          configuracionesSistema: configuracionesSistema?.length || 0,
+          maintenanceSubmissions: maintenanceSubmissions?.length || 0,
+          submissionAttachments: submissionAttachments?.length || 0,
+          catModelos: catModelos?.length || 0,
+          catIntervalosMantenimiento: catIntervalos?.length || 0,
+          catCodigosPieza: catCodigosPieza?.length || 0,
+          catModeloIntervaloPiezas: catModeloIntervaloPiezas?.length || 0,
+        },
       };
 
       const blob = new Blob([JSON.stringify(exportData, null, 2)], { type: 'application/json;charset=utf-8;' });
       const url = URL.createObjectURL(blob);
       const link = document.createElement('a');
       link.href = url;
-      link.download = `import-dash-backup-${new Date().toISOString().split('T')[0]}.json`;
+      link.download = `import-dash-backup-completo-${new Date().toISOString().split('T')[0]}.json`;
       document.body.appendChild(link);
       link.click();
       document.body.removeChild(link);
       URL.revokeObjectURL(url);
 
-      toast({ title: 'Exportación completada', description: `Se exportaron ${Object.values(exportData.summary).reduce((a, b) => a + b, 0)} registros.` });
+      const totalRecords = Object.values(exportData.summary).reduce((a, b) => a + b, 0);
+      const tableCount = Object.keys(exportData.data).length;
+      toast({ title: 'Exportación completada', description: `Se exportaron ${totalRecords} registros de ${tableCount} tablas.` });
     } catch (error) {
       console.error('Error exportando BD:', error);
       toast({ title: 'Error al exportar', description: 'No se pudo exportar. Intenta de nuevo.', variant: 'destructive' });
