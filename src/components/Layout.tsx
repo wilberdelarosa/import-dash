@@ -1,4 +1,5 @@
 import { ReactNode, useState } from 'react';
+import { Navigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { RefreshCw, FileDown, FileUp, Trash2, ListChecks } from 'lucide-react';
 import DataActionsToggle from '@/components/DataActionsToggle';
@@ -14,6 +15,7 @@ import { Navigation } from '@/components/Navigation';
 import { ConfirmDialog } from '@/components/ConfirmDialog';
 import BottomNav from '@/components/BottomNav';
 import { CommandPalette } from '@/components/CommandPalette';
+import { useUserRoles } from '@/hooks/useUserRoles';
 
 interface LayoutProps {
   children: ReactNode;
@@ -31,9 +33,13 @@ export function Layout({ children, title }: LayoutProps) {
   const { importData } = useLocalStorage();
   const { toast } = useToast();
   const { config } = useSystemConfig();
+  const { isMechanic, isSupervisor, isAdmin, loading: roleLoading } = useUserRoles();
   const [confirmClearOpen, setConfirmClearOpen] = useState(false);
 
   const importDisabled = !config.permitirImportaciones;
+
+  // Solo mostrar acciones de datos para admin
+  const showDataActions = isAdmin;
 
   const handleMigrate = async () => {
     await migrateFromLocalStorage();
@@ -203,17 +209,19 @@ export function Layout({ children, title }: LayoutProps) {
               </div>
             </div>
             
-            {/* Fila 2: Acciones de datos */}
-            <div className="flex items-center gap-2">
-              <DataActionsToggle
-                onImport={handleImport}
-                onExport={handleExport}
-                onMigrate={handleMigrate}
-                onSmartImport={handleSmartImport}
-                onClear={handleClear}
-                importDisabled={importDisabled}
-              />
-            </div>
+            {/* Fila 2: Acciones de datos - solo para admin */}
+            {showDataActions && (
+              <div className="flex items-center gap-2">
+                <DataActionsToggle
+                  onImport={handleImport}
+                  onExport={handleExport}
+                  onMigrate={handleMigrate}
+                  onSmartImport={handleSmartImport}
+                  onClear={handleClear}
+                  importDisabled={importDisabled}
+                />
+              </div>
+            )}
           </div>
           
           {/* Mobile layout - más simple */}

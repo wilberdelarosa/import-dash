@@ -1,4 +1,4 @@
-import { Link, useLocation } from 'react-router-dom';
+import { Link, useLocation, Navigate } from 'react-router-dom';
 import { useMemo, useState } from 'react';
 import { cn } from '@/lib/utils';
 import {
@@ -17,6 +17,9 @@ import {
   PackageOpen,
   Download,
   Route,
+  FileText,
+  ClipboardCheck,
+  Eye,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Popover, PopoverTrigger, PopoverContent } from '@/components/ui/popover';
@@ -25,8 +28,10 @@ import { LogoutButton } from '@/components/LogoutButton';
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetDescription, SheetTrigger, SheetClose } from '@/components/ui/sheet';
 import { BrandLogo } from '@/components/BrandLogo';
 import { UserBadge } from '@/components/UserBadge';
+import { useUserRoles } from '@/hooks/useUserRoles';
 
-const navItems = [
+// Nav items for admin/user roles
+const adminNavItems = [
   { path: '/', label: 'Dashboard', icon: LayoutDashboard },
   { path: '/equipos', label: 'Equipos', icon: Truck },
   { path: '/control-mantenimiento', label: 'Control Mantenimiento', icon: Wrench },
@@ -35,12 +40,28 @@ const navItems = [
   { path: '/mantenimiento', label: 'Mantenimiento', icon: Calendar },
   { path: '/planes-mantenimiento', label: 'Planes Mant.', icon: ClipboardList },
   { path: '/kits-mantenimiento', label: 'Kits Mant.', icon: PackageOpen },
-  // { path: '/importar-caterpillar', label: 'Importar CAT', icon: Download }, // Oculto por solicitud del usuario
   { path: '/historial', label: 'Historial', icon: History },
   { path: '/reportes', label: 'Reportes', icon: BarChart3 },
   { path: '/listas-personalizadas', label: 'Listas personalizadas', icon: ListChecks },
   { path: '/configuraciones', label: 'Configuraciones', icon: Settings },
   { path: '/asistente', label: 'Asistente IA', icon: MessageSquareText },
+];
+
+// Nav items for mechanic role
+const mechanicNavItems = [
+  { path: '/mechanic', label: 'Inicio', icon: LayoutDashboard },
+  { path: '/mechanic/pendientes', label: 'Equipos Pendientes', icon: Truck },
+  { path: '/mechanic/reportar', label: 'Reportar Trabajo', icon: ClipboardCheck },
+  { path: '/mechanic/historial', label: 'Mis Reportes', icon: History },
+];
+
+// Nav items for supervisor role
+const supervisorNavItems = [
+  { path: '/supervisor', label: 'Dashboard', icon: LayoutDashboard },
+  { path: '/supervisor/submissions', label: 'Revisar Reportes', icon: FileText },
+  { path: '/equipos', label: 'Ver Equipos', icon: Truck },
+  { path: '/mantenimiento', label: 'Mantenimiento', icon: Calendar },
+  { path: '/historial', label: 'Historial', icon: History },
 ];
 
 interface NavigationProps {
@@ -50,38 +71,25 @@ interface NavigationProps {
 export function Navigation({ hideBrand = false }: NavigationProps) {
   const location = useLocation();
   const [sheetOpen, setSheetOpen] = useState(false);
+  const { currentUserRole, loading: roleLoading } = useUserRoles();
 
-  const navLinks = useMemo(
-    () =>
-      navItems.map(({ path, label, icon: Icon }) => (
-        <Link
-          key={path}
-          to={path}
-          className={cn(
-            'group relative inline-flex w-full items-center justify-center gap-2 overflow-hidden rounded-lg px-3 py-3 text-sm font-medium transition-all duration-300 sm:w-auto sm:rounded-lg sm:py-4',
-            location.pathname === path
-              ? 'bg-primary/10 text-primary shadow-lg shadow-primary/20'
-              : 'text-muted-foreground hover:bg-gradient-to-r hover:from-muted hover:via-muted/90 hover:to-muted hover:text-foreground hover:shadow-md',
-          )}
-        >
-          <Icon className={cn(
-            "h-4 w-4 relative z-10 transition-all duration-300 drop-shadow-sm",
-            location.pathname === path ? "scale-110" : "group-hover:scale-125 group-hover:rotate-6"
-          )} />
-          <span className="relative z-10">{label}</span>
-        </Link>
-      )),
-    [location.pathname],
-  );
+  // Determine which nav items to use based on role
+  const navItems = useMemo(() => {
+    if (currentUserRole === 'mechanic') return mechanicNavItems;
+    if (currentUserRole === 'supervisor') return supervisorNavItems;
+    return adminNavItems; // admin and user use same nav
+  }, [currentUserRole]);
 
-  // Primary items that should always be visible
-  const primaryPaths = new Set([
-    '/',
-    '/equipos',
-    '/mantenimiento',
-    '/control-mantenimiento',
-    '/asistente',
-  ]);
+  // Primary items based on role
+  const primaryPaths = useMemo(() => {
+    if (currentUserRole === 'mechanic') {
+      return new Set(['/mechanic', '/mechanic/pendientes', '/mechanic/reportar', '/mechanic/historial']);
+    }
+    if (currentUserRole === 'supervisor') {
+      return new Set(['/supervisor', '/supervisor/submissions', '/equipos', '/mantenimiento']);
+    }
+    return new Set(['/', '/equipos', '/mantenimiento', '/control-mantenimiento', '/asistente']);
+  }, [currentUserRole]);
 
   const primaryItems = navItems.filter((i) => primaryPaths.has(i.path));
   const secondaryItems = navItems.filter((i) => !primaryPaths.has(i.path));
