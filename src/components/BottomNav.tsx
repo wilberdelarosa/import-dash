@@ -3,7 +3,7 @@ import { Home, Truck, Calendar, Wrench, MessageSquare, History, Bell, LucideIcon
 import { cn } from '@/lib/utils';
 import { useUserRoles } from '@/hooks/useUserRoles';
 import { Badge } from '@/components/ui/badge';
-import { useNotificaciones } from '@/hooks/useNotificaciones';
+import { useUnifiedNotifications } from '@/hooks/useUnifiedNotifications';
 
 interface NavItem {
   to: string;
@@ -15,9 +15,7 @@ interface NavItem {
 export default function BottomNav() {
   const location = useLocation();
   const { isAdmin, isSupervisor, isMechanic } = useUserRoles();
-  const { notificaciones } = useNotificaciones();
-  
-  const unreadCount = notificaciones.filter(n => !n.leida).length;
+  const { unreadCount } = useUnifiedNotifications();
 
   // Items base para todos los usuarios
   const baseItems: NavItem[] = [

@@ -1,6 +1,6 @@
-import { NotificationCenter } from '@/components/notifications/NotificationCenter';
+import { UnifiedNotificationCenter } from '@/components/notifications/UnifiedNotificationCenter';
 
 export function NotificationButton() {
-  return <NotificationCenter />;
+  return <UnifiedNotificationCenter />;
 }
 
