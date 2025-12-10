@@ -117,7 +117,7 @@ export function MechanicDashboard() {
           <Button
             variant="outline"
             className="w-full h-9 text-xs gap-2"
-            onClick={() => navigate('/mechanic/equipos')}
+            onClick={() => navigate('/mechanic/pendientes')}
           >
             Ver Lista
             <ChevronRight className="h-3.5 w-3.5" />
