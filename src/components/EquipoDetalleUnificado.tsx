@@ -321,17 +321,17 @@ export function EquipoDetalleUnificado({ ficha, open, onOpenChange }: Props) {
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-4xl w-[95vw] sm:w-full max-h-[95vh] sm:max-h-[90vh] overflow-y-auto p-0">
+      <DialogContent className="max-w-4xl w-[95vw] sm:w-full max-h-[95vh] sm:max-h-[90vh] overflow-y-auto p-0 bg-background">
         {/* Hero Section - Información crítica siempre visible */}
         <div className={cn(
-          "sticky top-0 z-10 p-3 sm:p-4 border-b",
+          "sticky top-0 z-20 p-3 sm:p-4 border-b backdrop-blur-xl",
           esVendido 
-            ? "bg-orange-50 dark:bg-orange-950/30 border-orange-200 dark:border-orange-900"
+            ? "bg-orange-50/95 dark:bg-orange-950/95 border-orange-200 dark:border-orange-900"
             : mantenimientoVencido 
-              ? "bg-destructive/5 border-destructive/20" 
+              ? "bg-red-50/95 dark:bg-red-950/95 border-destructive/20" 
               : mantenimientoProximo 
-                ? "bg-amber-50 dark:bg-amber-950/20 border-amber-200 dark:border-amber-800"
-                : "bg-background border-border"
+                ? "bg-amber-50/95 dark:bg-amber-950/95 border-amber-200 dark:border-amber-800"
+                : "bg-background/95 border-border"
         )}>
           <DialogHeader>
             <div className="flex items-start justify-between gap-2 sm:gap-4">
