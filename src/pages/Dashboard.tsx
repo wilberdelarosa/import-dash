@@ -1,10 +1,13 @@
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect } from 'react';
 import { Layout } from '@/components/Layout';
 import { Navigation } from '@/components/Navigation';
 import { useSupabaseDataContext } from '@/context/SupabaseDataContext';
 import { useDeviceDetection } from '@/hooks/useDeviceDetection';
+import { useUserRoles } from '@/hooks/useUserRoles';
 import { ResponsiveWrapper } from '@/components/mobile/ResponsiveWrapper';
 import { DashboardMobile } from '@/pages/mobile/DashboardMobile';
+import { MechanicDashboard } from '@/pages/mobile/MechanicDashboard';
+import { SupervisorDashboard } from '@/pages/mobile/SupervisorDashboard';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
@@ -44,9 +47,19 @@ export default function Dashboard() {
   const { data, loading } = useSupabaseDataContext();
   const navigate = useNavigate();
   const { isMobile } = useDeviceDetection();
+  const { isMechanic, isSupervisor, loading: loadingRoles } = useUserRoles();
   const [fichaSeleccionada, setFichaSeleccionada] = useState<string | null>(null);
   const [dialogOpen, setDialogOpen] = useState(false);
   const [novedadesExpanded, setNovedadesExpanded] = useState(false);
+
+  // Si es mecánico o supervisor, mostrar su dashboard específico
+  if (!loadingRoles && isMechanic) {
+    return <MechanicDashboard />;
+  }
+
+  if (!loadingRoles && isSupervisor) {
+    return <SupervisorDashboard />;
+  }
 
   // Memoizar estadísticas para evitar recálculos en cada render
   const estadisticas = useMemo(() => {

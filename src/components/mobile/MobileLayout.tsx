@@ -40,6 +40,7 @@ import {
   Info,
   X,
   CheckCheck,
+  Eye,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -81,6 +82,15 @@ const mechanicBottomNavItems = [
   { path: '/inventario', icon: Package, label: 'Partes' },
 ];
 
+// NAVEGACIÓN BOTTOM BAR PARA SUPERVISOR - Vista gerencial
+const supervisorBottomNavItems = [
+  { path: '/supervisor', icon: LayoutDashboard, label: 'Panel' },
+  { path: '/mantenimiento', icon: Wrench, label: 'Mant.' },
+  { path: '/supervisor/reportes', icon: FileText, label: 'Reportes' },
+  { path: '/historial', icon: History, label: 'Historial' },
+  { path: '/notificaciones', icon: Bell, label: 'Alertas' },
+];
+
 // MENÚ LATERAL PARA MECÁNICO
 const mechanicSideMenuSections = [
   {
@@ -97,6 +107,32 @@ const mechanicSideMenuSections = [
     items: [
       { path: '/equipos', icon: Truck, label: 'Ver Equipos' },
       { path: '/inventario', icon: Package, label: 'Partes/Inventario' },
+    ],
+  },
+];
+
+// MENÚ LATERAL PARA SUPERVISOR - Vista gerencial con solo lectura
+const supervisorSideMenuSections = [
+  {
+    title: 'Panel de Control',
+    items: [
+      { path: '/supervisor', icon: LayoutDashboard, label: 'Mi Dashboard' },
+      { path: '/supervisor/reportes', icon: FileText, label: 'Reportes Mecánicos' },
+    ],
+  },
+  {
+    title: 'Consulta',
+    items: [
+      { path: '/equipos', icon: Truck, label: 'Ver Equipos' },
+      { path: '/mantenimiento', icon: Wrench, label: 'Mantenimientos' },
+      { path: '/inventario', icon: Package, label: 'Inventario' },
+      { path: '/historial', icon: History, label: 'Historial' },
+    ],
+  },
+  {
+    title: 'Alertas',
+    items: [
+      { path: '/notificaciones', icon: Bell, label: 'Notificaciones' },
     ],
   },
 ];
@@ -195,14 +231,20 @@ export function MobileLayout({
   const roleBadge = getRoleBadge();
 
   // Seleccionar navegación según el rol
-  const activeBottomNavItems = isMechanic ? mechanicBottomNavItems : bottomNavItems;
+  const activeBottomNavItems = isMechanic 
+    ? mechanicBottomNavItems 
+    : isSupervisor 
+      ? supervisorBottomNavItems 
+      : bottomNavItems;
   
   // Agregar sección admin al menú si el usuario es admin
   const activeSideMenuSections = isMechanic 
     ? mechanicSideMenuSections 
-    : isAdmin 
-      ? [...sideMenuSections, adminMenuSection]
-      : sideMenuSections;
+    : isSupervisor
+      ? supervisorSideMenuSections
+      : isAdmin 
+        ? [...sideMenuSections, adminMenuSection]
+        : sideMenuSections;
 
   const getIconoNivel = (nivel: string) => {
     switch (nivel) {
