@@ -8,6 +8,8 @@ import { ResponsiveWrapper } from '@/components/mobile/ResponsiveWrapper';
 import { DashboardMobile } from '@/pages/mobile/DashboardMobile';
 import { MechanicDashboard } from '@/pages/mobile/MechanicDashboard';
 import { SupervisorDashboard } from '@/pages/mobile/SupervisorDashboard';
+import { MechanicDesktop } from '@/pages/MechanicDesktop';
+import { SupervisorDesktop } from '@/pages/SupervisorDesktop';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
@@ -127,12 +129,13 @@ export default function Dashboard() {
   };
 
   // Si es mecánico o supervisor, mostrar su dashboard específico (después de todos los hooks)
+  // En móvil usa la versión mobile, en desktop usa la versión desktop
   if (!loadingRoles && isMechanic) {
-    return <MechanicDashboard />;
+    return isMobile ? <MechanicDashboard /> : <MechanicDesktop />;
   }
 
   if (!loadingRoles && isSupervisor) {
-    return <SupervisorDashboard />;
+    return isMobile ? <SupervisorDashboard /> : <SupervisorDesktop />;
   }
 
   if (loading) {
