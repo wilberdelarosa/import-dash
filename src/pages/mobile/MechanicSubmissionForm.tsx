@@ -253,8 +253,8 @@ export function MechanicSubmissionForm() {
   };
 
   return (
-    <MobileLayout title="Reportar Trabajo" showBottomNav={false}>
-      <div className="space-y-3 pb-24">
+    <MobileLayout title="Reportar Trabajo" showBottomNav={true}>
+      <div className="space-y-3 pb-32">
         {/* Equipo seleccionado */}
         {selectedEquipo ? (
           <MobileCard className="p-3 border-primary/20 bg-primary/5">
@@ -491,8 +491,8 @@ export function MechanicSubmissionForm() {
         </div>
       </div>
 
-      {/* Botón de enviar (sticky) */}
-      <div className="fixed bottom-0 left-0 right-0 p-3 bg-background border-t safe-area-pb">
+      {/* Botón de enviar (sticky, encima del bottom nav) */}
+      <div className="fixed bottom-16 left-0 right-0 p-3 bg-background/95 backdrop-blur-sm border-t z-40">
         <Button
           className="w-full h-11 text-sm gap-2"
           onClick={handleSubmit}
