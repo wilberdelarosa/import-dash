@@ -1,5 +1,5 @@
 import { Link, useLocation } from 'react-router-dom';
-import { Home, Truck, Calendar, Wrench, MessageSquare, History, Bell, LucideIcon } from 'lucide-react';
+import { Home, Truck, Calendar, Wrench, MessageSquare, History, Bell, LucideIcon, FileText, Eye, ClipboardList } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useUserRoles } from '@/hooks/useUserRoles';
 import { Badge } from '@/components/ui/badge';
@@ -14,7 +14,7 @@ interface NavItem {
 
 export default function BottomNav() {
   const location = useLocation();
-  const { isAdmin, isSupervisor } = useUserRoles();
+  const { isAdmin, isSupervisor, isMechanic } = useUserRoles();
   const { notificaciones } = useNotificaciones();
   
   const unreadCount = notificaciones.filter(n => !n.leida).length;
@@ -33,11 +33,21 @@ export default function BottomNav() {
     { to: '/asistente', label: 'IA', icon: MessageSquare },
   ];
 
-  // Items para supervisor - incluye historial y notificaciones
+  // Items para supervisor - dashboard supervisor, reportes, historial, alertas
   const supervisorItems: NavItem[] = [
-    ...baseItems,
+    { to: '/supervisor', label: 'Panel', icon: Eye },
+    { to: '/mantenimiento', label: 'Mant.', icon: Calendar },
+    { to: '/supervisor/reportes', label: 'Reportes', icon: FileText },
     { to: '/historial', label: 'Historial', icon: History },
     { to: '/notificaciones', label: 'Alertas', icon: Bell, badge: unreadCount },
+  ];
+
+  // Items para mecánico
+  const mechanicItems: NavItem[] = [
+    { to: '/mechanic', label: 'Panel', icon: Home },
+    { to: '/mechanic/pendientes', label: 'Pendientes', icon: ClipboardList },
+    { to: '/mechanic/reportar', label: 'Reportar', icon: FileText },
+    { to: '/mechanic/historial', label: 'Historial', icon: History },
   ];
 
   // Items para usuario normal
@@ -47,7 +57,13 @@ export default function BottomNav() {
   ];
 
   // Seleccionar items según rol
-  const items = isAdmin ? adminItems : isSupervisor ? supervisorItems : userItems;
+  const items = isAdmin 
+    ? adminItems 
+    : isSupervisor 
+    ? supervisorItems 
+    : isMechanic 
+    ? mechanicItems 
+    : userItems;
 
   return (
     <nav className="fixed bottom-0 left-0 right-0 z-50 bg-card/98 backdrop-blur-xl border-t border-border/60 sm:hidden shadow-[0_-4px_20px_rgba(0,0,0,0.08)] dark:shadow-[0_-4px_20px_rgba(0,0,0,0.3)]">
