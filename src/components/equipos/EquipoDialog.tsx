@@ -59,7 +59,7 @@ export function EquipoDialog({
     modelo: equipoData?.modelo || '',
     numeroSerie: equipoData?.numeroSerie || '',
     placa: equipoData?.placa || '',
-    categoria: equipoData?.categoria || '',
+    categoria: equipoData?.categoria || undefined,
     empresa: equipoData?.empresa || 'ALITO EIRL' as const,
     activo: equipoData?.activo ?? true,
     motivoInactividad: equipoData?.motivoInactividad || '',
@@ -75,7 +75,7 @@ export function EquipoDialog({
         modelo: data.modelo || '',
         numeroSerie: data.numeroSerie || '',
         placa: data.placa || '',
-        categoria: data.categoria || '',
+        categoria: data.categoria || undefined,
         empresa: data.empresa || 'ALITO EIRL',
         activo: data.activo ?? true,
         motivoInactividad: data.motivoInactividad || '',
@@ -104,7 +104,7 @@ export function EquipoDialog({
   const handleSave = async () => {
     // Si está vendido, forzar inactivo
     const finalActivo = isVendido ? false : formData.activo;
-    const finalMotivo = isVendido 
+    const finalMotivo = isVendido
       ? (formData.motivoInactividad || 'Equipo vendido')
       : (formData.activo ? null : formData.motivoInactividad.trim() || null);
 
@@ -232,8 +232,8 @@ export function EquipoDialog({
             <Alert variant="destructive" className="md:col-span-2">
               <AlertTriangle className="h-4 w-4" />
               <AlertDescription>
-                Los equipos marcados como <strong>VENDIDO</strong> se desactivan automáticamente 
-                y no aparecerán en el sistema (mantenimientos, reportes, etc.) a menos que 
+                Los equipos marcados como <strong>VENDIDO</strong> se desactivan automáticamente
+                y no aparecerán en el sistema (mantenimientos, reportes, etc.) a menos que
                 se filtren específicamente en la página de Equipos.
               </AlertDescription>
             </Alert>

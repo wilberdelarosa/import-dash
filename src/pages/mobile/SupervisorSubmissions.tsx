@@ -46,9 +46,21 @@ export function SupervisorSubmissions() {
   const [search, setSearch] = useState('');
   const [selectedSubmission, setSelectedSubmission] = useState<Submission | null>(null);
 
+  const formatReading = (value: unknown) => {
+    const numberValue = typeof value === 'number' ? value : Number(value);
+    if (!Number.isFinite(numberValue)) return '0';
+
+    const abs = Math.abs(numberValue);
+    const rounded = abs >= 100 ? Math.round(numberValue) : Math.round(numberValue * 10) / 10;
+    return rounded.toLocaleString('es-ES', {
+      minimumFractionDigits: rounded % 1 === 0 ? 0 : 1,
+      maximumFractionDigits: rounded % 1 === 0 ? 0 : 1,
+    });
+  };
+
   const filteredSubmissions = useMemo(() => {
     let result = submissions;
-    
+
     if (statusFilter !== 'all') {
       if (statusFilter === 'approved') {
         result = result.filter(s => s.status === 'approved' || s.status === 'integrated');
@@ -124,23 +136,23 @@ export function SupervisorSubmissions() {
           </div>
         </MobileCard>
 
-        {/* Stats rápidos */}
-        <div className="grid grid-cols-4 gap-1.5">
+        {/* Stats rápidos - Grid responsive */}
+        <div className="mobile-stats-grid">
           <MobileCard className="p-2 text-center border-amber-500/20 bg-amber-500/5">
-            <p className="text-base font-bold">{stats.pending}</p>
-            <p className="text-[8px] text-muted-foreground uppercase">Pendientes</p>
+            <p className="fluid-kpi font-bold tabular-nums">{stats.pending}</p>
+            <p className="fluid-text-sm text-muted-foreground uppercase">Pendientes</p>
           </MobileCard>
           <MobileCard className="p-2 text-center border-green-500/20 bg-green-500/5">
-            <p className="text-base font-bold">{stats.approved}</p>
-            <p className="text-[8px] text-muted-foreground uppercase">Aprobados</p>
+            <p className="fluid-kpi font-bold tabular-nums">{stats.approved}</p>
+            <p className="fluid-text-sm text-muted-foreground uppercase">Aprobados</p>
           </MobileCard>
           <MobileCard className="p-2 text-center border-destructive/20 bg-destructive/5">
-            <p className="text-base font-bold">{stats.rejected}</p>
-            <p className="text-[8px] text-muted-foreground uppercase">Rechazados</p>
+            <p className="fluid-kpi font-bold tabular-nums">{stats.rejected}</p>
+            <p className="fluid-text-sm text-muted-foreground uppercase">Rechazados</p>
           </MobileCard>
           <MobileCard className="p-2 text-center border-primary/20">
-            <p className="text-base font-bold">{stats.total}</p>
-            <p className="text-[8px] text-muted-foreground uppercase">Total</p>
+            <p className="fluid-kpi font-bold tabular-nums">{stats.total}</p>
+            <p className="fluid-text-sm text-muted-foreground uppercase">Total</p>
           </MobileCard>
         </div>
 
@@ -181,54 +193,63 @@ export function SupervisorSubmissions() {
             </p>
           </MobileCard>
         ) : (
-          <div className="space-y-2">
-            {filteredSubmissions.map((sub, index) => (
-              <MobileCard
-                key={sub.id}
-                className={cn(
-                  "p-3 transition-all cursor-pointer hover:bg-muted/50 animate-in slide-in-from-bottom-2",
-                  sub.status === 'pending' && "border-l-2 border-l-amber-500"
-                )}
-                style={{ animationDelay: `${index * 0.03}s` }}
-                onClick={() => setSelectedSubmission(sub)}
-              >
-                <div className="flex items-start justify-between gap-2">
-                  <div className="flex-1 min-w-0">
-                    <div className="flex items-center gap-2">
-                      <Truck className="h-4 w-4 text-muted-foreground shrink-0" />
-                      <span className="text-sm font-medium truncate">
-                        {sub.equipo?.ficha} - {sub.equipo?.nombre}
-                      </span>
+          <div 
+            className="h-list-expanded overflow-hidden"
+            style={{ height: 'clamp(200px, 45svh, 400px)' }}
+          >
+            <div className="h-full overflow-y-auto space-y-2">
+              {filteredSubmissions.map((sub, index) => (
+                <MobileCard
+                  key={sub.id}
+                  className={cn(
+                    "h-[88px] p-3 overflow-hidden transition-all cursor-pointer hover:bg-muted/50 animate-in slide-in-from-bottom-2",
+                    sub.status === 'pending' && "border-l-2 border-l-amber-500"
+                  )}
+                  style={{ animationDelay: `${index * 0.03}s` }}
+                  onClick={() => setSelectedSubmission(sub)}
+                >
+                  <div className="flex items-start justify-between gap-2 h-full">
+                    <div className="flex-1 min-w-0 overflow-hidden">
+                      <div className="flex items-start gap-2">
+                        <Truck className="h-4 w-4 text-muted-foreground shrink-0 mt-0.5" />
+                        <div className="min-w-0 flex-1">
+                          <span className="text-sm font-medium line-clamp-1">
+                            {sub.equipo?.ficha} - {sub.equipo?.nombre}
+                          </span>
+                        </div>
+                      </div>
+                      <p className="text-xs text-muted-foreground line-clamp-1 mt-1">
+                        {sub.descripcion_trabajo || sub.tipo_mantenimiento || 'Sin descripción'}
+                      </p>
+                      <div className="flex flex-wrap items-center gap-2 mt-1.5 text-[10px] text-muted-foreground">
+                        <span className="flex items-center gap-1 shrink-0">
+                          <Calendar className="h-3 w-3" />
+                          {format(new Date(sub.fecha_mantenimiento), 'dd MMM', { locale: es })}
+                        </span>
+                        <span className="flex items-center gap-1 shrink-0">
+                          <Gauge className="h-3 w-3" />
+                          <span className="tabular-nums">{formatReading(sub.horas_km_actuales)}h</span>
+                        </span>
+                      </div>
                     </div>
-                    <p className="text-xs text-muted-foreground truncate mt-1">
-                      {sub.descripcion_trabajo || sub.tipo_mantenimiento || 'Sin descripción'}
-                    </p>
-                    <div className="flex items-center gap-2 mt-1 text-[10px] text-muted-foreground">
-                      <span className="flex items-center gap-1">
-                        <Calendar className="h-3 w-3" />
-                        {format(new Date(sub.fecha_mantenimiento), 'dd MMM', { locale: es })}
-                      </span>
-                      <span className="flex items-center gap-1">
-                        <Gauge className="h-3 w-3" />
-                        {sub.horas_km_actuales.toLocaleString()}h
-                      </span>
+                    <div className="shrink-0">
+                      {getStatusBadge(sub.status)}
                     </div>
                   </div>
-                  {getStatusBadge(sub.status)}
-                </div>
-              </MobileCard>
-            ))}
+                </MobileCard>
+              ))}
+            </div>
           </div>
         )}
       </div>
 
-      {/* Dialog de detalle */}
+      {/* Dialog de detalle - Responsive */}
       <Dialog open={!!selectedSubmission} onOpenChange={() => setSelectedSubmission(null)}>
-        <DialogContent className="max-w-md max-h-[85vh] overflow-y-auto">
+        <DialogContent className="max-w-[95vw] sm:max-w-md max-h-[85svh] overflow-y-auto p-4 sm:p-6">
           <DialogHeader>
-            <DialogTitle className="flex items-center gap-2">
-              <FileText className="h-5 w-5 text-primary" />
-              Detalle del Reporte
+            <DialogTitle className="flex items-center gap-2 text-base">
+              <FileText className="h-5 w-5 text-primary shrink-0" />
+              <span>Detalle del Reporte</span>
             </DialogTitle>
           </DialogHeader>
 
@@ -236,11 +257,11 @@ export function SupervisorSubmissions() {
             <div className="space-y-4">
               {/* Equipo */}
               <div className="p-3 rounded-lg bg-accent/50 border">
-                <div className="flex items-center gap-3">
-                  <Truck className="h-5 w-5 text-primary" />
-                  <div>
-                    <p className="font-semibold text-sm">{selectedSubmission.equipo?.nombre}</p>
-                    <p className="text-xs text-muted-foreground">
+                <div className="flex items-start gap-3">
+                  <Truck className="h-5 w-5 text-primary shrink-0 mt-0.5" />
+                  <div className="min-w-0">
+                    <p className="font-semibold text-sm break-words">{selectedSubmission.equipo?.nombre}</p>
+                    <p className="text-xs text-muted-foreground break-words">
                       {selectedSubmission.equipo?.ficha} • {selectedSubmission.equipo?.marca} {selectedSubmission.equipo?.modelo}
                     </p>
                   </div>
@@ -248,26 +269,26 @@ export function SupervisorSubmissions() {
               </div>
 
               {/* Estado */}
-              <div className="flex items-center justify-between">
+              <div className="flex items-center justify-between flex-wrap gap-2">
                 <span className="text-sm text-muted-foreground">Estado:</span>
                 {getStatusBadge(selectedSubmission.status)}
               </div>
 
-              {/* Detalles */}
+              {/* Detalles - Grid responsive */}
               <div className="grid grid-cols-2 gap-3">
                 <div>
                   <p className="text-xs text-muted-foreground">Fecha</p>
                   <p className="text-sm font-medium">
-                    {format(new Date(selectedSubmission.fecha_mantenimiento), 'dd MMMM yyyy', { locale: es })}
+                    {format(new Date(selectedSubmission.fecha_mantenimiento), 'dd MMM yyyy', { locale: es })}
                   </p>
                 </div>
                 <div>
                   <p className="text-xs text-muted-foreground">Horas/KM</p>
-                  <p className="text-sm font-medium">{selectedSubmission.horas_km_actuales.toLocaleString()}</p>
+                  <p className="text-sm font-medium tabular-nums">{formatReading(selectedSubmission.horas_km_actuales)}</p>
                 </div>
                 <div className="col-span-2">
                   <p className="text-xs text-muted-foreground">Tipo</p>
-                  <p className="text-sm font-medium">{selectedSubmission.tipo_mantenimiento || '-'}</p>
+                  <p className="text-sm font-medium break-words">{selectedSubmission.tipo_mantenimiento || '-'}</p>
                 </div>
               </div>
 
@@ -288,7 +309,7 @@ export function SupervisorSubmissions() {
               )}
 
               {/* Partes usadas */}
-              {selectedSubmission.partes_usadas && selectedSubmission.partes_usadas.length > 0 && (
+              {Array.isArray(selectedSubmission.partes_usadas) && selectedSubmission.partes_usadas.length > 0 && (
                 <div>
                   <p className="text-xs text-muted-foreground mb-2 flex items-center gap-1">
                     <Package className="h-3 w-3" />
@@ -297,8 +318,8 @@ export function SupervisorSubmissions() {
                   <div className="space-y-1">
                     {selectedSubmission.partes_usadas.map((part, i) => (
                       <div key={i} className="flex items-center justify-between text-sm bg-muted/30 px-2 py-1 rounded">
-                        <span>{part.nombre}</span>
-                        <span className="text-muted-foreground">x{part.cantidad}</span>
+                        <span className="break-words">{part.nombre}</span>
+                        <span className="text-muted-foreground tabular-nums shrink-0 ml-2">x{part.cantidad}</span>
                       </div>
                     ))}
                   </div>

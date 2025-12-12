@@ -70,7 +70,7 @@ export function ReportesMobile({
         // Given the user wants to "fix problems", I should probably be careful.
         // But without changing the parent component, I can't add fields.
         // I will assume the passed objects have it (maybe joined in the backend).
-        return mantenimientosVencidos.filter((m: any) => m.categoria === selectedCategory);
+        return mantenimientosVencidos.filter((m) => (m as MantenimientoProgramado & { categoria?: string }).categoria === selectedCategory);
     }, [mantenimientosVencidos, selectedCategory]);
 
     return (
@@ -83,7 +83,7 @@ export function ReportesMobile({
                             <Filter className="h-5 w-5" />
                         </Button>
                     </SheetTrigger>
-                    <SheetContent side="bottom" className="h-[400px] rounded-t-[2rem] border-t-0 bg-background/95 backdrop-blur-xl">
+                    <SheetContent side="bottom" className="h-auto max-h-[85svh] overflow-y-auto pb-safe rounded-t-[2rem] border-t-0 bg-background/95 backdrop-blur-xl">
                         <div className="mx-auto mt-2 h-1 w-12 rounded-full bg-muted" />
                         <SheetHeader className="mt-4">
                             <SheetTitle className="text-center text-xl font-bold bg-gradient-premium bg-clip-text text-transparent">
@@ -125,35 +125,35 @@ export function ReportesMobile({
                 </Sheet>
             }
         >
-            <div className="space-y-6 pb-24">
-                {/* Resumen Cards Premium con Glassmorphism */}
-                <div className="grid grid-cols-2 gap-3">
-                    <MobileCard variant="glass" className="p-4 border-primary/20 shadow-premium relative overflow-hidden group animate-slide-in-up" style={{ animationDelay: '0s' } as React.CSSProperties}>
+            <div className="space-y-6 pb-20">
+                {/* Resumen Cards Premium - Grid Responsive */}
+                <div className="mobile-stats-grid">
+                    <MobileCard variant="glass" className="p-3 border-primary/20 shadow-premium relative overflow-hidden group animate-slide-in-up" style={{ animationDelay: '0s' } as React.CSSProperties}>
                         <div className="absolute inset-0 bg-primary/5 group-hover:bg-primary/10 transition-colors" />
                         <div className="text-center relative z-10">
-                            <p className="text-3xl font-bold text-primary mb-1">{stats.total}</p>
-                            <p className="text-xs uppercase tracking-wider text-muted-foreground font-medium">Total Equipos</p>
+                            <p className="fluid-kpi font-bold text-primary mb-0.5 tabular-nums">{stats.total}</p>
+                            <p className="fluid-text-sm uppercase tracking-wider text-muted-foreground font-medium">Total</p>
                         </div>
                     </MobileCard>
-                    <MobileCard variant="glass" className="p-4 border-green-500/20 shadow-premium relative overflow-hidden group animate-slide-in-up" style={{ animationDelay: '0.1s' } as React.CSSProperties}>
+                    <MobileCard variant="glass" className="p-3 border-green-500/20 shadow-premium relative overflow-hidden group animate-slide-in-up" style={{ animationDelay: '0.1s' } as React.CSSProperties}>
                         <div className="absolute inset-0 bg-green-500/5 group-hover:bg-green-500/10 transition-colors" />
                         <div className="text-center relative z-10">
-                            <p className="text-3xl font-bold text-green-600 mb-1">{stats.activos}</p>
-                            <p className="text-xs uppercase tracking-wider text-green-600/80 font-medium">Activos</p>
+                            <p className="fluid-kpi font-bold text-green-600 mb-0.5 tabular-nums">{stats.activos}</p>
+                            <p className="fluid-text-sm uppercase tracking-wider text-green-600/80 font-medium">Activos</p>
                         </div>
                     </MobileCard>
-                    <MobileCard variant="glass" className="p-4 border-red-500/20 shadow-premium relative overflow-hidden group animate-slide-in-up" style={{ animationDelay: '0.2s' } as React.CSSProperties}>
+                    <MobileCard variant="glass" className="p-3 border-red-500/20 shadow-premium relative overflow-hidden group animate-slide-in-up" style={{ animationDelay: '0.2s' } as React.CSSProperties}>
                         <div className="absolute inset-0 bg-red-500/5 group-hover:bg-red-500/10 transition-colors" />
                         <div className="text-center relative z-10">
-                            <p className="text-3xl font-bold text-red-600 mb-1">{stats.vencidos}</p>
-                            <p className="text-xs uppercase tracking-wider text-red-600/80 font-medium">Vencidos</p>
+                            <p className="fluid-kpi font-bold text-red-600 mb-0.5 tabular-nums">{stats.vencidos}</p>
+                            <p className="fluid-text-sm uppercase tracking-wider text-red-600/80 font-medium">Vencidos</p>
                         </div>
                     </MobileCard>
-                    <MobileCard variant="glass" className="p-4 border-amber-500/20 shadow-premium relative overflow-hidden group animate-slide-in-up" style={{ animationDelay: '0.3s' } as React.CSSProperties}>
+                    <MobileCard variant="glass" className="p-3 border-amber-500/20 shadow-premium relative overflow-hidden group animate-slide-in-up" style={{ animationDelay: '0.3s' } as React.CSSProperties}>
                         <div className="absolute inset-0 bg-amber-500/5 group-hover:bg-amber-500/10 transition-colors" />
                         <div className="text-center relative z-10">
-                            <p className="text-3xl font-bold text-amber-600 mb-1">{stats.porVencer}</p>
-                            <p className="text-xs uppercase tracking-wider text-amber-600/80 font-medium">Por Vencer</p>
+                            <p className="fluid-kpi font-bold text-amber-600 mb-0.5 tabular-nums">{stats.porVencer}</p>
+                            <p className="fluid-text-sm uppercase tracking-wider text-amber-600/80 font-medium">Por Vencer</p>
                         </div>
                     </MobileCard>
                 </div>

@@ -130,12 +130,24 @@ export default function Dashboard() {
 
   // Si es mecánico o supervisor, mostrar su dashboard específico (después de todos los hooks)
   // En móvil usa la versión mobile, en desktop usa la versión desktop
-  if (!loadingRoles && isMechanic) {
-    return isMobile ? <MechanicDashboard /> : <MechanicDesktop />;
-  }
+  // Usar useMemo para evitar glitches de navegación
+  const roleBasedContent = useMemo(() => {
+    if (loadingRoles) return null;
+    
+    if (isMechanic) {
+      return isMobile ? <MechanicDashboard /> : <MechanicDesktop />;
+    }
+    
+    if (isSupervisor) {
+      return isMobile ? <SupervisorDashboard /> : <SupervisorDesktop />;
+    }
+    
+    return null;
+  }, [loadingRoles, isMechanic, isSupervisor, isMobile]);
 
-  if (!loadingRoles && isSupervisor) {
-    return isMobile ? <SupervisorDashboard /> : <SupervisorDesktop />;
+  // Si hay contenido basado en rol, mostrarlo
+  if (roleBasedContent) {
+    return roleBasedContent;
   }
 
   if (loading) {

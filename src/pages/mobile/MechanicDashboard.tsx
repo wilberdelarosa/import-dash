@@ -158,14 +158,23 @@ export function MechanicDashboard() {
             </div>
           ) : (
             <div className="space-y-2">
-              {recentSubmissions.map((sub) => (
+              {recentSubmissions.map((sub, index) => (
                 <div
                   key={sub.id}
-                  className="flex items-center justify-between p-2 rounded-lg bg-muted/30 cursor-pointer hover:bg-muted/50 transition-colors"
+                  className={cn(
+                    "flex items-center justify-between p-2.5 rounded-lg border cursor-pointer transition-all",
+                    sub.status === 'pending'
+                      ? "border-amber-500/30 bg-amber-500/5 active:bg-amber-500/10"
+                      : sub.status === 'approved' || sub.status === 'integrated'
+                        ? "border-green-500/30 bg-green-500/5 active:bg-green-500/10"
+                        : "border-destructive/30 bg-destructive/5 active:bg-destructive/10",
+                    "animate-in slide-in-from-left-2"
+                  )}
+                  style={{ animationDelay: `${index * 0.03}s` }}
                   onClick={() => navigate(`/mechanic/historial/${sub.id}`)}
                 >
                   <div className="flex-1 min-w-0">
-                    <p className="text-xs font-medium truncate">
+                    <p className="text-sm font-medium truncate">
                       {sub.equipo?.ficha} - {sub.equipo?.nombre}
                     </p>
                     <p className="text-[10px] text-muted-foreground">

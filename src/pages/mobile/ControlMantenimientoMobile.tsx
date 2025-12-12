@@ -27,11 +27,22 @@ import { formatRemainingLabel, getRemainingVariant } from '@/lib/maintenanceUtil
 import { useToast } from '@/hooks/use-toast';
 import { useCaterpillarData } from '@/hooks/useCaterpillarData';
 
+interface DatosMantenimiento {
+    tipo?: string;
+    fecha: string;
+    horasRealizadas?: number;
+    horasKm: number;
+    observaciones?: string;
+    unidad?: 'horas' | 'km';
+    notas?: string;
+    repuestos?: { id: number; cantidad: number }[];
+}
+
 interface ControlMantenimientoMobileProps {
     equipos: MantenimientoProgramado[];
     catalogoEquipos: Equipo[];
     onUpdateLectura: (id: number, lectura: number, fecha: string, notas?: string) => Promise<void>;
-    onRegistrarMantenimiento: (id: number, datos: any) => Promise<void>;
+    onRegistrarMantenimiento: (id: number, datos: DatosMantenimiento) => Promise<void>;
     loading?: boolean;
 }
 
@@ -192,6 +203,7 @@ export function ControlMantenimientoMobile({
         setRegistering(true);
         try {
             await onRegistrarMantenimiento(selectedEquipo.id, {
+                tipo: selectedEquipo.tipoMantenimiento,
                 fecha: fechaRegistro,
                 horasKm: Number(lecturaActual), // Usar la lectura actual o la que se haya modificado
                 observaciones: observacionesRegistro,
@@ -339,7 +351,10 @@ export function ControlMantenimientoMobile({
 
                                         <div className="flex justify-between items-center py-2">
                                             <span className="text-xs text-muted-foreground">Estado</span>
-                                            <Badge variant={getRemainingVariant(selectedEquipo.horasKmRestante)}>
+                                            <Badge
+                                                variant={getRemainingVariant(selectedEquipo.horasKmRestante)}
+                                                className="h-5 px-2 py-0.5 text-[10px] leading-none font-medium tabular-nums"
+                                            >
                                                 {formatRemainingLabel(
                                                     selectedEquipo.horasKmRestante,
                                                     selectedEquipo.tipoMantenimiento.toLowerCase().includes('km') ? 'km' : 'horas'
@@ -364,12 +379,14 @@ export function ControlMantenimientoMobile({
                                             placeholder="0"
                                         />
                                         <div className="flex justify-between text-xs text-muted-foreground px-1">
-                                            <span>Anterior: {selectedEquipo.horasKmActuales}</span>
+                                            <span className="tabular-nums">Anterior: {selectedEquipo.horasKmActuales.toLocaleString('es-ES')}</span>
                                             <span className={cn(
                                                 "font-medium",
                                                 Number(lecturaActual) < selectedEquipo.horasKmActuales && "text-destructive"
                                             )}>
-                                                Diferencia: {Number(lecturaActual || 0) - selectedEquipo.horasKmActuales}
+                                                <span className="tabular-nums">
+                                                    Diferencia: {(Number(lecturaActual || 0) - selectedEquipo.horasKmActuales).toLocaleString('es-ES')}
+                                                </span>
                                             </span>
                                         </div>
                                     </div>

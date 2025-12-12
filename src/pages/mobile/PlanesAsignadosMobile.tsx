@@ -150,7 +150,7 @@ export function PlanesAsignadosMobile() {
 
   if (loading) {
     return (
-      <div className="flex h-screen items-center justify-center bg-background">
+      <div className="flex min-h-[100dvh] items-center justify-center bg-background">
         <Loader2 className="h-8 w-8 animate-spin text-primary" />
       </div>
     );
@@ -166,7 +166,8 @@ export function PlanesAsignadosMobile() {
               <Filter className="h-5 w-5" />
             </Button>
           </SheetTrigger>
-          <SheetContent side="bottom" className="h-[500px] overflow-y-auto">
+          <SheetContent side="bottom" className="h-auto max-h-[85svh] overflow-y-auto pb-safe rounded-t-[2rem]">
+            <div className="mx-auto mt-2 h-1 w-12 rounded-full bg-muted mb-4" />
             <SheetHeader>
               <SheetTitle>Filtrar planes</SheetTitle>
               <SheetDescription>Filtra por estado, técnico o prioridad</SheetDescription>
@@ -237,7 +238,7 @@ export function PlanesAsignadosMobile() {
         </Sheet>
       }
     >
-      <div className="space-y-4">
+      <div className="space-y-4 pb-20">
         {/* Estadísticas */}
         <div className="grid grid-cols-4 gap-2">
           <div className="rounded-lg border bg-card p-2 text-center">

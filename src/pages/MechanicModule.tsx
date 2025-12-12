@@ -1,8 +1,10 @@
 /**
  * Mechanic Module Router
  * Detecta dispositivo y muestra versión mobile o desktop
+ * Optimizado para evitar glitches de navegación
  */
 import { useDeviceDetection } from '@/hooks/useDeviceDetection';
+import { useMemo } from 'react';
 
 // Mobile versions
 import { MechanicDashboard } from '@/pages/mobile/MechanicDashboard';
@@ -19,23 +21,32 @@ import { MechanicHistoryDesktop } from '@/pages/MechanicHistoryDesktop';
 // Dashboard - detects device
 export function MechanicDashboardRouter() {
   const { isMobile } = useDeviceDetection();
-  return isMobile ? <MechanicDashboard /> : <MechanicDesktop />;
+  // Memoizar para evitar re-renders innecesarios
+  return useMemo(() => (
+    isMobile ? <MechanicDashboard /> : <MechanicDesktop />
+  ), [isMobile]);
 }
 
 // Pending List - detects device
 export function MechanicPendingListRouter() {
   const { isMobile } = useDeviceDetection();
-  return isMobile ? <MechanicPendingList /> : <MechanicPendingListDesktop />;
+  return useMemo(() => (
+    isMobile ? <MechanicPendingList /> : <MechanicPendingListDesktop />
+  ), [isMobile]);
 }
 
 // Submission Form - detects device
 export function MechanicSubmissionFormRouter() {
   const { isMobile } = useDeviceDetection();
-  return isMobile ? <MechanicSubmissionForm /> : <MechanicSubmissionFormDesktop />;
+  return useMemo(() => (
+    isMobile ? <MechanicSubmissionForm /> : <MechanicSubmissionFormDesktop />
+  ), [isMobile]);
 }
 
 // History - detects device
 export function MechanicHistoryRouter() {
   const { isMobile } = useDeviceDetection();
-  return isMobile ? <MechanicHistory /> : <MechanicHistoryDesktop />;
+  return useMemo(() => (
+    isMobile ? <MechanicHistory /> : <MechanicHistoryDesktop />
+  ), [isMobile]);
 }

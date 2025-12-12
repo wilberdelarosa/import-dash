@@ -78,7 +78,8 @@ const getBreakpoints = (width: number) => ({
 });
 
 export function useDeviceDetection(): DeviceInfo {
-  const [deviceInfo, setDeviceInfo] = useState<DeviceInfo>(() => {
+  // Inicialización SÍNCRONA inmediata para evitar parpadeo/glitch
+  const getInitialState = (): DeviceInfo => {
     const width = typeof window !== 'undefined' ? window.innerWidth : 1024;
     const height = typeof window !== 'undefined' ? window.innerHeight : 768;
     const type = getDeviceType(width);
@@ -96,7 +97,9 @@ export function useDeviceDetection(): DeviceInfo {
       dimensions: { width, height },
       breakpoints: getBreakpoints(width),
     };
-  });
+  };
+
+  const [deviceInfo, setDeviceInfo] = useState<DeviceInfo>(getInitialState);
 
   const updateDeviceInfo = useCallback(() => {
     const width = window.innerWidth;
@@ -129,8 +132,8 @@ export function useDeviceDetection(): DeviceInfo {
     window.addEventListener('resize', handleResize);
     window.addEventListener('orientationchange', updateDeviceInfo);
 
-    // Actualización inicial
-    updateDeviceInfo();
+    // NO hacer updateDeviceInfo() aquí - ya tenemos el valor correcto
+    // Esto evita el glitch de doble renderizado
 
     return () => {
       clearTimeout(timeoutId);

@@ -1,14 +1,36 @@
 /* stylelint-disable-next-line at-rule-no-unknown */
-/* stylelint-disable-next-line at-rule-no-unknown */
 @tailwind base;
 /* stylelint-disable-next-line at-rule-no-unknown */
 @tailwind components;
 /* stylelint-disable-next-line at-rule-no-unknown */
 @tailwind utilities;
 
-/* Sistema de diseño para gestión de equipos. Colores profesionales verde corporativo.
-All colors MUST be HSL.
-*/
+/* ============================================
+   ALITO Design System v3.0
+   Sistema de Mantenimiento - Green Corporate Theme
+   All colors MUST use HSL format
+   ============================================ */
+
+/* 🎯 Accessibility: Respect user motion preferences */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}
+
+/* 🎨 Color scheme hint for browser chrome */
+html {
+  color-scheme: light dark;
+}
+
+html.dark {
+  color-scheme: dark;
+}
 
 @layer base {
   :root {
@@ -162,6 +184,13 @@ All colors MUST be HSL.
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
     text-rendering: optimizeLegibility;
+    /* Smooth theme transitions without FOUC */
+    transition: background-color 0.2s ease-in-out, color 0.2s ease-in-out;
+  }
+  
+  /* Prevent transitions on page load */
+  html.no-transitions * {
+    transition: none !important;
   }
 
   /* Scrollbar personalizado */
@@ -513,8 +542,9 @@ All colors MUST be HSL.
 }
 
 .dark .glass-panel {
-  background: rgba(15, 23, 42, 0.6);
-  border: 1px solid rgba(255, 255, 255, 0.1);
+  background: rgba(15, 23, 42, 0.7);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  box-shadow: 0 4px 30px rgba(0, 0, 0, 0.3);
 }
 
 /* Mobile Optimizations */
@@ -529,4 +559,270 @@ All colors MUST be HSL.
 .no-scrollbar {
   -ms-overflow-style: none;
   scrollbar-width: none;
+}
+
+/* ============================================
+   Enhanced Shimmer Effect for Loading States
+   ============================================ */
+.shimmer {
+  position: relative;
+  overflow: hidden;
+}
+
+.shimmer::after {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: linear-gradient(
+    90deg,
+    transparent 0%,
+    rgba(255, 255, 255, 0.4) 50%,
+    transparent 100%
+  );
+  animation: shimmer-slide 1.5s infinite;
+}
+
+.dark .shimmer::after {
+  background: linear-gradient(
+    90deg,
+    transparent 0%,
+    rgba(255, 255, 255, 0.1) 50%,
+    transparent 100%
+  );
+}
+
+@keyframes shimmer-slide {
+  0% {
+    transform: translateX(-100%);
+  }
+  100% {
+    transform: translateX(100%);
+  }
+}
+
+/* ============================================
+   Safe Area & Viewport Utilities
+   ============================================ */
+.min-h-screen-safe {
+  min-height: 100vh;
+  min-height: 100dvh;
+}
+
+.h-screen-safe {
+  height: 100vh;
+  height: 100dvh;
+}
+
+/* Bottom padding that accounts for nav + safe area */
+.pb-nav-safe {
+  padding-bottom: calc(4rem + env(safe-area-inset-bottom, 0px));
+}
+
+/* ============================================
+   Focus & Interaction States
+   ============================================ */
+@media (hover: hover) {
+  .hover-lift:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 8px 25px -5px rgba(0, 0, 0, 0.1);
+  }
+}
+
+/* Touch devices: no hover effects, better active states */
+@media (hover: none) {
+  .touch-active:active {
+    transform: scale(0.98);
+    opacity: 0.9;
+  }
+}
+
+/* ============================================
+   CONTAINER QUERIES - Sistema Responsive v2
+   Permite que componentes se adapten al contenedor
+   ============================================ */
+
+/* Contenedor principal para queries */
+.container-mobile {
+  container-type: inline-size;
+  container-name: mobile-content;
+}
+
+/* Contenedor de cards */
+.mobile-card-container {
+  container-type: inline-size;
+  container-name: card;
+}
+
+/* ============================================
+   RESPONSIVE GRIDS - Se adaptan al contenedor
+   ============================================ */
+
+/* Grid de stats que colapsa automáticamente */
+.mobile-stats-grid {
+  display: grid;
+  gap: 0.5rem;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+}
+
+@container mobile-content (max-width: 360px) {
+  .mobile-stats-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 0.375rem;
+  }
+}
+
+@container mobile-content (max-width: 280px) {
+  .mobile-stats-grid {
+    grid-template-columns: 1fr;
+    gap: 0.25rem;
+  }
+}
+
+/* Grid de KPIs */
+.mobile-kpi-grid {
+  display: grid;
+  gap: 0.75rem;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
+@container mobile-content (max-width: 400px) {
+  .mobile-kpi-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 0.5rem;
+  }
+}
+
+@container mobile-content (max-width: 280px) {
+  .mobile-kpi-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+/* ============================================
+   FLUID LIST ITEMS - Texto que no desborda
+   ============================================ */
+.mobile-list-item {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  min-width: 0; /* CRÍTICO para truncate */
+  width: 100%;
+  overflow: hidden;
+}
+
+.mobile-list-item > * {
+  flex-shrink: 0;
+}
+
+.mobile-list-item .content-area {
+  flex: 1;
+  min-width: 0; /* CRÍTICO para truncate */
+  overflow: hidden;
+}
+
+.mobile-list-item .content-area p,
+.mobile-list-item .content-area span,
+.mobile-list-item .content-area h3,
+.mobile-list-item .content-area h4 {
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* ============================================
+   FLUID TYPOGRAPHY - Escala con contenedor
+   ============================================ */
+@container mobile-content (max-width: 320px) {
+  .fluid-text-base {
+    font-size: 0.75rem;
+  }
+  .fluid-text-sm {
+    font-size: 0.625rem;
+  }
+  .fluid-text-lg {
+    font-size: 0.875rem;
+  }
+  .fluid-kpi {
+    font-size: 1rem;
+  }
+}
+
+@container mobile-content (min-width: 321px) and (max-width: 400px) {
+  .fluid-text-base {
+    font-size: 0.8125rem;
+  }
+  .fluid-text-sm {
+    font-size: 0.6875rem;
+  }
+  .fluid-text-lg {
+    font-size: 1rem;
+  }
+  .fluid-kpi {
+    font-size: 1.25rem;
+  }
+}
+
+@container mobile-content (min-width: 401px) {
+  .fluid-text-base {
+    font-size: 0.875rem;
+  }
+  .fluid-text-sm {
+    font-size: 0.75rem;
+  }
+  .fluid-text-lg {
+    font-size: 1.125rem;
+  }
+  .fluid-kpi {
+    font-size: 1.5rem;
+  }
+}
+
+/* ============================================
+   OVERFLOW PREVENTION - Nunca desborda
+   ============================================ */
+.no-overflow {
+  overflow: hidden;
+  max-width: 100%;
+}
+
+.no-overflow-text {
+  max-width: 100%;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* Contenedor con scroll interno */
+.scroll-container {
+  overflow: hidden;
+  max-height: clamp(150px, 25svh, 280px);
+}
+
+.scroll-container > .scroll-content {
+  height: 100%;
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+}
+
+/* ============================================
+   BADGE NUMERICO - Ancho fijo para números
+   ============================================ */
+.badge-numeric {
+  font-variant-numeric: tabular-nums;
+  min-width: 1.5rem;
+  text-align: center;
+}
+
+/* ============================================
+   MOBILE MAIN CONTAINER - Previene overflow global
+   ============================================ */
+.mobile-main-container {
+  container-type: inline-size;
+  container-name: mobile-content;
+  width: 100%;
+  max-width: 100%;
+  overflow-x: hidden;
 }

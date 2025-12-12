@@ -1,9 +1,48 @@
 <!doctype html>
-<html lang="en">
+<html lang="es">
   <head>
     <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Sistema de Gestión de Equipos</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+    <meta name="theme-color" content="#1a2e1a" media="(prefers-color-scheme: dark)" />
+    <meta name="theme-color" content="#ffffff" media="(prefers-color-scheme: light)" />
+    <title>ALITO - Sistema de Mantenimiento</title>
+    <!-- Prevent FOUC: Apply theme before render -->
+    <script>
+      (function() {
+        try {
+          const stored = localStorage.getItem('ui-theme');
+          const theme = stored || (window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light');
+          document.documentElement.classList.toggle('dark', theme === 'dark');
+          document.documentElement.style.colorScheme = theme;
+        } catch (e) {}
+      })();
+    </script>
+    <style>
+      /* Critical CSS: Prevent layout shift during load */
+      html { background-color: #ffffff; }
+      html.dark { background-color: #0f172a; }
+      #root:empty {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        min-height: 100vh;
+        min-height: 100dvh;
+      }
+      #root:empty::after {
+        content: '';
+        width: 40px;
+        height: 40px;
+        border: 3px solid #e2e8f0;
+        border-top-color: #1a5d1a;
+        border-radius: 50%;
+        animation: spinner 0.8s linear infinite;
+      }
+      html.dark #root:empty::after {
+        border-color: #334155;
+        border-top-color: #22c55e;
+      }
+      @keyframes spinner { to { transform: rotate(360deg); } }
+    </style>
     <meta name="description" content="Sistema completo para gestión de equipos, inventario y mantenimientos programados" />
     <meta name="author" content="Sistema de Equipos" />
 

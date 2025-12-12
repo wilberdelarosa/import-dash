@@ -37,7 +37,7 @@ export function SupervisorDashboard() {
   const { user } = useAuth();
   const { data } = useSupabaseDataContext();
   const { submissions, loading: loadingSubmissions } = useAdminSubmissions();
-  
+
   const equipos = data.equipos;
   const mantenimientos = data.mantenimientosProgramados;
 
@@ -83,6 +83,34 @@ export function SupervisorDashboard() {
   const handleOpenDetalle = (ficha: string) => {
     setSelectedFicha(ficha);
     setDetalleOpen(true);
+  };
+
+  const formatRemaining = (value: unknown) => {
+    const numberValue = typeof value === 'number' ? value : Number(value);
+    if (!Number.isFinite(numberValue)) return '0h';
+
+    const abs = Math.abs(numberValue);
+    const rounded = abs >= 100 ? Math.round(abs) : Math.round(abs * 10) / 10;
+    const text = rounded.toLocaleString('es-ES', {
+      minimumFractionDigits: rounded % 1 === 0 ? 0 : 1,
+      maximumFractionDigits: rounded % 1 === 0 ? 0 : 1,
+    });
+    return `${text}h`;
+  };
+
+  const formatReading = (value: unknown) => {
+    const numberValue = typeof value === 'number' ? value : Number(value);
+    if (!Number.isFinite(numberValue)) return '0h';
+
+    const rounded = Math.abs(numberValue) >= 100
+      ? Math.round(numberValue)
+      : Math.round(numberValue * 10) / 10;
+
+    const text = rounded.toLocaleString('es-ES', {
+      minimumFractionDigits: rounded % 1 === 0 ? 0 : 1,
+      maximumFractionDigits: rounded % 1 === 0 ? 0 : 1,
+    });
+    return `${text}h`;
   };
 
   return (
@@ -145,88 +173,80 @@ export function SupervisorDashboard() {
               </TabsTrigger>
             </TabsList>
 
-            <TabsContent value="vencidos" className="mt-0">
+            <TabsContent value="vencidos" className="mt-0 data-[state=active]:block h-list-default overflow-hidden">
               {equiposVencidos.length === 0 ? (
-                <div className="text-center py-6">
+                <div className="text-center py-6 h-full flex flex-col items-center justify-center">
                   <CheckCircle className="h-10 w-10 mx-auto text-green-500 mb-2" />
                   <p className="text-sm font-medium text-green-600">¡Excelente!</p>
                   <p className="text-xs text-muted-foreground">Sin mantenimientos vencidos</p>
                 </div>
               ) : (
-                <div className="space-y-2 max-h-[250px] overflow-y-auto">
+                <div className="space-y-2 h-full overflow-y-auto">
                   {equiposVencidos.map((mant, index) => (
                     <div
                       key={mant.id}
                       onClick={() => handleOpenDetalle(mant.ficha)}
                       className={cn(
-                        "flex items-center justify-between p-2.5 rounded-lg border cursor-pointer transition-all",
+                        "flex items-center justify-between p-2 rounded-lg border cursor-pointer transition-all h-[52px]",
                         "border-destructive/30 bg-destructive/5 active:bg-destructive/10",
                         "animate-in slide-in-from-left-2"
                       )}
                       style={{ animationDelay: `${index * 0.03}s` }}
                     >
-                      <div className="flex items-center gap-2 min-w-0">
-                        <Truck className="h-4 w-4 text-destructive flex-shrink-0" />
-                        <div className="min-w-0">
-                          <p className="text-sm font-medium truncate">{mant.nombreEquipo}</p>
+                      <div className="flex items-center gap-2 min-w-0 flex-1 overflow-hidden">
+                        <Truck className="h-4 w-4 text-destructive shrink-0" />
+                        <div className="min-w-0 flex-1 overflow-hidden">
+                          <p className="text-xs font-medium truncate">{mant.nombreEquipo}</p>
                           <p className="text-[10px] text-muted-foreground flex items-center gap-1">
-                            <span>{mant.ficha}</span>
+                            <span className="truncate">{mant.ficha}</span>
                             <span>•</span>
-                            <Gauge className="h-2.5 w-2.5" />
-                            <span>{mant.horasKmActuales?.toLocaleString() || 0}h</span>
+                            <span className="tabular-nums shrink-0">{formatReading(mant.horasKmActuales)}</span>
                           </p>
                         </div>
                       </div>
-                      <div className="flex items-center gap-1.5 shrink-0">
-                        <Badge variant="destructive" className="text-[10px]">
-                          {Math.abs(mant.horasKmRestante)}h
-                        </Badge>
-                        <ExternalLink className="h-3 w-3 text-muted-foreground" />
-                      </div>
+                      <Badge className="h-5 px-1.5 text-[10px] leading-none font-medium shrink-0 ml-2 tabular-nums bg-destructive/10 text-destructive border-destructive/20">
+                        {formatRemaining(mant.horasKmRestante)}
+                      </Badge>
                     </div>
                   ))}
                 </div>
               )}
             </TabsContent>
 
-            <TabsContent value="proximos" className="mt-0">
+            <TabsContent value="proximos" className="mt-0 h-list-default overflow-hidden">
               {equiposProximos.length === 0 ? (
-                <div className="text-center py-6">
+                <div className="text-center py-6 h-full flex flex-col items-center justify-center">
                   <CheckCircle className="h-10 w-10 mx-auto text-green-500 mb-2" />
                   <p className="text-sm font-medium text-green-600">Todo en orden</p>
                   <p className="text-xs text-muted-foreground">Sin mantenimientos próximos</p>
                 </div>
               ) : (
-                <div className="space-y-2 max-h-[250px] overflow-y-auto">
+                <div className="space-y-2 h-full overflow-y-auto">
                   {equiposProximos.map((mant, index) => (
                     <div
                       key={mant.id}
                       onClick={() => handleOpenDetalle(mant.ficha)}
                       className={cn(
-                        "flex items-center justify-between p-2.5 rounded-lg border cursor-pointer transition-all",
+                        "flex items-center justify-between p-2 rounded-lg border cursor-pointer transition-all h-[52px]",
                         "border-amber-500/30 bg-amber-500/5 active:bg-amber-500/10",
                         "animate-in slide-in-from-left-2"
                       )}
                       style={{ animationDelay: `${index * 0.03}s` }}
                     >
-                      <div className="flex items-center gap-2 min-w-0">
-                        <Truck className="h-4 w-4 text-amber-600 flex-shrink-0" />
-                        <div className="min-w-0">
-                          <p className="text-sm font-medium truncate">{mant.nombreEquipo}</p>
+                      <div className="flex items-center gap-2 min-w-0 flex-1 overflow-hidden">
+                        <Truck className="h-4 w-4 text-amber-600 shrink-0" />
+                        <div className="min-w-0 flex-1 overflow-hidden">
+                          <p className="text-xs font-medium truncate">{mant.nombreEquipo}</p>
                           <p className="text-[10px] text-muted-foreground flex items-center gap-1">
-                            <span>{mant.ficha}</span>
+                            <span className="truncate">{mant.ficha}</span>
                             <span>•</span>
-                            <Gauge className="h-2.5 w-2.5" />
-                            <span>{mant.horasKmActuales?.toLocaleString() || 0}h</span>
+                            <span className="tabular-nums shrink-0">{formatReading(mant.horasKmActuales)}</span>
                           </p>
                         </div>
                       </div>
-                      <div className="flex items-center gap-1.5 shrink-0">
-                        <Badge className="text-[10px] bg-amber-500/10 text-amber-600 border-amber-500/20">
-                          {mant.horasKmRestante}h
-                        </Badge>
-                        <ExternalLink className="h-3 w-3 text-muted-foreground" />
-                      </div>
+                      <Badge className="h-5 px-1.5 text-[10px] leading-none font-medium shrink-0 ml-2 tabular-nums bg-amber-500/10 text-amber-600 border-amber-500/20">
+                        {formatRemaining(mant.horasKmRestante)}
+                      </Badge>
                     </div>
                   ))}
                 </div>
@@ -350,7 +370,7 @@ export function SupervisorDashboard() {
             <div>
               <p className="text-muted-foreground text-xs">Disponibilidad</p>
               <p className="font-semibold text-green-600">
-                {equiposStats.total > 0 
+                {equiposStats.total > 0
                   ? Math.round((equiposStats.activos / equiposStats.total) * 100)
                   : 0}%
               </p>

@@ -86,9 +86,9 @@ export function useMechanicSubmissions() {
       if (fetchError) throw fetchError;
 
       setSubmissions((data || []) as unknown as Submission[]);
-    } catch (err: any) {
+    } catch (err: unknown) {
       console.error('Error fetching submissions:', err);
-      setError(err.message);
+      setError(err instanceof Error ? err.message : 'Error desconocido');
     } finally {
       setLoading(false);
     }
@@ -147,6 +147,7 @@ export function useMechanicSubmissions() {
       
       const { data: newSubmission, error: insertError } = await supabase
         .from('maintenance_submissions')
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
         .insert(insertData as any)
         .select()
         .single();
@@ -160,11 +161,11 @@ export function useMechanicSubmissions() {
 
       await fetchSubmissions();
       return newSubmission?.id || null;
-    } catch (err: any) {
+    } catch (err: unknown) {
       console.error('Error creating submission:', err);
       toast({
         title: 'Error',
-        description: err.message || 'No se pudo crear el reporte',
+        description: err instanceof Error ? err.message : 'No se pudo crear el reporte',
         variant: 'destructive',
       });
       return null;
@@ -221,7 +222,7 @@ export function useAdminSubmissions() {
 
       if (error) throw error;
       setSubmissions((data || []) as unknown as Submission[]);
-    } catch (err: any) {
+    } catch (err: unknown) {
       console.error('Error fetching all submissions:', err);
     } finally {
       setLoading(false);
@@ -244,11 +245,11 @@ export function useAdminSubmissions() {
 
       await fetchAllSubmissions();
       return true;
-    } catch (err: any) {
+    } catch (err: unknown) {
       console.error('Error approving submission:', err);
       toast({
         title: 'Error',
-        description: err.message || 'No se pudo aprobar el reporte',
+        description: err instanceof Error ? err.message : 'No se pudo aprobar el reporte',
         variant: 'destructive',
       });
       return false;
@@ -271,11 +272,11 @@ export function useAdminSubmissions() {
 
       await fetchAllSubmissions();
       return true;
-    } catch (err: any) {
+    } catch (err: unknown) {
       console.error('Error rejecting submission:', err);
       toast({
         title: 'Error',
-        description: err.message || 'No se pudo rechazar el reporte',
+        description: err instanceof Error ? err.message : 'No se pudo rechazar el reporte',
         variant: 'destructive',
       });
       return false;

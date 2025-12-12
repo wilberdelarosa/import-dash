@@ -107,7 +107,7 @@ export function InventarioMobile({
               <ListFilter className="h-5 w-5" />
             </Button>
           </SheetTrigger>
-          <SheetContent side="bottom" className="h-[550px] rounded-t-[2rem] border-t-0 bg-background/95 backdrop-blur-xl">
+          <SheetContent side="bottom" className="h-auto max-h-[85svh] overflow-y-auto pb-safe rounded-t-[2rem] border-t-0 bg-background/95 backdrop-blur-xl">
             <div className="mx-auto mt-2 h-1 w-12 rounded-full bg-muted" />
             <SheetHeader className="mt-4">
               <SheetTitle className="text-center text-xl font-bold">Filtrar inventario</SheetTitle>
@@ -205,7 +205,7 @@ export function InventarioMobile({
         </Sheet>
       }
     >
-      <div className="space-y-6 pb-24">
+      <div className="space-y-6 pb-20">
         {/* Alertas de stock bajo Premium */}
         {stats.lowStock > 0 && filter !== 'low-stock' && (
           <div

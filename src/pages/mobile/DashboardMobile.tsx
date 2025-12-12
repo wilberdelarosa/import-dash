@@ -204,7 +204,7 @@ export function DashboardMobile({
           {/* Welcome Section - Compact */}
           <div className="relative overflow-hidden rounded-xl bg-gradient-to-br from-primary/90 to-primary p-3 text-primary-foreground shadow-lg">
             <div className="absolute -right-8 -top-8 h-24 w-24 rounded-full bg-white/10 blur-2xl" />
-            
+
             <div className="relative z-10">
               <div className="flex items-center gap-1.5 mb-0.5 opacity-90">
                 <Sparkles className="h-3.5 w-3.5" />
@@ -394,7 +394,7 @@ export function DashboardMobile({
                       <p className="text-[0.6rem] text-red-700 dark:text-red-300">Requieren atención inmediata</p>
                     </div>
                   </div>
-                  <Badge variant="destructive" className="text-[0.65rem] h-5">{mantenimientosVencidosList.length}</Badge>
+                  <Badge variant="destructive" className="text-[0.65rem] h-5 tabular-nums">{mantenimientosVencidosList.length}</Badge>
                 </div>
               </div>
               <div className="p-2 space-y-1.5">
@@ -446,7 +446,7 @@ export function DashboardMobile({
                       <p className="text-[0.6rem] text-muted-foreground">Próximas intervenciones</p>
                     </div>
                   </div>
-                  <Badge variant="secondary" className="text-[0.65rem] h-5">{mantenimientosProximosList.length}</Badge>
+                  <Badge variant="secondary" className="text-[0.65rem] h-5 tabular-nums">{mantenimientosProximosList.length}</Badge>
                 </div>
               </div>
               <div className="p-2 space-y-1.5">
@@ -633,7 +633,7 @@ export function DashboardMobile({
             <Button
               className="w-full"
               onClick={() => {
-                navigate('/planificador');
+                navigate('/planificador-inteligente');
                 setProximosSheetOpen(false);
               }}
             >

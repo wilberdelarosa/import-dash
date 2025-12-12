@@ -152,7 +152,6 @@ const sideMenuSections = [
     title: 'Planificación',
     items: [
       { path: '/planificador-inteligente', icon: Zap, label: 'Planificador IA' },
-      { path: '/planificador', icon: Calendar, label: 'Planificador Manual' },
       { path: '/planes-mantenimiento', icon: ClipboardList, label: 'Planes Asignados' },
       { path: '/control-mantenimiento', icon: Wrench, label: 'Control Profesional' },
     ],
@@ -160,7 +159,7 @@ const sideMenuSections = [
   {
     title: 'Gestión',
     items: [
-      { path: '/kits', icon: Boxes, label: 'Kits Mantenimiento' },
+      { path: '/kits-mantenimiento', icon: Boxes, label: 'Kits Mantenimiento' },
       { path: '/historial', icon: History, label: 'Historial' },
       { path: '/reportes', icon: FileText, label: 'Reportes' },
       { path: '/listas-personalizadas', icon: ListChecks, label: 'Listas Personalizadas' },
@@ -197,7 +196,7 @@ export function MobileLayout({
   const { currentUserRole, loading: loadingRole } = useUserRoles();
   const { toast } = useToast();
   const [notificacionesOpen, setNotificacionesOpen] = useState(false);
-  
+
   // Hook de notificaciones
   const {
     notificaciones,
@@ -230,19 +229,21 @@ export function MobileLayout({
   };
   const roleBadge = getRoleBadge();
 
-  // Seleccionar navegación según el rol
-  const activeBottomNavItems = isMechanic 
-    ? mechanicBottomNavItems 
-    : isSupervisor 
-      ? supervisorBottomNavItems 
-      : bottomNavItems;
-  
+  // Seleccionar navegación según el rol - solo si ya cargó
+  const activeBottomNavItems = loadingRole
+    ? [] // No mostrar nav mientras carga el rol
+    : isMechanic
+      ? mechanicBottomNavItems
+      : isSupervisor
+        ? supervisorBottomNavItems
+        : bottomNavItems;
+
   // Agregar sección admin al menú si el usuario es admin
-  const activeSideMenuSections = isMechanic 
-    ? mechanicSideMenuSections 
+  const activeSideMenuSections = isMechanic
+    ? mechanicSideMenuSections
     : isSupervisor
       ? supervisorSideMenuSections
-      : isAdmin 
+      : isAdmin
         ? [...sideMenuSections, adminMenuSection]
         : sideMenuSections;
 
@@ -294,7 +295,7 @@ export function MobileLayout({
   };
 
   return (
-    <div className="flex h-screen flex-col overflow-hidden bg-background/95 supports-[backdrop-filter]:bg-background/60">
+    <div className="flex min-h-[100dvh] flex-col overflow-hidden bg-background/95 supports-[backdrop-filter]:bg-background/60">
       {/* Header móvil premium - Responsive */}
       <header className="sticky top-0 z-50 glass-panel border-b-0 shadow-sm">
         <div className="flex h-12 sm:h-14 items-center justify-between px-3 sm:px-4 pt-safe">
@@ -329,7 +330,7 @@ export function MobileLayout({
                   {/* Header del menú con info de usuario */}
                   <div className="relative p-4 pb-3 border-b border-border/50">
                     <div className="absolute inset-0 bg-gradient-to-br from-primary/5 to-transparent" />
-                    
+
                     {/* User Badge */}
                     <div className={cn(
                       "relative flex items-center gap-3 p-3 rounded-xl border mb-4",
@@ -350,8 +351,8 @@ export function MobileLayout({
                         <span className="text-sm font-medium truncate" title={email}>
                           {email}
                         </span>
-                        <Badge 
-                          variant={roleBadge.variant} 
+                        <Badge
+                          variant={roleBadge.variant}
                           className={cn(
                             "w-fit gap-1 text-[10px] px-1.5 py-0 mt-1",
                             isAdmin && "bg-primary/90",
@@ -387,7 +388,7 @@ export function MobileLayout({
                           )}
                         </Button>
                       </SheetTrigger>
-                      <SheetContent side="bottom" className="h-[85vh] rounded-t-[2rem] bg-background">
+                      <SheetContent side="bottom" className="h-[85svh] rounded-t-[2rem] bg-background">
                         <div className="mx-auto mt-2 h-1 w-12 rounded-full bg-muted" />
                         <SheetHeader className="mt-4">
                           <SheetTitle className="text-center text-xl font-bold">Notificaciones</SheetTitle>
@@ -395,7 +396,7 @@ export function MobileLayout({
                             {noLeidas > 0 ? `${noLeidas} sin leer` : 'Todas leídas'}
                           </SheetDescription>
                         </SheetHeader>
-                        
+
                         {noLeidas > 0 && (
                           <div className="flex justify-center mt-4">
                             <Button
@@ -409,7 +410,7 @@ export function MobileLayout({
                             </Button>
                           </div>
                         )}
-                        
+
                         <ScrollArea className="flex-1 mt-4 h-[calc(85vh-180px)]">
                           {loadingNotificaciones ? (
                             <div className="p-8 text-center text-muted-foreground">
@@ -436,10 +437,10 @@ export function MobileLayout({
                                     <div className="mt-0.5">
                                       {getIconoNivel(notif.nivel)}
                                     </div>
-                                    <div className="flex-1 min-w-0">
+                                    <div className="flex-1 min-w-0 overflow-hidden">
                                       <div className="flex items-start justify-between gap-2">
                                         <p className={cn(
-                                          "font-medium text-sm leading-tight",
+                                          "font-medium text-sm leading-tight truncate flex-1",
                                           !notif.leida && "font-semibold"
                                         )}>
                                           {notif.titulo}
@@ -460,9 +461,9 @@ export function MobileLayout({
                                         {notif.mensaje}
                                       </p>
                                       <span className="text-[10px] text-muted-foreground mt-2 block">
-                                        {formatDistanceToNow(new Date(notif.createdAt), { 
-                                          addSuffix: true, 
-                                          locale: es 
+                                        {formatDistanceToNow(new Date(notif.createdAt), {
+                                          addSuffix: true,
+                                          locale: es
                                         })}
                                       </span>
                                     </div>
@@ -546,28 +547,33 @@ export function MobileLayout({
         </div>
       </header>
 
-      {/* Contenido principal con padding bottom CONSISTENTE */}
+      {/* Contenido principal con padding bottom DINÁMICO */}
       <ScrollArea
         className={cn(
           "flex-1 bg-slate-50/50 dark:bg-slate-950/50",
-          // Padding bottom FIJO para todos los módulos
-          showBottomNav && "pb-safe"
+          // Espacio real para la bottom-nav + safe-area (evita cortes en iOS/Android)
+          showBottomNav && "pb-[calc(4rem+env(safe-area-inset-bottom))]"
         )}
       >
         <main
           className={cn(
-            "container mx-auto p-3 sm:p-4 animate-fade-in max-w-screen-xl",
-            // Margen bottom aumentado para evitar que botones se oculten
-            showBottomNav && "mb-24"
+            "container mx-auto p-3 sm:p-4 max-w-screen-xl",
+            // Container query - permite responsive basado en contenedor
+            "mobile-main-container",
+            // Animación sutil al entrar
+            "animate-in fade-in duration-300",
+            // Padding interno mínimo y consistente
+            showBottomNav && "pb-8"
           )}
         >
           {children}
         </main>
       </ScrollArea>
 
-      {/* Bottom navigation bar flotante - CONSISTENTE */}
-      {showBottomNav && (
-        <nav className="fixed bottom-0 left-0 right-0 z-50 glass-panel border-t-0 shadow-[0_-4px_20px_-5px_rgba(0,0,0,0.1)]">
+
+      {/* Bottom navigation bar flotante - PREMIUM */}
+      {showBottomNav && activeBottomNavItems.length > 0 && (
+        <nav className="fixed bottom-0 left-0 right-0 z-50 glass-panel border-t-0 shadow-[0_-4px_30px_-5px_rgba(0,0,0,0.12)] dark:shadow-[0_-4px_30px_-5px_rgba(0,0,0,0.4)]">
           <div
             className={cn(
               "flex h-14 sm:h-16 items-center justify-around px-1 sm:px-2",

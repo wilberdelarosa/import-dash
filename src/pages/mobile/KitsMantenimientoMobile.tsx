@@ -91,13 +91,13 @@ export function KitsMantenimientoMobile({
   // Filtrado
   const kitsFiltrados = useMemo(() => {
     return kits.filter(kit => {
-      const matchSearch = !searchTerm || 
+      const matchSearch = !searchTerm ||
         kit.nombre.toLowerCase().includes(searchTerm.toLowerCase()) ||
         kit.codigo.toLowerCase().includes(searchTerm.toLowerCase()) ||
         kit.marca?.toLowerCase().includes(searchTerm.toLowerCase());
-      
+
       const matchCategory = filterCategory === 'all' || kit.categoria === filterCategory;
-      
+
       return matchSearch && matchCategory;
     });
   }, [kits, searchTerm, filterCategory]);
@@ -112,7 +112,7 @@ export function KitsMantenimientoMobile({
               <ListFilter className="h-5 w-5" />
             </Button>
           </SheetTrigger>
-          <SheetContent side="bottom" className="h-[400px] rounded-t-[2rem]">
+          <SheetContent side="bottom" className="h-auto max-h-[85svh] overflow-y-auto pb-safe rounded-t-[2rem]">
             <div className="mx-auto mt-2 h-1 w-12 rounded-full bg-muted" />
             <SheetHeader className="mt-4">
               <SheetTitle className="text-center">Filtrar Kits</SheetTitle>
@@ -153,7 +153,7 @@ export function KitsMantenimientoMobile({
         </Sheet>
       }
     >
-      <div className="space-y-4 pb-24">
+      <div className="space-y-4 pb-20">
         {/* Stats */}
         <div className="grid grid-cols-3 gap-2">
           <MobileCard variant="glass" className="p-3 text-center">
@@ -247,8 +247,8 @@ export function KitsMantenimientoMobile({
                           <Edit2 className="h-4 w-4" />
                           Editar
                         </DropdownMenuItem>
-                        <DropdownMenuItem 
-                          onClick={() => onDelete(kit)} 
+                        <DropdownMenuItem
+                          onClick={() => onDelete(kit)}
                           className="gap-2 text-destructive focus:text-destructive"
                         >
                           <Trash2 className="h-4 w-4" />

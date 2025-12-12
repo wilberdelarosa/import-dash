@@ -16,7 +16,7 @@ export interface InventarioItem {
   stock_minimo: number;
   ubicacion: string | null;
   activo: boolean;
-  movimientos: any;
+  movimientos: Array<{ fecha: string; tipo: string; cantidad: number; motivo?: string }>;
   created_at: string;
 }
 
@@ -35,7 +35,7 @@ export function useInventario() {
 
       if (error) throw error;
       setInventario(data || []);
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error('Error loading inventario:', error);
       toast({
         title: 'Error',
@@ -58,6 +58,7 @@ export function useInventario() {
     return () => {
       supabase.removeChannel(channel);
     };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   const createItem = async (item: Omit<InventarioItem, 'id' | 'created_at' | 'movimientos'>) => {
@@ -76,11 +77,12 @@ export function useInventario() {
       });
 
       return data;
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error('Error creating item:', error);
+      const errorMessage = error instanceof Error ? error.message : '';
       toast({
         title: 'Error',
-        description: error.message?.includes('duplicate') ? 'Ya existe un item con ese código' : 'No se pudo crear el item',
+        description: errorMessage.includes('duplicate') ? 'Ya existe un item con ese código' : 'No se pudo crear el item',
         variant: 'destructive',
       });
       throw error;
@@ -100,7 +102,7 @@ export function useInventario() {
         title: 'Item actualizado',
         description: 'El item se actualizó correctamente',
       });
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error('Error updating item:', error);
       toast({
         title: 'Error',
@@ -124,7 +126,7 @@ export function useInventario() {
         title: 'Item eliminado',
         description: 'El item se eliminó del inventario',
       });
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error('Error deleting item:', error);
       toast({
         title: 'Error',

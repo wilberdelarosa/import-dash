@@ -73,7 +73,7 @@ export function MechanicSubmissionForm() {
   const [partesUsadas, setPartesUsadas] = useState<PartUsada[]>([]);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [showPartsSheet, setShowPartsSheet] = useState(false);
-  
+
   // Estado de fotos
   const [photos, setPhotos] = useState<PhotoPreview[]>([]);
   const MAX_PHOTOS = 5;
@@ -92,7 +92,7 @@ export function MechanicSubmissionForm() {
         // Obtener horas actuales del mantenimiento
         const mant = mantenimientos.find(m => m.ficha === ficha);
         if (mant) {
-        setHorasKmActuales(mant.horasKmActuales.toString());
+          setHorasKmActuales(mant.horasKmActuales.toString());
           setTipoMantenimiento(mant.tipoMantenimiento);
         }
       }
@@ -241,10 +241,10 @@ export function MechanicSubmissionForm() {
           const filesToUpload = photos.map(p => p.file);
           await uploadAttachments(filesToUpload, submissionId);
         }
-        
+
         // Limpiar previews
         photos.forEach(p => URL.revokeObjectURL(p.preview));
-        
+
         navigate('/mechanic/historial');
       }
     } finally {
@@ -254,7 +254,7 @@ export function MechanicSubmissionForm() {
 
   return (
     <MobileLayout title="Reportar Trabajo" showBottomNav={true}>
-      <div className="space-y-3 pb-32">
+      <div className="space-y-3 pb-20">
         {/* Equipo seleccionado */}
         {selectedEquipo ? (
           <MobileCard className="p-3 border-primary/20 bg-primary/5">
@@ -316,7 +316,7 @@ export function MechanicSubmissionForm() {
           />
           {mantEquipo && (
             <p className="text-[10px] text-muted-foreground">
-              Último registro: {mantEquipo.horasKmActuales.toLocaleString()} hrs
+              Último registro: {mantEquipo.horasKmActuales.toLocaleString('es-ES', { maximumFractionDigits: 1 })} hrs
             </p>
           )}
         </div>

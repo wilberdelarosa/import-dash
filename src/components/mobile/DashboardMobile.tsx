@@ -655,7 +655,7 @@ export function DashboardMobile({
             <Button
               className="w-full"
               onClick={() => {
-                navigate('/planificador');
+                navigate('/planificador-inteligente');
                 setProximosSheetOpen(false);
               }}
             >

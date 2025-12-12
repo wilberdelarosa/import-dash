@@ -82,7 +82,67 @@ export default function Historial() {
   const [vistaActiva, setVistaActiva] = useState<'timeline' | 'tabla' | 'estadisticas'>('timeline');
   const [mostrarDetallesTecnicos, setMostrarDetallesTecnicos] = useState(false);
 
-  // Si es móvil, renderizar versión mobile
+  // Mover los useMemo aquí antes del early return para cumplir con las reglas de hooks
+  const eventosAgrupados = useMemo(() => {
+    const grupos = new Map<string, typeof eventos>();
+
+    eventos.forEach(evento => {
+      const fecha = format(new Date(evento.createdAt), "EEEE d 'de' MMMM yyyy", { locale: es });
+      if (!grupos.has(fecha)) {
+        grupos.set(fecha, []);
+      }
+      grupos.get(fecha)?.push(evento);
+    });
+
+    return Array.from(grupos.entries());
+  }, [eventos]);
+
+  // Estadísticas avanzadas
+  const estadisticasAvanzadas = useMemo(() => {
+    const porModulo = eventos.reduce((acc, evento) => {
+      acc[evento.modulo] = (acc[evento.modulo] || 0) + 1;
+      return acc;
+    }, {} as Record<string, number>);
+
+    const porTipo = eventos.reduce((acc, evento) => {
+      const key = evento.categoriaEvento;
+      const actual = acc[key] ?? { etiqueta: evento.etiquetaCategoria, cantidad: 0 };
+      actual.cantidad += 1;
+      actual.etiqueta = evento.etiquetaCategoria;
+      acc[key] = actual;
+      return acc;
+    }, {} as Partial<Record<TipoEventoBase, { etiqueta: string; cantidad: number }>>);
+
+    const porEquipo = eventos
+      .filter(e => e.fichaEquipo)
+      .reduce((acc, evento) => {
+        const key = `${evento.fichaEquipo} - ${evento.nombreEquipo}`;
+        acc[key] = (acc[key] || 0) + 1;
+        return acc;
+      }, {} as Record<string, number>);
+
+    const topEquipos = Object.entries(porEquipo)
+      .sort((a, b) => b[1] - a[1])
+      .slice(0, 10);
+
+    const ultimosSieteDias = eventos.filter(e => {
+      const fecha = new Date(e.createdAt);
+      const haceUnaSemana = new Date();
+      haceUnaSemana.setDate(haceUnaSemana.getDate() - 7);
+      return fecha >= haceUnaSemana;
+    }).length;
+
+    return {
+      porModulo,
+      porTipo,
+      porEquipo,
+      topEquipos,
+      ultimosSieteDias,
+      promedioEventosPorDia: eventos.length > 0 ? (eventos.length / 30).toFixed(1) : '0'
+    };
+  }, [eventos]);
+
+  // Si es móvil, renderizar versión mobile (después de todos los hooks)
   if (isMobile) {
     return <HistorialMobile loading={loading} />;
   }
@@ -334,65 +394,6 @@ export default function Historial() {
     Boolean(filtros.fechaHasta),
   ].filter(Boolean).length;
 
-  const eventosAgrupados = useMemo(() => {
-    const grupos = new Map<string, typeof eventos>();
-
-    eventos.forEach(evento => {
-      const fecha = format(new Date(evento.createdAt), "EEEE d 'de' MMMM yyyy", { locale: es });
-      if (!grupos.has(fecha)) {
-        grupos.set(fecha, []);
-      }
-      grupos.get(fecha)?.push(evento);
-    });
-
-    return Array.from(grupos.entries());
-  }, [eventos]);
-
-  // Estadísticas avanzadas
-  const estadisticasAvanzadas = useMemo(() => {
-    const porModulo = eventos.reduce((acc, evento) => {
-      acc[evento.modulo] = (acc[evento.modulo] || 0) + 1;
-      return acc;
-    }, {} as Record<string, number>);
-
-    const porTipo = eventos.reduce((acc, evento) => {
-      const key = evento.categoriaEvento;
-      const actual = acc[key] ?? { etiqueta: evento.etiquetaCategoria, cantidad: 0 };
-      actual.cantidad += 1;
-      actual.etiqueta = evento.etiquetaCategoria;
-      acc[key] = actual;
-      return acc;
-    }, {} as Partial<Record<TipoEventoBase, { etiqueta: string; cantidad: number }>>);
-
-    const porEquipo = eventos
-      .filter(e => e.fichaEquipo)
-      .reduce((acc, evento) => {
-        const key = `${evento.fichaEquipo} - ${evento.nombreEquipo}`;
-        acc[key] = (acc[key] || 0) + 1;
-        return acc;
-      }, {} as Record<string, number>);
-
-    const topEquipos = Object.entries(porEquipo)
-      .sort((a, b) => b[1] - a[1])
-      .slice(0, 10);
-
-    const ultimosSieteDias = eventos.filter(e => {
-      const fecha = new Date(e.createdAt);
-      const haceUnaSemana = new Date();
-      haceUnaSemana.setDate(haceUnaSemana.getDate() - 7);
-      return fecha >= haceUnaSemana;
-    }).length;
-
-    return {
-      porModulo,
-      porTipo,
-      porEquipo,
-      topEquipos,
-      ultimosSieteDias,
-      promedioEventosPorDia: eventos.length > 0 ? (eventos.length / 30).toFixed(1) : '0'
-    };
-  }, [eventos]);
-
   const exportarPDF = () => {
     // TODO: Implementar exportación a PDF
     console.log('Exportar a PDF');
@@ -415,7 +416,7 @@ export default function Historial() {
           </div>
 
           <div className="flex flex-col sm:flex-row gap-2 items-start sm:items-center justify-between">
-            <Tabs value={vistaActiva} onValueChange={(v) => setVistaActiva(v as any)} className="w-full sm:w-auto">
+            <Tabs value={vistaActiva} onValueChange={(v) => setVistaActiva(v as 'timeline' | 'tabla' | 'estadisticas')} className="w-full sm:w-auto">
               <TabsList className="grid w-full grid-cols-3">
                 <TabsTrigger value="timeline" className="gap-2">
                   <Clock3 className="h-4 w-4" />

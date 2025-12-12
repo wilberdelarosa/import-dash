@@ -135,7 +135,7 @@ export function EquiposMobile({
               <ListFilter className="h-5 w-5" />
             </Button>
           </SheetTrigger>
-          <SheetContent side="bottom" className="h-[400px] rounded-t-[2rem] border-t-0 bg-background/95 backdrop-blur-xl">
+          <SheetContent side="bottom" className="h-auto max-h-[85svh] overflow-y-auto pb-safe rounded-t-[2rem] border-t-0 bg-background/95 backdrop-blur-xl">
             <div className="mx-auto mt-2 h-1 w-12 rounded-full bg-muted" />
             <SheetHeader className="mt-4">
               <SheetTitle className="text-center text-xl font-bold">Filtros</SheetTitle>
@@ -230,7 +230,7 @@ export function EquiposMobile({
         </Sheet>
       }
     >
-      <div className="space-y-6 pb-24">
+      <div className="space-y-6 pb-20">
         {/* Estadísticas rápidas con Glassmorphism */}
         <div className="grid grid-cols-3 gap-3">
           <MobileCard variant="glass" className="p-3 text-center bg-primary/5 border-primary/10">
@@ -265,10 +265,10 @@ export function EquiposMobile({
               <span className="text-xs text-muted-foreground">Filtrando por:</span>
               <Badge variant="secondary" className="gap-1 pl-1 pr-2 h-6">
                 <div className={cn(
-                  "h-1.5 w-1.5 rounded-full", 
-                  filter === 'active' ? "bg-emerald-500" : 
-                  filter === 'inactive' ? "bg-slate-500" : 
-                  filter === 'vendido' ? "bg-orange-500" : "bg-primary"
+                  "h-1.5 w-1.5 rounded-full",
+                  filter === 'active' ? "bg-emerald-500" :
+                    filter === 'inactive' ? "bg-slate-500" :
+                      filter === 'vendido' ? "bg-orange-500" : "bg-primary"
                 )} />
                 {filter === 'active' ? 'Activos' : filter === 'inactive' ? 'Inactivos' : filter === 'vendido' ? 'Vendidos' : 'Todos'}
                 <button onClick={() => setFilter('all')} className="ml-1 hover:text-foreground">×</button>
@@ -330,55 +330,55 @@ export function EquiposMobile({
                       <Button
                         variant="ghost"
                         size="icon"
-                      className="absolute right-2 top-1/2 h-8 w-8 -translate-y-1/2 opacity-0 group-hover:opacity-100 transition-opacity focus:opacity-100 active:opacity-100 data-[state=open]:opacity-100"
-                      onClick={(e) => e.stopPropagation()}
-                    >
-                      <MoreVertical className="h-4 w-4 text-muted-foreground" />
-                    </Button>
-                  </DropdownMenuTrigger>
-                  <DropdownMenuContent align="end" className="w-48 rounded-xl">
-                    <DropdownMenuItem
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        onVerDetalle(equipo.ficha || '');
-                      }}
-                      className="gap-2 py-2.5"
-                    >
-                      <Eye className="h-4 w-4 text-primary" />
-                      Ver detalle
-                    </DropdownMenuItem>
-                    {isAdmin ? (
-                      <>
-                        <DropdownMenuItem
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            onEdit(equipo);
-                          }}
-                          className="gap-2 py-2.5"
-                        >
-                          <Edit2 className="h-4 w-4" />
-                          Editar
-                        </DropdownMenuItem>
-                        <DropdownMenuItem
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            onDelete(equipo.id);
-                          }}
-                          className="gap-2 py-2.5 text-destructive focus:text-destructive focus:bg-destructive/10"
-                        >
-                          <Trash2 className="h-4 w-4" />
-                          Eliminar
-                        </DropdownMenuItem>
-                      </>
-                    ) : (
-                      <DropdownMenuItem disabled className="gap-2 py-2.5 text-muted-foreground">
-                        <Lock className="h-4 w-4" />
-                        Solo lectura
+                        className="absolute right-2 top-1/2 h-8 w-8 -translate-y-1/2 opacity-0 group-hover:opacity-100 transition-opacity focus:opacity-100 active:opacity-100 data-[state=open]:opacity-100"
+                        onClick={(e) => e.stopPropagation()}
+                      >
+                        <MoreVertical className="h-4 w-4 text-muted-foreground" />
+                      </Button>
+                    </DropdownMenuTrigger>
+                    <DropdownMenuContent align="end" className="w-48 rounded-xl">
+                      <DropdownMenuItem
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          onVerDetalle(equipo.ficha || '');
+                        }}
+                        className="gap-2 py-2.5"
+                      >
+                        <Eye className="h-4 w-4 text-primary" />
+                        Ver detalle
                       </DropdownMenuItem>
-                    )}
-                  </DropdownMenuContent>
-                </DropdownMenu>
-              </div>
+                      {isAdmin ? (
+                        <>
+                          <DropdownMenuItem
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              onEdit(equipo);
+                            }}
+                            className="gap-2 py-2.5"
+                          >
+                            <Edit2 className="h-4 w-4" />
+                            Editar
+                          </DropdownMenuItem>
+                          <DropdownMenuItem
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              onDelete(equipo.id);
+                            }}
+                            className="gap-2 py-2.5 text-destructive focus:text-destructive focus:bg-destructive/10"
+                          >
+                            <Trash2 className="h-4 w-4" />
+                            Eliminar
+                          </DropdownMenuItem>
+                        </>
+                      ) : (
+                        <DropdownMenuItem disabled className="gap-2 py-2.5 text-muted-foreground">
+                          <Lock className="h-4 w-4" />
+                          Solo lectura
+                        </DropdownMenuItem>
+                      )}
+                    </DropdownMenuContent>
+                  </DropdownMenu>
+                </div>
               );
             })}
           </div>

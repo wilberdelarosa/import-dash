@@ -13,7 +13,7 @@ export default {
       },
     },
     screens: {
-      'xs': '375px',
+      'xs': '320px',
       'sm': '640px',
       'md': '768px',
       'lg': '1024px',
@@ -107,11 +107,43 @@ export default {
         "accordion-down": "accordion-down 0.2s ease-out",
         "accordion-up": "accordion-up 0.2s ease-out",
       },
+      // Sistema Responsive v2 - Alturas Fluidas
+      height: {
+        'list-compact': 'clamp(120px, 20svh, 200px)',
+        'list-default': 'clamp(150px, 25svh, 250px)',
+        'list-expanded': 'clamp(200px, 35svh, 400px)',
+        'item': 'clamp(44px, 12svh, 56px)',
+        'item-compact': 'clamp(36px, 10svh, 48px)',
+        'safe-screen': '100svh',
+      },
+      // Sistema Responsive v2 - Espaciado Fluido
+      spacing: {
+        'fluid-xs': 'clamp(4px, 1svh, 8px)',
+        'fluid-sm': 'clamp(6px, 1.5svh, 12px)',
+        'fluid-md': 'clamp(8px, 2svh, 16px)',
+        'fluid-lg': 'clamp(12px, 3svh, 24px)',
+      },
+      // Sistema Responsive v2 - Tipografía Fluida
+      fontSize: {
+        'fluid-xs': ['clamp(0.5rem, 1.25svw, 0.625rem)', { lineHeight: '1.4' }],
+        'fluid-sm': ['clamp(0.625rem, 1.5svw, 0.75rem)', { lineHeight: '1.4' }],
+        'fluid-base': ['clamp(0.75rem, 2svw, 0.875rem)', { lineHeight: '1.5' }],
+        'fluid-lg': ['clamp(0.875rem, 2.5svw, 1rem)', { lineHeight: '1.5' }],
+        'fluid-kpi': ['clamp(1rem, 4svw, 1.5rem)', { lineHeight: '1.2' }],
+      },
+      // Safe Areas para dispositivos con notch
+      padding: {
+        'safe-top': 'env(safe-area-inset-top, 0px)',
+        'safe-bottom': 'env(safe-area-inset-bottom, 0px)',
+        'safe-left': 'env(safe-area-inset-left, 0px)',
+        'safe-right': 'env(safe-area-inset-right, 0px)',
+      },
     },
   },
-  // eslint-disable-next-line @typescript-eslint/no-require-imports
   plugins: [
+    // eslint-disable-next-line @typescript-eslint/no-require-imports
     require("tailwindcss-animate"),
+    // eslint-disable-next-line @typescript-eslint/no-require-imports
     require("@tailwindcss/container-queries"),
   ],
 } satisfies Config;

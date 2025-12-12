@@ -54,7 +54,7 @@ export function UserManagement() {
       }
 
       const usersWithRoles: UserWithRole[] = (rolesData || []).map(item => {
-        const authUser = authData?.find((u: any) => u.id === item.user_id);
+        const authUser = authData?.find((u: { id: string; email?: string; created_at?: string; last_sign_in_at?: string }) => u.id === item.user_id);
         return {
           id: item.user_id,
           email: authUser?.email || `Usuario ${item.user_id.slice(0, 8)}...`,

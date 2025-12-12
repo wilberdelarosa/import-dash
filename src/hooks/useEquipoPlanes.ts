@@ -78,7 +78,7 @@ export function useEquipoPlanes(equipoId?: number) {
           .map(intervalo => ({
             ...intervalo,
             tareas: Array.isArray(intervalo.tareas) ? intervalo.tareas as string[] : [],
-            kits: (intervalo.plan_intervalo_kits || []).map((pik: any) => ({
+            kits: (intervalo.plan_intervalo_kits || []).map((pik: { id: number; kit_id: number; created_at?: string; kits_mantenimiento?: unknown }) => ({
               id: pik.id,
               kit_id: pik.kit_id,
               plan_intervalo_id: intervalo.id,
@@ -87,8 +87,8 @@ export function useEquipoPlanes(equipoId?: number) {
             })),
             plan_intervalo_kits: undefined
           }))
-          .filter((intervalo: any) => {
-            delete intervalo.plan_intervalo_kits;
+          .filter((intervalo: { plan_intervalo_kits?: unknown }) => {
+            delete (intervalo as Record<string, unknown>).plan_intervalo_kits;
             return true;
           })
       }));
@@ -99,7 +99,7 @@ export function useEquipoPlanes(equipoId?: number) {
       })).filter(item => item.plan);
 
       setEquipoPlanes(resultado);
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error('Error loading equipo planes:', error);
       toast({
         title: 'Error',
@@ -124,6 +124,7 @@ export function useEquipoPlanes(equipoId?: number) {
     return () => {
       supabase.removeChannel(channel);
     };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [equipoId]);
 
   const vincularPlan = async (planId: number, horasInicio: number = 0) => {
@@ -150,11 +151,12 @@ export function useEquipoPlanes(equipoId?: number) {
 
       loadEquipoPlanes();
       return data;
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error('Error vinculando plan:', error);
+      const errorMessage = error instanceof Error ? error.message : '';
       toast({
         title: 'Error',
-        description: error.message?.includes('duplicate') ? 'Este plan ya está vinculado' : 'No se pudo vincular el plan',
+        description: errorMessage.includes('duplicate') ? 'Este plan ya está vinculado' : 'No se pudo vincular el plan',
         variant: 'destructive',
       });
       throw error;
@@ -176,7 +178,7 @@ export function useEquipoPlanes(equipoId?: number) {
       });
 
       loadEquipoPlanes();
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error('Error desvinculando plan:', error);
       toast({
         title: 'Error',

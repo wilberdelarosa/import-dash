@@ -142,7 +142,7 @@ export function MantenimientoMobile({
 
   // Obtener fichas únicas
   const fichasUnicas = useMemo(() => {
-    return [...new Set(mantenimientos.map(m => m.ficha))].sort((a, b) => 
+    return [...new Set(mantenimientos.map(m => m.ficha))].sort((a, b) =>
       a.localeCompare(b, 'es', { numeric: true })
     );
   }, [mantenimientos]);
@@ -182,7 +182,7 @@ export function MantenimientoMobile({
         const isProximo = m.horasKmRestante > 0 && m.horasKmRestante <= 100;
         const isNormal = m.horasKmRestante > 100;
 
-        const matchEstado = 
+        const matchEstado =
           (filtros.estados.includes('vencido') && isVencido) ||
           (filtros.estados.includes('proximo') && isProximo) ||
           (filtros.estados.includes('normal') && isNormal);
@@ -324,9 +324,9 @@ export function MantenimientoMobile({
       // Filtrar por categorías si es necesario
       const dataToExport = exportMode === 'categories' && exportCategories.length > 0
         ? mantenimientosFiltrados.filter(m => {
-            const equipo = equiposPorFicha[m.ficha];
-            return equipo && exportCategories.includes(equipo.categoria);
-          })
+          const equipo = equiposPorFicha[m.ficha];
+          return equipo && exportCategories.includes(equipo.categoria);
+        })
         : mantenimientosFiltrados;
 
       if (dataToExport.length === 0) {
@@ -350,7 +350,7 @@ export function MantenimientoMobile({
       doc.setFontSize(20);
       doc.setTextColor(36, 99, 56);
       doc.text(
-        exportMode === 'categories' 
+        exportMode === 'categories'
           ? `Reporte por Categorías: ${exportCategories.join(', ')}`
           : 'Reporte Completo de Mantenimientos',
         20, 28
@@ -425,7 +425,7 @@ export function MantenimientoMobile({
       const tableData = dataToExport.map(mant => {
         const unidad = mant.tipoMantenimiento === 'Horas' ? 'hrs' : 'km';
         const equipo = equiposPorFicha[mant.ficha];
-        const estado = mant.horasKmRestante <= 0 ? 'Vencido' 
+        const estado = mant.horasKmRestante <= 0 ? 'Vencido'
           : mant.horasKmRestante <= 100 ? 'Próximo' : 'Normal';
 
         return [
@@ -438,7 +438,7 @@ export function MantenimientoMobile({
           `${mant.horasKmUltimoMantenimiento.toLocaleString()} ${unidad}`,
           `${mant.proximoMantenimiento.toLocaleString()} ${unidad}`,
           formatRemainingLabel(mant.horasKmRestante, unidad),
-          mant.fechaUltimoMantenimiento 
+          mant.fechaUltimoMantenimiento
             ? new Date(mant.fechaUltimoMantenimiento).toLocaleDateString('es-ES')
             : 'N/A',
           estado
@@ -605,7 +605,7 @@ export function MantenimientoMobile({
               </SheetHeader>
 
               <ScrollArea className="flex-1 px-4 py-4">
-                <div className="space-y-6 pb-24">
+                <div className="space-y-6 pb-20">
                   {/* Estado */}
                   <div className="space-y-3">
                     <h4 className="text-sm font-semibold flex items-center gap-2">
@@ -765,7 +765,7 @@ export function MantenimientoMobile({
         </div>
       }
     >
-      <div className="space-y-4 pb-28">
+      <div className="space-y-4 pb-20">
         {/* Buscador */}
         <div className="sticky top-0 z-30 bg-background/80 backdrop-blur-xl py-2">
           <div className="relative">
@@ -811,7 +811,7 @@ export function MantenimientoMobile({
             </div>
 
             {/* Estado general */}
-              <MobileCard variant="glass" className="p-4">
+            <MobileCard variant="glass" className="p-4">
               <h3 className="text-sm font-semibold mb-4 flex items-center gap-2">
                 <Activity className="h-4 w-4 text-primary" />
                 Estado General
@@ -827,7 +827,7 @@ export function MantenimientoMobile({
                       <span className="text-lg font-bold text-destructive">{stats.vencidos}</span>
                     </div>
                     <div className="h-1.5 bg-muted rounded-full overflow-hidden mt-1">
-                      <div 
+                      <div
                         className="h-full bg-destructive rounded-full transition-all"
                         style={{ width: `${stats.total > 0 ? (stats.vencidos / stats.total) * 100 : 0}%` }}
                       />
@@ -844,7 +844,7 @@ export function MantenimientoMobile({
                       <span className="text-lg font-bold text-amber-500">{stats.proximos}</span>
                     </div>
                     <div className="h-1.5 bg-muted rounded-full overflow-hidden mt-1">
-                      <div 
+                      <div
                         className="h-full bg-amber-500 rounded-full transition-all"
                         style={{ width: `${stats.total > 0 ? (stats.proximos / stats.total) * 100 : 0}%` }}
                       />
@@ -861,7 +861,7 @@ export function MantenimientoMobile({
                       <span className="text-lg font-bold text-green-500">{stats.ok}</span>
                     </div>
                     <div className="h-1.5 bg-muted rounded-full overflow-hidden mt-1">
-                      <div 
+                      <div
                         className="h-full bg-green-500 rounded-full transition-all"
                         style={{ width: `${stats.total > 0 ? (stats.ok / stats.total) * 100 : 0}%` }}
                       />
@@ -917,8 +917,8 @@ export function MantenimientoMobile({
                 </h3>
                 <div className="space-y-2">
                   {stats.criticos.map((item, idx) => (
-                    <div 
-                      key={item.id} 
+                    <div
+                      key={item.id}
                       className={cn(
                         "flex items-center gap-3 p-3 rounded-xl cursor-pointer transition-all",
                         getStatusBg(item.horasKmRestante)
@@ -942,8 +942,8 @@ export function MantenimientoMobile({
             )}
 
             {/* Botón para cambiar a lista */}
-            <Button 
-              variant="outline" 
+            <Button
+              variant="outline"
               className="w-full h-12 rounded-xl"
               onClick={() => setViewMode('list')}
             >
@@ -1093,7 +1093,7 @@ export function MantenimientoMobile({
                               <div>
                                 <p className="text-[0.65rem] text-muted-foreground uppercase tracking-wider">Fecha Últ.</p>
                                 <p className="text-sm font-medium">
-                                  {item.fechaUltimoMantenimiento 
+                                  {item.fechaUltimoMantenimiento
                                     ? new Date(item.fechaUltimoMantenimiento).toLocaleDateString('es-ES')
                                     : 'N/A'}
                                 </p>
@@ -1225,8 +1225,8 @@ export function MantenimientoMobile({
                       <Checkbox
                         checked={exportCategories.includes(cat)}
                         onCheckedChange={(checked) => {
-                          setExportCategories(prev => 
-                            checked 
+                          setExportCategories(prev =>
+                            checked
                               ? [...prev, cat]
                               : prev.filter(c => c !== cat)
                           );

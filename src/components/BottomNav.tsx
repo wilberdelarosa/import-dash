@@ -17,6 +17,11 @@ export default function BottomNav() {
   const { isAdmin, isSupervisor, isMechanic } = useUserRoles();
   const { unreadCount } = useUnifiedNotifications();
 
+  const isActiveRoute = (to: string) => {
+    if (to === '/') return location.pathname === '/';
+    return location.pathname === to || location.pathname.startsWith(`${to}/`) || location.pathname.startsWith(to);
+  };
+
   // Items base para todos los usuarios
   const baseItems: NavItem[] = [
     { to: '/', label: 'Dashboard', icon: Home },
@@ -70,7 +75,7 @@ export default function BottomNav() {
       <div className="mx-auto flex max-w-[1600px] items-center justify-around px-1 py-1.5 pb-[calc(0.375rem+env(safe-area-inset-bottom))]">
         {items.map((item) => {
           const Icon = item.icon;
-          const active = location.pathname === item.to;
+          const active = isActiveRoute(item.to);
           const hasBadge = 'badge' in item && item.badge && item.badge > 0;
           
           return (

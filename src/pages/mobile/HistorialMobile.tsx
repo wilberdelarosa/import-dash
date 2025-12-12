@@ -257,7 +257,7 @@ export function HistorialMobile({ loading: externalLoading }: HistorialMobilePro
                 </div>
 
                 {/* Tabs */}
-                <Tabs value={activeTab} onValueChange={(v) => setActiveTab(v as any)}>
+                <Tabs value={activeTab} onValueChange={(v) => setActiveTab(v as 'timeline' | 'stats')}>
                     <TabsList className="grid w-full grid-cols-2">
                         <TabsTrigger value="timeline" className="gap-2">
                             <Clock className="h-4 w-4" />
@@ -514,7 +514,7 @@ export function HistorialMobile({ loading: externalLoading }: HistorialMobilePro
 
             {/* Sheet de filtros */}
             <Sheet open={filterSheetOpen} onOpenChange={setFilterSheetOpen}>
-                <SheetContent side="bottom" className="h-[85vh] rounded-t-[2rem] border-t-0">
+                <SheetContent side="bottom" className="h-[85svh] rounded-t-[2rem] border-t-0">
                     <div className="mx-auto mt-2 h-1 w-12 rounded-full bg-muted mb-4" />
                     <SheetHeader>
                         <SheetTitle className="flex items-center gap-2">

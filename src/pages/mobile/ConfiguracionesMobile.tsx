@@ -20,9 +20,9 @@ import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Checkbox } from '@/components/ui/checkbox';
-import { 
-  Settings2, Bell, MoonStar, Mail, MessageSquare, Smartphone, 
-  RotateCcw, ChevronDown, ChevronUp, CheckCircle2, XCircle, 
+import {
+  Settings2, Bell, MoonStar, Mail, MessageSquare, Smartphone,
+  RotateCcw, ChevronDown, ChevronUp, CheckCircle2, XCircle,
   AlertTriangle, Send, Loader2, Shield, Wrench, Package, Info
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
@@ -71,7 +71,7 @@ export function ConfiguracionesMobile() {
   };
 
   const toggleNotificationType = (typeId: string) => {
-    setEnabledTypes(prev => 
+    setEnabledTypes(prev =>
       prev.includes(typeId) ? prev.filter(t => t !== typeId) : [...prev, typeId]
     );
   };
@@ -160,7 +160,7 @@ export function ConfiguracionesMobile() {
 
   return (
     <MobileLayout title="Configuraciones">
-      <div className="space-y-4 pb-24">
+      <div className="space-y-4 pb-20">
         {/* Estado de Canales */}
         <div className="glass-panel rounded-2xl p-4 border border-border/40 shadow-premium">
           <div className="flex items-center gap-3 mb-3">
@@ -288,7 +288,7 @@ export function ConfiguracionesMobile() {
               <div><h3 className="font-semibold text-sm">Tipos de alertas</h3><p className="text-xs text-muted-foreground">Qué notificaciones recibir</p></div>
             </div>
             <div className="flex items-center gap-2">
-              <Badge variant="secondary" className="text-xs">{enabledTypes.length}/{NOTIFICATION_TYPES.length}</Badge>
+              <Badge variant="secondary" className="text-xs tabular-nums">{enabledTypes.length}/{NOTIFICATION_TYPES.length}</Badge>
               {tiposNotificacionExpanded ? <ChevronUp className="h-5 w-5 text-muted-foreground" /> : <ChevronDown className="h-5 w-5 text-muted-foreground" />}
             </div>
           </div>

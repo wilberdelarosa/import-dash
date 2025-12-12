@@ -270,7 +270,7 @@ export function PlanificadorMobile({
                         </p>
                     </div>
                 ) : (
-                    <div className="space-y-2 pb-24">
+                    <div className="space-y-2 pb-20">
                         {equiposFiltrados.map((equipo, index) => (
                             <MobileCard
                                 key={equipo.id}

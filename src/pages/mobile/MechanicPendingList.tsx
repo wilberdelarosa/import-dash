@@ -25,6 +25,18 @@ export function MechanicPendingList() {
   const mantenimientos = data.mantenimientosProgramados;
   const [search, setSearch] = useState('');
 
+  const formatHours = (value: unknown) => {
+    const numberValue = typeof value === 'number' ? value : Number(value);
+    if (!Number.isFinite(numberValue)) return '0';
+
+    const abs = Math.abs(numberValue);
+    const rounded = abs >= 100 ? Math.round(abs) : Math.round(abs * 10) / 10;
+    return rounded.toLocaleString('es-ES', {
+      minimumFractionDigits: rounded % 1 === 0 ? 0 : 1,
+      maximumFractionDigits: rounded % 1 === 0 ? 0 : 1,
+    });
+  };
+
   // Equipos con mantenimiento pendiente/vencido, ordenados por urgencia
   const equiposPendientes = useMemo(() => {
     const pendientes = mantenimientos
@@ -43,33 +55,33 @@ export function MechanicPendingList() {
   const getUrgencyBadge = (horasRestantes: number) => {
     if (horasRestantes < 0) {
       return (
-        <Badge className="bg-destructive/10 text-destructive border-destructive/20 text-[10px]">
+        <Badge className="bg-destructive/10 text-destructive border-destructive/20 text-[10px] leading-none max-w-[150px] truncate tabular-nums">
           <AlertTriangle className="h-3 w-3 mr-1" />
-          VENCIDO hace {Math.abs(horasRestantes)}h
+          VENCIDO hace {formatHours(horasRestantes)}h
         </Badge>
       );
     }
     if (horasRestantes <= 50) {
       return (
-        <Badge className="bg-amber-500/10 text-amber-600 border-amber-500/20 text-[10px]">
+        <Badge className="bg-amber-500/10 text-amber-600 border-amber-500/20 text-[10px] leading-none max-w-[150px] truncate tabular-nums">
           <Clock className="h-3 w-3 mr-1" />
-          Próximo en {horasRestantes}h
+          Próximo en {formatHours(horasRestantes)}h
         </Badge>
       );
     }
     return (
-      <Badge className="bg-green-500/10 text-green-600 border-green-500/20 text-[10px]">
-        Al día ({horasRestantes}h)
+      <Badge className="bg-green-500/10 text-green-600 border-green-500/20 text-[10px] leading-none max-w-[150px] truncate tabular-nums">
+        Al día ({formatHours(horasRestantes)}h)
       </Badge>
     );
   };
 
   return (
-    <MobileLayout 
-      title="Equipos Pendientes" 
+    <MobileLayout
+      title="Equipos Pendientes"
       showBottomNav={true}
     >
-      <div className="space-y-3 pb-4">
+      <div className="space-y-3 pb-20">
         {/* Búsqueda */}
         <div className="relative">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
@@ -130,11 +142,11 @@ export function MechanicPendingList() {
 
                 <div className="grid grid-cols-2 gap-2 text-xs text-muted-foreground mb-3 ml-6">
                   <div>
-                    <span className="text-foreground font-medium">{mant.horasKmActuales.toLocaleString()}</span>
+                    <span className="text-foreground font-medium tabular-nums">{formatHours(mant.horasKmActuales)}</span>
                     <span className="text-[10px]"> hrs actuales</span>
                   </div>
                   <div>
-                    <span className="text-foreground font-medium">{mant.proximoMantenimiento.toLocaleString()}</span>
+                    <span className="text-foreground font-medium tabular-nums">{formatHours(mant.proximoMantenimiento)}</span>
                     <span className="text-[10px]"> hrs límite</span>
                   </div>
                 </div>

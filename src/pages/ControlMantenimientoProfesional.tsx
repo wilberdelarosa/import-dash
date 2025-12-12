@@ -801,7 +801,10 @@ export default function ControlMantenimientoProfesional() {
         onRegistrarMantenimiento={async (id, datos) => {
           await registrarMantenimientoRealizado({
             mantenimientoId: id,
-            ...datos
+            horasKm: datos.horasKm,
+            fecha: datos.fecha,
+            observaciones: datos.observaciones,
+            unidad: datos.unidad as 'horas' | 'km' | undefined
           });
         }}
         loading={loading}

@@ -1,8 +1,10 @@
 /**
  * Supervisor Module - Device Detection Routers
  * Routes supervisor pages to mobile or desktop versions based on device
+ * Optimizado para evitar glitches de navegación
  */
 import { useIsMobileDevice } from '@/hooks/useDeviceDetection';
+import { useMemo } from 'react';
 
 // Mobile versions
 import { SupervisorDashboard } from './mobile/SupervisorDashboard';
@@ -18,11 +20,10 @@ import { SupervisorSubmissionsDesktop } from './SupervisorSubmissionsDesktop';
 export function SupervisorDashboardRouter() {
   const isMobile = useIsMobileDevice();
   
-  if (isMobile) {
-    return <SupervisorDashboard />;
-  }
-  
-  return <SupervisorDesktop />;
+  // Memoizar para evitar re-renders y glitches
+  return useMemo(() => (
+    isMobile ? <SupervisorDashboard /> : <SupervisorDesktop />
+  ), [isMobile]);
 }
 
 /**
@@ -31,11 +32,9 @@ export function SupervisorDashboardRouter() {
 export function SupervisorSubmissionsRouter() {
   const isMobile = useIsMobileDevice();
   
-  if (isMobile) {
-    return <SupervisorSubmissions />;
-  }
-  
-  return <SupervisorSubmissionsDesktop />;
+  return useMemo(() => (
+    isMobile ? <SupervisorSubmissions /> : <SupervisorSubmissionsDesktop />
+  ), [isMobile]);
 }
 
 export default {

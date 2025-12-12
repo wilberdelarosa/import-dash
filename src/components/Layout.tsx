@@ -13,7 +13,6 @@ import { useSystemConfig } from '@/context/SystemConfigContext';
 import { BrandLogo } from '@/components/BrandLogo';
 import { Navigation } from '@/components/Navigation';
 import { ConfirmDialog } from '@/components/ConfirmDialog';
-import BottomNav from '@/components/BottomNav';
 import { CommandPalette } from '@/components/CommandPalette';
 import { useUserRoles } from '@/hooks/useUserRoles';
 
@@ -237,13 +236,10 @@ export function Layout({ children, title }: LayoutProps) {
         <Navigation hideBrand />
       </header>
       
-      {/* Main content */}
-      <main className="mx-auto w-full max-w-[1600px] px-4 py-6 sm:py-8 sm:px-6 lg:px-8 pb-20 sm:pb-8">
+      {/* Main content - padding bottom ajustado porque MobileLayout maneja su propia navegación */}
+      <main className="mx-auto w-full max-w-[1600px] px-4 py-6 sm:py-8 sm:px-6 lg:px-8">
         {children}
       </main>
-      
-      {/* Bottom navigation: solo móvil */}
-      <BottomNav />
 
       <ConfirmDialog
         open={confirmClearOpen}
