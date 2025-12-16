@@ -36,6 +36,7 @@ import {
   ExternalLink,
   Settings,
   ClipboardEdit,
+  Ticket,
 } from 'lucide-react';
 import { format, formatDistanceToNow } from 'date-fns';
 import { es } from 'date-fns/locale';
@@ -47,6 +48,7 @@ import { usePlanAsignado, useIntervaloActual } from '@/hooks/usePlanAsignado';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { isEquipoVendido } from '@/types/equipment';
 import { cn } from '@/lib/utils';
+import { EquipmentTicketsList, TicketCountBadge } from '@/components/tickets';
 
 interface Props {
   ficha: string | null;
@@ -495,7 +497,7 @@ export function EquipoDetalleUnificado({ ficha, open, onOpenChange }: Props) {
 
         <div className="p-3 sm:p-4">
           <Tabs defaultValue="general" className="w-full">
-            <TabsList className="grid w-full grid-cols-4 h-auto">
+            <TabsList className="grid w-full grid-cols-5 h-auto">
               <TabsTrigger value="general" className="gap-1 sm:gap-2 text-xs sm:text-sm py-2">
                 <Truck className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
                 <span className="hidden sm:inline">General</span>
@@ -521,6 +523,11 @@ export function EquipoDetalleUnificado({ ficha, open, onOpenChange }: Props) {
                     {timelineUnificado.length}
                   </Badge>
                 )}
+              </TabsTrigger>
+              <TabsTrigger value="tickets" className="gap-1 sm:gap-2 text-xs sm:text-sm py-2">
+                <Ticket className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
+                <span className="hidden sm:inline">Tickets</span>
+                {equipo && <TicketCountBadge equipoId={equipo.id} />}
               </TabsTrigger>
             </TabsList>
 
@@ -1191,6 +1198,17 @@ export function EquipoDetalleUnificado({ ficha, open, onOpenChange }: Props) {
                     </ScrollArea>
                   </CardContent>
                 </Card>
+              )}
+            </TabsContent>
+
+            {/* Tab de Tickets */}
+            <TabsContent value="tickets" className="space-y-4">
+              {equipo && (
+                <EquipmentTicketsList
+                  equipoId={equipo.id}
+                  ficha={equipo.ficha}
+                  equipoNombre={equipo.nombre}
+                />
               )}
             </TabsContent>
           </Tabs>
