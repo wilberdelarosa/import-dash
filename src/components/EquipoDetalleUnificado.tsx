@@ -931,9 +931,9 @@ export function EquipoDetalleUnificado({ ficha, open, onOpenChange }: Props) {
                 ))
               )}
               {mantenimientosRealizadosData.length > 0 && (
-                <Card className="border border-amber-200/70 bg-amber-50/40">
+                <Card className="border border-amber-200/70 bg-amber-50/40 dark:border-amber-800/40 dark:bg-amber-950/30">
                   <CardHeader>
-                    <CardTitle className="flex items-center gap-2 text-amber-700">
+                    <CardTitle className="flex items-center gap-2 text-amber-700 dark:text-amber-400">
                       <HistoryIcon className="h-5 w-5" />
                       Mantenimientos realizados
                     </CardTitle>
@@ -942,10 +942,10 @@ export function EquipoDetalleUnificado({ ficha, open, onOpenChange }: Props) {
                     {mantenimientosRealizadosData.map((realizado) => (
                       <div
                         key={realizado.id}
-                        className="rounded-xl border border-amber-200/60 bg-white/70 p-4 transition-all duration-300 hover:-translate-y-0.5 hover:shadow-md"
+                        className="rounded-xl border border-amber-200/60 bg-white/70 dark:border-amber-800/40 dark:bg-slate-800/70 p-4 transition-all duration-300 hover:-translate-y-0.5 hover:shadow-md"
                       >
                         <div className="flex flex-wrap items-center justify-between gap-3">
-                          <span className="text-sm font-semibold text-amber-800">
+                          <span className="text-sm font-semibold text-amber-800 dark:text-amber-400">
                             {format(new Date(realizado.fechaMantenimiento), 'dd MMM yyyy', { locale: es })}
                           </span>
                           <Badge variant="outline">Lectura: {realizado.horasKmAlMomento}</Badge>
@@ -954,22 +954,22 @@ export function EquipoDetalleUnificado({ ficha, open, onOpenChange }: Props) {
                           {realizado.observaciones || 'Sin observaciones registradas.'}
                         </p>
                         <div className="mt-3 flex flex-wrap items-center gap-3 text-xs text-muted-foreground">
-                          <span className="rounded-full bg-amber-100 px-3 py-1 font-medium text-amber-700">
+                          <span className="rounded-full bg-amber-100 dark:bg-amber-900/50 px-3 py-1 font-medium text-amber-700 dark:text-amber-400">
                             {realizado.usuarioResponsable}
                           </span>
                           <span className="flex items-center gap-1">
-                            <TrendingUp className="h-3 w-3 text-amber-600" />
+                            <TrendingUp className="h-3 w-3 text-amber-600 dark:text-amber-500" />
                             Incremento: {Number(realizado.incrementoDesdeUltimo).toFixed(1)}
                           </span>
                         </div>
                         {realizado.filtrosUtilizados?.length > 0 && (
-                          <div className="mt-3 rounded-lg border border-amber-200/60 bg-amber-50/60 p-3 text-xs">
-                            <p className="font-semibold text-amber-700">Insumos utilizados</p>
+                          <div className="mt-3 rounded-lg border border-amber-200/60 dark:border-amber-800/40 bg-amber-50/60 dark:bg-amber-950/30 p-3 text-xs">
+                            <p className="font-semibold text-amber-700 dark:text-amber-400">Insumos utilizados</p>
                             <ul className="mt-2 grid gap-1 sm:grid-cols-2">
                               {realizado.filtrosUtilizados.map((filtro: any, index: number) => (
                                 <li key={`${realizado.id}-${index}`} className="flex items-center justify-between">
                                   <span>{filtro.nombre}</span>
-                                  <span className="font-medium text-amber-800">{filtro.cantidad}</span>
+                                  <span className="font-medium text-amber-800 dark:text-amber-400">{filtro.cantidad}</span>
                                 </li>
                               ))}
                             </ul>
@@ -981,9 +981,9 @@ export function EquipoDetalleUnificado({ ficha, open, onOpenChange }: Props) {
                 </Card>
               )}
               {actualizacionesHorasKmData.length > 0 && (
-                <Card className="border border-sky-200/70 bg-sky-50/40">
+                <Card className="border border-sky-200/70 bg-sky-50/40 dark:border-sky-800/40 dark:bg-sky-950/30">
                   <CardHeader>
-                    <CardTitle className="flex items-center gap-2 text-sky-700">
+                    <CardTitle className="flex items-center gap-2 text-sky-700 dark:text-sky-400">
                       <Activity className="h-5 w-5" />
                       Actualizaciones de horas/km
                     </CardTitle>
@@ -992,20 +992,20 @@ export function EquipoDetalleUnificado({ ficha, open, onOpenChange }: Props) {
                     {actualizacionesHorasKmData.map((lectura) => (
                       <div
                         key={lectura.id}
-                        className="rounded-xl border border-sky-200/60 bg-white/70 p-4 transition-all duration-300 hover:-translate-y-0.5 hover:shadow-md"
+                        className="rounded-xl border border-sky-200/60 bg-white/70 dark:border-sky-800/40 dark:bg-slate-800/70 p-4 transition-all duration-300 hover:-translate-y-0.5 hover:shadow-md"
                       >
                         <div className="flex flex-wrap items-center justify-between gap-3">
-                          <span className="text-sm font-semibold text-sky-800">
+                          <span className="text-sm font-semibold text-sky-800 dark:text-sky-400">
                             {format(new Date(lectura.fecha), 'dd MMM yyyy', { locale: es })}
                           </span>
                           <Badge variant="outline">{lectura.horasKm} horas/km</Badge>
                         </div>
                         <div className="mt-2 flex flex-wrap items-center gap-3 text-xs text-muted-foreground">
                           <span className="flex items-center gap-1">
-                            <TrendingUp className="h-3 w-3 text-sky-500" />
+                            <TrendingUp className="h-3 w-3 text-sky-500 dark:text-sky-400" />
                             Incremento: {Number(lectura.incremento).toFixed(1)}
                           </span>
-                          <span className="rounded-full bg-sky-100 px-3 py-1 font-medium text-sky-700">
+                          <span className="rounded-full bg-sky-100 dark:bg-sky-900/50 px-3 py-1 font-medium text-sky-700 dark:text-sky-400">
                             {lectura.usuarioResponsable}
                           </span>
                         </div>
