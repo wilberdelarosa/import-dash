@@ -93,10 +93,10 @@ export function useEquipoPlanes(equipoId?: number) {
           })
       }));
 
-      const resultado: EquipoPlanConDetalles[] = equipoPlanesData.map(ep => ({
+      const resultado = equipoPlanesData.map(ep => ({
         ...ep,
         plan: planesConIntervalos.find(p => p.id === ep.plan_id)!
-      })).filter(item => item.plan);
+      })).filter(item => item.plan) as EquipoPlanConDetalles[];
 
       setEquipoPlanes(resultado);
     } catch (error: unknown) {

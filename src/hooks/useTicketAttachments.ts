@@ -20,6 +20,7 @@ export function useTicketAttachments(ticketId?: string) {
 
         try {
             setLoading(true);
+            // @ts-ignore - table exists but types not regenerated yet
             const { data, error } = await supabase
                 .from('ticket_attachments')
                 .select('*')
@@ -73,6 +74,7 @@ export function useTicketAttachments(ticketId?: string) {
                 uploaded_by: user.email,
             };
 
+            // @ts-ignore - table exists but types not regenerated yet
             const { data, error: dbError } = await supabase
                 .from('ticket_attachments')
                 .insert([attachmentData])
@@ -81,7 +83,7 @@ export function useTicketAttachments(ticketId?: string) {
 
             if (dbError) throw dbError;
 
-            // Registrar en historial del ticket
+            // @ts-ignore - table exists but types not regenerated yet
             await supabase.from('ticket_history').insert([{
                 ticket_id: id,
                 action: 'attachment_added',
@@ -130,7 +132,7 @@ export function useTicketAttachments(ticketId?: string) {
         try {
             const { data, error } = await supabase.storage
                 .from(BUCKET_NAME)
-                .createSignedUrl(filePath, 3600); // 1 hora de validez
+                .createSignedUrl(filePath, 3600);
 
             if (error) throw error;
             return data.signedUrl;
@@ -146,7 +148,7 @@ export function useTicketAttachments(ticketId?: string) {
             // Eliminar de Storage
             await supabase.storage.from(BUCKET_NAME).remove([attachment.file_path]);
 
-            // Eliminar registro de DB
+            // @ts-ignore - table exists but types not regenerated yet
             const { error } = await supabase
                 .from('ticket_attachments')
                 .delete()

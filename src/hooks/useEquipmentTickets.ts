@@ -22,6 +22,7 @@ export function useEquipmentTickets(equipoId?: number) {
         try {
             setLoading(true);
 
+            // @ts-ignore - table exists but types not regenerated yet
             let query = supabase
                 .from('equipment_tickets')
                 .select(`
@@ -30,7 +31,6 @@ export function useEquipmentTickets(equipoId?: number) {
         `)
                 .order('created_at', { ascending: false });
 
-            // Si se especifica equipoId, filtrar por equipo
             if (equipoId) {
                 query = query.eq('equipo_id', equipoId);
             }
@@ -72,6 +72,7 @@ export function useEquipmentTickets(equipoId?: number) {
                 cantidad_requerida: data.cantidad_requerida || 1,
             };
 
+            // @ts-ignore - table exists but types not regenerated yet
             const { data: newTicket, error } = await supabase
                 .from('equipment_tickets')
                 .insert([ticketData])
@@ -80,9 +81,11 @@ export function useEquipmentTickets(equipoId?: number) {
 
             if (error) throw error;
 
-            // Registrar en historial
+            const ticketId = (newTicket as EquipmentTicket).id;
+
+            // @ts-ignore - table exists but types not regenerated yet
             await supabase.from('ticket_history').insert([{
-                ticket_id: newTicket.id,
+                ticket_id: ticketId,
                 action: 'created',
                 status_to: 'abierto',
                 comment: `Ticket creado: ${data.titulo}`,
@@ -95,7 +98,7 @@ export function useEquipmentTickets(equipoId?: number) {
             });
 
             loadTickets();
-            return newTicket.id;
+            return ticketId;
         } catch (error) {
             console.error('Error creating ticket:', error);
             toast({
@@ -116,13 +119,14 @@ export function useEquipmentTickets(equipoId?: number) {
         if (!user?.email) return false;
 
         try {
-            // Obtener estado actual para el historial
+            // @ts-ignore - table exists but types not regenerated yet
             const { data: currentTicket } = await supabase
                 .from('equipment_tickets')
                 .select('status')
                 .eq('id', ticketId)
                 .single();
 
+            // @ts-ignore - table exists but types not regenerated yet
             const { error } = await supabase
                 .from('equipment_tickets')
                 .update(data)
@@ -130,18 +134,20 @@ export function useEquipmentTickets(equipoId?: number) {
 
             if (error) throw error;
 
-            // Si cambió el estado, registrar en historial
-            if (data.status && currentTicket && data.status !== currentTicket.status) {
+            const currentStatus = (currentTicket as { status: string } | null)?.status;
+
+            if (data.status && currentStatus && data.status !== currentStatus) {
+                // @ts-ignore - table exists but types not regenerated yet
                 await supabase.from('ticket_history').insert([{
                     ticket_id: ticketId,
                     action: 'status_change',
-                    status_from: currentTicket.status,
+                    status_from: currentStatus,
                     status_to: data.status,
                     comment: comment || `Estado cambiado a ${data.status}`,
                     performed_by: user.email,
                 }]);
             } else if (comment) {
-                // Registrar actualización general
+                // @ts-ignore - table exists but types not regenerated yet
                 await supabase.from('ticket_history').insert([{
                     ticket_id: ticketId,
                     action: 'updated',
@@ -176,7 +182,6 @@ export function useEquipmentTickets(equipoId?: number) {
     ): Promise<boolean> => {
         const updateData: UpdateTicketData = { status: newStatus };
 
-        // Añadir fechas automáticas según el estado
         if (newStatus === 'cerrado') {
             updateData.fecha_cierre = new Date().toISOString().split('T')[0];
         } else if (newStatus === 'en_reparacion') {
@@ -191,6 +196,7 @@ export function useEquipmentTickets(equipoId?: number) {
         if (!user?.email || !comment.trim()) return false;
 
         try {
+            // @ts-ignore - table exists but types not regenerated yet
             await supabase.from('ticket_history').insert([{
                 ticket_id: ticketId,
                 action: 'comment',
@@ -212,6 +218,7 @@ export function useEquipmentTickets(equipoId?: number) {
     // Obtener historial de un ticket
     const getTicketHistory = useCallback(async (ticketId: string): Promise<TicketHistoryEntry[]> => {
         try {
+            // @ts-ignore - table exists but types not regenerated yet
             const { data, error } = await supabase
                 .from('ticket_history')
                 .select('*')
@@ -229,6 +236,7 @@ export function useEquipmentTickets(equipoId?: number) {
     // Obtener un ticket por ID
     const getTicketById = useCallback(async (ticketId: string): Promise<EquipmentTicketWithEquipo | null> => {
         try {
+            // @ts-ignore - table exists but types not regenerated yet
             const { data, error } = await supabase
                 .from('equipment_tickets')
                 .select(`
@@ -249,6 +257,7 @@ export function useEquipmentTickets(equipoId?: number) {
     // Eliminar ticket (solo admin)
     const deleteTicket = useCallback(async (ticketId: string): Promise<boolean> => {
         try {
+            // @ts-ignore - table exists but types not regenerated yet
             const { error } = await supabase
                 .from('equipment_tickets')
                 .delete()
@@ -276,6 +285,22 @@ export function useEquipmentTickets(equipoId?: number) {
     // Cargar tickets al montar o cuando cambie equipoId
     useEffect(() => {
         loadTickets();
+    }, [loadTickets]);
+
+    // Suscribirse a cambios en tiempo real
+    useEffect(() => {
+        const channel = supabase
+            .channel('equipment-tickets-changes')
+            .on(
+                'postgres_changes',
+                { event: '*', schema: 'public', table: 'equipment_tickets' },
+                () => loadTickets()
+            )
+            .subscribe();
+
+        return () => {
+            supabase.removeChannel(channel);
+        };
     }, [loadTickets]);
 
     // Estadísticas

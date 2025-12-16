@@ -207,6 +207,98 @@ export type Database = {
         }
         Relationships: []
       }
+      equipment_tickets: {
+        Row: {
+          assigned_to: string | null
+          cantidad_requerida: number | null
+          cotizacion_fecha: string | null
+          cotizacion_monto: number | null
+          cotizacion_proveedor: string | null
+          created_at: string | null
+          created_by: string
+          descripcion: string
+          equipo_id: number
+          fecha_cierre: string | null
+          fecha_inicio_reparacion: string | null
+          fecha_recepcion_pieza: string | null
+          ficha: string
+          id: string
+          notas_admin: string | null
+          numero_parte: string | null
+          orden_compra_fecha: string | null
+          orden_compra_numero: string | null
+          pieza_solicitada: string | null
+          prioridad: string | null
+          resolucion: string | null
+          status: string | null
+          tipo_problema: string
+          titulo: string
+          updated_at: string | null
+        }
+        Insert: {
+          assigned_to?: string | null
+          cantidad_requerida?: number | null
+          cotizacion_fecha?: string | null
+          cotizacion_monto?: number | null
+          cotizacion_proveedor?: string | null
+          created_at?: string | null
+          created_by: string
+          descripcion: string
+          equipo_id: number
+          fecha_cierre?: string | null
+          fecha_inicio_reparacion?: string | null
+          fecha_recepcion_pieza?: string | null
+          ficha: string
+          id?: string
+          notas_admin?: string | null
+          numero_parte?: string | null
+          orden_compra_fecha?: string | null
+          orden_compra_numero?: string | null
+          pieza_solicitada?: string | null
+          prioridad?: string | null
+          resolucion?: string | null
+          status?: string | null
+          tipo_problema: string
+          titulo: string
+          updated_at?: string | null
+        }
+        Update: {
+          assigned_to?: string | null
+          cantidad_requerida?: number | null
+          cotizacion_fecha?: string | null
+          cotizacion_monto?: number | null
+          cotizacion_proveedor?: string | null
+          created_at?: string | null
+          created_by?: string
+          descripcion?: string
+          equipo_id?: number
+          fecha_cierre?: string | null
+          fecha_inicio_reparacion?: string | null
+          fecha_recepcion_pieza?: string | null
+          ficha?: string
+          id?: string
+          notas_admin?: string | null
+          numero_parte?: string | null
+          orden_compra_fecha?: string | null
+          orden_compra_numero?: string | null
+          pieza_solicitada?: string | null
+          prioridad?: string | null
+          resolucion?: string | null
+          status?: string | null
+          tipo_problema?: string
+          titulo?: string
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "equipment_tickets_equipo_id_fkey"
+            columns: ["equipo_id"]
+            isOneToOne: false
+            referencedRelation: "equipos"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       equipo_planes: {
         Row: {
           activo: boolean
@@ -924,6 +1016,91 @@ export type Database = {
             columns: ["submission_id"]
             isOneToOne: false
             referencedRelation: "maintenance_submissions"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      ticket_attachments: {
+        Row: {
+          created_at: string | null
+          file_name: string
+          file_path: string
+          file_size: number | null
+          file_type: string
+          id: string
+          mime_type: string | null
+          ticket_id: string
+          uploaded_by: string
+        }
+        Insert: {
+          created_at?: string | null
+          file_name: string
+          file_path: string
+          file_size?: number | null
+          file_type: string
+          id?: string
+          mime_type?: string | null
+          ticket_id: string
+          uploaded_by: string
+        }
+        Update: {
+          created_at?: string | null
+          file_name?: string
+          file_path?: string
+          file_size?: number | null
+          file_type?: string
+          id?: string
+          mime_type?: string | null
+          ticket_id?: string
+          uploaded_by?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "ticket_attachments_ticket_id_fkey"
+            columns: ["ticket_id"]
+            isOneToOne: false
+            referencedRelation: "equipment_tickets"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      ticket_history: {
+        Row: {
+          action: string
+          comment: string | null
+          created_at: string | null
+          id: number
+          performed_by: string
+          status_from: string | null
+          status_to: string | null
+          ticket_id: string
+        }
+        Insert: {
+          action: string
+          comment?: string | null
+          created_at?: string | null
+          id?: number
+          performed_by: string
+          status_from?: string | null
+          status_to?: string | null
+          ticket_id: string
+        }
+        Update: {
+          action?: string
+          comment?: string | null
+          created_at?: string | null
+          id?: number
+          performed_by?: string
+          status_from?: string | null
+          status_to?: string | null
+          ticket_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "ticket_history_ticket_id_fkey"
+            columns: ["ticket_id"]
+            isOneToOne: false
+            referencedRelation: "equipment_tickets"
             referencedColumns: ["id"]
           },
         ]
