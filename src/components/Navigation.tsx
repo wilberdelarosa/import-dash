@@ -90,9 +90,9 @@ export function Navigation({ hideBrand = false }: NavigationProps) {
       return new Set(['/mechanic', '/mechanic/pendientes', '/mechanic/reportar', '/mechanic/historial', '/historial']);
     }
     if (currentUserRole === 'supervisor') {
-      return new Set(['/supervisor', '/supervisor/submissions', '/tickets', '/equipos', '/historial']);
+      return new Set(['/supervisor', '/supervisor/submissions', '/tickets', '/equipos', '/mantenimiento', '/historial']);
     }
-    return new Set(['/', '/equipos', '/tickets', '/control-mantenimiento', '/asistente']);
+    return new Set(['/', '/equipos', '/mantenimiento', '/inventario', '/tickets', '/control-mantenimiento']);
   }, [currentUserRole]);
 
   const primaryItems = navItems.filter((i) => primaryPaths.has(i.path));

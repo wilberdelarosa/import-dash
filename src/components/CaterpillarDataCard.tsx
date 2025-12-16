@@ -24,15 +24,15 @@ export function CaterpillarDataCard({ modelo, numeroSerie, marca, mantenimientos
 
   if (loading) {
     return (
-      <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <Wrench className="h-5 w-5" />
+      <Card className="border-amber-500/30 dark:border-amber-500/20">
+        <CardHeader className="p-3 sm:p-4">
+          <CardTitle className="flex items-center gap-2 text-sm sm:text-base">
+            <Wrench className="h-4 w-4 sm:h-5 sm:w-5 text-amber-500" />
             Información Caterpillar
           </CardTitle>
         </CardHeader>
-        <CardContent className="flex items-center justify-center py-8">
-          <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
+        <CardContent className="flex items-center justify-center py-6 sm:py-8">
+          <Loader2 className="h-5 w-5 sm:h-6 sm:w-6 animate-spin text-muted-foreground" />
         </CardContent>
       </Card>
     );
@@ -40,14 +40,14 @@ export function CaterpillarDataCard({ modelo, numeroSerie, marca, mantenimientos
 
   if (!data.modelo) {
     return (
-      <Card className="border-amber-200/50 bg-amber-50/30">
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2 text-amber-800">
-            <Wrench className="h-5 w-5" />
+      <Card className="border-amber-500/30 bg-amber-500/5 dark:border-amber-500/20 dark:bg-amber-500/10">
+        <CardHeader className="p-3 sm:p-4">
+          <CardTitle className="flex items-center gap-2 text-sm sm:text-base text-amber-700 dark:text-amber-400">
+            <Wrench className="h-4 w-4 sm:h-5 sm:w-5" />
             Información Caterpillar
           </CardTitle>
-          <CardDescription>
-            No se encontraron datos técnicos Caterpillar para el modelo {modelo}
+          <CardDescription className="text-xs sm:text-sm">
+            No se encontraron datos técnicos para el modelo {modelo}
           </CardDescription>
         </CardHeader>
       </Card>
@@ -72,52 +72,52 @@ export function CaterpillarDataCard({ modelo, numeroSerie, marca, mantenimientos
   };
 
   return (
-    <Card className="border-amber-200/70 bg-gradient-to-br from-amber-50/50 to-background">
-      <CardHeader>
-        <CardTitle className="flex items-center gap-2 text-amber-900">
-          <Wrench className="h-5 w-5" />
-          Plan de Mantenimiento Caterpillar
+    <Card className="border-amber-500/30 bg-gradient-to-br from-amber-500/5 to-transparent dark:border-amber-500/20 dark:from-amber-500/10">
+      <CardHeader className="p-3 sm:p-4">
+        <CardTitle className="flex items-center gap-2 text-sm sm:text-base text-amber-700 dark:text-amber-400">
+          <Wrench className="h-4 w-4 sm:h-5 sm:w-5" />
+          Plan de Mantenimiento Cat
         </CardTitle>
-        <CardDescription>
+        <CardDescription className="text-xs sm:text-sm">
           Intervalos PM y especificaciones técnicas para {catModelo.modelo}
         </CardDescription>
       </CardHeader>
-      <CardContent className="space-y-6">
+      <CardContent className="space-y-4 p-3 sm:p-4 pt-0 sm:pt-0">
         {/* Especificaciones del Modelo */}
-        <div className="rounded-lg border border-amber-200/60 bg-white/70 p-4">
-          <h3 className="mb-3 text-sm font-semibold text-amber-900">Especificaciones Técnicas</h3>
-          <div className="grid gap-3 sm:grid-cols-2">
-            <div className="flex items-center gap-2">
-              <Fuel className="h-4 w-4 text-amber-600" />
-              <div>
-                <p className="text-xs text-muted-foreground">Motor</p>
-                <p className="font-medium">{catModelo.motor}</p>
+        <div className="rounded-lg border border-amber-500/20 bg-amber-500/5 dark:bg-amber-500/10 p-3">
+          <h3 className="mb-2 text-xs sm:text-sm font-semibold text-amber-700 dark:text-amber-400">Especificaciones Técnicas</h3>
+          <div className="grid grid-cols-2 gap-2 sm:gap-3">
+            <div className="flex items-center gap-1.5 sm:gap-2">
+              <Fuel className="h-3.5 w-3.5 sm:h-4 sm:w-4 text-amber-600 dark:text-amber-400 shrink-0" />
+              <div className="min-w-0">
+                <p className="text-[10px] sm:text-xs text-muted-foreground">Motor</p>
+                <p className="text-xs sm:text-sm font-medium truncate">{catModelo.motor}</p>
               </div>
             </div>
-            <div className="flex items-center gap-2">
-              <Droplets className="h-4 w-4 text-amber-600" />
-              <div>
-                <p className="text-xs text-muted-foreground">Aceite Motor</p>
-                <p className="font-medium">{catModelo.capacidad_aceite_motor}L</p>
+            <div className="flex items-center gap-1.5 sm:gap-2">
+              <Droplets className="h-3.5 w-3.5 sm:h-4 sm:w-4 text-amber-600 dark:text-amber-400 shrink-0" />
+              <div className="min-w-0">
+                <p className="text-[10px] sm:text-xs text-muted-foreground">Aceite Motor</p>
+                <p className="text-xs sm:text-sm font-medium">{catModelo.capacidad_aceite_motor}L</p>
               </div>
             </div>
-            <div className="flex items-center gap-2">
-              <Droplets className="h-4 w-4 text-amber-600" />
-              <div>
-                <p className="text-xs text-muted-foreground">Sistema Hidráulico</p>
-                <p className="font-medium">{catModelo.capacidad_hidraulico}L</p>
+            <div className="flex items-center gap-1.5 sm:gap-2">
+              <Droplets className="h-3.5 w-3.5 sm:h-4 sm:w-4 text-amber-600 dark:text-amber-400 shrink-0" />
+              <div className="min-w-0">
+                <p className="text-[10px] sm:text-xs text-muted-foreground">Hidráulico</p>
+                <p className="text-xs sm:text-sm font-medium">{catModelo.capacidad_hidraulico}L</p>
               </div>
             </div>
-            <div className="flex items-center gap-2">
-              <Thermometer className="h-4 w-4 text-amber-600" />
-              <div>
-                <p className="text-xs text-muted-foreground">Refrigerante</p>
-                <p className="font-medium">{catModelo.capacidad_refrigerante}L</p>
+            <div className="flex items-center gap-1.5 sm:gap-2">
+              <Thermometer className="h-3.5 w-3.5 sm:h-4 sm:w-4 text-amber-600 dark:text-amber-400 shrink-0" />
+              <div className="min-w-0">
+                <p className="text-[10px] sm:text-xs text-muted-foreground">Refrigerante</p>
+                <p className="text-xs sm:text-sm font-medium">{catModelo.capacidad_refrigerante}L</p>
               </div>
             </div>
           </div>
           {catModelo.serie_desde && (
-            <div className="mt-3 rounded-md bg-amber-100/50 p-2 text-xs text-amber-800">
+            <div className="mt-2 rounded-md bg-amber-500/10 dark:bg-amber-500/20 p-1.5 sm:p-2 text-[10px] sm:text-xs text-amber-700 dark:text-amber-300">
               <strong>Serie:</strong> {catModelo.serie_desde}
               {catModelo.serie_hasta && ` - ${catModelo.serie_hasta}`}
               {catModelo.notas && ` • ${catModelo.notas}`}
@@ -125,15 +125,15 @@ export function CaterpillarDataCard({ modelo, numeroSerie, marca, mantenimientos
           )}
         </div>
 
-        <Separator className="bg-amber-200/50" />
+        <Separator className="bg-amber-500/20" />
 
         {/* Intervalos de Mantenimiento */}
         <div>
-          <h3 className="mb-3 flex items-center gap-2 text-sm font-semibold text-amber-900">
-            <Package className="h-4 w-4" />
-            Intervalos de Mantenimiento Programado
+          <h3 className="mb-2 flex items-center gap-2 text-xs sm:text-sm font-semibold text-amber-700 dark:text-amber-400">
+            <Package className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
+            Intervalos de Mantenimiento
           </h3>
-          <Accordion type="single" collapsible className="space-y-2">
+          <Accordion type="single" collapsible className="space-y-1.5">
             {intervalos.map((intervalo) => {
               const piezas = piezasPorIntervalo[intervalo.codigo] || [];
               const tareas = tareasPorIntervalo[intervalo.codigo] || [];
@@ -143,40 +143,40 @@ export function CaterpillarDataCard({ modelo, numeroSerie, marca, mantenimientos
                 <AccordionItem
                   key={intervalo.id}
                   value={`interval-${intervalo.id}`}
-                  className="rounded-lg border border-amber-200/60 bg-white/70 px-4"
+                  className="rounded-lg border border-amber-500/20 bg-amber-500/5 dark:bg-amber-500/10 px-2 sm:px-3"
                 >
-                  <AccordionTrigger className="hover:no-underline">
-                    <div className="flex w-full items-center justify-between pr-2">
-                      <div className="flex items-center gap-3">
-                        <Badge variant="outline" className="bg-amber-100 text-amber-800">
+                  <AccordionTrigger className="hover:no-underline py-2 sm:py-3">
+                    <div className="flex w-full items-center justify-between pr-1 sm:pr-2 gap-1">
+                      <div className="flex items-center gap-1.5 sm:gap-2 min-w-0">
+                        <Badge variant="outline" className="bg-amber-500/10 text-amber-700 dark:text-amber-400 border-amber-500/30 text-[10px] sm:text-xs shrink-0">
                           {intervalo.codigo}
                         </Badge>
-                        <span className="font-medium">{intervalo.nombre}</span>
+                        <span className="text-xs sm:text-sm font-medium truncate">{intervalo.nombre}</span>
                       </div>
-                      <div className="flex items-center gap-2">
+                      <div className="flex items-center gap-1 shrink-0">
                         {mantenimientoAsociado && (
-                          <Badge variant={getRemainingVariant(restante)}>
+                          <Badge variant={getRemainingVariant(restante)} className="text-[9px] sm:text-[10px] h-4 sm:h-5">
                             {formatRemainingLabel(restante)}
                           </Badge>
                         )}
-                        <Badge variant="secondary">{intervalo.horas_intervalo}h</Badge>
+                        <Badge variant="secondary" className="text-[9px] sm:text-[10px] h-4 sm:h-5">{intervalo.horas_intervalo}h</Badge>
                       </div>
                     </div>
                   </AccordionTrigger>
-                  <AccordionContent className="pt-3">
-                    <div className="space-y-3">
-                      <p className="text-sm text-muted-foreground">{intervalo.descripcion}</p>
+                  <AccordionContent className="pt-2 pb-3">
+                    <div className="space-y-2">
+                      <p className="text-xs text-muted-foreground">{intervalo.descripcion}</p>
 
                       {tareas.length > 0 && (
-                        <div className="rounded-md border border-amber-200/40 bg-amber-50/50 p-3">
-                          <p className="mb-2 flex items-center gap-2 text-xs font-semibold text-amber-800">
-                            <ClipboardList className="h-3.5 w-3.5" /> Tareas recomendadas
+                        <div className="rounded-md border border-amber-500/20 bg-amber-500/5 dark:bg-amber-500/10 p-2">
+                          <p className="mb-1.5 flex items-center gap-1.5 text-[10px] sm:text-xs font-semibold text-amber-700 dark:text-amber-400">
+                            <ClipboardList className="h-3 w-3 sm:h-3.5 sm:w-3.5" /> Tareas
                           </p>
-                          <ul className="space-y-2 text-xs">
+                          <ul className="space-y-1 text-[10px] sm:text-xs">
                             {tareas.map((tarea) => (
-                              <li key={tarea} className="flex items-start gap-2">
-                                <span className="mt-1 h-1.5 w-1.5 rounded-full bg-amber-500" />
-                                <span className="text-amber-900">{tarea}</span>
+                              <li key={tarea} className="flex items-start gap-1.5">
+                                <span className="mt-1 h-1 w-1 rounded-full bg-amber-500 shrink-0" />
+                                <span className="text-foreground">{tarea}</span>
                               </li>
                             ))}
                           </ul>
@@ -184,26 +184,23 @@ export function CaterpillarDataCard({ modelo, numeroSerie, marca, mantenimientos
                       )}
 
                       {piezas.length > 0 && (
-                        <div className="rounded-md border border-amber-200/40 bg-amber-50/50 p-3">
-                          <p className="mb-2 text-xs font-semibold text-amber-800">
-                            Kits y Piezas Requeridas:
+                        <div className="rounded-md border border-amber-500/20 bg-amber-500/5 dark:bg-amber-500/10 p-2">
+                          <p className="mb-1.5 text-[10px] sm:text-xs font-semibold text-amber-700 dark:text-amber-400">
+                            Kits y Piezas:
                           </p>
-                          <div className="space-y-2">
+                          <div className="space-y-1.5">
                             {piezas.map((pieza) => (
                               <div
                                 key={pieza.id}
-                                className="flex items-start justify-between gap-2 text-xs"
+                                className="flex items-start justify-between gap-2 text-[10px] sm:text-xs"
                               >
-                                <div className="flex-1">
-                                  <p className="font-medium text-amber-900">
+                                <div className="flex-1 min-w-0">
+                                  <p className="font-medium truncate">
                                     {pieza.pieza.numero_parte}
                                   </p>
-                                  <p className="text-muted-foreground">{pieza.pieza.descripcion}</p>
-                                  <Badge variant="outline" className="mt-1 text-[10px]">
-                                    {pieza.pieza.tipo}
-                                  </Badge>
+                                  <p className="text-muted-foreground truncate">{pieza.pieza.descripcion}</p>
                                 </div>
-                                <Badge variant="secondary" className="shrink-0">
+                                <Badge variant="secondary" className="shrink-0 text-[9px] h-4">
                                   x{pieza.cantidad}
                                 </Badge>
                               </div>
@@ -213,8 +210,8 @@ export function CaterpillarDataCard({ modelo, numeroSerie, marca, mantenimientos
                       )}
 
                       {piezas.length === 0 && (
-                        <p className="text-xs italic text-muted-foreground">
-                          No hay códigos de pieza configurados para este intervalo.
+                        <p className="text-[10px] sm:text-xs italic text-muted-foreground">
+                          Sin códigos de pieza configurados.
                         </p>
                       )}
                     </div>
@@ -226,36 +223,36 @@ export function CaterpillarDataCard({ modelo, numeroSerie, marca, mantenimientos
         </div>
 
         {mantenimientosEspeciales.length > 0 && (
-          <div className="space-y-3 rounded-lg border border-amber-200/60 bg-white/70 p-4">
-            <h3 className="flex items-center gap-2 text-sm font-semibold text-amber-900">
-              <AlertTriangle className="h-4 w-4" /> Intervenciones especializadas
+          <div className="space-y-2 rounded-lg border border-amber-500/20 bg-amber-500/5 dark:bg-amber-500/10 p-3">
+            <h3 className="flex items-center gap-2 text-xs sm:text-sm font-semibold text-amber-700 dark:text-amber-400">
+              <AlertTriangle className="h-3.5 w-3.5 sm:h-4 sm:w-4" /> Intervenciones especializadas
             </h3>
-            <ul className="space-y-2 text-xs text-amber-900">
+            <ul className="space-y-1.5 text-[10px] sm:text-xs">
               {mantenimientosEspeciales.map((especial) => (
-                <li key={especial.id} className="rounded-md border border-amber-200/50 bg-amber-50/40 p-3">
-                  <div className="flex flex-wrap items-center justify-between gap-2">
-                    <Badge variant="outline" className="bg-amber-100 text-amber-700">
+                <li key={especial.id} className="rounded-md border border-amber-500/20 bg-background/50 p-2">
+                  <div className="flex flex-wrap items-center gap-1.5">
+                    <Badge variant="outline" className="bg-amber-500/10 text-amber-700 dark:text-amber-400 text-[9px] sm:text-[10px]">
                       {especial.intervaloCodigo}
                     </Badge>
                     {especial.responsableSugerido && (
-                      <Badge variant="secondary">{especial.responsableSugerido}</Badge>
+                      <Badge variant="secondary" className="text-[9px] sm:text-[10px]">{especial.responsableSugerido}</Badge>
                     )}
                   </div>
-                  <p className="mt-2 leading-relaxed text-amber-900">{especial.descripcion}</p>
+                  <p className="mt-1.5 leading-relaxed text-foreground">{especial.descripcion}</p>
                   {especial.referencia && (
-                    <p className="mt-2 text-[11px] text-muted-foreground">
-                      Referencia: {especial.referencia}
+                    <p className="mt-1 text-muted-foreground">
+                      Ref: {especial.referencia}
                     </p>
                   )}
                   {especial.adjuntos?.length ? (
-                    <div className="mt-2 flex flex-wrap gap-2">
+                    <div className="mt-1.5 flex flex-wrap gap-1.5">
                       {especial.adjuntos.map((adjunto) => (
                         <a
                           key={adjunto.label}
                           href={adjunto.url}
                           target="_blank"
                           rel="noopener noreferrer"
-                          className="text-xs font-medium text-amber-800 underline"
+                          className="text-[10px] font-medium text-amber-600 dark:text-amber-400 underline"
                         >
                           {adjunto.label}
                         </a>
@@ -268,9 +265,8 @@ export function CaterpillarDataCard({ modelo, numeroSerie, marca, mantenimientos
           </div>
         )}
 
-        <div className="rounded-lg border border-amber-300/50 bg-amber-100/40 p-3 text-xs text-amber-800">
-          <strong>💡 Nota:</strong> Estos son intervalos recomendados por Caterpillar. Consulta el manual
-          OMM específico de tu equipo o{' '}
+        <div className="rounded-lg border border-amber-500/30 bg-amber-500/10 dark:bg-amber-500/20 p-2 text-[10px] sm:text-xs text-amber-700 dark:text-amber-300">
+          <strong>💡 Nota:</strong> Intervalos recomendados por Caterpillar. Consulta{' '}
           <a
             href="https://parts.cat.com"
             target="_blank"
@@ -279,7 +275,7 @@ export function CaterpillarDataCard({ modelo, numeroSerie, marca, mantenimientos
           >
             parts.cat.com
           </a>{' '}
-          para confirmar códigos de pieza actualizados según tu número de serie.
+          para confirmar piezas según tu número de serie.
         </div>
       </CardContent>
     </Card>
