@@ -31,11 +31,13 @@ import {
 import { cn } from '@/lib/utils';
 import { format } from 'date-fns';
 import { es } from 'date-fns/locale';
+import { useSystemConfig } from '@/context/SystemConfigContext';
 
 export function SupervisorDashboard() {
   const navigate = useNavigate();
   const { user } = useAuth();
   const { data } = useSupabaseDataContext();
+  const { config } = useSystemConfig();
   const { submissions, loading: loadingSubmissions } = useAdminSubmissions();
 
   const equipos = data.equipos;
@@ -45,39 +47,48 @@ export function SupervisorDashboard() {
   const [selectedFicha, setSelectedFicha] = useState<string | null>(null);
   const [detalleOpen, setDetalleOpen] = useState(false);
 
+  // Fichas de equipos activos (no vendidos)
+  const fichasEquiposActivos = useMemo(() => {
+    return new Set(
+      equipos
+        .filter(e => e.activo && e.empresa !== 'VENDIDO')
+        .map(e => e.ficha)
+    );
+  }, [equipos]);
+
   // Estadísticas de equipos
   const equiposStats = useMemo(() => {
-    const activos = equipos.filter(e => e.activo).length;
-    const inactivos = equipos.filter(e => !e.activo).length;
+    const activos = equipos.filter(e => e.activo && e.empresa !== 'VENDIDO').length;
+    const inactivos = equipos.filter(e => !e.activo || e.empresa === 'VENDIDO').length;
     return { activos, inactivos, total: equipos.length };
   }, [equipos]);
 
-  // Estadísticas de mantenimiento
+  // Estadísticas de mantenimiento (solo equipos activos)
   const mantStats = useMemo(() => {
-    const vencidos = mantenimientos.filter(m => m.activo && m.horasKmRestante < 0).length;
-    const proximos = mantenimientos.filter(m => m.activo && m.horasKmRestante >= 0 && m.horasKmRestante <= 50).length;
-    const alDia = mantenimientos.filter(m => m.activo && m.horasKmRestante > 50).length;
+    const vencidos = mantenimientos.filter(m => m.activo && m.horasKmRestante < 0 && fichasEquiposActivos.has(m.ficha)).length;
+    const proximos = mantenimientos.filter(m => m.activo && m.horasKmRestante >= 0 && m.horasKmRestante <= config.alertaPreventiva && fichasEquiposActivos.has(m.ficha)).length;
+    const alDia = mantenimientos.filter(m => m.activo && m.horasKmRestante > config.alertaPreventiva && fichasEquiposActivos.has(m.ficha)).length;
     return { vencidos, proximos, alDia };
-  }, [mantenimientos]);
+  }, [mantenimientos, fichasEquiposActivos]);
 
   // Submissions pendientes
   const pendingSubmissions = useMemo(() => {
     return submissions.filter(s => s.status === 'pending').slice(0, 5);
   }, [submissions]);
 
-  // Lista completa de equipos vencidos
+  // Lista completa de equipos vencidos (solo equipos activos, no vendidos)
   const equiposVencidos = useMemo(() => {
     return mantenimientos
-      .filter(m => m.activo && m.horasKmRestante < 0)
+      .filter(m => m.activo && m.horasKmRestante < 0 && fichasEquiposActivos.has(m.ficha))
       .sort((a, b) => a.horasKmRestante - b.horasKmRestante);
-  }, [mantenimientos]);
+  }, [mantenimientos, fichasEquiposActivos]);
 
-  // Lista completa de equipos próximos
+  // Lista completa de equipos próximos (solo equipos activos, no vendidos)
   const equiposProximos = useMemo(() => {
     return mantenimientos
-      .filter(m => m.activo && m.horasKmRestante >= 0 && m.horasKmRestante <= 50)
+      .filter(m => m.activo && m.horasKmRestante >= 0 && m.horasKmRestante <= config.alertaPreventiva && fichasEquiposActivos.has(m.ficha))
       .sort((a, b) => a.horasKmRestante - b.horasKmRestante);
-  }, [mantenimientos]);
+  }, [mantenimientos, fichasEquiposActivos]);
 
   // Abrir detalle de equipo
   const handleOpenDetalle = (ficha: string) => {

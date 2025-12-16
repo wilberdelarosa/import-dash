@@ -133,15 +133,15 @@ export default function Dashboard() {
   // Usar useMemo para evitar glitches de navegación
   const roleBasedContent = useMemo(() => {
     if (loadingRoles) return null;
-    
+
     if (isMechanic) {
       return isMobile ? <MechanicDashboard /> : <MechanicDesktop />;
     }
-    
+
     if (isSupervisor) {
       return isMobile ? <SupervisorDashboard /> : <SupervisorDesktop />;
     }
-    
+
     return null;
   }, [loadingRoles, isMechanic, isSupervisor, isMobile]);
 
@@ -360,37 +360,39 @@ export default function Dashboard() {
             </CardContent>
           </Card>
           <Card
-            className="group cursor-pointer transition-all duration-300 hover:shadow-xl hover:scale-[1.02] hover:border-primary/50"
+            className="group cursor-pointer transition-all duration-300 hover:shadow-xl hover:scale-[1.02] hover:border-destructive/50"
+            onClick={() => navigate('/mantenimiento')}
+          >
+            <CardHeader className="p-3 sm:p-4 pb-2">
+              <CardDescription className="text-[0.65rem] sm:text-xs font-medium uppercase tracking-wide truncate">Mant. vencidos</CardDescription>
+              <CardTitle className="text-2xl sm:text-3xl lg:text-4xl font-bold flex items-center gap-2">
+                <AlertTriangle className="h-5 w-5 sm:h-6 sm:w-6 lg:h-7 lg:w-7 text-destructive transition-transform group-hover:scale-110 shrink-0" />
+                <span className="truncate">{estadisticas.mantenimientosVencidos}</span>
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="p-3 sm:p-4 pt-0">
+              <p className="text-[0.65rem] sm:text-xs lg:text-sm text-muted-foreground flex items-center gap-1 group-hover:text-foreground transition-colors truncate">
+                <span className="truncate">Requieren atención</span>
+                <ExternalLink className="h-3 w-3 opacity-0 group-hover:opacity-100 transition-opacity shrink-0" />
+              </p>
+            </CardContent>
+          </Card>
+          <Card
+            className="group cursor-pointer transition-all duration-300 hover:shadow-xl hover:scale-[1.02] hover:border-warning/50"
             onClick={() => navigate('/mantenimiento')}
           >
             <CardHeader className="p-3 sm:p-4 pb-2">
               <CardDescription className="text-[0.65rem] sm:text-xs font-medium uppercase tracking-wide truncate">Mant. próximos</CardDescription>
               <CardTitle className="text-2xl sm:text-3xl lg:text-4xl font-bold flex items-center gap-2">
-                <CalendarClock className="h-5 w-5 sm:h-6 sm:w-6 lg:h-7 lg:w-7 text-primary transition-transform group-hover:scale-110 shrink-0" />
-                <span className="truncate">{estadisticas.mantenimientosPendientes}</span>
+                <Clock className="h-5 w-5 sm:h-6 sm:w-6 lg:h-7 lg:w-7 text-warning transition-transform group-hover:scale-110 shrink-0" />
+                <span className="truncate">{estadisticas.mantenimientosPendientes - estadisticas.mantenimientosVencidos}</span>
               </CardTitle>
             </CardHeader>
             <CardContent className="p-3 sm:p-4 pt-0">
               <p className="text-[0.65rem] sm:text-xs lg:text-sm text-muted-foreground flex items-center gap-1 group-hover:text-foreground transition-colors truncate">
-                {estadisticas.mantenimientosVencidos > 0 ? (
-                  <span className="truncate">Vencidos: <span className="font-semibold text-destructive">{estadisticas.mantenimientosVencidos}</span></span>
-                ) : (
-                  <span className="truncate">&lt;50 hrs restantes</span>
-                )}
+                <span className="truncate">&lt;50 hrs restantes</span>
                 <ExternalLink className="h-3 w-3 opacity-0 group-hover:opacity-100 transition-opacity shrink-0" />
               </p>
-            </CardContent>
-          </Card>
-          <Card className="group transition-all duration-300 hover:shadow-xl hover:scale-[1.02] hover:border-info/50">
-            <CardHeader className="p-3 sm:p-4 pb-2">
-              <CardDescription className="text-[0.65rem] sm:text-xs font-medium uppercase tracking-wide truncate">Técnicos</CardDescription>
-              <CardTitle className="text-2xl sm:text-3xl lg:text-4xl font-bold flex items-center gap-2">
-                <Users className="h-5 w-5 sm:h-6 sm:w-6 lg:h-7 lg:w-7 text-info transition-transform group-hover:scale-110 shrink-0" />
-                <span className="truncate">{data.empleados?.length ?? 0}</span>
-              </CardTitle>
-            </CardHeader>
-            <CardContent className="p-3 sm:p-4 pt-0">
-              <p className="text-[0.65rem] sm:text-xs lg:text-sm text-muted-foreground group-hover:text-foreground transition-colors truncate">Personal disponible</p>
             </CardContent>
           </Card>
         </section>
@@ -536,7 +538,7 @@ export default function Dashboard() {
                         </div>
                         <p className="text-sm text-muted-foreground mt-1">
                           Nueva lectura: {actualizacion.horasKm} ({actualizacion.incremento >= 0 ? '+' : ''}
-                          {actualizacion.incremento})
+                          {Number(actualizacion.incremento).toFixed(1)})
                         </p>
                         <p className="text-xs text-muted-foreground">Responsable: {actualizacion.usuarioResponsable}</p>
                       </div>

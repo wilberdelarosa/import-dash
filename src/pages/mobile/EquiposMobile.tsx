@@ -27,6 +27,10 @@ import {
   Eye,
   Edit2,
   Trash2,
+  ArrowUpDown,
+  ArrowUp,
+  ArrowDown,
+  Layers,
   ListFilter,
   Lock,
 } from 'lucide-react';
@@ -57,6 +61,7 @@ interface EquiposMobileProps {
 }
 
 type FilterType = 'all' | 'active' | 'inactive' | 'vendido' | 'todo';
+type SortType = 'ficha-asc' | 'ficha-desc' | 'categoria' | 'estado';
 
 export function EquiposMobile({
   equipos,
@@ -67,6 +72,7 @@ export function EquiposMobile({
 }: EquiposMobileProps) {
   const [searchQuery, setSearchQuery] = useState('');
   const [filter, setFilter] = useState<FilterType>('all');
+  const [sortBy, setSortBy] = useState<SortType>('ficha-asc');
   const [filtersOpen, setFiltersOpen] = useState(false);
   const { currentUserRole } = useUserRoles();
   const isAdmin = currentUserRole === 'admin';
@@ -118,8 +124,22 @@ export function EquiposMobile({
       );
     }
 
-    return filtered;
-  }, [equipos, filter, searchQuery]);
+    // Sort
+    return [...filtered].sort((a, b) => {
+      switch (sortBy) {
+        case 'ficha-asc':
+          return (a.ficha || '').localeCompare(b.ficha || '', 'es', { numeric: true });
+        case 'ficha-desc':
+          return (b.ficha || '').localeCompare(a.ficha || '', 'es', { numeric: true });
+        case 'categoria':
+          return (a.categoria || '').localeCompare(b.categoria || '', 'es');
+        case 'estado':
+          return (b.activo ? 1 : 0) - (a.activo ? 1 : 0);
+        default:
+          return (a.ficha || '').localeCompare(b.ficha || '', 'es', { numeric: true });
+      }
+    });
+  }, [equipos, filter, searchQuery, sortBy]);
 
   const getCategoryIcon = (categoria?: string) => {
     return <Truck className="h-5 w-5" />;
@@ -225,6 +245,50 @@ export function EquiposMobile({
                   </div>
                 </Button>
               )}
+
+              {/* Separador */}
+              <div className="my-4 border-t border-border/50" />
+
+              {/* Opciones de ordenamiento */}
+              <p className="text-sm font-semibold text-muted-foreground mb-3 flex items-center gap-2">
+                <ArrowUpDown className="h-4 w-4" />
+                Ordenar por
+              </p>
+
+              <div className="grid grid-cols-2 gap-2">
+                <Button
+                  variant={sortBy === 'ficha-asc' ? 'default' : 'outline'}
+                  className="justify-start gap-2 h-11 rounded-xl"
+                  onClick={() => setSortBy('ficha-asc')}
+                >
+                  <ArrowUp className="h-4 w-4" />
+                  Ficha A-Z
+                </Button>
+                <Button
+                  variant={sortBy === 'ficha-desc' ? 'default' : 'outline'}
+                  className="justify-start gap-2 h-11 rounded-xl"
+                  onClick={() => setSortBy('ficha-desc')}
+                >
+                  <ArrowDown className="h-4 w-4" />
+                  Ficha Z-A
+                </Button>
+                <Button
+                  variant={sortBy === 'categoria' ? 'default' : 'outline'}
+                  className="justify-start gap-2 h-11 rounded-xl"
+                  onClick={() => setSortBy('categoria')}
+                >
+                  <Layers className="h-4 w-4" />
+                  Categoría
+                </Button>
+                <Button
+                  variant={sortBy === 'estado' ? 'default' : 'outline'}
+                  className="justify-start gap-2 h-11 rounded-xl"
+                  onClick={() => setSortBy('estado')}
+                >
+                  <Power className="h-4 w-4" />
+                  Estado
+                </Button>
+              </div>
             </div>
           </SheetContent>
         </Sheet>

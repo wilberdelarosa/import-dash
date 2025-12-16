@@ -9,7 +9,9 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/com
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
+import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { useSupabaseDataContext } from '@/context/SupabaseDataContext';
+import { EquipoDetalleUnificado } from '@/components/EquipoDetalleUnificado';
 import {
   Table,
   TableBody,
@@ -32,32 +34,72 @@ export function MechanicPendingListDesktop() {
   const navigate = useNavigate();
   const { data } = useSupabaseDataContext();
   const mantenimientos = data.mantenimientosProgramados;
+  const equipos = data.equipos;
   const [search, setSearch] = useState('');
+  const [tab, setTab] = useState('vencidos');
 
-  // Equipos con mantenimiento pendiente/vencido, ordenados por urgencia
+  const [selectedFicha, setSelectedFicha] = useState<string | null>(null);
+  const [detalleOpen, setDetalleOpen] = useState(false);
+
+  // Fichas de equipos activos (no vendidos)
+  const fichasEquiposActivos = useMemo(() => {
+    return new Set(
+      equipos
+        .filter(e => e.activo && e.empresa !== 'VENDIDO')
+        .map(e => e.ficha)
+    );
+  }, [equipos]);
+
+  const handleOpenDetalle = (ficha: string) => {
+    setSelectedFicha(ficha);
+    setDetalleOpen(true);
+  };
+
+  const formatHours = (value: unknown) => {
+    const numberValue = typeof value === 'number' ? value : Number(value);
+    if (!Number.isFinite(numberValue)) return '0';
+
+    const abs = Math.abs(numberValue);
+    const rounded = abs >= 100 ? Math.round(abs) : Math.round(abs * 10) / 10;
+    return rounded.toLocaleString('es-ES', {
+      minimumFractionDigits: rounded % 1 === 0 ? 0 : 1,
+      maximumFractionDigits: rounded % 1 === 0 ? 0 : 1,
+    });
+  };
+
+  // Equipos con mantenimiento (solo equipos activos), ordenados por urgencia
   const equiposPendientes = useMemo(() => {
-    const pendientes = mantenimientos
-      .filter(m => m.activo)
+    const base = mantenimientos
+      .filter(m => m.activo && fichasEquiposActivos.has(m.ficha))
       .sort((a, b) => a.horasKmRestante - b.horasKmRestante);
 
-    if (!search) return pendientes;
+    if (!search) return base;
 
     const searchLower = search.toLowerCase();
-    return pendientes.filter(m =>
+    return base.filter(m =>
       m.ficha.toLowerCase().includes(searchLower) ||
       m.nombreEquipo.toLowerCase().includes(searchLower)
     );
-  }, [mantenimientos, search]);
+  }, [mantenimientos, search, fichasEquiposActivos]);
 
-  const vencidos = equiposPendientes.filter(e => e.horasKmRestante < 0).length;
-  const proximos = equiposPendientes.filter(e => e.horasKmRestante >= 0 && e.horasKmRestante <= 50).length;
+  const vencidosList = useMemo(() => equiposPendientes.filter(e => e.horasKmRestante < 0), [equiposPendientes]);
+  const proximosList = useMemo(() => equiposPendientes.filter(e => e.horasKmRestante >= 0 && e.horasKmRestante <= 50), [equiposPendientes]);
+  const alDiaList = useMemo(() => equiposPendientes.filter(e => e.horasKmRestante > 50), [equiposPendientes]);
+
+  const equiposTabla = useMemo(() => {
+    if (tab === 'todos') return equiposPendientes;
+    if (tab === 'vencidos') return vencidosList;
+    if (tab === 'proximos') return proximosList;
+    if (tab === 'aldia') return alDiaList;
+    return equiposPendientes;
+  }, [tab, equiposPendientes, vencidosList, proximosList, alDiaList]);
 
   const getUrgencyBadge = (horasRestantes: number) => {
     if (horasRestantes < 0) {
       return (
         <Badge className="bg-destructive/10 text-destructive border-destructive/20">
           <AlertTriangle className="h-3 w-3 mr-1" />
-          VENCIDO hace {Math.abs(horasRestantes)}h
+          VENCIDO hace {formatHours(horasRestantes)}h
         </Badge>
       );
     }
@@ -65,13 +107,13 @@ export function MechanicPendingListDesktop() {
       return (
         <Badge className="bg-amber-500/10 text-amber-600 border-amber-500/20">
           <Clock className="h-3 w-3 mr-1" />
-          Próximo en {horasRestantes}h
+          Próximo en {formatHours(horasRestantes)}h
         </Badge>
       );
     }
     return (
       <Badge className="bg-green-500/10 text-green-600 border-green-500/20">
-        Al día ({horasRestantes}h)
+        Al día ({formatHours(horasRestantes)}h)
       </Badge>
     );
   };
@@ -99,11 +141,11 @@ export function MechanicPendingListDesktop() {
           <div className="flex items-center gap-3">
             <Badge variant="outline" className="gap-1">
               <AlertTriangle className="h-3 w-3 text-destructive" />
-              {vencidos} vencidos
+              {vencidosList.length} vencidos
             </Badge>
             <Badge variant="outline" className="gap-1">
               <Clock className="h-3 w-3 text-amber-500" />
-              {proximos} próximos
+              {proximosList.length} próximos
             </Badge>
           </div>
         </div>
@@ -124,11 +166,34 @@ export function MechanicPendingListDesktop() {
           <CardHeader className="pb-3">
             <CardTitle className="text-lg">Lista de Equipos</CardTitle>
             <CardDescription>
-              {equiposPendientes.length} equipos encontrados
+              {equiposTabla.length} equipos encontrados
             </CardDescription>
           </CardHeader>
           <CardContent>
-            {equiposPendientes.length === 0 ? (
+            <div className="mb-4">
+              <Tabs value={tab} onValueChange={setTab} className="w-full">
+                <TabsList className="grid w-full max-w-[560px] grid-cols-4">
+                  <TabsTrigger value="vencidos" className="text-sm gap-2">
+                    <AlertTriangle className="h-4 w-4" />
+                    Vencidos ({vencidosList.length})
+                  </TabsTrigger>
+                  <TabsTrigger value="proximos" className="text-sm gap-2">
+                    <Clock className="h-4 w-4" />
+                    Próximos ({proximosList.length})
+                  </TabsTrigger>
+                  <TabsTrigger value="aldia" className="text-sm gap-2">
+                    <Truck className="h-4 w-4" />
+                    Al día ({alDiaList.length})
+                  </TabsTrigger>
+                  <TabsTrigger value="todos" className="text-sm gap-2">
+                    <Truck className="h-4 w-4" />
+                    Todos ({equiposPendientes.length})
+                  </TabsTrigger>
+                </TabsList>
+              </Tabs>
+            </div>
+
+            {equiposTabla.length === 0 ? (
               <div className="text-center py-12">
                 <Truck className="h-12 w-12 mx-auto text-muted-foreground/50 mb-3" />
                 <p className="text-muted-foreground">
@@ -150,24 +215,26 @@ export function MechanicPendingListDesktop() {
                     </TableRow>
                   </TableHeader>
                   <TableBody>
-                    {equiposPendientes.map((mant) => (
+                    {equiposTabla.map((mant) => (
                       <TableRow
                         key={mant.id}
                         className={cn(
+                          'cursor-pointer',
                           mant.horasKmRestante < 0 && "bg-destructive/5",
                           mant.horasKmRestante >= 0 && mant.horasKmRestante <= 50 && "bg-amber-500/5"
                         )}
+                        onClick={() => handleOpenDetalle(mant.ficha)}
                       >
-                        <TableCell className="font-medium">{mant.nombreEquipo}</TableCell>
-                        <TableCell>{mant.ficha}</TableCell>
+                        <TableCell className="font-medium max-w-[360px] truncate">{mant.nombreEquipo}</TableCell>
+                        <TableCell className="tabular-nums">{mant.ficha}</TableCell>
                         <TableCell>
                           <Badge variant="outline">{mant.tipoMantenimiento}</Badge>
                         </TableCell>
-                        <TableCell className="text-right font-mono">
-                          {mant.horasKmActuales.toLocaleString()}
+                        <TableCell className="text-right tabular-nums">
+                          {Number(mant.horasKmActuales).toLocaleString('es-ES')}
                         </TableCell>
-                        <TableCell className="text-right font-mono">
-                          {mant.proximoMantenimiento.toLocaleString()}
+                        <TableCell className="text-right tabular-nums">
+                          {Number(mant.proximoMantenimiento).toLocaleString('es-ES')}
                         </TableCell>
                         <TableCell>
                           {getUrgencyBadge(mant.horasKmRestante)}
@@ -176,7 +243,10 @@ export function MechanicPendingListDesktop() {
                           <Button
                             size="sm"
                             className="gap-1.5"
-                            onClick={() => navigate(`/mechanic/reportar/${mant.ficha}`)}
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              navigate(`/mechanic/reportar/${mant.ficha}`);
+                            }}
                           >
                             <FileText className="h-4 w-4" />
                             Reportar
@@ -191,6 +261,12 @@ export function MechanicPendingListDesktop() {
           </CardContent>
         </Card>
       </div>
+
+      <EquipoDetalleUnificado
+        ficha={selectedFicha}
+        open={detalleOpen}
+        onOpenChange={setDetalleOpen}
+      />
     </Layout>
   );
 }

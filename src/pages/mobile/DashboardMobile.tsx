@@ -324,7 +324,7 @@ export function DashboardMobile({
                                 <div className="flex-1 min-w-0">
                                   <p className="text-[0.7rem] font-medium truncate">{act.nombreEquipo || `Ficha ${act.ficha}`}</p>
                                   <p className="text-[0.6rem] text-muted-foreground">
-                                    {act.horasKm} ({act.incremento >= 0 ? '+' : ''}{act.incremento})
+                                    {act.horasKm} ({act.incremento >= 0 ? '+' : ''}{Number(act.incremento).toFixed(1)})
                                   </p>
                                 </div>
                                 <span className="text-[0.6rem] text-muted-foreground whitespace-nowrap ml-2">

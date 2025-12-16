@@ -64,8 +64,8 @@ import {
   Printer,
   CheckCircle2,
 } from 'lucide-react';
-import { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useState, useEffect } from 'react';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import type { jsPDF } from 'jspdf';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Label } from '@/components/ui/label';
@@ -77,6 +77,7 @@ import { useToast } from '@/hooks/use-toast';
 import { formatRemainingLabel, getRemainingVariant } from '@/lib/maintenanceUtils';
 import { useDeviceDetection } from '@/hooks/useDeviceDetection';
 import { MantenimientoMobile } from '@/pages/mobile/MantenimientoMobile';
+import { useSystemConfig } from '@/context/SystemConfigContext';
 
 const numericField = z
   .string()
@@ -130,7 +131,9 @@ const formatDateForInput = (date: string | null | undefined) => {
 export default function Mantenimiento() {
   const { isMobile } = useDeviceDetection();
   const navigate = useNavigate();
+  const [searchParams, setSearchParams] = useSearchParams();
   const { data, loading, clearDatabase, createMantenimiento, updateMantenimiento, deleteMantenimiento } = useSupabaseDataContext();
+  const { config } = useSystemConfig();
   const [modoAvanzado, setModoAvanzado] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
   const [filtros, setFiltros] = useState({
@@ -160,6 +163,22 @@ export default function Mantenimiento() {
     resolver: zodResolver(mantenimientoSchema),
     defaultValues: getDefaultFormValues(),
   });
+
+  // Handle ficha query param from URL (coming from EquipoDetalleUnificado)
+  useEffect(() => {
+    const fichaParam = searchParams.get('ficha');
+    if (fichaParam) {
+      // Set search term to the ficha
+      setSearchTerm(fichaParam);
+      // Also filter by ficha
+      setFiltros(prev => ({
+        ...prev,
+        fichas: [fichaParam]
+      }));
+      // Clean up URL params
+      setSearchParams({}, { replace: true });
+    }
+  }, [searchParams, setSearchParams]);
 
   const clampScale = (value: number) => Math.min(1.4, Math.max(0.8, Number(value.toFixed(2))));
 
@@ -473,8 +492,8 @@ export default function Mantenimiento() {
 
     const matchesEstado = filtros.estados.length === 0 ||
       (filtros.estados.includes('vencido') && mant.horasKmRestante <= 0) ||
-      (filtros.estados.includes('proximo') && mant.horasKmRestante > 0 && mant.horasKmRestante <= 100) ||
-      (filtros.estados.includes('normal') && mant.horasKmRestante > 100);
+      (filtros.estados.includes('proximo') && mant.horasKmRestante > 0 && mant.horasKmRestante <= config.alertaPreventiva) ||
+      (filtros.estados.includes('normal') && mant.horasKmRestante > config.alertaPreventiva);
 
     // Filtro de rango de restante
     const restante = Math.abs(mant.horasKmRestante);
@@ -490,8 +509,8 @@ export default function Mantenimiento() {
 
   const totalMantenimientos = mantenimientosFiltrados.length;
   const vencidos = mantenimientosFiltrados.filter(m => m.horasKmRestante <= 0).length;
-  const proximos = mantenimientosFiltrados.filter(m => m.horasKmRestante > 0 && m.horasKmRestante <= 100).length;
-  const normales = mantenimientosFiltrados.filter(m => m.horasKmRestante > 100).length;
+  const proximos = mantenimientosFiltrados.filter(m => m.horasKmRestante > 0 && m.horasKmRestante <= config.alertaPreventiva).length;
+  const normales = mantenimientosFiltrados.filter(m => m.horasKmRestante > config.alertaPreventiva).length;
 
   const formatearFecha = (fecha: string | null) => {
     if (!fecha) return 'N/A';
@@ -500,7 +519,7 @@ export default function Mantenimiento() {
 
   const obtenerEstadoMantenimiento = (horasRestante: number) => {
     if (horasRestante <= 0) return { label: 'Vencido', variant: 'destructive' as const };
-    if (horasRestante <= 100) return { label: 'Próximo', variant: 'secondary' as const };
+    if (horasRestante <= config.alertaPreventiva) return { label: 'Próximo', variant: 'secondary' as const };
     return { label: 'Normal', variant: 'default' as const };
   };
 
@@ -594,8 +613,8 @@ export default function Mantenimiento() {
     // Resumen estadístico con cajas de colores
     const totalMant = mantenimientos.length;
     const venc = mantenimientos.filter(m => m.horasKmRestante <= 0).length;
-    const prox = mantenimientos.filter(m => m.horasKmRestante > 0 && m.horasKmRestante <= 100).length;
-    const norm = mantenimientos.filter(m => m.horasKmRestante > 100).length;
+    const prox = mantenimientos.filter(m => m.horasKmRestante > 0 && m.horasKmRestante <= config.alertaPreventiva).length;
+    const norm = mantenimientos.filter(m => m.horasKmRestante > config.alertaPreventiva).length;
 
     doc.setFontSize(14);
     doc.setTextColor(40, 40, 40);
@@ -634,7 +653,7 @@ export default function Mantenimiento() {
     doc.roundedRect(20 + boxSpacing * 2, boxY, boxWidth, boxHeight, 3, 3, 'F');
     doc.setFontSize(10);
     doc.setFont('helvetica', 'normal');
-    doc.text('Próximos (≤100)', 25 + boxSpacing * 2, boxY + 6);
+    doc.text(`Próximos (≤${config.alertaPreventiva})`, 25 + boxSpacing * 2, boxY + 6);
     doc.setFontSize(18);
     doc.setFont('helvetica', 'bold');
     doc.text(prox.toString(), 25 + boxSpacing * 2, boxY + 14);
@@ -1846,7 +1865,7 @@ export default function Mantenimiento() {
           <Card className="overflow-hidden border-l-4 border-l-amber-500 bg-gradient-to-br from-amber-50 to-white dark:from-amber-950/20 dark:to-slate-800 hover:shadow-lg transition-all duration-300">
             <CardHeader className="pb-3">
               <div className="flex items-center justify-between">
-                <CardDescription className="text-xs font-medium uppercase tracking-wide">Próximos (≤100)</CardDescription>
+                <CardDescription className="text-xs font-medium uppercase tracking-wide">Próximos (≤{config.alertaPreventiva})</CardDescription>
                 <div className="rounded-full bg-amber-100 dark:bg-amber-900/30 p-2">
                   <Clock className="h-4 w-4 text-amber-600 dark:text-amber-500" />
                 </div>

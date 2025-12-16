@@ -76,6 +76,7 @@ import {
 import { formatRemainingLabel, getRemainingVariant } from '@/lib/maintenanceUtils';
 import { useUserRoles } from '@/hooks/useUserRoles';
 import { useToast } from '@/hooks/use-toast';
+import { useSystemConfig } from '@/context/SystemConfigContext';
 
 interface MantenimientoMobileProps {
   mantenimientos: MantenimientoProgramado[];
@@ -113,6 +114,7 @@ export function MantenimientoMobile({
   const { currentUserRole } = useUserRoles();
   const isAdmin = currentUserRole === 'admin';
   const { toast } = useToast();
+  const { config } = useSystemConfig();
 
   // Filtros avanzados con checkbox
   const [filtros, setFiltros] = useState({
@@ -179,8 +181,8 @@ export function MantenimientoMobile({
       // Filtro por estado
       if (filtros.estados.length > 0) {
         const isVencido = m.horasKmRestante <= 0;
-        const isProximo = m.horasKmRestante > 0 && m.horasKmRestante <= 100;
-        const isNormal = m.horasKmRestante > 100;
+        const isProximo = m.horasKmRestante > 0 && m.horasKmRestante <= config.alertaPreventiva;
+        const isNormal = m.horasKmRestante > config.alertaPreventiva;
 
         const matchEstado =
           (filtros.estados.includes('vencido') && isVencido) ||
@@ -208,8 +210,8 @@ export function MantenimientoMobile({
   const stats = useMemo(() => {
     const total = mantenimientosFiltrados.length;
     const vencidos = mantenimientosFiltrados.filter(m => m.horasKmRestante <= 0);
-    const proximos = mantenimientosFiltrados.filter(m => m.horasKmRestante > 0 && m.horasKmRestante <= 100);
-    const ok = mantenimientosFiltrados.filter(m => m.horasKmRestante > 100);
+    const proximos = mantenimientosFiltrados.filter(m => m.horasKmRestante > 0 && m.horasKmRestante <= config.alertaPreventiva);
+    const ok = mantenimientosFiltrados.filter(m => m.horasKmRestante > config.alertaPreventiva);
 
     // Calcular promedio de horas restantes para los que están ok
     const avgRestante = ok.length > 0
@@ -226,8 +228,8 @@ export function MantenimientoMobile({
         categoria: cat,
         total: items.length,
         vencidos: items.filter(m => m.horasKmRestante <= 0).length,
-        proximos: items.filter(m => m.horasKmRestante > 0 && m.horasKmRestante <= 100).length,
-        ok: items.filter(m => m.horasKmRestante > 100).length
+        proximos: items.filter(m => m.horasKmRestante > 0 && m.horasKmRestante <= config.alertaPreventiva).length,
+        ok: items.filter(m => m.horasKmRestante > config.alertaPreventiva).length
       };
     }).filter(c => c.total > 0);
 
@@ -406,7 +408,7 @@ export function MantenimientoMobile({
       doc.roundedRect(20 + boxSpacing * 2, boxY, boxWidth, boxHeight, 2, 2, 'F');
       doc.setFontSize(9);
       doc.setFont('helvetica', 'normal');
-      doc.text('Próximos (≤100)', 25 + boxSpacing * 2, boxY + 5);
+      doc.text(`Próximos (≤${config.alertaPreventiva})`, 25 + boxSpacing * 2, boxY + 5);
       doc.setFontSize(16);
       doc.setFont('helvetica', 'bold');
       doc.text(prox.toString(), 25 + boxSpacing * 2, boxY + 13);
@@ -615,7 +617,7 @@ export function MantenimientoMobile({
                     <div className="grid grid-cols-1 gap-2">
                       {[
                         { id: 'vencido', label: 'Vencidos', icon: AlertTriangle, color: 'text-destructive' },
-                        { id: 'proximo', label: 'Próximos (≤100)', icon: Clock, color: 'text-amber-500' },
+                        { id: 'proximo', label: `Próximos (≤${config.alertaPreventiva})`, icon: Clock, color: 'text-amber-500' },
                         { id: 'normal', label: 'Normales', icon: CheckCircle2, color: 'text-green-500' },
                       ].map(estado => (
                         <label
@@ -840,7 +842,7 @@ export function MantenimientoMobile({
                   </div>
                   <div className="flex-1">
                     <div className="flex justify-between items-center">
-                      <span className="text-sm font-medium">Próximos (≤100)</span>
+                      <span className="text-sm font-medium">Próximos (≤{config.alertaPreventiva})</span>
                       <span className="text-lg font-bold text-amber-500">{stats.proximos}</span>
                     </div>
                     <div className="h-1.5 bg-muted rounded-full overflow-hidden mt-1">

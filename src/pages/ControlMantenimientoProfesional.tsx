@@ -134,7 +134,7 @@ export default function ControlMantenimientoProfesional() {
   } = useSupabaseDataContext();
   const { toast } = useToast();
   const { isSupervisor, isAdmin } = useUserRoles();
-  
+
   // Supervisor es solo lectura - no puede editar
   const isReadOnly = isSupervisor && !isAdmin;
 
@@ -840,7 +840,7 @@ export default function ControlMantenimientoProfesional() {
     <Layout title="Control de Mantenimiento">
       {/* Banner de solo lectura para supervisores */}
       {isReadOnly && <ReadOnlyBanner className="mb-4" />}
-      
+
       {/* Tabs para Mantenimiento y Planificador */}
       <Tabs value={tabActivo} onValueChange={(v) => setTabActivo(v as 'mantenimiento' | 'planificador')} className="space-y-4">
         <TabsList className="grid w-full max-w-md grid-cols-2">
@@ -1487,7 +1487,7 @@ export default function ControlMantenimientoProfesional() {
                                       </div>
                                       <div>
                                         <span className="text-muted-foreground">Incremento:</span>
-                                        <p className="font-semibold text-blue-600">+{alerta.incremento}</p>
+                                        <p className="font-semibold text-blue-600">+{Number(alerta.incremento).toFixed(1)}</p>
                                       </div>
                                     </div>
                                   </div>

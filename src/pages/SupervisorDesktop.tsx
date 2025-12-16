@@ -29,11 +29,13 @@ import {
   Gauge,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { useSystemConfig } from '@/context/SystemConfigContext';
 
 export function SupervisorDesktop() {
   const navigate = useNavigate();
   const { user } = useAuth();
   const { data } = useSupabaseDataContext();
+  const { config } = useSystemConfig();
   const { submissions } = useMechanicSubmissions();
   const mantenimientos = data.mantenimientosProgramados;
   const equipos = data.equipos;
@@ -42,15 +44,24 @@ export function SupervisorDesktop() {
   const [selectedFicha, setSelectedFicha] = useState<string | null>(null);
   const [detalleOpen, setDetalleOpen] = useState(false);
 
+  // Fichas de equipos activos (no vendidos)
+  const fichasEquiposActivos = useMemo(() => {
+    return new Set(
+      equipos
+        .filter(e => e.activo && e.empresa !== 'VENDIDO')
+        .map(e => e.ficha)
+    );
+  }, [equipos]);
+
   // Estadísticas de flota
   const fleetStats = useMemo(() => {
     const total = equipos.length;
-    const activos = equipos.filter(e => e.activo).length;
+    const activos = equipos.filter(e => e.activo && e.empresa !== 'VENDIDO').length;
     const inactivos = total - activos;
 
-    const vencidos = mantenimientos.filter(m => m.activo && m.horasKmRestante < 0).length;
-    const proximos = mantenimientos.filter(m => m.activo && m.horasKmRestante >= 0 && m.horasKmRestante <= 50).length;
-    const alDia = mantenimientos.filter(m => m.activo && m.horasKmRestante > 50).length;
+    const vencidos = mantenimientos.filter(m => m.activo && m.horasKmRestante < 0 && fichasEquiposActivos.has(m.ficha)).length;
+    const proximos = mantenimientos.filter(m => m.activo && m.horasKmRestante >= 0 && m.horasKmRestante <= config.alertaPreventiva && fichasEquiposActivos.has(m.ficha)).length;
+    const alDia = mantenimientos.filter(m => m.activo && m.horasKmRestante > config.alertaPreventiva && fichasEquiposActivos.has(m.ficha)).length;
 
     const saludFlota = total > 0 ? Math.round((alDia / Math.max(vencidos + proximos + alDia, 1)) * 100) : 100;
 
@@ -63,7 +74,7 @@ export function SupervisorDesktop() {
       alDia,
       saludFlota,
     };
-  }, [equipos, mantenimientos]);
+  }, [equipos, mantenimientos, fichasEquiposActivos]);
 
   // Estadísticas de submissions
   const submissionStats = useMemo(() => {
@@ -73,19 +84,19 @@ export function SupervisorDesktop() {
     return { pending, approved, rejected, total: submissions.length };
   }, [submissions]);
 
-  // Lista completa de equipos vencidos
+  // Lista completa de equipos vencidos (solo equipos activos, no vendidos)
   const equiposVencidos = useMemo(() => {
     return mantenimientos
-      .filter(m => m.activo && m.horasKmRestante < 0)
+      .filter(m => m.activo && m.horasKmRestante < 0 && fichasEquiposActivos.has(m.ficha))
       .sort((a, b) => a.horasKmRestante - b.horasKmRestante);
-  }, [mantenimientos]);
+  }, [mantenimientos, fichasEquiposActivos]);
 
-  // Lista completa de equipos próximos
+  // Lista completa de equipos próximos (solo equipos activos, no vendidos)
   const equiposProximos = useMemo(() => {
     return mantenimientos
-      .filter(m => m.activo && m.horasKmRestante >= 0 && m.horasKmRestante <= 50)
+      .filter(m => m.activo && m.horasKmRestante >= 0 && m.horasKmRestante <= config.alertaPreventiva && fichasEquiposActivos.has(m.ficha))
       .sort((a, b) => a.horasKmRestante - b.horasKmRestante);
-  }, [mantenimientos]);
+  }, [mantenimientos, fichasEquiposActivos]);
 
   // Abrir detalle de equipo
   const handleOpenDetalle = (ficha: string) => {
@@ -172,7 +183,7 @@ export function SupervisorDesktop() {
                 <div>
                   <p className="text-sm text-muted-foreground">Próximos</p>
                   <p className="text-3xl font-bold text-amber-600">{fleetStats.proximos}</p>
-                  <p className="text-xs text-muted-foreground mt-1">Menos de 50h</p>
+                  <p className="text-xs text-muted-foreground mt-1">Menos de {config.alertaPreventiva}h</p>
                 </div>
                 <Clock className="h-10 w-10 text-amber-600" />
               </div>

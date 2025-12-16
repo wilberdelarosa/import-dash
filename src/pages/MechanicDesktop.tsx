@@ -2,15 +2,17 @@
  * Dashboard del Mecánico - Versión Desktop
  * Usa el Layout estándar con navegación horizontal
  */
-import { useMemo } from 'react';
+import { useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Layout } from '@/components/Layout';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { useMechanicSubmissions } from '@/hooks/useMechanicSubmissions';
 import { useSupabaseDataContext } from '@/context/SupabaseDataContext';
 import { useAuth } from '@/context/AuthContext';
+import { EquipoDetalleUnificado } from '@/components/EquipoDetalleUnificado';
 import {
   FileText,
   Clock,
@@ -32,15 +34,37 @@ export function MechanicDesktop() {
   const { submissions, loading, getStats } = useMechanicSubmissions();
   const { data } = useSupabaseDataContext();
   const mantenimientos = data.mantenimientosProgramados;
+  const equipos = data.equipos;
+
+  // Estado para el detalle unificado
+  const [selectedFicha, setSelectedFicha] = useState<string | null>(null);
+  const [detalleOpen, setDetalleOpen] = useState(false);
 
   const stats = useMemo(() => getStats(), [getStats]);
 
-  // Equipos con mantenimiento pendiente/vencido
+  // Fichas de equipos activos (no vendidos)
+  const fichasEquiposActivos = useMemo(() => {
+    return new Set(
+      equipos
+        .filter(e => e.activo && e.empresa !== 'VENDIDO')
+        .map(e => e.ficha)
+    );
+  }, [equipos]);
+
+  // Equipos con mantenimiento pendiente/vencido (solo equipos activos)
   const equiposPendientes = useMemo(() => {
     return mantenimientos
-      .filter(m => m.activo && m.horasKmRestante <= 50)
+      .filter(m => m.activo && m.horasKmRestante <= 50 && fichasEquiposActivos.has(m.ficha))
       .sort((a, b) => a.horasKmRestante - b.horasKmRestante);
-  }, [mantenimientos]);
+  }, [mantenimientos, fichasEquiposActivos]);
+
+  const equiposVencidos = useMemo(() => {
+    return equiposPendientes.filter(m => m.horasKmRestante < 0);
+  }, [equiposPendientes]);
+
+  const equiposProximos = useMemo(() => {
+    return equiposPendientes.filter(m => m.horasKmRestante >= 0 && m.horasKmRestante <= 50);
+  }, [equiposPendientes]);
 
   // Últimos reportes
   const recentSubmissions = useMemo(() => {
@@ -61,24 +85,37 @@ export function MechanicDesktop() {
     }
   };
 
-  const getUrgencyBadge = (horasRestantes: number) => {
-    if (horasRestantes < 0) {
-      return (
-        <Badge className="bg-destructive/10 text-destructive border-destructive/20 text-xs">
-          <AlertTriangle className="h-3 w-3 mr-1" />
-          VENCIDO
-        </Badge>
-      );
-    }
-    if (horasRestantes <= 50) {
-      return (
-        <Badge className="bg-amber-500/10 text-amber-600 border-amber-500/20 text-xs">
-          <Clock className="h-3 w-3 mr-1" />
-          Próximo
-        </Badge>
-      );
-    }
-    return null;
+  const handleOpenDetalle = (ficha: string) => {
+    setSelectedFicha(ficha);
+    setDetalleOpen(true);
+  };
+
+  const formatRemaining = (value: unknown) => {
+    const numberValue = typeof value === 'number' ? value : Number(value);
+    if (!Number.isFinite(numberValue)) return '0h';
+
+    const abs = Math.abs(numberValue);
+    const rounded = abs >= 100 ? Math.round(abs) : Math.round(abs * 10) / 10;
+    const text = rounded.toLocaleString('es-ES', {
+      minimumFractionDigits: rounded % 1 === 0 ? 0 : 1,
+      maximumFractionDigits: rounded % 1 === 0 ? 0 : 1,
+    });
+    return `${text}h`;
+  };
+
+  const formatReading = (value: unknown) => {
+    const numberValue = typeof value === 'number' ? value : Number(value);
+    if (!Number.isFinite(numberValue)) return '0h';
+
+    const rounded = Math.abs(numberValue) >= 100
+      ? Math.round(numberValue)
+      : Math.round(numberValue * 10) / 10;
+
+    const text = rounded.toLocaleString('es-ES', {
+      minimumFractionDigits: rounded % 1 === 0 ? 0 : 1,
+      maximumFractionDigits: rounded % 1 === 0 ? 0 : 1,
+    });
+    return `${text}h`;
   };
 
   return (
@@ -157,59 +194,126 @@ export function MechanicDesktop() {
         </div>
 
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-          {/* Equipos pendientes */}
+          {/* Estado de equipos (Vencidos / Próximos) */}
           <Card>
             <CardHeader className="pb-3">
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-2">
                   <AlertTriangle className="h-5 w-5 text-amber-500" />
-                  <CardTitle className="text-lg">Equipos Pendientes</CardTitle>
+                  <CardTitle className="text-lg">Estado de Equipos</CardTitle>
                 </div>
                 <Badge variant="secondary">{equiposPendientes.length}</Badge>
               </div>
-              <CardDescription>Equipos que necesitan mantenimiento</CardDescription>
+              <CardDescription>Vencidos y próximos (solo equipos activos)</CardDescription>
             </CardHeader>
             <CardContent>
-              {equiposPendientes.length === 0 ? (
-                <div className="text-center py-8">
-                  <Truck className="h-12 w-12 mx-auto text-muted-foreground/50 mb-2" />
-                  <p className="text-sm text-muted-foreground">No hay equipos pendientes</p>
-                </div>
-              ) : (
-                <div className="space-y-2 max-h-[300px] overflow-y-auto">
-                  {equiposPendientes.slice(0, 5).map((mant) => (
-                    <div
-                      key={mant.id}
-                      className="flex items-center justify-between p-3 rounded-lg border bg-card hover:bg-muted/50 transition-colors cursor-pointer"
-                      onClick={() => navigate(`/mechanic/reportar/${mant.ficha}`)}
-                    >
-                      <div className="flex items-center gap-3">
-                        <Truck className="h-5 w-5 text-muted-foreground" />
-                        <div>
-                          <p className="font-medium">{mant.nombreEquipo}</p>
-                          <p className="text-xs text-muted-foreground">Ficha: {mant.ficha}</p>
-                        </div>
-                      </div>
-                      <div className="flex items-center gap-2">
-                        {getUrgencyBadge(mant.horasKmRestante)}
-                        <span className="text-sm font-medium">
-                          {mant.horasKmRestante}h
-                        </span>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              )}
-              {equiposPendientes.length > 5 && (
-                <Button
-                  variant="outline"
-                  className="w-full mt-4"
-                  onClick={() => navigate('/mechanic/pendientes')}
+              <Tabs defaultValue="vencidos" className="w-full">
+                <TabsList className="grid w-full grid-cols-2 mb-3">
+                  <TabsTrigger value="vencidos" className="text-sm gap-2">
+                    <AlertTriangle className="h-4 w-4" />
+                    Vencidos ({equiposVencidos.length})
+                  </TabsTrigger>
+                  <TabsTrigger value="proximos" className="text-sm gap-2">
+                    <Clock className="h-4 w-4" />
+                    Próximos ({equiposProximos.length})
+                  </TabsTrigger>
+                </TabsList>
+
+                <TabsContent
+                  value="vencidos"
+                  className="mt-0 data-[state=active]:block"
+                  style={{ height: '280px', overflow: 'hidden' }}
                 >
-                  Ver Todos ({equiposPendientes.length})
-                  <ChevronRight className="h-4 w-4 ml-2" />
+                  {equiposVencidos.length === 0 ? (
+                    <div className="h-full flex flex-col items-center justify-center text-center">
+                      <CheckCircle className="h-12 w-12 text-green-600 mb-2" />
+                      <p className="text-sm font-medium text-green-700">Sin vencidos</p>
+                      <p className="text-xs text-muted-foreground">Todo al día</p>
+                    </div>
+                  ) : (
+                    <div className="h-full overflow-y-auto space-y-2" style={{ height: '280px' }}>
+                      {equiposVencidos.map((mant) => (
+                        <div
+                          key={mant.id}
+                          onClick={() => handleOpenDetalle(mant.ficha)}
+                          className={cn(
+                            "flex items-center justify-between p-2 rounded-lg border cursor-pointer transition-all h-[52px]",
+                            "border-destructive/30 bg-destructive/5 hover:bg-destructive/10"
+                          )}
+                        >
+                          <div className="flex items-center gap-2 min-w-0 flex-1 overflow-hidden">
+                            <Truck className="h-4 w-4 text-destructive shrink-0" />
+                            <div className="min-w-0 flex-1 overflow-hidden">
+                              <p className="text-sm font-medium truncate">{mant.nombreEquipo}</p>
+                              <p className="text-xs text-muted-foreground flex items-center gap-1">
+                                <span className="truncate">{mant.ficha}</span>
+                                <span>•</span>
+                                <span className="tabular-nums shrink-0">{formatReading(mant.horasKmActuales)}</span>
+                              </p>
+                            </div>
+                          </div>
+                          <Badge className="h-6 px-2 text-xs leading-none font-medium shrink-0 ml-2 tabular-nums bg-destructive/10 text-destructive border-destructive/20">
+                            {formatRemaining(mant.horasKmRestante)}
+                          </Badge>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </TabsContent>
+
+                <TabsContent
+                  value="proximos"
+                  className="mt-0"
+                  style={{ height: '280px', overflow: 'hidden' }}
+                >
+                  {equiposProximos.length === 0 ? (
+                    <div className="h-full flex flex-col items-center justify-center text-center">
+                      <CheckCircle className="h-12 w-12 text-green-600 mb-2" />
+                      <p className="text-sm font-medium text-green-700">Sin próximos</p>
+                      <p className="text-xs text-muted-foreground">Todo en orden</p>
+                    </div>
+                  ) : (
+                    <div className="h-full overflow-y-auto space-y-2" style={{ height: '280px' }}>
+                      {equiposProximos.map((mant) => (
+                        <div
+                          key={mant.id}
+                          onClick={() => handleOpenDetalle(mant.ficha)}
+                          className={cn(
+                            "flex items-center justify-between p-2 rounded-lg border cursor-pointer transition-all h-[52px]",
+                            "border-amber-500/30 bg-amber-500/5 hover:bg-amber-500/10"
+                          )}
+                        >
+                          <div className="flex items-center gap-2 min-w-0 flex-1 overflow-hidden">
+                            <Truck className="h-4 w-4 text-amber-600 shrink-0" />
+                            <div className="min-w-0 flex-1 overflow-hidden">
+                              <p className="text-sm font-medium truncate">{mant.nombreEquipo}</p>
+                              <p className="text-xs text-muted-foreground flex items-center gap-1">
+                                <span className="truncate">{mant.ficha}</span>
+                                <span>•</span>
+                                <span className="tabular-nums shrink-0">{formatReading(mant.horasKmActuales)}</span>
+                              </p>
+                            </div>
+                          </div>
+                          <Badge className="h-6 px-2 text-xs leading-none font-medium shrink-0 ml-2 tabular-nums bg-amber-500/10 text-amber-600 border-amber-500/20">
+                            {formatRemaining(mant.horasKmRestante)}
+                          </Badge>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </TabsContent>
+              </Tabs>
+
+              <div className="flex items-center justify-between mt-4">
+                <Button variant="outline" onClick={() => navigate('/mechanic/pendientes')} className="gap-2">
+                  Ver pendientes
+                  <ChevronRight className="h-4 w-4" />
                 </Button>
-              )}
+                <Button onClick={() => navigate('/mechanic/reportar')} className="gap-2">
+                  <FileText className="h-4 w-4" />
+                  Reportar
+                </Button>
+              </div>
             </CardContent>
           </Card>
 
@@ -264,6 +368,12 @@ export function MechanicDesktop() {
           </Card>
         </div>
       </div>
+
+      <EquipoDetalleUnificado
+        ficha={selectedFicha}
+        open={detalleOpen}
+        onOpenChange={setDetalleOpen}
+      />
     </Layout>
   );
 }
