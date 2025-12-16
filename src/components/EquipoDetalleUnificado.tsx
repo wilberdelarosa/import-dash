@@ -665,7 +665,7 @@ export function EquipoDetalleUnificado({ ficha, open, onOpenChange }: Props) {
                           </div>
                         )}
                       </div>
-                      <div className="rounded-md border border-primary/20 bg-slate-50 p-3 text-xs text-muted-foreground dark:bg-slate-900">
+                      <div className="rounded-md border border-primary/20 bg-muted/50 p-3 text-xs text-muted-foreground">
                         <p className="font-semibold text-primary mb-3">Estado del equipo</p>
                         <div className="space-y-3">
                           <div className="bg-primary/5 rounded p-2.5 border border-primary/10">
@@ -736,7 +736,7 @@ export function EquipoDetalleUnificado({ ficha, open, onOpenChange }: Props) {
                       </div>
                     </div>
                     <div className="space-y-4">
-                      <div className="rounded-md border border-primary/20 bg-slate-50 p-3 dark:bg-slate-900">
+                      <div className="rounded-md border border-primary/20 bg-muted/50 p-3">
                         <p className="flex items-center gap-2 text-xs font-semibold uppercase tracking-wide text-primary/80">
                           <Package className="h-4 w-4" /> Kit sugerido
                         </p>
@@ -759,7 +759,7 @@ export function EquipoDetalleUnificado({ ficha, open, onOpenChange }: Props) {
                           </p>
                         )}
                       </div>
-                      <div className="rounded-md border border-primary/20 bg-slate-50 p-3 dark:bg-slate-900">
+                      <div className="rounded-md border border-primary/20 bg-muted/50 p-3">
                         <p className="flex items-center gap-2 text-xs font-semibold uppercase tracking-wide text-primary/80">
                           <ListChecks className="h-4 w-4" /> Tareas clave
                         </p>

@@ -669,7 +669,7 @@ export default function Auth() {
                                 disabled={loading}
                                 className={`pl-11 h-12 transition-all duration-300 rounded-xl ${theme === 'dark'
                                   ? 'bg-slate-900/50 border-slate-700 text-white placeholder:text-slate-500 focus:bg-slate-900 focus:border-amber-500 focus:ring-2 focus:ring-amber-500/20'
-                                  : 'bg-slate-50 border-slate-200 text-slate-800 placeholder:text-slate-400 focus:bg-white focus:border-amber-400 focus:ring-2 focus:ring-amber-400/20'
+                                  : 'bg-white border-slate-200 text-black placeholder:text-slate-400 focus:bg-white focus:border-amber-400 focus:ring-2 focus:ring-amber-400/20'
                                   }`}
                               />
                             </div>
@@ -693,7 +693,7 @@ export default function Auth() {
                                 disabled={loading}
                                 className={`pl-11 h-12 transition-all duration-300 rounded-xl ${theme === 'dark'
                                   ? 'bg-slate-900/50 border-slate-700 text-white placeholder:text-slate-500 focus:bg-slate-900 focus:border-amber-500 focus:ring-2 focus:ring-amber-500/20'
-                                  : 'bg-slate-50 border-slate-200 text-slate-800 placeholder:text-slate-400 focus:bg-white focus:border-amber-400 focus:ring-2 focus:ring-amber-400/20'
+                                  : 'bg-white border-slate-200 text-black placeholder:text-slate-400 focus:bg-white focus:border-amber-400 focus:ring-2 focus:ring-amber-400/20'
                                   }`}
                               />
                             </div>
@@ -796,7 +796,7 @@ export default function Auth() {
                                 disabled={loading}
                                 className={`pl-11 h-12 transition-all duration-300 rounded-xl ${theme === 'dark'
                                   ? 'bg-slate-900/50 border-slate-700 text-white placeholder:text-slate-500 focus:bg-slate-900 focus:border-amber-500 focus:ring-2 focus:ring-amber-500/20'
-                                  : 'bg-slate-50 border-slate-200 text-slate-800 placeholder:text-slate-400 focus:bg-white focus:border-amber-400 focus:ring-2 focus:ring-amber-400/20'
+                                  : 'bg-white border-slate-200 text-black placeholder:text-slate-400 focus:bg-white focus:border-amber-400 focus:ring-2 focus:ring-amber-400/20'
                                   }`}
                               />
                             </div>
@@ -820,7 +820,7 @@ export default function Auth() {
                                 disabled={loading}
                                 className={`pl-11 h-12 transition-all duration-300 rounded-xl ${theme === 'dark'
                                   ? 'bg-slate-900/50 border-slate-700 text-white placeholder:text-slate-500 focus:bg-slate-900 focus:border-amber-500 focus:ring-2 focus:ring-amber-500/20'
-                                  : 'bg-slate-50 border-slate-200 text-slate-800 placeholder:text-slate-400 focus:bg-white focus:border-amber-400 focus:ring-2 focus:ring-amber-400/20'
+                                  : 'bg-white border-slate-200 text-black placeholder:text-slate-400 focus:bg-white focus:border-amber-400 focus:ring-2 focus:ring-amber-400/20'
                                   }`}
                               />
                             </div>
@@ -845,7 +845,7 @@ export default function Auth() {
                                 disabled={loading}
                                 className={`pl-11 h-12 transition-all duration-300 rounded-xl ${theme === 'dark'
                                   ? 'bg-slate-900/50 border-slate-700 text-white placeholder:text-slate-500 focus:bg-slate-900 focus:border-amber-500 focus:ring-2 focus:ring-amber-500/20'
-                                  : 'bg-slate-50 border-slate-200 text-slate-800 placeholder:text-slate-400 focus:bg-white focus:border-amber-400 focus:ring-2 focus:ring-amber-400/20'
+                                  : 'bg-white border-slate-200 text-black placeholder:text-slate-400 focus:bg-white focus:border-amber-400 focus:ring-2 focus:ring-amber-400/20'
                                   }`}
                               />
                             </div>
@@ -869,7 +869,7 @@ export default function Auth() {
                                 disabled={loading}
                                 className={`pl-11 h-12 transition-all duration-300 rounded-xl ${theme === 'dark'
                                   ? 'bg-slate-900/50 border-slate-700 text-white placeholder:text-slate-500 focus:bg-slate-900 focus:border-amber-500 focus:ring-2 focus:ring-amber-500/20'
-                                  : 'bg-slate-50 border-slate-200 text-slate-800 placeholder:text-slate-400 focus:bg-white focus:border-amber-400 focus:ring-2 focus:ring-amber-400/20'
+                                  : 'bg-white border-slate-200 text-black placeholder:text-slate-400 focus:bg-white focus:border-amber-400 focus:ring-2 focus:ring-amber-400/20'
                                   }`}
                               />
                             </div>
@@ -961,7 +961,7 @@ export default function Auth() {
                           disabled={loading}
                           className={`h-14 text-center text-3xl tracking-[0.5em] font-bold rounded-xl transition-all duration-300 ${theme === 'dark'
                             ? 'bg-slate-900/50 border-slate-700 text-white placeholder:text-slate-600 focus:bg-slate-900 focus:border-amber-500 focus:ring-2 focus:ring-amber-500/20'
-                            : 'bg-slate-50 border-slate-200 text-slate-800 placeholder:text-slate-400 focus:bg-white focus:border-amber-400 focus:ring-2 focus:ring-amber-400/20'
+                            : 'bg-white border-slate-200 text-black placeholder:text-slate-400 focus:bg-white focus:border-amber-400 focus:ring-2 focus:ring-amber-400/20'
                             }`}
                         />
                         {pinSent && (
