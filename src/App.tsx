@@ -28,6 +28,7 @@ const ListasPersonalizadas = lazy(() => import("./pages/ListasPersonalizadas"));
 const ImportarDatosCaterpillar = lazy(() => import("./pages/ImportarDatosCaterpillar"));
 const Auth = lazy(() => import("./pages/Auth"));
 const NotificacionesPage = lazy(() => import("./pages/Notificaciones"));
+const GestorTickets = lazy(() => import("./pages/GestorTickets"));
 
 // Mechanic pages - with device detection routers
 const MechanicDashboardRouter = lazy(() => import("./pages/MechanicModule").then(m => ({ default: m.MechanicDashboardRouter })));
@@ -72,7 +73,8 @@ const App = () => (
                   <Route path="/listas-personalizadas" element={<ProtectedRoute><ListasPersonalizadas /></ProtectedRoute>} />
                   <Route path="/importar-caterpillar" element={<ProtectedRoute><ImportarDatosCaterpillar /></ProtectedRoute>} />
                   <Route path="/notificaciones" element={<ProtectedRoute><NotificacionesPage /></ProtectedRoute>} />
-                  
+                  <Route path="/tickets" element={<ProtectedRoute><GestorTickets /></ProtectedRoute>} />
+
                   {/* Mechanic routes */}
                   <Route path="/mechanic" element={<ProtectedRoute><MechanicDashboardRouter /></ProtectedRoute>} />
                   <Route path="/mechanic/pendientes" element={<ProtectedRoute><MechanicPendingListRouter /></ProtectedRoute>} />
@@ -80,17 +82,17 @@ const App = () => (
                   <Route path="/mechanic/reportar/:ficha" element={<ProtectedRoute><MechanicSubmissionFormRouter /></ProtectedRoute>} />
                   <Route path="/mechanic/historial" element={<ProtectedRoute><MechanicHistoryRouter /></ProtectedRoute>} />
                   <Route path="/mechanic/historial/:id" element={<ProtectedRoute><MechanicHistoryRouter /></ProtectedRoute>} />
-                  
+
                   {/* Supervisor routes */}
                   <Route path="/supervisor" element={<ProtectedRoute><SupervisorDashboardRouter /></ProtectedRoute>} />
                   <Route path="/supervisor/reportes" element={<ProtectedRoute><SupervisorSubmissionsRouter /></ProtectedRoute>} />
                   <Route path="/supervisor/submissions" element={<ProtectedRoute><SupervisorSubmissionsRouter /></ProtectedRoute>} />
-                  
+
                   {/* Admin routes */}
                   <Route path="/admin" element={<ProtectedRoute><Admin /></ProtectedRoute>} />
                   <Route path="/admin/usuarios" element={<ProtectedRoute><Admin /></ProtectedRoute>} />
                   <Route path="/admin/submissions" element={<ProtectedRoute><Admin /></ProtectedRoute>} />
-                  
+
                   {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
                   <Route path="*" element={<NotFound />} />
                 </Routes>

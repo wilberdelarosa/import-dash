@@ -20,6 +20,7 @@ import {
   FileText,
   ClipboardCheck,
   Eye,
+  Ticket,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Popover, PopoverTrigger, PopoverContent } from '@/components/ui/popover';
@@ -35,6 +36,7 @@ const adminNavItems = [
   { path: '/', label: 'Dashboard', icon: LayoutDashboard },
   { path: '/equipos', label: 'Equipos', icon: Truck },
   { path: '/control-mantenimiento', label: 'Control Mantenimiento', icon: Wrench },
+  { path: '/tickets', label: 'Tickets', icon: Ticket },
   { path: '/planificador-inteligente', label: 'Planificador Inteligente', icon: Route },
   { path: '/inventario', label: 'Inventario', icon: Package },
   { path: '/mantenimiento', label: 'Mantenimiento', icon: Calendar },
@@ -60,6 +62,7 @@ const mechanicNavItems = [
 const supervisorNavItems = [
   { path: '/supervisor', label: 'Dashboard', icon: LayoutDashboard },
   { path: '/supervisor/submissions', label: 'Revisar Reportes', icon: FileText },
+  { path: '/tickets', label: 'Tickets', icon: Ticket },
   { path: '/equipos', label: 'Ver Equipos', icon: Truck },
   { path: '/mantenimiento', label: 'Mantenimiento', icon: Calendar },
   { path: '/historial', label: 'Historial', icon: History },
@@ -87,9 +90,9 @@ export function Navigation({ hideBrand = false }: NavigationProps) {
       return new Set(['/mechanic', '/mechanic/pendientes', '/mechanic/reportar', '/mechanic/historial', '/historial']);
     }
     if (currentUserRole === 'supervisor') {
-      return new Set(['/supervisor', '/supervisor/submissions', '/equipos', '/mantenimiento', '/historial']);
+      return new Set(['/supervisor', '/supervisor/submissions', '/tickets', '/equipos', '/historial']);
     }
-    return new Set(['/', '/equipos', '/mantenimiento', '/control-mantenimiento', '/asistente']);
+    return new Set(['/', '/equipos', '/tickets', '/control-mantenimiento', '/asistente']);
   }, [currentUserRole]);
 
   const primaryItems = navItems.filter((i) => primaryPaths.has(i.path));
@@ -193,7 +196,7 @@ export function Navigation({ hideBrand = false }: NavigationProps) {
             <SheetTitle className="text-lg font-bold">Navegación</SheetTitle>
             <SheetDescription className="text-sm">Accede a todas las secciones del sistema</SheetDescription>
           </SheetHeader>
-          
+
           {/* Secciones agrupadas */}
           <div className="mt-6 space-y-6">
             {/* Principal */}
@@ -226,7 +229,7 @@ export function Navigation({ hideBrand = false }: NavigationProps) {
                 ))}
               </div>
             </div>
-            
+
             {/* Gestión y Reportes */}
             <div className="space-y-2">
               <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground px-2">Gestión y Reportes</p>
@@ -252,7 +255,7 @@ export function Navigation({ hideBrand = false }: NavigationProps) {
                 ))}
               </div>
             </div>
-            
+
             {/* Usuario y Cuenta */}
             <div className="pt-4 border-t border-border space-y-3">
               <UserBadge className="w-full" />
