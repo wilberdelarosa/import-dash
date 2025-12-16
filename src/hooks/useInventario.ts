@@ -34,7 +34,7 @@ export function useInventario() {
         .order('nombre');
 
       if (error) throw error;
-      setInventario(data || []);
+      setInventario((data || []) as InventarioItem[]);
     } catch (error: unknown) {
       console.error('Error loading inventario:', error);
       toast({

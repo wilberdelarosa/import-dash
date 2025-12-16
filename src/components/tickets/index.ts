@@ -4,3 +4,4 @@ export { TicketCard, TicketCardMini } from './TicketCard';
 export { CreateTicketForm } from './CreateTicketForm';
 export { TicketTimeline } from './TicketTimeline';
 export { EquipmentTicketsList, TicketCountBadge } from './EquipmentTicketsList';
+export { TicketDetailDialog } from './TicketDetailDialog';
