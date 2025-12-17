@@ -7,6 +7,7 @@ interface AuthContextType {
   session: Session | null;
   loading: boolean;
   signOut: () => Promise<void>;
+  switchAccount: (email: string, password: string) => Promise<boolean>;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -42,8 +43,31 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setSession(null);
   };
 
+  const switchAccount = async (email: string, password: string): Promise<boolean> => {
+    try {
+      // First sign out current user
+      await supabase.auth.signOut();
+      
+      // Then sign in with new credentials
+      const { data, error } = await supabase.auth.signInWithPassword({
+        email,
+        password,
+      });
+
+      if (error || !data.session) {
+        return false;
+      }
+
+      setSession(data.session);
+      setUser(data.user);
+      return true;
+    } catch {
+      return false;
+    }
+  };
+
   return (
-    <AuthContext.Provider value={{ user, session, loading, signOut }}>
+    <AuthContext.Provider value={{ user, session, loading, signOut, switchAccount }}>
       {children}
     </AuthContext.Provider>
   );
