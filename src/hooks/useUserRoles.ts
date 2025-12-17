@@ -36,13 +36,44 @@ interface UseUserRolesReturn {
   error: string | null;
 }
 
+// Helper to get/set cached role per user
+const ROLE_CACHE_KEY = 'userRole_';
+
+function getCachedRole(userId: string): AppRole | null {
+  try {
+    const cached = localStorage.getItem(ROLE_CACHE_KEY + userId);
+    if (cached && ['admin', 'supervisor', 'mechanic', 'user'].includes(cached)) {
+      return cached as AppRole;
+    }
+  } catch {
+    // Ignore localStorage errors
+  }
+  return null;
+}
+
+function setCachedRole(userId: string, role: AppRole) {
+  try {
+    localStorage.setItem(ROLE_CACHE_KEY + userId, role);
+  } catch {
+    // Ignore localStorage errors
+  }
+}
+
 export function useUserRoles(): UseUserRolesReturn {
   const { user } = useAuth();
-  const [currentUserRole, setCurrentUserRole] = useState<AppRole | null>(null);
+
+  // Initialize with cached role if available (prevents flash)
+  const [currentUserRole, setCurrentUserRole] = useState<AppRole | null>(() => {
+    if (user?.id) {
+      return getCachedRole(user.id);
+    }
+    return null;
+  });
   const [loading, setLoading] = useState(true);
   const [users, setUsers] = useState<UserWithRole[]>([]);
   const [loadingUsers, setLoadingUsers] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
 
   // Cargar rol del usuario actual
   useEffect(() => {
@@ -51,6 +82,14 @@ export function useUserRoles(): UseUserRolesReturn {
         setCurrentUserRole(null);
         setLoading(false);
         return;
+      }
+
+      // If we already have a cached role for this user, use it and skip DB query
+      const cachedRole = getCachedRole(user.id);
+      if (cachedRole) {
+        setCurrentUserRole(cachedRole);
+        setLoading(false);
+        return; // Skip DB query - use cached value
       }
 
       // Emails para testing (fallback si no hay rol en BD)
@@ -62,13 +101,16 @@ export function useUserRoles(): UseUserRolesReturn {
         const { data, error: roleError } = await supabase
           .from('user_roles')
           .select('role')
+
           .eq('user_id', user.id)
           .single();
 
         if (!roleError && data?.role) {
           // ✓ Rol encontrado en BD - usar ese
           console.log(`[useUserRoles] Rol desde BD: ${data.role}`);
-          setCurrentUserRole(data.role as AppRole);
+          const role = data.role as AppRole;
+          setCurrentUserRole(role);
+          setCachedRole(user.id, role); // Cache for instant restore
           setLoading(false);
           return;
         }
@@ -76,11 +118,11 @@ export function useUserRoles(): UseUserRolesReturn {
         // 2. FALLBACK: Si no hay rol en BD, usar simulación para emails de prueba
         // Esto permite testing sin necesidad de asignar roles manualmente
         console.log('[useUserRoles] No hay rol en BD, verificando fallback de testing...');
-        
+
         // Verificar localStorage o query params para simulación manual
         let simulateMechanic = false;
         let simulateSupervisor = false;
-        
+
         if (typeof window !== 'undefined') {
           try {
             const ls = window.localStorage;
@@ -110,13 +152,15 @@ export function useUserRoles(): UseUserRolesReturn {
         if (simulateSupervisor && user.email === supervisorEmail) {
           console.log('[useUserRoles] Usando rol SIMULADO: supervisor');
           setCurrentUserRole('supervisor');
+          setCachedRole(user.id, 'supervisor');
           setLoading(false);
           return;
         }
-        
+
         if (simulateMechanic && user.email === mechanicEmail) {
           console.log('[useUserRoles] Usando rol SIMULADO: mechanic');
           setCurrentUserRole('mechanic');
+          setCachedRole(user.id, 'mechanic');
           setLoading(false);
           return;
         }
@@ -124,9 +168,11 @@ export function useUserRoles(): UseUserRolesReturn {
         // 3. Si no hay rol en BD ni es email de testing, asignar 'user' por defecto
         console.log('[useUserRoles] Sin rol asignado, usando: user');
         setCurrentUserRole('user');
+        setCachedRole(user.id, 'user');
       } catch (err) {
         console.error('[useUserRoles] Error:', err);
         setCurrentUserRole('user');
+        if (user.id) setCachedRole(user.id, 'user');
       } finally {
         setLoading(false);
       }
@@ -227,7 +273,7 @@ export function useUserRoles(): UseUserRolesReturn {
       }
 
       // Actualizar lista local
-      setUsers(prev => prev.map(u => 
+      setUsers(prev => prev.map(u =>
         u.id === userId ? { ...u, role } : u
       ));
 
@@ -244,10 +290,10 @@ export function useUserRoles(): UseUserRolesReturn {
   const isSupervisor = currentUserRole === 'supervisor';
   const isMechanic = currentUserRole === 'mechanic';
   const isUser = currentUserRole === 'user';
-  
+
   // Permisos de edición: solo admin
   const canEdit = isAdmin;
-  
+
   // Permisos de visualización: admin y supervisor
   const canViewDashboard = isAdmin || isSupervisor;
   const canViewMantenimiento = isAdmin || isSupervisor;

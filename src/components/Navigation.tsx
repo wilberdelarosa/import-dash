@@ -75,7 +75,7 @@ interface NavigationProps {
 export function Navigation({ hideBrand = false }: NavigationProps) {
   const location = useLocation();
   const [sheetOpen, setSheetOpen] = useState(false);
-  const { currentUserRole, loading: roleLoading } = useUserRoles();
+  const { currentUserRole } = useUserRoles();
 
   // Determine which nav items to use based on role
   const navItems = useMemo(() => {
@@ -84,15 +84,16 @@ export function Navigation({ hideBrand = false }: NavigationProps) {
     return adminNavItems; // admin and user use same nav
   }, [currentUserRole]);
 
-  // Primary items based on role
+  // Primary items based on role - only essential navigation items
   const primaryPaths = useMemo(() => {
     if (currentUserRole === 'mechanic') {
-      return new Set(['/mechanic', '/mechanic/pendientes', '/mechanic/reportar', '/mechanic/historial', '/historial']);
+      return new Set(['/mechanic', '/mechanic/pendientes', '/mechanic/reportar', '/mechanic/historial']);
     }
     if (currentUserRole === 'supervisor') {
-      return new Set(['/supervisor', '/supervisor/submissions', '/tickets', '/equipos', '/mantenimiento', '/historial']);
+      return new Set(['/supervisor', '/supervisor/submissions', '/equipos', '/mantenimiento', '/historial']);
     }
-    return new Set(['/', '/equipos', '/mantenimiento', '/inventario', '/tickets', '/control-mantenimiento']);
+    // Admin/User: Only 5 essential items in main nav
+    return new Set(['/', '/equipos', '/control-mantenimiento', '/inventario', '/mantenimiento']);
   }, [currentUserRole]);
 
   const primaryItems = navItems.filter((i) => primaryPaths.has(i.path));
@@ -125,22 +126,24 @@ export function Navigation({ hideBrand = false }: NavigationProps) {
                   hideBrand ? 'justify-start sm:justify-center' : 'justify-center',
                 )}
               >
-                {/* Render only primary items in main nav */}
+                {/* Primary navigation items */}
                 {primaryItems.map(({ path, label, icon: Icon }) => (
                   <Link
                     key={path}
                     to={path}
                     className={cn(
-                      'group relative inline-flex items-center gap-2 overflow-hidden rounded-lg px-3 py-3 text-sm font-medium transition-all duration-300 sm:py-4',
+                      'inline-flex items-center gap-2 rounded-lg px-3 py-3 text-sm font-medium sm:py-4 shrink-0',
                       location.pathname === path
-                        ? 'bg-primary/10 text-primary shadow-lg shadow-primary/20'
-                        : 'text-muted-foreground hover:bg-gradient-to-r hover:from-muted hover:via-muted/90 hover:to-muted hover:text-foreground hover:shadow-md',
+                        ? 'bg-primary/10 text-primary'
+                        : 'bg-transparent text-muted-foreground hover:bg-muted hover:text-foreground',
                     )}
                   >
-                    <Icon className={cn('h-4 w-4 relative z-10')} />
-                    <span className="relative z-10">{label}</span>
+                    <Icon className="h-4 w-4 shrink-0" />
+                    <span className="whitespace-nowrap">{label}</span>
                   </Link>
                 ))}
+
+
 
                 {/* Compact control for secondary items: popover (acoplado) + sheet (desacoplado) */}
                 <div className="ml-2">

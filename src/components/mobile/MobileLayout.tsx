@@ -52,11 +52,12 @@ import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { useAuth } from '@/context/AuthContext';
 import { useUserRoles } from '@/hooks/useUserRoles';
 import { useToast } from '@/hooks/use-toast';
-import { useNotificaciones } from '@/hooks/useNotificaciones';
+import { useUnifiedNotifications, UnifiedNotification } from '@/hooks/useUnifiedNotifications';
 import { formatDistanceToNow } from 'date-fns';
 import { es } from 'date-fns/locale';
-import type { Notificacion } from '@/types/historial';
 import { AccountSwitcher } from '@/components/AccountSwitcher';
+import { cleanDecimalsInText } from '@/lib/mobileFormatters';
+
 
 interface MobileLayoutProps {
   children: ReactNode;
@@ -198,15 +199,15 @@ export function MobileLayout({
   const { toast } = useToast();
   const [notificacionesOpen, setNotificacionesOpen] = useState(false);
 
-  // Hook de notificaciones
+  // Hook de notificaciones con persistencia en Supabase
   const {
-    notificaciones,
+    notifications,
     loading: loadingNotificaciones,
-    noLeidas,
-    marcarComoLeida,
-    marcarTodasComoLeidas,
-    eliminarNotificacion,
-  } = useNotificaciones();
+    unreadCount,
+    markAsRead,
+    markAllAsRead,
+    deleteNotification,
+  } = useUnifiedNotifications();
 
   // Verificar si la ruta actual coincide (incluyendo rutas parciales como /planificador*)
   const isRouteActive = (path: string) => {
@@ -270,8 +271,8 @@ export function MobileLayout({
     }
   };
 
-  const handleNotificacionClick = (notif: Notificacion) => {
-    marcarComoLeida(notif.id);
+  const handleNotificacionClick = (notif: UnifiedNotification) => {
+    markAsRead(notif.id);
     if (notif.accionUrl) {
       setNotificacionesOpen(false);
       navigate(notif.accionUrl);
@@ -320,12 +321,124 @@ export function MobileLayout({
           {/* Acciones header */}
           <div className="flex items-center gap-1">
             {headerActions}
+
+            {/* Notification button in header - always visible */}
+            <Sheet open={notificacionesOpen} onOpenChange={setNotificacionesOpen}>
+              <SheetTrigger asChild>
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  className="relative h-10 w-10 rounded-full hover:bg-primary/10 active:scale-90 transition-all overflow-visible"
+                >
+                  <Bell className={cn(
+                    "h-5 w-5",
+                    unreadCount > 0 ? "text-amber-500" : "text-foreground/80"
+                  )} />
+                  {unreadCount > 0 && (
+                    <span className="absolute -top-1 -right-1 flex h-[18px] min-w-[18px] items-center justify-center rounded-full bg-destructive text-[11px] font-bold text-destructive-foreground px-1.5 shadow-lg border-2 border-background">
+                      {unreadCount}
+                    </span>
+                  )}
+                </Button>
+              </SheetTrigger>
+
+              <SheetContent side="bottom" className="h-[85svh] rounded-t-[2rem] bg-background">
+                <div className="mx-auto mt-2 h-1 w-12 rounded-full bg-muted" />
+                <SheetHeader className="mt-4">
+                  <SheetTitle className="text-center text-xl font-bold">Notificaciones</SheetTitle>
+                  <SheetDescription className="text-center">
+                    {unreadCount > 0 ? `${unreadCount} sin leer` : 'Todas leídas'}
+                  </SheetDescription>
+                </SheetHeader>
+
+                {unreadCount > 0 && (
+                  <div className="flex justify-center mt-4">
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={markAllAsRead}
+                      className="gap-2"
+                    >
+                      <CheckCheck className="h-4 w-4" />
+                      Marcar todas como leídas
+                    </Button>
+                  </div>
+                )}
+
+                <ScrollArea className="flex-1 mt-4 h-[calc(85vh-180px)]">
+                  {loadingNotificaciones ? (
+                    <div className="p-8 text-center text-muted-foreground">
+                      Cargando notificaciones...
+                    </div>
+                  ) : notifications.length === 0 ? (
+                    <div className="p-12 text-center">
+                      <Bell className="h-16 w-16 mx-auto text-muted-foreground/30 mb-4" />
+                      <p className="text-muted-foreground font-medium">No hay notificaciones</p>
+                      <p className="text-sm text-muted-foreground/70 mt-1">Todo está al día</p>
+                    </div>
+                  ) : (
+                    <div className="space-y-2 px-4 pb-8">
+                      {notifications.map((notif) => (
+                        <div
+                          key={notif.id}
+                          className={cn(
+                            "p-3 rounded-xl border transition-colors cursor-pointer",
+                            !notif.leida ? getBgNivel(notif.nivel) : "bg-muted/30 border-border/50"
+                          )}
+                          onClick={() => handleNotificacionClick(notif)}
+                        >
+                          <div className="flex items-start gap-3">
+                            <div className="mt-0.5">
+                              {getIconoNivel(notif.nivel)}
+                            </div>
+                            <div className="flex-1 min-w-0 overflow-hidden">
+                              <div className="flex items-start justify-between gap-2">
+                                <p className={cn(
+                                  "font-medium text-sm leading-tight truncate flex-1",
+                                  !notif.leida && "font-semibold"
+                                )}>
+                                  {notif.titulo}
+                                </p>
+                                <Button
+                                  variant="ghost"
+                                  size="icon"
+                                  className="h-6 w-6 shrink-0 -mt-1 -mr-1"
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    deleteNotification(notif.id);
+                                  }}
+                                >
+                                  <X className="h-3 w-3" />
+                                </Button>
+                              </div>
+                              <p className="text-xs text-muted-foreground mt-1 line-clamp-2">
+                                {cleanDecimalsInText(notif.mensaje)}
+                              </p>
+
+                              <span className="text-[10px] text-muted-foreground mt-2 block">
+                                {formatDistanceToNow(new Date(notif.createdAt), {
+                                  addSuffix: true,
+                                  locale: es
+                                })}
+                              </span>
+                            </div>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </ScrollArea>
+              </SheetContent>
+            </Sheet>
+
+            {/* Menu button */}
             <Sheet>
               <SheetTrigger asChild>
                 <Button variant="ghost" size="icon" className="h-9 w-9 rounded-full hover:bg-primary/10 active:scale-90 transition-all">
                   <Menu className="h-5 w-5 text-foreground/80" />
                 </Button>
               </SheetTrigger>
+
               <SheetContent side="right" className="w-[85vw] sm:w-80 p-0 border-l-0 bg-background">
                 <div className="flex flex-col h-full">
                   {/* Header del menú con info de usuario */}
@@ -369,120 +482,12 @@ export function MobileLayout({
                         <ChevronRight className="h-4 w-4 text-muted-foreground shrink-0" />
                       </div>
                     </AccountSwitcher>
-                    
+
                     <div className="flex items-center justify-end mb-2">
                       <ThemeToggle />
                     </div>
-
-                    {/* Notificaciones - Sheet funcional */}
-                    <Sheet open={notificacionesOpen} onOpenChange={setNotificacionesOpen}>
-                      <SheetTrigger asChild>
-                        <Button
-                          variant="ghost"
-                          className="relative w-full justify-start gap-3 h-11 text-sm font-medium hover:bg-primary/10 rounded-xl transition-all group overflow-hidden"
-                        >
-                          <div className="absolute inset-0 bg-gradient-to-r from-primary/5 to-transparent opacity-0 group-hover:opacity-100 transition-opacity" />
-                          <div className="relative flex items-center gap-3 flex-1">
-                            <div className="rounded-lg p-1.5 bg-primary/10">
-                              <Bell className="h-4 w-4 text-primary" />
-                            </div>
-                            Notificaciones
-                          </div>
-                          {noLeidas > 0 && (
-                            <Badge variant="destructive" className="shadow-lg shadow-destructive/30">
-                              {noLeidas > 99 ? '99+' : noLeidas}
-                            </Badge>
-                          )}
-                        </Button>
-                      </SheetTrigger>
-                      <SheetContent side="bottom" className="h-[85svh] rounded-t-[2rem] bg-background">
-                        <div className="mx-auto mt-2 h-1 w-12 rounded-full bg-muted" />
-                        <SheetHeader className="mt-4">
-                          <SheetTitle className="text-center text-xl font-bold">Notificaciones</SheetTitle>
-                          <SheetDescription className="text-center">
-                            {noLeidas > 0 ? `${noLeidas} sin leer` : 'Todas leídas'}
-                          </SheetDescription>
-                        </SheetHeader>
-
-                        {noLeidas > 0 && (
-                          <div className="flex justify-center mt-4">
-                            <Button
-                              variant="outline"
-                              size="sm"
-                              onClick={marcarTodasComoLeidas}
-                              className="gap-2"
-                            >
-                              <CheckCheck className="h-4 w-4" />
-                              Marcar todas como leídas
-                            </Button>
-                          </div>
-                        )}
-
-                        <ScrollArea className="flex-1 mt-4 h-[calc(85vh-180px)]">
-                          {loadingNotificaciones ? (
-                            <div className="p-8 text-center text-muted-foreground">
-                              Cargando notificaciones...
-                            </div>
-                          ) : notificaciones.length === 0 ? (
-                            <div className="p-12 text-center">
-                              <Bell className="h-16 w-16 mx-auto text-muted-foreground/30 mb-4" />
-                              <p className="text-muted-foreground font-medium">No hay notificaciones</p>
-                              <p className="text-sm text-muted-foreground/70 mt-1">Todo está al día</p>
-                            </div>
-                          ) : (
-                            <div className="space-y-2 px-4 pb-8">
-                              {notificaciones.map((notif) => (
-                                <div
-                                  key={notif.id}
-                                  className={cn(
-                                    "p-3 rounded-xl border transition-colors cursor-pointer",
-                                    !notif.leida ? getBgNivel(notif.nivel) : "bg-muted/30 border-border/50"
-                                  )}
-                                  onClick={() => handleNotificacionClick(notif)}
-                                >
-                                  <div className="flex items-start gap-3">
-                                    <div className="mt-0.5">
-                                      {getIconoNivel(notif.nivel)}
-                                    </div>
-                                    <div className="flex-1 min-w-0 overflow-hidden">
-                                      <div className="flex items-start justify-between gap-2">
-                                        <p className={cn(
-                                          "font-medium text-sm leading-tight truncate flex-1",
-                                          !notif.leida && "font-semibold"
-                                        )}>
-                                          {notif.titulo}
-                                        </p>
-                                        <Button
-                                          variant="ghost"
-                                          size="icon"
-                                          className="h-6 w-6 shrink-0 -mt-1 -mr-1"
-                                          onClick={(e) => {
-                                            e.stopPropagation();
-                                            eliminarNotificacion(notif.id);
-                                          }}
-                                        >
-                                          <X className="h-3 w-3" />
-                                        </Button>
-                                      </div>
-                                      <p className="text-xs text-muted-foreground mt-1 line-clamp-2">
-                                        {notif.mensaje}
-                                      </p>
-                                      <span className="text-[10px] text-muted-foreground mt-2 block">
-                                        {formatDistanceToNow(new Date(notif.createdAt), {
-                                          addSuffix: true,
-                                          locale: es
-                                        })}
-                                      </span>
-                                    </div>
-                                  </div>
-                                </div>
-                              ))}
-                            </div>
-                          )}
-                        </ScrollArea>
-                      </SheetContent>
-                    </Sheet>
                   </div>
+
 
                   <Separator className="opacity-50" />
 

@@ -45,10 +45,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const switchAccount = async (email: string, password: string): Promise<boolean> => {
     try {
-      // First sign out current user
-      await supabase.auth.signOut();
-      
-      // Then sign in with new credentials
+      // Atomic switch - try login directly, no logout first
+      // If login fails, current session remains active
       const { data, error } = await supabase.auth.signInWithPassword({
         email,
         password,
@@ -65,6 +63,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       return false;
     }
   };
+
 
   return (
     <AuthContext.Provider value={{ user, session, loading, signOut, switchAccount }}>

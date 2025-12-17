@@ -1,13 +1,13 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { 
-  Bell, 
-  Check, 
+import {
+  Bell,
+  Check,
   CheckCheck,
-  Trash2, 
-  X, 
-  AlertCircle, 
-  AlertTriangle, 
+  Trash2,
+  X,
+  AlertCircle,
+  AlertTriangle,
   Info,
   ExternalLink,
   Wrench,
@@ -38,12 +38,13 @@ import { cn } from '@/lib/utils';
 import { formatDistanceToNow, format } from 'date-fns';
 import { es } from 'date-fns/locale';
 import { useUnifiedNotifications, UnifiedNotification } from '@/hooks/useUnifiedNotifications';
+import { cleanDecimalsInText } from '@/lib/mobileFormatters';
 
 export function UnifiedNotificationCenter() {
   const navigate = useNavigate();
   const [isOpen, setIsOpen] = useState(false);
   const [activeTab, setActiveTab] = useState('all');
-  
+
   const {
     notifications,
     unreadCount,
@@ -93,7 +94,7 @@ export function UnifiedNotificationCenter() {
     if (notif.leida) {
       return 'bg-transparent hover:bg-muted/50';
     }
-    
+
     switch (notif.nivel) {
       case 'critical':
         return 'bg-destructive/5 hover:bg-destructive/10 border-l-destructive';
@@ -119,9 +120,9 @@ export function UnifiedNotificationCenter() {
   return (
     <Popover open={isOpen} onOpenChange={setIsOpen}>
       <PopoverTrigger asChild>
-        <Button 
-          variant="ghost" 
-          size="icon" 
+        <Button
+          variant="ghost"
+          size="icon"
           className="relative h-10 w-10 rounded-xl hover:bg-accent transition-all duration-200"
         >
           <Bell className={cn(
@@ -135,7 +136,7 @@ export function UnifiedNotificationCenter() {
           )}
         </Button>
       </PopoverTrigger>
-      
+
       <PopoverContent className="w-[400px] p-0" align="end" sideOffset={8}>
         {/* Header */}
         <div className="flex items-center justify-between p-4 border-b bg-muted/30">
@@ -179,9 +180,9 @@ export function UnifiedNotificationCenter() {
               <Bell className="h-4 w-4 text-primary" />
               <span className="text-muted-foreground">Activa alertas en tu dispositivo</span>
             </div>
-            <Button 
-              size="sm" 
-              variant="outline" 
+            <Button
+              size="sm"
+              variant="outline"
               className="h-7 text-xs"
               onClick={requestPushPermission}
             >
@@ -234,7 +235,7 @@ export function UnifiedNotificationCenter() {
                 <div className="flex flex-col items-center justify-center h-32 text-muted-foreground">
                   <Bell className="h-10 w-10 mb-2 opacity-30" />
                   <p className="text-sm">
-                    {activeTab === 'unread' 
+                    {activeTab === 'unread'
                       ? 'No tienes notificaciones sin leer'
                       : 'No hay notificaciones'
                     }
@@ -292,13 +293,13 @@ export function UnifiedNotificationCenter() {
                             </div>
                           </div>
                           <p className="text-xs text-muted-foreground line-clamp-2">
-                            {notif.mensaje}
+                            {cleanDecimalsInText(notif.mensaje)}
                           </p>
                           <div className="flex items-center justify-between pt-1">
                             <span className="text-[10px] text-muted-foreground">
-                              {formatDistanceToNow(new Date(notif.createdAt), { 
-                                addSuffix: true, 
-                                locale: es 
+                              {formatDistanceToNow(new Date(notif.createdAt), {
+                                addSuffix: true,
+                                locale: es
                               })}
                             </span>
                             <div className="flex items-center gap-2">
@@ -336,8 +337,8 @@ export function UnifiedNotificationCenter() {
               )}
               <span>Sonido de notificación</span>
             </div>
-            <Switch 
-              checked={soundEnabled} 
+            <Switch
+              checked={soundEnabled}
               onCheckedChange={handleSoundToggle}
               className="scale-90"
             />

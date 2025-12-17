@@ -2,8 +2,8 @@
  * Historial del Mecánico - Desktop
  * Lista de todos sus reportes con filtros por estado
  */
-import { useState, useMemo } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useState, useMemo, useEffect } from 'react';
+import { useNavigate, useParams } from 'react-router-dom';
 import { Layout } from '@/components/Layout';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -39,14 +39,34 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogDescription,
+} from '@/components/ui/dialog';
+import { Separator } from '@/components/ui/separator';
 
 type StatusFilter = 'all' | 'pending' | 'approved' | 'rejected' | 'integrated';
 
 export function MechanicHistoryDesktop() {
   const navigate = useNavigate();
+  const { id } = useParams();
   const { submissions, loading, getStats } = useMechanicSubmissions();
   const [statusFilter, setStatusFilter] = useState<StatusFilter>('all');
+  const [selectedSubmission, setSelectedSubmission] = useState<any>(null);
   const stats = useMemo(() => getStats(), [getStats]);
+
+  // Open detail dialog if URL has an ID
+  useEffect(() => {
+    if (id && submissions.length > 0) {
+      const found = submissions.find(s => s.id === id);
+      if (found) {
+        setSelectedSubmission(found);
+      }
+    }
+  }, [id, submissions]);
 
   const filteredSubmissions = useMemo(() => {
     if (statusFilter === 'all') return submissions;
@@ -248,7 +268,7 @@ export function MechanicHistoryDesktop() {
                           <Button
                             variant="ghost"
                             size="sm"
-                            onClick={() => navigate(`/mechanic/historial/${sub.id}`)}
+                            onClick={() => setSelectedSubmission(sub)}
                           >
                             <Eye className="h-4 w-4 mr-1" />
                             Ver
@@ -263,8 +283,83 @@ export function MechanicHistoryDesktop() {
           </CardContent>
         </Card>
       </div>
+
+      {/* Detail Dialog */}
+      <Dialog open={!!selectedSubmission} onOpenChange={(open) => !open && setSelectedSubmission(null)}>
+        <DialogContent className="max-w-lg">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <FileText className="h-5 w-5" />
+              Detalle del Reporte
+            </DialogTitle>
+            <DialogDescription>
+              {selectedSubmission?.equipo?.ficha} - {selectedSubmission?.equipo?.nombre}
+            </DialogDescription>
+          </DialogHeader>
+
+          {selectedSubmission && (
+            <div className="space-y-4">
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <p className="text-sm text-muted-foreground">Fecha</p>
+                  <p className="font-medium">
+                    {format(new Date(selectedSubmission.created_at), "d MMM yyyy HH:mm", { locale: es })}
+                  </p>
+                </div>
+                <div>
+                  <p className="text-sm text-muted-foreground">Estado</p>
+                  {getStatusBadge(selectedSubmission.status)}
+                </div>
+                <div>
+                  <p className="text-sm text-muted-foreground">Tipo</p>
+                  <Badge variant="outline">{selectedSubmission.tipo_mantenimiento || 'N/A'}</Badge>
+                </div>
+                <div>
+                  <p className="text-sm text-muted-foreground">Lectura</p>
+                  <p className="font-mono font-medium">{selectedSubmission.horas_km_actuales.toLocaleString()}</p>
+                </div>
+              </div>
+
+              <Separator />
+
+              <div>
+                <p className="text-sm text-muted-foreground mb-1">Descripción del trabajo</p>
+                <p className="text-sm">{selectedSubmission.descripcion || 'Sin descripción'}</p>
+              </div>
+
+              {selectedSubmission.partes_usadas && Array.isArray(selectedSubmission.partes_usadas) && selectedSubmission.partes_usadas.length > 0 && (
+                <div>
+                  <p className="text-sm text-muted-foreground mb-1">Partes usadas</p>
+                  <div className="flex flex-wrap gap-1">
+                    {selectedSubmission.partes_usadas.map((parte: any, idx: number) => (
+                      <Badge key={idx} variant="secondary" className="text-xs">
+                        {typeof parte === 'string' ? parte : parte.nombre || parte.item?.nombre || 'Parte'}
+                      </Badge>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+
+              {selectedSubmission.admin_feedback && (
+                <div className="bg-muted/50 rounded-lg p-3">
+                  <p className="text-sm text-muted-foreground mb-1">Feedback del supervisor</p>
+                  <p className="text-sm">{selectedSubmission.admin_feedback}</p>
+                </div>
+              )}
+
+              <div className="flex justify-end">
+                <Button variant="outline" onClick={() => setSelectedSubmission(null)}>
+                  Cerrar
+                </Button>
+              </div>
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
     </Layout>
   );
 }
 
 export default MechanicHistoryDesktop;
+
