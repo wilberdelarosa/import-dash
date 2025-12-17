@@ -56,6 +56,7 @@ import { useNotificaciones } from '@/hooks/useNotificaciones';
 import { formatDistanceToNow } from 'date-fns';
 import { es } from 'date-fns/locale';
 import type { Notificacion } from '@/types/historial';
+import { AccountSwitcher } from '@/components/AccountSwitcher';
 
 interface MobileLayoutProps {
   children: ReactNode;
@@ -331,39 +332,45 @@ export function MobileLayout({
                   <div className="relative p-4 pb-3 border-b border-border/50">
                     <div className="absolute inset-0 bg-gradient-to-br from-primary/5 to-transparent" />
 
-                    {/* User Badge */}
-                    <div className={cn(
-                      "relative flex items-center gap-3 p-3 rounded-xl border mb-4",
-                      isAdmin ? "border-primary/30 bg-primary/5" : "border-border bg-muted/30"
-                    )}>
-                      <Avatar className={cn(
-                        "h-10 w-10 border-2",
-                        isAdmin ? "border-primary/40" : isSupervisor ? "border-blue-400" : "border-border"
+                    {/* User Badge - Interactive Account Switcher */}
+                    <AccountSwitcher>
+                      <div className={cn(
+                        "relative flex items-center gap-3 p-3 rounded-xl border mb-4 cursor-pointer transition-all hover:shadow-sm active:scale-[0.98]",
+                        isAdmin ? "border-primary/30 bg-primary/5 hover:bg-primary/10" : "border-border bg-muted/30 hover:bg-muted/50"
                       )}>
-                        <AvatarFallback className={cn(
-                          "text-sm font-bold",
-                          isAdmin ? "bg-primary/20 text-primary" : isSupervisor ? "bg-blue-100 text-blue-700 dark:bg-blue-900 dark:text-blue-300" : "bg-muted text-muted-foreground"
+                        <Avatar className={cn(
+                          "h-10 w-10 border-2",
+                          isAdmin ? "border-primary/40" : isSupervisor ? "border-blue-400" : "border-border"
                         )}>
-                          {initials}
-                        </AvatarFallback>
-                      </Avatar>
-                      <div className="flex flex-col min-w-0 flex-1">
-                        <span className="text-sm font-medium truncate" title={email}>
-                          {email}
-                        </span>
-                        <Badge
-                          variant={roleBadge.variant}
-                          className={cn(
-                            "w-fit gap-1 text-[10px] px-1.5 py-0 mt-1",
-                            isAdmin && "bg-primary/90",
-                            isSupervisor && "bg-blue-600 text-white",
-                            isMechanic && "bg-amber-600 text-white"
-                          )}
-                        >
-                          <roleBadge.icon className="h-2.5 w-2.5" />
-                          {roleBadge.label}
-                        </Badge>
+                          <AvatarFallback className={cn(
+                            "text-sm font-bold",
+                            isAdmin ? "bg-primary/20 text-primary" : isSupervisor ? "bg-blue-100 text-blue-700 dark:bg-blue-900 dark:text-blue-300" : "bg-muted text-muted-foreground"
+                          )}>
+                            {initials}
+                          </AvatarFallback>
+                        </Avatar>
+                        <div className="flex flex-col min-w-0 flex-1">
+                          <span className="text-sm font-medium truncate" title={email}>
+                            {email}
+                          </span>
+                          <Badge
+                            variant={roleBadge.variant}
+                            className={cn(
+                              "w-fit gap-1 text-[10px] px-1.5 py-0 mt-1",
+                              isAdmin && "bg-primary/90",
+                              isSupervisor && "bg-blue-600 text-white",
+                              isMechanic && "bg-amber-600 text-white"
+                            )}
+                          >
+                            <roleBadge.icon className="h-2.5 w-2.5" />
+                            {roleBadge.label}
+                          </Badge>
+                        </div>
+                        <ChevronRight className="h-4 w-4 text-muted-foreground shrink-0" />
                       </div>
+                    </AccountSwitcher>
+                    
+                    <div className="flex items-center justify-end mb-2">
                       <ThemeToggle />
                     </div>
 
