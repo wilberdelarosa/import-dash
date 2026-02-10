@@ -36,7 +36,7 @@ export async function createGroqChatCompletion({
     throw new Error('No estás autenticado. Por favor inicia sesión.');
   }
 
-  const { data, error } = await supabase.functions.invoke('ai-chat', {
+  const { data, error } = await supabase.functions.invoke('ai-agent', {
     body: {
       messages,
     },
