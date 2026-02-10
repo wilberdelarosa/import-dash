@@ -558,38 +558,9 @@ export default function AsistenteIA() {
   const [downloadingTableId, setDownloadingTableId] = useState<string | null>(null);
 
   const context = useMemo(() => {
-    // Crear contexto enriquecido con datos completos para búsquedas
+    // Build lightweight context - the agent fetches real data via tools
     const baseContext = buildChatContext(loading ? null : data, config);
-
-    if (!data) return baseContext;
-
-    // Agregar todos los equipos con detalles completos al contexto
-    const equiposDetallados = data.equipos.map(e =>
-      `${e.nombre} (Ficha: ${e.ficha}, Marca: ${e.marca}, Modelo: ${e.modelo}, Serie: ${e.numeroSerie}, Categoría: ${e.categoria}, Estado: ${e.activo ? 'Activo' : 'Inactivo'})`
-    ).join(' | ');
-
-    const mantenimientosDetallados = data.mantenimientosProgramados.map(m =>
-      `${m.nombreEquipo} (Ficha: ${m.ficha}, Tipo: ${m.tipoMantenimiento}, Horas actuales: ${m.horasKmActuales}, Restante: ${m.horasKmRestante})`
-    ).join(' | ');
-
-    const inventariosDetallados = data.inventarios.map(i =>
-      `${i.nombre} (Código: ${i.codigoIdentificacion}, Stock: ${i.cantidad}, Categoría: ${i.categoriaEquipo})`
-    ).join(' | ');
-
-    return {
-      ...baseContext,
-      summary: `${baseContext.summary}
-
-DATOS COMPLETOS PARA BÚSQUEDAS:
-
-Equipos completos: ${equiposDetallados}
-
-Mantenimientos: ${mantenimientosDetallados}
-
-Inventarios: ${inventariosDetallados}
-
-Usa estos datos para responder consultas específicas y generar tablas filtradas según los criterios del usuario.`
-    };
+    return baseContext;
   }, [data, config, loading]);
   const modelPriority = useMemo(() => getGroqModelPriority(), []);
   const systemPrompt = useMemo(() => buildSystemPrompt(context.summary), [context.summary]);
