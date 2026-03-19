@@ -114,6 +114,7 @@ export function EquipoDialog({
       ...formData,
       activo: finalActivo,
       motivoInactividad: finalMotivo,
+      segmento: formData.segmento.trim() || null,
     };
 
     const equipoDataToSave = equipoData ? { ...payload, id: equipoData.id } : payload;

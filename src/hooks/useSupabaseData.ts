@@ -504,6 +504,7 @@ export function useSupabaseData() {
           empresa: (e.empresa as 'ALITO GROUP SRL' | 'ALITO EIRL' | 'VENDIDO') ?? 'ALITO EIRL',
           activo: e.activo,
           motivoInactividad: e.motivo_inactividad ?? null,
+          segmento: (e as any).segmento ?? null,
         })),
         inventarios: inventariosData.map(i => ({
           id: Number(i.id),

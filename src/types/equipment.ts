@@ -27,6 +27,7 @@ export interface Equipo {
   empresa: EmpresaEquipo;
   activo: boolean;
   motivoInactividad: string | null;
+  segmento: string | null;
 }
 
 export interface Inventario {
