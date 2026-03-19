@@ -73,15 +73,17 @@ Deno.serve(async (req) => {
       const empresa = url.searchParams.get("empresa");
       const categoria = url.searchParams.get("categoria");
       const ficha = url.searchParams.get("ficha");
+      const segmento = url.searchParams.get("segmento");
 
       let query = supabase
         .from("equipos")
-        .select("id, ficha, nombre, marca, modelo, numero_serie, placa, categoria, empresa, activo, motivo_inactividad, created_at");
+        .select("id, ficha, nombre, marca, modelo, numero_serie, placa, categoria, empresa, activo, motivo_inactividad, segmento, created_at");
 
       if (activo !== null) query = query.eq("activo", activo === "true");
       if (empresa) query = query.eq("empresa", empresa);
       if (categoria) query = query.eq("categoria", categoria);
       if (ficha) query = query.eq("ficha", ficha);
+      if (segmento) query = query.eq("segmento", segmento);
 
       const { data, error } = await query.order("ficha", { ascending: true });
 

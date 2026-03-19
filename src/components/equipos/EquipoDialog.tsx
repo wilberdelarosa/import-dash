@@ -229,6 +229,15 @@ export function EquipoDialog({
               </SelectContent>
             </Select>
           </div>
+          <div>
+            <Label htmlFor="segmento">Segmento</Label>
+            <Input
+              id="segmento"
+              value={formData.segmento}
+              onChange={(e) => setFormData({ ...formData, segmento: e.target.value })}
+              placeholder="Ej: Minería, Construcción, Transporte..."
+            />
+          </div>
 
           {/* Alerta si el equipo está marcado como vendido */}
           {isVendido && (
