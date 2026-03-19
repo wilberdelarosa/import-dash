@@ -28,6 +28,7 @@ export const DEMO_DATABASE_DATA: DatabaseData = {
       empresa: 'ALITO EIRL',
       activo: true,
       motivoInactividad: null,
+      segmento: null,
     },
     {
       id: 3,
