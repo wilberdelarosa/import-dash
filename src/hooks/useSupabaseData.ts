@@ -248,6 +248,7 @@ const toEquipoPayload = (equipo: Equipo): EquipoPayload => ({
   empresa: equipo.empresa,
   activo: equipo.activo,
   motivoInactividad: equipo.motivoInactividad ?? null,
+  segmento: equipo.segmento ?? null,
 });
 
 const toInventarioPayload = (inventario: Inventario): InventarioPayload => ({

@@ -42,6 +42,7 @@ export const DEMO_DATABASE_DATA: DatabaseData = {
       empresa: 'ALITO EIRL',
       activo: false,
       motivoInactividad: 'En revisión preventiva',
+      segmento: null,
     },
   ],
   inventarios: [
