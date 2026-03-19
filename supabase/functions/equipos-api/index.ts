@@ -172,8 +172,8 @@ Deno.serve(async (req) => {
       JSON.stringify({
         error: "Ruta no encontrada",
         rutas_disponibles: [
-          "GET /equipos-api → Lista de equipos (filtros: activo, empresa, categoria, ficha)",
-          "GET /equipos-api/resumen → Resumen por empresa y categoría",
+          "GET /equipos-api → Lista de equipos (filtros: activo, empresa, categoria, ficha, segmento)",
+          "GET /equipos-api/resumen → Resumen por empresa, categoría y segmento",
           "GET /equipos-api/equipo/:ficha → Detalle de equipo con mantenimientos",
         ],
       }),
