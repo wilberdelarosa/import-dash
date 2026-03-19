@@ -108,7 +108,7 @@ export function useResponsive(): ResponsiveState {
         updateState();
 
         // Debounced resize handler
-        let timeoutId: NodeJS.Timeout;
+        let timeoutId: ReturnType<typeof setTimeout>;
         const handleResize = () => {
             clearTimeout(timeoutId);
             timeoutId = setTimeout(updateState, 150);
