@@ -120,6 +120,9 @@ Deno.serve(async (req) => {
       for (const e of equipos) {
         resumen.por_empresa[e.empresa] = (resumen.por_empresa[e.empresa] || 0) + 1;
         resumen.por_categoria[e.categoria] = (resumen.por_categoria[e.categoria] || 0) + 1;
+        if (e.segmento) {
+          resumen.por_segmento[e.segmento] = (resumen.por_segmento[e.segmento] || 0) + 1;
+        }
       }
 
       return new Response(
