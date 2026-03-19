@@ -1,0 +1,1 @@
+ALTER TABLE public.equipos ADD COLUMN IF NOT EXISTS segmento text DEFAULT null;

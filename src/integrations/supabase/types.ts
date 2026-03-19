@@ -358,6 +358,7 @@ export type Database = {
           nombre: string
           numero_serie: string
           placa: string
+          segmento: string | null
         }
         Insert: {
           activo?: boolean
@@ -372,6 +373,7 @@ export type Database = {
           nombre: string
           numero_serie: string
           placa: string
+          segmento?: string | null
         }
         Update: {
           activo?: boolean
@@ -386,6 +388,7 @@ export type Database = {
           nombre?: string
           numero_serie?: string
           placa?: string
+          segmento?: string | null
         }
         Relationships: []
       }
