@@ -104,7 +104,7 @@ Deno.serve(async (req) => {
     if (req.method === "GET" && path === "resumen") {
       const { data: equipos, error } = await supabase
         .from("equipos")
-        .select("id, ficha, nombre, marca, modelo, categoria, empresa, activo");
+        .select("id, ficha, nombre, marca, modelo, categoria, empresa, activo, segmento");
 
       if (error) throw error;
 
