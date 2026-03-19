@@ -149,6 +149,7 @@ const mapEquipoToRow = (equipo: EquipoPayload) => ({
   empresa: equipo.empresa,
   activo: equipo.activo,
   motivo_inactividad: equipo.motivoInactividad ?? null,
+  segmento: equipo.segmento ?? null,
 });
 
 const mapInventarioToRow = (inventario: InventarioPayload) => ({
@@ -247,6 +248,7 @@ const toEquipoPayload = (equipo: Equipo): EquipoPayload => ({
   empresa: equipo.empresa,
   activo: equipo.activo,
   motivoInactividad: equipo.motivoInactividad ?? null,
+  segmento: equipo.segmento ?? null,
 });
 
 const toInventarioPayload = (inventario: Inventario): InventarioPayload => ({
@@ -503,6 +505,7 @@ export function useSupabaseData() {
           empresa: (e.empresa as 'ALITO GROUP SRL' | 'ALITO EIRL' | 'VENDIDO') ?? 'ALITO EIRL',
           activo: e.activo,
           motivoInactividad: e.motivo_inactividad ?? null,
+          segmento: (e as any).segmento ?? null,
         })),
         inventarios: inventariosData.map(i => ({
           id: Number(i.id),

@@ -73,15 +73,17 @@ Deno.serve(async (req) => {
       const empresa = url.searchParams.get("empresa");
       const categoria = url.searchParams.get("categoria");
       const ficha = url.searchParams.get("ficha");
+      const segmento = url.searchParams.get("segmento");
 
       let query = supabase
         .from("equipos")
-        .select("id, ficha, nombre, marca, modelo, numero_serie, placa, categoria, empresa, activo, motivo_inactividad, created_at");
+        .select("id, ficha, nombre, marca, modelo, numero_serie, placa, categoria, empresa, activo, motivo_inactividad, segmento, created_at");
 
       if (activo !== null) query = query.eq("activo", activo === "true");
       if (empresa) query = query.eq("empresa", empresa);
       if (categoria) query = query.eq("categoria", categoria);
       if (ficha) query = query.eq("ficha", ficha);
+      if (segmento) query = query.eq("segmento", segmento);
 
       const { data, error } = await query.order("ficha", { ascending: true });
 
@@ -102,7 +104,7 @@ Deno.serve(async (req) => {
     if (req.method === "GET" && path === "resumen") {
       const { data: equipos, error } = await supabase
         .from("equipos")
-        .select("id, ficha, nombre, marca, modelo, categoria, empresa, activo");
+        .select("id, ficha, nombre, marca, modelo, categoria, empresa, activo, segmento");
 
       if (error) throw error;
 
@@ -112,11 +114,15 @@ Deno.serve(async (req) => {
         inactivos: equipos.filter((e: any) => !e.activo).length,
         por_empresa: {} as Record<string, number>,
         por_categoria: {} as Record<string, number>,
+        por_segmento: {} as Record<string, number>,
       };
 
       for (const e of equipos) {
         resumen.por_empresa[e.empresa] = (resumen.por_empresa[e.empresa] || 0) + 1;
         resumen.por_categoria[e.categoria] = (resumen.por_categoria[e.categoria] || 0) + 1;
+        if (e.segmento) {
+          resumen.por_segmento[e.segmento] = (resumen.por_segmento[e.segmento] || 0) + 1;
+        }
       }
 
       return new Response(
@@ -166,8 +172,8 @@ Deno.serve(async (req) => {
       JSON.stringify({
         error: "Ruta no encontrada",
         rutas_disponibles: [
-          "GET /equipos-api → Lista de equipos (filtros: activo, empresa, categoria, ficha)",
-          "GET /equipos-api/resumen → Resumen por empresa y categoría",
+          "GET /equipos-api → Lista de equipos (filtros: activo, empresa, categoria, ficha, segmento)",
+          "GET /equipos-api/resumen → Resumen por empresa, categoría y segmento",
           "GET /equipos-api/equipo/:ficha → Detalle de equipo con mantenimientos",
         ],
       }),

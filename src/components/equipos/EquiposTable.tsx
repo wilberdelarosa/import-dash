@@ -430,6 +430,7 @@ export function EquiposTable({ equipos, onEdit, onDelete, onVerDetalle }: Equipo
                   <TableHead>Modelo</TableHead>
                   <TableHead>N° Serie</TableHead>
                   <TableHead>Categoría</TableHead>
+                  <TableHead>Segmento</TableHead>
                   <TableHead>Placa</TableHead>
                   <TableHead>Estado</TableHead>
                   <TableHead>Acciones</TableHead>
@@ -463,6 +464,7 @@ export function EquiposTable({ equipos, onEdit, onDelete, onVerDetalle }: Equipo
                     <TableCell>{equipo.modelo}</TableCell>
                     <TableCell>{equipo.numeroSerie}</TableCell>
                     <TableCell>{equipo.categoria}</TableCell>
+                    <TableCell>{equipo.segmento || '—'}</TableCell>
                     <TableCell>{equipo.placa}</TableCell>
                     <TableCell>
                       {isEquipoVendido(equipo.empresa) ? (

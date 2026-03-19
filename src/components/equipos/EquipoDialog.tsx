@@ -63,6 +63,7 @@ export function EquipoDialog({
     empresa: equipoData?.empresa || 'ALITO EIRL' as const,
     activo: equipoData?.activo ?? true,
     motivoInactividad: equipoData?.motivoInactividad || '',
+    segmento: equipoData?.segmento || '',
   });
 
   useEffect(() => {
@@ -79,6 +80,7 @@ export function EquipoDialog({
         empresa: data.empresa || 'ALITO EIRL',
         activo: data.activo ?? true,
         motivoInactividad: data.motivoInactividad || '',
+        segmento: data.segmento || '',
       });
     }
   }, [initialData, equipo]);
@@ -112,6 +114,7 @@ export function EquipoDialog({
       ...formData,
       activo: finalActivo,
       motivoInactividad: finalMotivo,
+      segmento: formData.segmento.trim() || null,
     };
 
     const equipoDataToSave = equipoData ? { ...payload, id: equipoData.id } : payload;
@@ -225,6 +228,15 @@ export function EquipoDialog({
                 ))}
               </SelectContent>
             </Select>
+          </div>
+          <div>
+            <Label htmlFor="segmento">Segmento</Label>
+            <Input
+              id="segmento"
+              value={formData.segmento}
+              onChange={(e) => setFormData({ ...formData, segmento: e.target.value })}
+              placeholder="Ej: Minería, Construcción, Transporte..."
+            />
           </div>
 
           {/* Alerta si el equipo está marcado como vendido */}
