@@ -430,6 +430,7 @@ export function EquiposTable({ equipos, onEdit, onDelete, onVerDetalle }: Equipo
                   <TableHead>Modelo</TableHead>
                   <TableHead>N° Serie</TableHead>
                   <TableHead>Categoría</TableHead>
+                  <TableHead>Segmento</TableHead>
                   <TableHead>Placa</TableHead>
                   <TableHead>Estado</TableHead>
                   <TableHead>Acciones</TableHead>
