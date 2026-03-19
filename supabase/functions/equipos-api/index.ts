@@ -114,6 +114,7 @@ Deno.serve(async (req) => {
         inactivos: equipos.filter((e: any) => !e.activo).length,
         por_empresa: {} as Record<string, number>,
         por_categoria: {} as Record<string, number>,
+        por_segmento: {} as Record<string, number>,
       };
 
       for (const e of equipos) {
