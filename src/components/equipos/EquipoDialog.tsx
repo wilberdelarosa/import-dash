@@ -80,6 +80,7 @@ export function EquipoDialog({
         empresa: data.empresa || 'ALITO EIRL',
         activo: data.activo ?? true,
         motivoInactividad: data.motivoInactividad || '',
+        segmento: data.segmento || '',
       });
     }
   }, [initialData, equipo]);
