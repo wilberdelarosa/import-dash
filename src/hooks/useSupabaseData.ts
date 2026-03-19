@@ -149,6 +149,7 @@ const mapEquipoToRow = (equipo: EquipoPayload) => ({
   empresa: equipo.empresa,
   activo: equipo.activo,
   motivo_inactividad: equipo.motivoInactividad ?? null,
+  segmento: equipo.segmento ?? null,
 });
 
 const mapInventarioToRow = (inventario: InventarioPayload) => ({
