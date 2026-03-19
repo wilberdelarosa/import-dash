@@ -63,6 +63,7 @@ export function EquipoDialog({
     empresa: equipoData?.empresa || 'ALITO EIRL' as const,
     activo: equipoData?.activo ?? true,
     motivoInactividad: equipoData?.motivoInactividad || '',
+    segmento: equipoData?.segmento || '',
   });
 
   useEffect(() => {
