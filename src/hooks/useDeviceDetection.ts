@@ -123,7 +123,7 @@ export function useDeviceDetection(): DeviceInfo {
 
   useEffect(() => {
     // Actualizar en resize con debounce
-    let timeoutId: NodeJS.Timeout;
+    let timeoutId: ReturnType<typeof setTimeout>;
     const handleResize = () => {
       clearTimeout(timeoutId);
       timeoutId = setTimeout(updateDeviceInfo, 150);

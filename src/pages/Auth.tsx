@@ -33,7 +33,7 @@ export default function Auth() {
   const { theme, toggleTheme } = useTheme();
 
   const [currentVehicle, setCurrentVehicle] = useState(0);
-  const vehicleIntervalRef = useRef<NodeJS.Timeout | null>(null);
+  const vehicleIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
   const vehicles = [
     { name: 'Excavadora', id: 'excavator' },
