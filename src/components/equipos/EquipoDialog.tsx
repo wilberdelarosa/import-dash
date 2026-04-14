@@ -7,8 +7,10 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Switch } from '@/components/ui/switch';
 import { Textarea } from '@/components/ui/textarea';
 import { Alert, AlertDescription } from '@/components/ui/alert';
-import { Plus, Edit, Building2, AlertTriangle } from 'lucide-react';
+import { Plus, Edit, Building2, AlertTriangle, RefreshCw } from 'lucide-react';
 import { Equipo, EMPRESAS_DISPONIBLES, isEquipoVendido, EmpresaEquipo } from '@/types/equipment';
+import { supabase } from '@/integrations/supabase/client';
+import { useToast } from '@/hooks/use-toast';
 
 interface EquipoDialogProps {
   equipo?: Equipo;
@@ -47,6 +49,10 @@ export function EquipoDialog({
   initialData
 }: EquipoDialogProps) {
   const [internalOpen, setInternalOpen] = useState(false);
+  const { toast } = useToast();
+  const [changingFicha, setChangingFicha] = useState(false);
+  const [newFicha, setNewFicha] = useState('');
+  const [showFichaChange, setShowFichaChange] = useState(false);
 
   const open = controlledOpen !== undefined ? controlledOpen : internalOpen;
   const setOpen = onOpenChange || setInternalOpen;
@@ -103,8 +109,34 @@ export function EquipoDialog({
   // Verificar si el equipo está vendido (no se puede reactivar)
   const isVendido = isEquipoVendido(formData.empresa);
 
+  const handleCambiarFicha = async () => {
+    if (!equipoData || !newFicha.trim()) return;
+    setChangingFicha(true);
+    try {
+      const { data: result, error } = await supabase.rpc('cambiar_ficha_equipo', {
+        p_old_ficha: equipoData.ficha,
+        p_new_ficha: newFicha.trim().toUpperCase(),
+      });
+      if (error) throw error;
+      const res = result as any;
+      if (res?.success) {
+        toast({ title: '✅ Ficha actualizada', description: res.message });
+        setShowFichaChange(false);
+        setNewFicha('');
+        setFormData(prev => ({ ...prev, ficha: newFicha.trim().toUpperCase() }));
+        // Reload page to reflect changes everywhere
+        window.location.reload();
+      } else {
+        toast({ title: 'Error', description: res?.error || 'No se pudo cambiar la ficha', variant: 'destructive' });
+      }
+    } catch (err: any) {
+      toast({ title: 'Error', description: err.message, variant: 'destructive' });
+    } finally {
+      setChangingFicha(false);
+    }
+  };
+
   const handleSave = async () => {
-    // Si está vendido, forzar inactivo
     const finalActivo = isVendido ? false : formData.activo;
     const finalMotivo = isVendido
       ? (formData.motivoInactividad || 'Equipo vendido')
@@ -146,12 +178,36 @@ export function EquipoDialog({
         <div className="grid grid-cols-1 gap-4 py-4 md:grid-cols-2">
           <div>
             <Label htmlFor="ficha">Ficha</Label>
-            <Input
-              id="ficha"
-              value={formData.ficha}
-              onChange={(e) => setFormData({ ...formData, ficha: e.target.value })}
-              placeholder="AC-001"
-            />
+            <div className="flex gap-2">
+              <Input
+                id="ficha"
+                value={formData.ficha}
+                onChange={(e) => setFormData({ ...formData, ficha: e.target.value })}
+                placeholder="AC-001"
+                disabled={!!equipoData}
+              />
+              {equipoData && (
+                <Button type="button" variant="outline" size="sm" className="shrink-0" onClick={() => setShowFichaChange(!showFichaChange)}>
+                  <RefreshCw className="h-4 w-4" />
+                </Button>
+              )}
+            </div>
+            {showFichaChange && equipoData && (
+              <div className="mt-2 p-3 border rounded-lg bg-muted/50 space-y-2">
+                <Label className="text-xs font-semibold">Nueva ficha (se actualiza en todo el sistema)</Label>
+                <div className="flex gap-2">
+                  <Input
+                    value={newFicha}
+                    onChange={(e) => setNewFicha(e.target.value.toUpperCase())}
+                    placeholder="Ej: FAG-001"
+                    className="h-8 text-sm"
+                  />
+                  <Button type="button" size="sm" className="h-8" onClick={handleCambiarFicha} disabled={changingFicha || !newFicha.trim()}>
+                    {changingFicha ? 'Cambiando...' : 'Cambiar'}
+                  </Button>
+                </div>
+              </div>
+            )}
           </div>
           <div>
             <Label htmlFor="nombre">Nombre</Label>

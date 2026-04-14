@@ -1178,6 +1178,10 @@ export type Database = {
           kit_id: number
         }[]
       }
+      cambiar_ficha_equipo: {
+        Args: { p_new_ficha: string; p_old_ficha: string }
+        Returns: Json
+      }
       generar_notificaciones_mantenimientos: { Args: never; Returns: undefined }
       generar_notificaciones_stock_bajo: { Args: never; Returns: undefined }
       get_users_with_emails: {

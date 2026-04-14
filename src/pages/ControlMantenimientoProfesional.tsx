@@ -47,6 +47,7 @@ import { cn } from '@/lib/utils';
 import { useDeviceDetection } from '@/hooks/useDeviceDetection';
 import { useNavigate } from 'react-router-dom';
 import { ControlMantenimientoMobile } from '@/pages/mobile/ControlMantenimientoMobile';
+import { VoiceMultiUpdate } from '@/components/VoiceMultiUpdate';
 
 const formatDate = (value: string | null | undefined) => {
   if (!value) return 'Sin registro';
@@ -197,6 +198,10 @@ export default function ControlMantenimientoProfesional() {
   const [notasRapida, setNotasRapida] = useState('');
   const [updatingRapido, setUpdatingRapido] = useState(false);
 
+  // Filtros para reportes
+  const [reporteSearch, setReporteSearch] = useState('');
+  const [reporteCategoriaFilter, setReporteCategoriaFilter] = useState('all');
+
   // Alertas de actualización
   const [alertasActualizacion, setAlertasActualizacion] = useState<Array<{
     id: string;
@@ -264,31 +269,34 @@ export default function ControlMantenimientoProfesional() {
     }
   }, [reporteRango]);
 
-  // Buscar equipo por ficha en actualización rápida
+  // Buscar equipo por ficha en actualización rápida (solo equipos activos)
   useEffect(() => {
     if (fichaRapida.trim()) {
       const busqueda = fichaRapida.trim().toUpperCase();
 
+      // Solo buscar en mantenimientos de equipos activos
+      const mantenimientosActivos = data.mantenimientosProgramados.filter(
+        (m) => activeEquipos.some((e) => e.ficha === m.ficha)
+      );
+
       // Buscar coincidencia exacta primero
-      let mantenimiento = data.mantenimientosProgramados.find(
+      let mantenimiento = mantenimientosActivos.find(
         (m) => m.ficha.toUpperCase() === busqueda
       );
 
       // Si no encuentra, buscar por coincidencia parcial flexible
       if (!mantenimiento) {
-        // Normalizar búsqueda: remover guiones y ceros a la izquierda
         const busquedaNormalizada = busqueda.replace(/-/g, '').replace(/^0+/, '');
 
-        mantenimiento = data.mantenimientosProgramados.find((m) => {
+        mantenimiento = mantenimientosActivos.find((m) => {
           const fichaOriginal = m.ficha.toUpperCase();
           const fichaNormalizada = fichaOriginal.replace(/-/g, '').replace(/^0+/, '');
 
-          // Buscar coincidencias flexibles
           return (
-            fichaNormalizada === busquedaNormalizada || // Exacta normalizada (AC033 = AC33)
-            fichaNormalizada.includes(busquedaNormalizada) || // Contiene (AC033 contiene 33)
-            busquedaNormalizada.includes(fichaNormalizada) || // Es contenida
-            fichaOriginal.includes(busqueda) // Contiene original (AC-033 contiene AC-033)
+            fichaNormalizada === busquedaNormalizada ||
+            fichaNormalizada.includes(busquedaNormalizada) ||
+            busquedaNormalizada.includes(fichaNormalizada) ||
+            fichaOriginal.includes(busqueda)
           );
         });
       }
@@ -303,7 +311,7 @@ export default function ControlMantenimientoProfesional() {
     } else {
       setEquipoRapido(null);
     }
-  }, [fichaRapida, data.mantenimientosProgramados]);
+  }, [fichaRapida, data.mantenimientosProgramados, activeEquipos]);
 
   const selected = useMemo(
     () => {
@@ -778,6 +786,65 @@ export default function ControlMantenimientoProfesional() {
       setUpdatingRapido(false);
     }
   };
+
+  // Handler para actualización por voz en lote
+  const handleVoiceBatchUpdate = async (updates: Array<{ mantenimientoId: number; lectura: number; ficha: string }>) => {
+    const fecha = new Date().toISOString().slice(0, 10);
+    for (const update of updates) {
+      const mant = data.mantenimientosProgramados.find(m => m.id === update.mantenimientoId);
+      if (!mant) continue;
+      const unidadInferida = mant.tipoMantenimiento.toLowerCase().includes('km') ? 'km' : 'horas';
+      const lecturaAnterior = mant.horasKmActuales;
+      await updateHorasActuales({
+        mantenimientoId: update.mantenimientoId,
+        horasKm: update.lectura,
+        fecha,
+        unidad: unidadInferida as 'horas' | 'km',
+        observaciones: 'Actualizado por voz',
+      });
+      // Create alert
+      setAlertasActualizacion(prev => [{
+        id: `${update.mantenimientoId}-${Date.now()}`,
+        ficha: update.ficha,
+        nombreEquipo: mant.nombreEquipo,
+        lecturaAnterior,
+        lecturaActual: update.lectura,
+        incremento: update.lectura - lecturaAnterior,
+        fecha,
+        timestamp: Date.now(),
+      }, ...prev].slice(0, 50));
+    }
+    // Refresh report if active
+    if (reporteRango) {
+      const rangoNormalizado = normalizarRangoFechas(reporteDesde, reporteHasta);
+      if (rangoNormalizado) setReporteRango(rangoNormalizado);
+    }
+  };
+
+  // Filtered report data
+  const filteredActualizados = useMemo(() => {
+    if (!resumenActualizaciones) return [];
+    return resumenActualizaciones.actualizados.filter(({ mantenimiento }) => {
+      const equipo = activeEquipos.find(e => e.ficha === mantenimiento.ficha);
+      const matchSearch = !reporteSearch || 
+        mantenimiento.ficha.toLowerCase().includes(reporteSearch.toLowerCase()) ||
+        mantenimiento.nombreEquipo.toLowerCase().includes(reporteSearch.toLowerCase());
+      const matchCat = reporteCategoriaFilter === 'all' || equipo?.categoria === reporteCategoriaFilter;
+      return matchSearch && matchCat;
+    });
+  }, [resumenActualizaciones, reporteSearch, reporteCategoriaFilter, activeEquipos]);
+
+  const filteredPendientes = useMemo(() => {
+    if (!resumenActualizaciones) return [];
+    return resumenActualizaciones.pendientes.filter((mantenimiento) => {
+      const equipo = activeEquipos.find(e => e.ficha === mantenimiento.ficha);
+      const matchSearch = !reporteSearch ||
+        mantenimiento.ficha.toLowerCase().includes(reporteSearch.toLowerCase()) ||
+        mantenimiento.nombreEquipo.toLowerCase().includes(reporteSearch.toLowerCase());
+      const matchCat = reporteCategoriaFilter === 'all' || equipo?.categoria === reporteCategoriaFilter;
+      return matchSearch && matchCat;
+    });
+  }, [resumenActualizaciones, reporteSearch, reporteCategoriaFilter, activeEquipos]);
 
   // ============================================
   // RETURNS CONDICIONALES DESPUÉS DE TODOS LOS HOOKS
@@ -1438,6 +1505,14 @@ export default function ControlMantenimientoProfesional() {
                         )}
                       </div>
 
+                      {/* Sección de Dictado por Voz */}
+                      <div className="pt-4 border-t">
+                        <VoiceMultiUpdate
+                          onUpdateBatch={handleVoiceBatchUpdate}
+                          isReadOnly={isReadOnly}
+                        />
+                      </div>
+
                       {/* Sección de Alertas de Actualización */}
                       {alertasActualizacion.length > 0 && (
                         <div className="pt-4 border-t space-y-3">
@@ -1608,25 +1683,48 @@ export default function ControlMantenimientoProfesional() {
                         <div className="space-y-5">
                           <div className="flex flex-wrap gap-3">
                             <Badge variant="secondary">
-                              Actualizados: {resumenActualizaciones.actualizados.length}
+                              Actualizados: {filteredActualizados.length}/{resumenActualizaciones.actualizados.length}
                             </Badge>
-                            <Badge variant={resumenActualizaciones.pendientes.length > 0 ? 'destructive' : 'outline'}>
-                              Pendientes: {resumenActualizaciones.pendientes.length}
+                            <Badge variant={filteredPendientes.length > 0 ? 'destructive' : 'outline'}>
+                              Pendientes: {filteredPendientes.length}/{resumenActualizaciones.pendientes.length}
                             </Badge>
                             <Badge variant="outline">
                               Período: {new Date(resumenActualizaciones.desde).toLocaleDateString()} - {new Date(resumenActualizaciones.hasta).toLocaleDateString()}
                             </Badge>
                           </div>
 
+                          {/* Filtros de reporte */}
+                          <div className="flex gap-2">
+                            <div className="flex-1">
+                              <Input
+                                placeholder="Buscar ficha o nombre..."
+                                value={reporteSearch}
+                                onChange={(e) => setReporteSearch(e.target.value)}
+                                className="h-8 text-xs"
+                              />
+                            </div>
+                            <Select value={reporteCategoriaFilter} onValueChange={setReporteCategoriaFilter}>
+                              <SelectTrigger className="w-[140px] h-8 text-xs">
+                                <SelectValue placeholder="Categoría" />
+                              </SelectTrigger>
+                              <SelectContent>
+                                <SelectItem value="all">Todas</SelectItem>
+                                {categorias.map((cat) => (
+                                  <SelectItem key={cat} value={cat}>{cat}</SelectItem>
+                                ))}
+                              </SelectContent>
+                            </Select>
+                          </div>
+
                           <div className="grid gap-6 lg:grid-cols-2">
                             <div className="space-y-3">
                               <h4 className="text-sm font-semibold">Equipos con lectura registrada</h4>
-                              {resumenActualizaciones.actualizados.length === 0 ? (
+                              {filteredActualizados.length === 0 ? (
                                 <p className="text-sm text-muted-foreground">No hay registros en el rango seleccionado.</p>
                               ) : (
                                 <div className="rounded-md border overflow-auto max-h-64">
                                   <Table className="text-sm">
-                                    <TableHeader className="sticky top-0 bg-slate-50 dark:bg-slate-900">
+                                    <TableHeader className="sticky top-0 bg-muted/80">
                                       <TableRow>
                                         <TableHead className="text-xs h-8">Equipo</TableHead>
                                         <TableHead className="text-xs h-8">Ficha</TableHead>
@@ -1635,7 +1733,7 @@ export default function ControlMantenimientoProfesional() {
                                       </TableRow>
                                     </TableHeader>
                                     <TableBody>
-                                      {resumenActualizaciones.actualizados.map(({ mantenimiento, evento }) => (
+                                      {filteredActualizados.map(({ mantenimiento, evento }) => (
                                         <TableRow key={mantenimiento.id} className="h-10">
                                           <TableCell className="font-medium">{mantenimiento.nombreEquipo}</TableCell>
                                           <TableCell className="font-mono text-xs">{mantenimiento.ficha}</TableCell>
@@ -1655,12 +1753,12 @@ export default function ControlMantenimientoProfesional() {
 
                             <div className="space-y-3">
                               <h4 className="text-sm font-semibold">Equipos pendientes</h4>
-                              {resumenActualizaciones.pendientes.length === 0 ? (
+                              {filteredPendientes.length === 0 ? (
                                 <p className="text-sm text-muted-foreground">Todos los equipos tienen lectura en el rango.</p>
                               ) : (
                                 <div className="rounded-md border overflow-auto max-h-64">
                                   <Table className="text-sm">
-                                    <TableHeader className="sticky top-0 bg-slate-50 dark:bg-slate-900">
+                                    <TableHeader className="sticky top-0 bg-muted/80">
                                       <TableRow>
                                         <TableHead className="text-xs h-8">Equipo</TableHead>
                                         <TableHead className="text-xs h-8">Ficha</TableHead>
@@ -1669,7 +1767,7 @@ export default function ControlMantenimientoProfesional() {
                                       </TableRow>
                                     </TableHeader>
                                     <TableBody>
-                                      {resumenActualizaciones.pendientes.map((mantenimiento) => (
+                                      {filteredPendientes.map((mantenimiento) => (
                                         <TableRow key={mantenimiento.id} className="h-10">
                                           <TableCell className="font-medium">{mantenimiento.nombreEquipo}</TableCell>
                                           <TableCell className="font-mono text-xs">{mantenimiento.ficha}</TableCell>
