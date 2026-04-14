@@ -47,6 +47,7 @@ import { cn } from '@/lib/utils';
 import { useDeviceDetection } from '@/hooks/useDeviceDetection';
 import { useNavigate } from 'react-router-dom';
 import { ControlMantenimientoMobile } from '@/pages/mobile/ControlMantenimientoMobile';
+import { VoiceMultiUpdate } from '@/components/VoiceMultiUpdate';
 
 const formatDate = (value: string | null | undefined) => {
   if (!value) return 'Sin registro';
@@ -197,6 +198,10 @@ export default function ControlMantenimientoProfesional() {
   const [notasRapida, setNotasRapida] = useState('');
   const [updatingRapido, setUpdatingRapido] = useState(false);
 
+  // Filtros para reportes
+  const [reporteSearch, setReporteSearch] = useState('');
+  const [reporteCategoriaFilter, setReporteCategoriaFilter] = useState('all');
+
   // Alertas de actualización
   const [alertasActualizacion, setAlertasActualizacion] = useState<Array<{
     id: string;
@@ -264,31 +269,34 @@ export default function ControlMantenimientoProfesional() {
     }
   }, [reporteRango]);
 
-  // Buscar equipo por ficha en actualización rápida
+  // Buscar equipo por ficha en actualización rápida (solo equipos activos)
   useEffect(() => {
     if (fichaRapida.trim()) {
       const busqueda = fichaRapida.trim().toUpperCase();
 
+      // Solo buscar en mantenimientos de equipos activos
+      const mantenimientosActivos = data.mantenimientosProgramados.filter(
+        (m) => activeEquipos.some((e) => e.ficha === m.ficha)
+      );
+
       // Buscar coincidencia exacta primero
-      let mantenimiento = data.mantenimientosProgramados.find(
+      let mantenimiento = mantenimientosActivos.find(
         (m) => m.ficha.toUpperCase() === busqueda
       );
 
       // Si no encuentra, buscar por coincidencia parcial flexible
       if (!mantenimiento) {
-        // Normalizar búsqueda: remover guiones y ceros a la izquierda
         const busquedaNormalizada = busqueda.replace(/-/g, '').replace(/^0+/, '');
 
-        mantenimiento = data.mantenimientosProgramados.find((m) => {
+        mantenimiento = mantenimientosActivos.find((m) => {
           const fichaOriginal = m.ficha.toUpperCase();
           const fichaNormalizada = fichaOriginal.replace(/-/g, '').replace(/^0+/, '');
 
-          // Buscar coincidencias flexibles
           return (
-            fichaNormalizada === busquedaNormalizada || // Exacta normalizada (AC033 = AC33)
-            fichaNormalizada.includes(busquedaNormalizada) || // Contiene (AC033 contiene 33)
-            busquedaNormalizada.includes(fichaNormalizada) || // Es contenida
-            fichaOriginal.includes(busqueda) // Contiene original (AC-033 contiene AC-033)
+            fichaNormalizada === busquedaNormalizada ||
+            fichaNormalizada.includes(busquedaNormalizada) ||
+            busquedaNormalizada.includes(fichaNormalizada) ||
+            fichaOriginal.includes(busqueda)
           );
         });
       }
@@ -303,7 +311,7 @@ export default function ControlMantenimientoProfesional() {
     } else {
       setEquipoRapido(null);
     }
-  }, [fichaRapida, data.mantenimientosProgramados]);
+  }, [fichaRapida, data.mantenimientosProgramados, activeEquipos]);
 
   const selected = useMemo(
     () => {
