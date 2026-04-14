@@ -874,7 +874,9 @@ export default function ControlMantenimientoProfesional() {
             unidad: datos.unidad as 'horas' | 'km' | undefined
           });
         }}
+        onVoiceBatchUpdate={handleVoiceBatchUpdate}
         loading={loading}
+        isReadOnly={isReadOnly}
       />
     );
   }
