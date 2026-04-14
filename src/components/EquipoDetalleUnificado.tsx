@@ -493,6 +493,35 @@ export function EquipoDetalleUnificado({ ficha, open, onOpenChange }: Props) {
               </span>
             </div>
           )}
+
+          {/* Botones de acceso rápido fijos en el hero */}
+          {!esVendido && (
+            <div className="flex gap-2 mt-3 sm:mt-4">
+              <Button
+                size="sm"
+                className="flex-1 gap-2"
+                onClick={() => {
+                  onOpenChange(false);
+                  navigate(`/control-mantenimiento?tab=lecturas&ficha=${ficha}`);
+                }}
+              >
+                <Gauge className="h-4 w-4" />
+                Actualizar Lectura
+              </Button>
+              <Button
+                variant="outline"
+                size="sm"
+                className="flex-1 gap-2"
+                onClick={() => {
+                  onOpenChange(false);
+                  navigate(`/control-mantenimiento?tab=registro&ficha=${ficha}`);
+                }}
+              >
+                <ClipboardEdit className="h-4 w-4" />
+                Registrar Mant.
+              </Button>
+            </div>
+          )}
         </div>
 
         <div className="p-3 sm:p-4">
