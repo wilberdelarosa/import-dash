@@ -169,6 +169,46 @@ export function ControlMantenimientoMobile({
         return Math.round((estadoActualizacion.actualizados.length / total) * 100);
     }, [equipos.length, estadoActualizacion.actualizados.length]);
 
+    // Categorías disponibles para filtro
+    const categoriasDisponibles = useMemo(() => {
+        const cats = new Set(equipos.map(e => {
+            const equipo = catalogoEquipos.find(ce => ce.ficha === e.ficha);
+            return equipo?.categoria || 'Sin categoría';
+        }));
+        return Array.from(cats).sort();
+    }, [equipos, catalogoEquipos]);
+
+    // Filtrar y ordenar por ficha ascendente
+    const filteredPendientes = useMemo(() => {
+        let list = [...estadoActualizacion.pendientes];
+        if (estadoSearch) {
+            const term = estadoSearch.toLowerCase();
+            list = list.filter(e => e.ficha.toLowerCase().includes(term) || e.nombreEquipo.toLowerCase().includes(term));
+        }
+        if (estadoCategoriaFilter !== 'all') {
+            list = list.filter(e => {
+                const equipo = catalogoEquipos.find(ce => ce.ficha === e.ficha);
+                return equipo?.categoria === estadoCategoriaFilter;
+            });
+        }
+        return list.sort((a, b) => a.ficha.localeCompare(b.ficha, undefined, { numeric: true }));
+    }, [estadoActualizacion.pendientes, estadoSearch, estadoCategoriaFilter, catalogoEquipos]);
+
+    const filteredActualizados = useMemo(() => {
+        let list = [...estadoActualizacion.actualizados];
+        if (estadoSearch) {
+            const term = estadoSearch.toLowerCase();
+            list = list.filter(e => e.ficha.toLowerCase().includes(term) || e.nombreEquipo.toLowerCase().includes(term));
+        }
+        if (estadoCategoriaFilter !== 'all') {
+            list = list.filter(e => {
+                const equipo = catalogoEquipos.find(ce => ce.ficha === e.ficha);
+                return equipo?.categoria === estadoCategoriaFilter;
+            });
+        }
+        return list.sort((a, b) => a.ficha.localeCompare(b.ficha, undefined, { numeric: true }));
+    }, [estadoActualizacion.actualizados, estadoSearch, estadoCategoriaFilter, catalogoEquipos]);
+
     const handleSelectEquipo = (equipo: MantenimientoProgramado) => {
         setSelectedEquipo(equipo);
         setLecturaActual(equipo.horasKmActuales.toString());
