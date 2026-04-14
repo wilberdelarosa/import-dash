@@ -178,12 +178,36 @@ export function EquipoDialog({
         <div className="grid grid-cols-1 gap-4 py-4 md:grid-cols-2">
           <div>
             <Label htmlFor="ficha">Ficha</Label>
-            <Input
-              id="ficha"
-              value={formData.ficha}
-              onChange={(e) => setFormData({ ...formData, ficha: e.target.value })}
-              placeholder="AC-001"
-            />
+            <div className="flex gap-2">
+              <Input
+                id="ficha"
+                value={formData.ficha}
+                onChange={(e) => setFormData({ ...formData, ficha: e.target.value })}
+                placeholder="AC-001"
+                disabled={!!equipoData}
+              />
+              {equipoData && (
+                <Button type="button" variant="outline" size="sm" className="shrink-0" onClick={() => setShowFichaChange(!showFichaChange)}>
+                  <RefreshCw className="h-4 w-4" />
+                </Button>
+              )}
+            </div>
+            {showFichaChange && equipoData && (
+              <div className="mt-2 p-3 border rounded-lg bg-muted/50 space-y-2">
+                <Label className="text-xs font-semibold">Nueva ficha (se actualiza en todo el sistema)</Label>
+                <div className="flex gap-2">
+                  <Input
+                    value={newFicha}
+                    onChange={(e) => setNewFicha(e.target.value.toUpperCase())}
+                    placeholder="Ej: FAG-001"
+                    className="h-8 text-sm"
+                  />
+                  <Button type="button" size="sm" className="h-8" onClick={handleCambiarFicha} disabled={changingFicha || !newFicha.trim()}>
+                    {changingFicha ? 'Cambiando...' : 'Cambiar'}
+                  </Button>
+                </div>
+              </div>
+            )}
           </div>
           <div>
             <Label htmlFor="nombre">Nombre</Label>
