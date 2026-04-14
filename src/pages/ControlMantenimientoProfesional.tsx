@@ -1505,6 +1505,14 @@ export default function ControlMantenimientoProfesional() {
                         )}
                       </div>
 
+                      {/* Sección de Dictado por Voz */}
+                      <div className="pt-4 border-t">
+                        <VoiceMultiUpdate
+                          onUpdateBatch={handleVoiceBatchUpdate}
+                          isReadOnly={isReadOnly}
+                        />
+                      </div>
+
                       {/* Sección de Alertas de Actualización */}
                       {alertasActualizacion.length > 0 && (
                         <div className="pt-4 border-t space-y-3">
