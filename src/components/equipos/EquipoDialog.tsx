@@ -7,8 +7,10 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Switch } from '@/components/ui/switch';
 import { Textarea } from '@/components/ui/textarea';
 import { Alert, AlertDescription } from '@/components/ui/alert';
-import { Plus, Edit, Building2, AlertTriangle } from 'lucide-react';
+import { Plus, Edit, Building2, AlertTriangle, RefreshCw } from 'lucide-react';
 import { Equipo, EMPRESAS_DISPONIBLES, isEquipoVendido, EmpresaEquipo } from '@/types/equipment';
+import { supabase } from '@/integrations/supabase/client';
+import { useToast } from '@/hooks/use-toast';
 
 interface EquipoDialogProps {
   equipo?: Equipo;
@@ -47,6 +49,10 @@ export function EquipoDialog({
   initialData
 }: EquipoDialogProps) {
   const [internalOpen, setInternalOpen] = useState(false);
+  const { toast } = useToast();
+  const [changingFicha, setChangingFicha] = useState(false);
+  const [newFicha, setNewFicha] = useState('');
+  const [showFichaChange, setShowFichaChange] = useState(false);
 
   const open = controlledOpen !== undefined ? controlledOpen : internalOpen;
   const setOpen = onOpenChange || setInternalOpen;
