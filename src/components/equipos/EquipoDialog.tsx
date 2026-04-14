@@ -109,8 +109,34 @@ export function EquipoDialog({
   // Verificar si el equipo está vendido (no se puede reactivar)
   const isVendido = isEquipoVendido(formData.empresa);
 
+  const handleCambiarFicha = async () => {
+    if (!equipoData || !newFicha.trim()) return;
+    setChangingFicha(true);
+    try {
+      const { data: result, error } = await supabase.rpc('cambiar_ficha_equipo', {
+        p_old_ficha: equipoData.ficha,
+        p_new_ficha: newFicha.trim().toUpperCase(),
+      });
+      if (error) throw error;
+      const res = result as any;
+      if (res?.success) {
+        toast({ title: '✅ Ficha actualizada', description: res.message });
+        setShowFichaChange(false);
+        setNewFicha('');
+        setFormData(prev => ({ ...prev, ficha: newFicha.trim().toUpperCase() }));
+        // Reload page to reflect changes everywhere
+        window.location.reload();
+      } else {
+        toast({ title: 'Error', description: res?.error || 'No se pudo cambiar la ficha', variant: 'destructive' });
+      }
+    } catch (err: any) {
+      toast({ title: 'Error', description: err.message, variant: 'destructive' });
+    } finally {
+      setChangingFicha(false);
+    }
+  };
+
   const handleSave = async () => {
-    // Si está vendido, forzar inactivo
     const finalActivo = isVendido ? false : formData.activo;
     const finalMotivo = isVendido
       ? (formData.motivoInactividad || 'Equipo vendido')
