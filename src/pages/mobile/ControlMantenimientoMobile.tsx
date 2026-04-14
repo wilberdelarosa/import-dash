@@ -90,6 +90,11 @@ export function ControlMantenimientoMobile({
     const [observacionesRegistro, setObservacionesRegistro] = useState('');
     const [registering, setRegistering] = useState(false);
 
+    // Estados para filtros en Estado
+    const [estadoSearch, setEstadoSearch] = useState('');
+    const [estadoCategoriaFilter, setEstadoCategoriaFilter] = useState('all');
+    const [estadoVistaActiva, setEstadoVistaActiva] = useState<'pendientes' | 'actualizados'>('pendientes');
+
     // Estados para pestaña Estado
     const [fechaInicio, setFechaInicio] = useState(() => {
         const d = new Date();
