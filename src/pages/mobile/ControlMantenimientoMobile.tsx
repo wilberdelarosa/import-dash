@@ -686,7 +686,7 @@ export function ControlMantenimientoMobile({
                         )}
                     </TabsContent>
 
-                    <TabsContent value="estado" className="mt-0 space-y-6">
+                    <TabsContent value="estado" className="mt-0 space-y-4">
                         <MobileCard className="p-4 space-y-4">
                             <div className="flex items-center justify-between">
                                 <h3 className="font-semibold">Rango de Fecha</h3>
@@ -714,14 +714,31 @@ export function ControlMantenimientoMobile({
                             </div>
                         </MobileCard>
 
-                        <div className="grid grid-cols-2 gap-4">
-                            <MobileCard className="p-4 flex flex-col items-center justify-center bg-green-500/10 border-green-500/20">
-                                <span className="text-3xl font-bold text-green-600">{estadoActualizacion.actualizados.length}</span>
-                                <span className="text-xs font-medium text-green-700 uppercase tracking-wider mt-1">Actualizados</span>
+                        {/* KPIs */}
+                        <div className="grid grid-cols-2 gap-3">
+                            <MobileCard
+                                className={cn(
+                                    "p-4 flex flex-col items-center justify-center cursor-pointer transition-all",
+                                    estadoVistaActiva === 'actualizados'
+                                        ? "bg-emerald-500/15 border-emerald-500/40 ring-2 ring-emerald-500/30"
+                                        : "bg-emerald-500/5 border-emerald-500/20"
+                                )}
+                                onClick={() => setEstadoVistaActiva('actualizados')}
+                            >
+                                <span className="text-3xl font-bold text-emerald-600">{estadoActualizacion.actualizados.length}</span>
+                                <span className="text-xs font-medium text-emerald-700 uppercase tracking-wider mt-1">Actualizados</span>
                             </MobileCard>
-                            <MobileCard className="p-4 flex flex-col items-center justify-center bg-red-500/10 border-red-500/20">
-                                <span className="text-3xl font-bold text-red-600">{estadoActualizacion.pendientes.length}</span>
-                                <span className="text-xs font-medium text-red-700 uppercase tracking-wider mt-1">Pendientes</span>
+                            <MobileCard
+                                className={cn(
+                                    "p-4 flex flex-col items-center justify-center cursor-pointer transition-all",
+                                    estadoVistaActiva === 'pendientes'
+                                        ? "bg-destructive/15 border-destructive/40 ring-2 ring-destructive/30"
+                                        : "bg-destructive/5 border-destructive/20"
+                                )}
+                                onClick={() => setEstadoVistaActiva('pendientes')}
+                            >
+                                <span className="text-3xl font-bold text-destructive">{estadoActualizacion.pendientes.length}</span>
+                                <span className="text-xs font-medium text-destructive uppercase tracking-wider mt-1">Pendientes</span>
                             </MobileCard>
                         </div>
 
@@ -739,46 +756,99 @@ export function ControlMantenimientoMobile({
                             </div>
                         </div>
 
-                        <div className="space-y-4">
-                            <h3 className="font-semibold px-1">Detalle de Equipos</h3>
-
-                            {estadoActualizacion.pendientes.length > 0 && (
-                                <div className="space-y-2">
-                                    <h4 className="text-xs font-medium text-red-500 uppercase px-1">Pendientes ({estadoActualizacion.pendientes.length})</h4>
-                                    {estadoActualizacion.pendientes.map(eq => (
-                                        <MobileCard key={eq.id} className="border-l-4 border-l-red-500">
-                                            <div className="flex justify-between items-center">
-                                                <div>
-                                                    <h4 className="font-bold">{eq.ficha}</h4>
-                                                    <p className="text-xs text-muted-foreground">Última act: {new Date(eq.fechaUltimaActualizacion).toLocaleDateString()}</p>
-                                                </div>
-                                                <Button size="sm" variant="outline" className="h-8" onClick={() => {
-                                                    setSelectedEquipo(eq);
-                                                    setActiveTab('lecturas');
-                                                }}>
-                                                    Actualizar
-                                                </Button>
-                                            </div>
-                                        </MobileCard>
+                        {/* Filtros de búsqueda */}
+                        <div className="flex gap-2">
+                            <div className="flex-1 relative">
+                                <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                                <Input
+                                    placeholder="Buscar ficha o nombre..."
+                                    value={estadoSearch}
+                                    onChange={(e) => setEstadoSearch(e.target.value)}
+                                    className="pl-9 h-10"
+                                />
+                            </div>
+                            <Select value={estadoCategoriaFilter} onValueChange={setEstadoCategoriaFilter}>
+                                <SelectTrigger className="w-[120px] h-10">
+                                    <Filter className="h-3.5 w-3.5 mr-1" />
+                                    <SelectValue placeholder="Categoría" />
+                                </SelectTrigger>
+                                <SelectContent>
+                                    <SelectItem value="all">Todas</SelectItem>
+                                    {categoriasDisponibles.map(cat => (
+                                        <SelectItem key={cat} value={cat}>{cat}</SelectItem>
                                     ))}
-                                </div>
-                            )}
+                                </SelectContent>
+                            </Select>
+                        </div>
 
-                            {estadoActualizacion.actualizados.length > 0 && (
-                                <div className="space-y-2">
-                                    <h4 className="text-xs font-medium text-green-500 uppercase px-1">Actualizados ({estadoActualizacion.actualizados.length})</h4>
-                                    {estadoActualizacion.actualizados.map(eq => (
-                                        <MobileCard key={eq.id} className="border-l-4 border-l-green-500 opacity-80">
-                                            <div className="flex justify-between items-center">
-                                                <div>
-                                                    <h4 className="font-bold">{eq.ficha}</h4>
-                                                    <p className="text-xs text-muted-foreground">Actualizado: {new Date(eq.fechaUltimaActualizacion).toLocaleDateString()}</p>
+                        {/* Voz Multi-Ficha Mobile */}
+                        {onVoiceBatchUpdate && (
+                            <MobileCard className="p-4">
+                                <VoiceMultiUpdate
+                                    onUpdateBatch={onVoiceBatchUpdate}
+                                    isReadOnly={isReadOnly}
+                                />
+                            </MobileCard>
+                        )}
+
+                        {/* Lista de equipos */}
+                        <div className="space-y-3">
+                            <div className="flex items-center justify-between">
+                                <h3 className="font-semibold px-1">
+                                    {estadoVistaActiva === 'pendientes' ? 'Pendientes' : 'Actualizados'}
+                                </h3>
+                                <Badge variant="outline" className="text-xs">
+                                    {estadoVistaActiva === 'pendientes' ? filteredPendientes.length : filteredActualizados.length} equipos
+                                </Badge>
+                            </div>
+
+                            {estadoVistaActiva === 'pendientes' ? (
+                                filteredPendientes.length > 0 ? (
+                                    <div className="space-y-2">
+                                        {filteredPendientes.map(eq => (
+                                            <MobileCard key={eq.id} className="border-l-4 border-l-destructive">
+                                                <div className="flex justify-between items-center">
+                                                    <div className="min-w-0 flex-1">
+                                                        <h4 className="font-bold text-sm">{eq.ficha}</h4>
+                                                        <p className="text-xs text-muted-foreground truncate">{eq.nombreEquipo}</p>
+                                                        <p className="text-[10px] text-muted-foreground">Última act: {new Date(eq.fechaUltimaActualizacion).toLocaleDateString()}</p>
+                                                    </div>
+                                                    <Button size="sm" variant="outline" className="h-8 ml-2 shrink-0" onClick={() => {
+                                                        setSelectedEquipo(eq);
+                                                        setActiveTab('lecturas');
+                                                    }}>
+                                                        Actualizar
+                                                    </Button>
                                                 </div>
-                                                <CheckCircle2 className="h-5 w-5 text-green-500" />
-                                            </div>
-                                        </MobileCard>
-                                    ))}
-                                </div>
+                                            </MobileCard>
+                                        ))}
+                                    </div>
+                                ) : (
+                                    <div className="text-center py-8 text-muted-foreground text-sm">
+                                        {estadoSearch ? 'Sin resultados para la búsqueda' : 'No hay equipos pendientes'}
+                                    </div>
+                                )
+                            ) : (
+                                filteredActualizados.length > 0 ? (
+                                    <div className="space-y-2">
+                                        {filteredActualizados.map(eq => (
+                                            <MobileCard key={eq.id} className="border-l-4 border-l-emerald-500">
+                                                <div className="flex justify-between items-center">
+                                                    <div className="min-w-0 flex-1">
+                                                        <h4 className="font-bold text-sm">{eq.ficha}</h4>
+                                                        <p className="text-xs text-muted-foreground truncate">{eq.nombreEquipo}</p>
+                                                        <p className="text-[10px] text-muted-foreground">Actualizado: {new Date(eq.fechaUltimaActualizacion).toLocaleDateString()}</p>
+                                                    </div>
+                                                    <CheckCircle2 className="h-5 w-5 text-emerald-500 shrink-0" />
+                                                </div>
+                                            </MobileCard>
+                                        ))}
+                                    </div>
+                                ) : (
+                                    <div className="text-center py-8 text-muted-foreground text-sm">
+                                        {estadoSearch ? 'Sin resultados para la búsqueda' : 'No hay equipos actualizados en este rango'}
+                                    </div>
+                                )
                             )}
                         </div>
                     </TabsContent>
