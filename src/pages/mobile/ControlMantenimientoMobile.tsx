@@ -70,7 +70,9 @@ export function ControlMantenimientoMobile({
     catalogoEquipos,
     onUpdateLectura,
     onRegistrarMantenimiento,
-    loading
+    onVoiceBatchUpdate,
+    loading,
+    isReadOnly
 }: ControlMantenimientoMobileProps) {
     const { toast } = useToast();
     const [activeTab, setActiveTab] = useState('lecturas');
