@@ -4,6 +4,7 @@ import { MobileCard } from '@/components/mobile/MobileCard';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import {
     Search,
@@ -19,13 +20,16 @@ import {
     CheckCircle2,
     History,
     Wrench,
-    AlertTriangle
+    AlertTriangle,
+    Mic,
+    Filter
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { MantenimientoProgramado, MantenimientoRealizado, Equipo, isEquipoDisponible } from '@/types/equipment';
 import { formatRemainingLabel, getRemainingVariant } from '@/lib/maintenanceUtils';
 import { useToast } from '@/hooks/use-toast';
 import { useCaterpillarData } from '@/hooks/useCaterpillarData';
+import { VoiceMultiUpdate } from '@/components/VoiceMultiUpdate';
 
 interface DatosMantenimiento {
     tipo?: string;
@@ -43,7 +47,9 @@ interface ControlMantenimientoMobileProps {
     catalogoEquipos: Equipo[];
     onUpdateLectura: (id: number, lectura: number, fecha: string, notas?: string) => Promise<void>;
     onRegistrarMantenimiento: (id: number, datos: DatosMantenimiento) => Promise<void>;
+    onVoiceBatchUpdate?: (updates: Array<{ mantenimientoId: number; lectura: number; ficha: string }>) => Promise<void>;
     loading?: boolean;
+    isReadOnly?: boolean;
 }
 
 // Helper para resolver intervalo
