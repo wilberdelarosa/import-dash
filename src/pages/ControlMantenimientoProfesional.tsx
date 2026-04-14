@@ -1683,25 +1683,48 @@ export default function ControlMantenimientoProfesional() {
                         <div className="space-y-5">
                           <div className="flex flex-wrap gap-3">
                             <Badge variant="secondary">
-                              Actualizados: {resumenActualizaciones.actualizados.length}
+                              Actualizados: {filteredActualizados.length}/{resumenActualizaciones.actualizados.length}
                             </Badge>
-                            <Badge variant={resumenActualizaciones.pendientes.length > 0 ? 'destructive' : 'outline'}>
-                              Pendientes: {resumenActualizaciones.pendientes.length}
+                            <Badge variant={filteredPendientes.length > 0 ? 'destructive' : 'outline'}>
+                              Pendientes: {filteredPendientes.length}/{resumenActualizaciones.pendientes.length}
                             </Badge>
                             <Badge variant="outline">
                               Período: {new Date(resumenActualizaciones.desde).toLocaleDateString()} - {new Date(resumenActualizaciones.hasta).toLocaleDateString()}
                             </Badge>
                           </div>
 
+                          {/* Filtros de reporte */}
+                          <div className="flex gap-2">
+                            <div className="flex-1">
+                              <Input
+                                placeholder="Buscar ficha o nombre..."
+                                value={reporteSearch}
+                                onChange={(e) => setReporteSearch(e.target.value)}
+                                className="h-8 text-xs"
+                              />
+                            </div>
+                            <Select value={reporteCategoriaFilter} onValueChange={setReporteCategoriaFilter}>
+                              <SelectTrigger className="w-[140px] h-8 text-xs">
+                                <SelectValue placeholder="Categoría" />
+                              </SelectTrigger>
+                              <SelectContent>
+                                <SelectItem value="all">Todas</SelectItem>
+                                {categorias.map((cat) => (
+                                  <SelectItem key={cat} value={cat}>{cat}</SelectItem>
+                                ))}
+                              </SelectContent>
+                            </Select>
+                          </div>
+
                           <div className="grid gap-6 lg:grid-cols-2">
                             <div className="space-y-3">
                               <h4 className="text-sm font-semibold">Equipos con lectura registrada</h4>
-                              {resumenActualizaciones.actualizados.length === 0 ? (
+                              {filteredActualizados.length === 0 ? (
                                 <p className="text-sm text-muted-foreground">No hay registros en el rango seleccionado.</p>
                               ) : (
                                 <div className="rounded-md border overflow-auto max-h-64">
                                   <Table className="text-sm">
-                                    <TableHeader className="sticky top-0 bg-slate-50 dark:bg-slate-900">
+                                    <TableHeader className="sticky top-0 bg-muted/80">
                                       <TableRow>
                                         <TableHead className="text-xs h-8">Equipo</TableHead>
                                         <TableHead className="text-xs h-8">Ficha</TableHead>
@@ -1710,7 +1733,7 @@ export default function ControlMantenimientoProfesional() {
                                       </TableRow>
                                     </TableHeader>
                                     <TableBody>
-                                      {resumenActualizaciones.actualizados.map(({ mantenimiento, evento }) => (
+                                      {filteredActualizados.map(({ mantenimiento, evento }) => (
                                         <TableRow key={mantenimiento.id} className="h-10">
                                           <TableCell className="font-medium">{mantenimiento.nombreEquipo}</TableCell>
                                           <TableCell className="font-mono text-xs">{mantenimiento.ficha}</TableCell>
@@ -1730,12 +1753,12 @@ export default function ControlMantenimientoProfesional() {
 
                             <div className="space-y-3">
                               <h4 className="text-sm font-semibold">Equipos pendientes</h4>
-                              {resumenActualizaciones.pendientes.length === 0 ? (
+                              {filteredPendientes.length === 0 ? (
                                 <p className="text-sm text-muted-foreground">Todos los equipos tienen lectura en el rango.</p>
                               ) : (
                                 <div className="rounded-md border overflow-auto max-h-64">
                                   <Table className="text-sm">
-                                    <TableHeader className="sticky top-0 bg-slate-50 dark:bg-slate-900">
+                                    <TableHeader className="sticky top-0 bg-muted/80">
                                       <TableRow>
                                         <TableHead className="text-xs h-8">Equipo</TableHead>
                                         <TableHead className="text-xs h-8">Ficha</TableHead>
@@ -1744,7 +1767,7 @@ export default function ControlMantenimientoProfesional() {
                                       </TableRow>
                                     </TableHeader>
                                     <TableBody>
-                                      {resumenActualizaciones.pendientes.map((mantenimiento) => (
+                                      {filteredPendientes.map((mantenimiento) => (
                                         <TableRow key={mantenimiento.id} className="h-10">
                                           <TableCell className="font-medium">{mantenimiento.nombreEquipo}</TableCell>
                                           <TableCell className="font-mono text-xs">{mantenimiento.ficha}</TableCell>
