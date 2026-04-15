@@ -14,6 +14,45 @@ export type Database = {
   }
   public: {
     Tables: {
+      ai_audit_log: {
+        Row: {
+          affected_id: string | null
+          affected_table: string | null
+          created_at: string
+          id: number
+          result_summary: string | null
+          success: boolean
+          tool_args: Json | null
+          tool_name: string
+          user_email: string | null
+          user_id: string | null
+        }
+        Insert: {
+          affected_id?: string | null
+          affected_table?: string | null
+          created_at?: string
+          id?: never
+          result_summary?: string | null
+          success?: boolean
+          tool_args?: Json | null
+          tool_name: string
+          user_email?: string | null
+          user_id?: string | null
+        }
+        Update: {
+          affected_id?: string | null
+          affected_table?: string | null
+          created_at?: string
+          id?: never
+          result_summary?: string | null
+          success?: boolean
+          tool_args?: Json | null
+          tool_name?: string
+          user_email?: string | null
+          user_id?: string | null
+        }
+        Relationships: []
+      }
       cat_codigos_pieza: {
         Row: {
           created_at: string | null
