@@ -14,3 +14,6 @@ verify_jwt = true
 
 [functions.equipos-api]
 verify_jwt = false
+
+[functions.ai-core]
+verify_jwt = false
