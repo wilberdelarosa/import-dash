@@ -1608,7 +1608,7 @@ export default function ControlMantenimientoProfesional() {
                     </div>
 
                     {/* Columna Derecha: Reportes */}
-                    <div className="overflow-y-auto px-5 py-5 space-y-5">
+                    <div className="overflow-y-auto overscroll-contain px-5 py-5 space-y-5">
                       <div>
                         <h4 className="text-sm font-semibold mb-1 flex items-center gap-2">
                           <CalendarRange className="h-4 w-4 text-primary" />
