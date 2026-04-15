@@ -1378,6 +1378,7 @@ export default function ControlMantenimientoProfesional() {
                   role="dialog"
                   aria-modal="false"
                   className="pointer-events-auto w-[95vw] max-w-[1400px] rounded-2xl border border-primary/20 bg-background/95 shadow-2xl backdrop-blur supports-[backdrop-filter]:backdrop-blur flex flex-col max-h-[90vh]"
+                  onWheel={(e) => e.stopPropagation()}
                 >
                   <div className="drag-handle cursor-move flex items-start justify-between gap-4 border-b px-6 py-4 bg-slate-50 dark:bg-slate-900 flex-shrink-0">
                     <div className="flex items-center gap-2">
