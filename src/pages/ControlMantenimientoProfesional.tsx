@@ -198,9 +198,11 @@ export default function ControlMantenimientoProfesional() {
   const [notasRapida, setNotasRapida] = useState('');
   const [updatingRapido, setUpdatingRapido] = useState(false);
 
-  // Filtros para reportes
-  const [reporteSearch, setReporteSearch] = useState('');
-  const [reporteCategoriaFilter, setReporteCategoriaFilter] = useState('all');
+  // Filtros independientes para cada listado de reporte
+  const [actualizadosSearch, setActualizadosSearch] = useState('');
+  const [actualizadosCatFilter, setActualizadosCatFilter] = useState('all');
+  const [pendientesSearch, setPendientesSearch] = useState('');
+  const [pendientesCatFilter, setPendientesCatFilter] = useState('all');
 
   // Alertas de actualización
   const [alertasActualizacion, setAlertasActualizacion] = useState<Array<{
