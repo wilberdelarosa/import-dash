@@ -1761,7 +1761,7 @@ export default function ControlMantenimientoProfesional() {
                               {filteredActualizados.length === 0 ? (
                                 <p className="text-xs text-muted-foreground py-4 text-center">Sin registros.</p>
                               ) : (
-                                <ScrollArea className="max-h-[350px]">
+                                <ScrollArea className="h-[350px]">
                                   <div className="space-y-1.5 pr-2">
                                     {filteredActualizados.map(({ mantenimiento, evento }) => (
                                       <div key={mantenimiento.id} className="flex items-center gap-3 p-2.5 rounded-lg border bg-card hover:bg-accent/30 transition-colors">
