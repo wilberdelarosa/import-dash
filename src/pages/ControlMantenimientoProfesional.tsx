@@ -845,30 +845,34 @@ export default function ControlMantenimientoProfesional() {
     }
   };
 
-  // Filtered report data
+  // Filtered report data - independent filters per list
   const filteredActualizados = useMemo(() => {
     if (!resumenActualizaciones) return [];
-    return resumenActualizaciones.actualizados.filter(({ mantenimiento }) => {
-      const equipo = activeEquipos.find(e => e.ficha === mantenimiento.ficha);
-      const matchSearch = !reporteSearch || 
-        mantenimiento.ficha.toLowerCase().includes(reporteSearch.toLowerCase()) ||
-        mantenimiento.nombreEquipo.toLowerCase().includes(reporteSearch.toLowerCase());
-      const matchCat = reporteCategoriaFilter === 'all' || equipo?.categoria === reporteCategoriaFilter;
-      return matchSearch && matchCat;
-    });
-  }, [resumenActualizaciones, reporteSearch, reporteCategoriaFilter, activeEquipos]);
+    return resumenActualizaciones.actualizados
+      .filter(({ mantenimiento }) => {
+        const equipo = activeEquipos.find(e => e.ficha === mantenimiento.ficha);
+        const matchSearch = !actualizadosSearch || 
+          mantenimiento.ficha.toLowerCase().includes(actualizadosSearch.toLowerCase()) ||
+          mantenimiento.nombreEquipo.toLowerCase().includes(actualizadosSearch.toLowerCase());
+        const matchCat = actualizadosCatFilter === 'all' || equipo?.categoria === actualizadosCatFilter;
+        return matchSearch && matchCat;
+      })
+      .sort((a, b) => a.mantenimiento.ficha.localeCompare(b.mantenimiento.ficha, undefined, { numeric: true }));
+  }, [resumenActualizaciones, actualizadosSearch, actualizadosCatFilter, activeEquipos]);
 
   const filteredPendientes = useMemo(() => {
     if (!resumenActualizaciones) return [];
-    return resumenActualizaciones.pendientes.filter((mantenimiento) => {
-      const equipo = activeEquipos.find(e => e.ficha === mantenimiento.ficha);
-      const matchSearch = !reporteSearch ||
-        mantenimiento.ficha.toLowerCase().includes(reporteSearch.toLowerCase()) ||
-        mantenimiento.nombreEquipo.toLowerCase().includes(reporteSearch.toLowerCase());
-      const matchCat = reporteCategoriaFilter === 'all' || equipo?.categoria === reporteCategoriaFilter;
-      return matchSearch && matchCat;
-    });
-  }, [resumenActualizaciones, reporteSearch, reporteCategoriaFilter, activeEquipos]);
+    return resumenActualizaciones.pendientes
+      .filter((mantenimiento) => {
+        const equipo = activeEquipos.find(e => e.ficha === mantenimiento.ficha);
+        const matchSearch = !pendientesSearch ||
+          mantenimiento.ficha.toLowerCase().includes(pendientesSearch.toLowerCase()) ||
+          mantenimiento.nombreEquipo.toLowerCase().includes(pendientesSearch.toLowerCase());
+        const matchCat = pendientesCatFilter === 'all' || equipo?.categoria === pendientesCatFilter;
+        return matchSearch && matchCat;
+      })
+      .sort((a, b) => a.ficha.localeCompare(b.ficha, undefined, { numeric: true }));
+  }, [resumenActualizaciones, pendientesSearch, pendientesCatFilter, activeEquipos]);
 
   // ============================================
   // RETURNS CONDICIONALES DESPUÉS DE TODOS LOS HOOKS
