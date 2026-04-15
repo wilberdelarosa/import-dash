@@ -5,7 +5,6 @@ import { Input } from '@/components/ui/input';
 import { Card, CardContent } from '@/components/ui/card';
 import { Checkbox } from '@/components/ui/checkbox';
 import { ScrollArea } from '@/components/ui/scroll-area';
-import { ScrollArea } from '@/components/ui/scroll-area';
 import {
   Mic, MicOff, Loader2, AlertTriangle, Check, X, Send, Volume2
 } from 'lucide-react';
