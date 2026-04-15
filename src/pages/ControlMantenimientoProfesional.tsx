@@ -1400,7 +1400,7 @@ export default function ControlMantenimientoProfesional() {
 
                   <div className="grid gap-0 lg:grid-cols-[380px,1fr] flex-1 min-h-0 overflow-hidden">
                     {/* Columna Izquierda: Actualización Rápida */}
-                    <div className="border-r overflow-y-auto px-5 py-5 space-y-4 bg-slate-50/50 dark:bg-slate-900/50">
+                    <div className="border-r overflow-y-auto overscroll-contain px-5 py-5 space-y-4 bg-slate-50/50 dark:bg-slate-900/50">
                       <div>
                         <h4 className="text-sm font-semibold mb-1 flex items-center gap-2">
                           <Gauge className="h-4 w-4 text-primary" />
