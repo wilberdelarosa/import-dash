@@ -1378,6 +1378,7 @@ export default function ControlMantenimientoProfesional() {
                   role="dialog"
                   aria-modal="false"
                   className="pointer-events-auto w-[95vw] max-w-[1400px] rounded-2xl border border-primary/20 bg-background/95 shadow-2xl backdrop-blur supports-[backdrop-filter]:backdrop-blur flex flex-col max-h-[90vh]"
+                  onWheel={(e) => e.stopPropagation()}
                 >
                   <div className="drag-handle cursor-move flex items-start justify-between gap-4 border-b px-6 py-4 bg-slate-50 dark:bg-slate-900 flex-shrink-0">
                     <div className="flex items-center gap-2">
@@ -1399,7 +1400,7 @@ export default function ControlMantenimientoProfesional() {
 
                   <div className="grid gap-0 lg:grid-cols-[380px,1fr] flex-1 min-h-0 overflow-hidden">
                     {/* Columna Izquierda: Actualización Rápida */}
-                    <div className="border-r overflow-y-auto px-5 py-5 space-y-4 bg-slate-50/50 dark:bg-slate-900/50">
+                    <div className="border-r overflow-y-auto overscroll-contain px-5 py-5 space-y-4 bg-slate-50/50 dark:bg-slate-900/50">
                       <div>
                         <h4 className="text-sm font-semibold mb-1 flex items-center gap-2">
                           <Gauge className="h-4 w-4 text-primary" />
@@ -1607,7 +1608,7 @@ export default function ControlMantenimientoProfesional() {
                     </div>
 
                     {/* Columna Derecha: Reportes */}
-                    <div className="overflow-y-auto px-5 py-5 space-y-5">
+                    <div className="overflow-y-auto overscroll-contain px-5 py-5 space-y-5">
                       <div>
                         <h4 className="text-sm font-semibold mb-1 flex items-center gap-2">
                           <CalendarRange className="h-4 w-4 text-primary" />

@@ -239,7 +239,7 @@ export function PlanificacionFlotante() {
           <CalendarRange className="h-6 w-6" />
         </Button>
       </DialogTrigger>
-      <DialogContent className="max-w-6xl max-h-[90vh] overflow-y-auto">
+      <DialogContent className="max-w-6xl max-h-[90vh] flex flex-col overflow-hidden">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
             <Route className="h-6 w-6 text-primary" />
@@ -250,7 +250,7 @@ export function PlanificacionFlotante() {
           </p>
         </DialogHeader>
 
-        <div className="space-y-6 py-4">
+        <div className="flex-1 min-h-0 overflow-y-auto overscroll-contain space-y-6 py-4 pr-1">
           {caterpillarEquipos.length === 0 ? (
             <p className="text-sm text-muted-foreground">
               Registra equipos Caterpillar para habilitar la planificación inteligente de rutas preventivas.
