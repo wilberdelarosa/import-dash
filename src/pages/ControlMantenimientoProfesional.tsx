@@ -788,32 +788,54 @@ export default function ControlMantenimientoProfesional() {
   };
 
   // Handler para actualización por voz en lote
+  // Toma snapshot de data al inicio para evitar problemas de closures con loadData intermedio
   const handleVoiceBatchUpdate = async (updates: Array<{ mantenimientoId: number; lectura: number; ficha: string }>) => {
     const fecha = new Date().toISOString().slice(0, 10);
+    const snapshot = [...data.mantenimientosProgramados];
+    const errores: string[] = [];
+    let exitosos = 0;
+
     for (const update of updates) {
-      const mant = data.mantenimientosProgramados.find(m => m.id === update.mantenimientoId);
-      if (!mant) continue;
-      const unidadInferida = mant.tipoMantenimiento.toLowerCase().includes('km') ? 'km' : 'horas';
-      const lecturaAnterior = mant.horasKmActuales;
-      await updateHorasActuales({
-        mantenimientoId: update.mantenimientoId,
-        horasKm: update.lectura,
-        fecha,
-        unidad: unidadInferida as 'horas' | 'km',
-        observaciones: 'Actualizado por voz',
-      });
-      // Create alert
-      setAlertasActualizacion(prev => [{
-        id: `${update.mantenimientoId}-${Date.now()}`,
-        ficha: update.ficha,
-        nombreEquipo: mant.nombreEquipo,
-        lecturaAnterior,
-        lecturaActual: update.lectura,
-        incremento: update.lectura - lecturaAnterior,
-        fecha,
-        timestamp: Date.now(),
-      }, ...prev].slice(0, 50));
+      const mant = snapshot.find(m => m.id === update.mantenimientoId);
+      if (!mant) {
+        errores.push(`Ficha ${update.ficha}: no encontrada`);
+        continue;
+      }
+      try {
+        const unidadInferida = mant.tipoMantenimiento.toLowerCase().includes('km') ? 'km' : 'horas';
+        const lecturaAnterior = mant.horasKmActuales;
+        await updateHorasActuales({
+          mantenimientoId: update.mantenimientoId,
+          horasKm: update.lectura,
+          fecha,
+          unidad: unidadInferida as 'horas' | 'km',
+          observaciones: 'Actualizado por voz',
+        });
+        exitosos++;
+        // Create alert
+        setAlertasActualizacion(prev => [{
+          id: `${update.mantenimientoId}-${Date.now()}`,
+          ficha: update.ficha,
+          nombreEquipo: mant.nombreEquipo,
+          lecturaAnterior,
+          lecturaActual: update.lectura,
+          incremento: update.lectura - lecturaAnterior,
+          fecha,
+          timestamp: Date.now(),
+        }, ...prev].slice(0, 50));
+      } catch (err) {
+        errores.push(`Ficha ${update.ficha}: ${err instanceof Error ? err.message : 'Error desconocido'}`);
+      }
     }
+
+    if (errores.length > 0) {
+      toast({
+        title: `⚠️ ${exitosos}/${updates.length} actualizados`,
+        description: errores.join('. '),
+        variant: 'destructive',
+      });
+    }
+
     // Refresh report if active
     if (reporteRango) {
       const rangoNormalizado = normalizarRangoFechas(reporteDesde, reporteHasta);

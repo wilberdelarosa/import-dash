@@ -3,8 +3,6 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
 import { Card, CardContent } from '@/components/ui/card';
-import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Checkbox } from '@/components/ui/checkbox';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import {
@@ -325,80 +323,86 @@ export function VoiceMultiUpdate({ onUpdateBatch, isReadOnly }: VoiceMultiUpdate
             <Badge variant="outline">{selectedCount} seleccionados</Badge>
           </div>
 
-          <ScrollArea className="max-h-[300px]">
-            <div className="rounded-md border">
-              <Table className="text-xs">
-                <TableHeader>
-                  <TableRow>
-                    <TableHead className="w-8 h-7"></TableHead>
-                    <TableHead className="h-7">Ficha</TableHead>
-                    <TableHead className="h-7">Equipo</TableHead>
-                    <TableHead className="h-7 text-right">Anterior</TableHead>
-                    <TableHead className="h-7 text-right">Nueva</TableHead>
-                    <TableHead className="h-7 text-right">Δ</TableHead>
-                    <TableHead className="h-7">Estado</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {parsedReadings.map((r, i) => (
-                    <TableRow key={i} className={!r.valid ? 'opacity-50' : r.anomalia ? 'bg-amber-50/50 dark:bg-amber-950/10' : ''}>
-                      <TableCell className="py-1">
-                        <Checkbox
-                          checked={r.selected}
-                          onCheckedChange={() => toggleReading(i)}
-                          disabled={!r.valid || step === 'submitting'}
-                        />
-                      </TableCell>
-                      <TableCell className="py-1 font-mono font-medium">{r.ficha}</TableCell>
-                      <TableCell className="py-1 truncate max-w-[120px]">{r.nombreEquipo || '-'}</TableCell>
-                      <TableCell className="py-1 text-right">{r.lecturaAnterior ?? '-'}</TableCell>
-                      <TableCell className="py-1 text-right">
+          <ScrollArea className="max-h-[400px]">
+            <div className="space-y-2">
+              {parsedReadings.map((r, i) => (
+                <Card
+                  key={i}
+                  className={`border ${!r.valid ? 'opacity-60 border-destructive/30' : r.anomalia ? 'border-amber-400/50 bg-amber-50/30 dark:bg-amber-950/10' : 'border-border'}`}
+                >
+                  <CardContent className="p-3 space-y-2">
+                    {/* Header row */}
+                    <div className="flex items-center gap-2">
+                      <Checkbox
+                        checked={r.selected}
+                        onCheckedChange={() => toggleReading(i)}
+                        disabled={!r.valid || step === 'submitting'}
+                      />
+                      <span className="font-mono font-bold text-sm text-primary">{r.ficha}</span>
+                      <span className="text-xs text-muted-foreground flex-1">{r.nombreEquipo || 'Equipo no encontrado'}</span>
+                      {/* Status badge */}
+                      {!r.valid ? (
+                        <Badge variant="destructive" className="text-[10px] px-1.5 shrink-0">
+                          <X className="h-3 w-3 mr-0.5" />
+                          {r.error}
+                        </Badge>
+                      ) : r.anomalia === 'error_lectura_menor' ? (
+                        <Badge variant="destructive" className="text-[10px] px-1.5 shrink-0">
+                          <AlertTriangle className="h-3 w-3 mr-0.5" />
+                          Lectura menor
+                        </Badge>
+                      ) : r.anomalia === 'incremento_sospechoso' ? (
+                        <Badge className="text-[10px] px-1.5 bg-amber-500 shrink-0">
+                          <AlertTriangle className="h-3 w-3 mr-0.5" />
+                          Sospechoso
+                        </Badge>
+                      ) : (
+                        <Badge variant="outline" className="text-[10px] px-1.5 text-green-600 border-green-300 shrink-0">
+                          <Check className="h-3 w-3 mr-0.5" />
+                          OK
+                        </Badge>
+                      )}
+                    </div>
+
+                    {/* Detail row */}
+                    <div className="grid grid-cols-3 gap-3 text-xs pl-6">
+                      <div>
+                        <span className="text-muted-foreground block">Anterior</span>
+                        <span className="font-medium">{r.lecturaAnterior != null ? r.lecturaAnterior.toLocaleString() : '-'}</span>
+                      </div>
+                      <div>
+                        <span className="text-muted-foreground block">Nueva lectura</span>
                         {r.valid ? (
                           <Input
                             type="number"
                             value={r.editedLectura ?? r.lectura}
                             onChange={(e) => updateLectura(i, Number(e.target.value))}
-                            className="h-6 w-20 text-xs text-right p-1"
+                            className="h-7 w-full text-xs p-1 mt-0.5"
                             disabled={step === 'submitting'}
                           />
                         ) : (
-                          r.lectura
+                          <span className="font-medium">{r.lectura.toLocaleString()}</span>
                         )}
-                      </TableCell>
-                      <TableCell className="py-1 text-right">
+                      </div>
+                      <div>
+                        <span className="text-muted-foreground block">Incremento</span>
                         {r.incremento !== null ? (
-                          <span className={r.incremento < 0 ? 'text-red-600' : 'text-green-600'}>
-                            {r.incremento > 0 ? '+' : ''}{r.incremento}
+                          <span className={`font-medium ${r.incremento < 0 ? 'text-red-600' : 'text-green-600'}`}>
+                            {r.incremento > 0 ? '+' : ''}{r.incremento.toLocaleString()}
                           </span>
-                        ) : '-'}
-                      </TableCell>
-                      <TableCell className="py-1">
-                        {!r.valid ? (
-                          <Badge variant="destructive" className="text-[10px] px-1">
-                            <X className="h-3 w-3 mr-0.5" />
-                            {r.error}
-                          </Badge>
-                        ) : r.anomalia === 'error_lectura_menor' ? (
-                          <Badge variant="destructive" className="text-[10px] px-1">
-                            <AlertTriangle className="h-3 w-3 mr-0.5" />
-                            Lectura menor
-                          </Badge>
-                        ) : r.anomalia === 'incremento_sospechoso' ? (
-                          <Badge className="text-[10px] px-1 bg-amber-500">
-                            <AlertTriangle className="h-3 w-3 mr-0.5" />
-                            Sospechoso
-                          </Badge>
-                        ) : (
-                          <Badge variant="outline" className="text-[10px] px-1 text-green-600 border-green-300">
-                            <Check className="h-3 w-3 mr-0.5" />
-                            OK
-                          </Badge>
-                        )}
-                      </TableCell>
-                    </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
+                        ) : <span>-</span>}
+                      </div>
+                    </div>
+
+                    {/* Confidence */}
+                    <div className="pl-6">
+                      <span className="text-[10px] text-muted-foreground">
+                        Confianza: {r.confidence === 'high' ? '🟢 Alta' : r.confidence === 'medium' ? '🟡 Media' : '🔴 Baja'}
+                      </span>
+                    </div>
+                  </CardContent>
+                </Card>
+              ))}
             </div>
           </ScrollArea>
 
