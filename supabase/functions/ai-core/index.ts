@@ -1005,6 +1005,7 @@ mcpServer.tool("get_api_docs", {
 // ==================== TRANSPORT ====================
 
 const transport = new StreamableHttpTransport();
+const httpHandler = transport.bind(mcpServer);
 
 app.all("/*", async (c) => {
   // Authenticate on every request
@@ -1014,7 +1015,7 @@ app.all("/*", async (c) => {
   }
   currentAuth = authResult;
 
-  return await transport.handleRequest(c.req.raw, mcpServer);
+  return await httpHandler(c.req.raw);
 });
 
 Deno.serve(app.fetch);
