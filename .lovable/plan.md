@@ -1,115 +1,107 @@
 
 
-# Plan: Actualización por Voz Multi-Ficha, Filtros en Reportes, Cambio de Ficha con Historial, y Ocultar Inactivos
+# Plan: AI Core — MCP Autenticado con Auditoría Completa
 
 ## Resumen
 
-Cuatro mejoras principales para el sistema de Control de Mantenimiento:
+Crear un nuevo MCP server **"AI Core"** (`ai-core`) que reemplaza el MCP actual (`mcp-server`). A diferencia del actual que usa `service_role_key` sin auditoría, AI Core:
 
-1. **Entrada por voz multi-ficha** en el panel flotante
-2. **Filtros en la sección de reportes** (actualizados/pendientes)
-3. **Cambio de ficha de equipos** preservando todo el historial
-4. **Ocultar equipos inactivos** de comboboxes y formularios de actualización
+1. **Autentica** cada request con JWT de usuario admin
+2. **Registra todo** en `historial_eventos` — cada insert, update, delete queda trazado
+3. **Cubre todos los módulos** con operaciones CRUD completas (no solo lectura + updates parciales)
+4. **Genera documentación** de uso integrada como tool
 
----
+## Problema actual
 
-## 1. Actualización por Voz Multi-Ficha
+El MCP existente (`mcp-server`) y el `ai-agent`:
+- Usan `SUPABASE_SERVICE_ROLE_KEY` que bypasea RLS — sin auditoría
+- Las escrituras (updates a equipos, mantenimientos) **no generan entradas en historial_eventos** porque se hacen vía service role sin triggers de auditoría
+- Faltan operaciones: crear equipos, crear mantenimientos, crear tickets, gestionar inventario, crear notificaciones, CRUD de kits/planes
+- No hay trazabilidad de quién (IA vs usuario) ejecutó cada acción
 
-### Cómo funciona
-- Nuevo botón "🎤 Dictado por Voz" en el panel flotante, junto a la actualización rápida actual
-- Al presionar, se inicia grabación de audio usando la Web Speech API (reconocimiento de voz nativo del navegador) o ElevenLabs STT si se necesita mayor precisión
-- El usuario dicta: *"Ficha AC-003, 1250 horas. Ficha AC-007, 3400 horas..."* durante hasta 10 minutos
-- Al finalizar, el sistema:
-  1. Parsea el texto transcrito extrayendo pares (ficha, lectura)
-  2. Valida cada ficha contra equipos activos en la base de datos
-  3. **Detecta anomalías**: calcula el incremento vs. tiempo transcurrido desde la última actualización. Si un equipo solo puede trabajar ~9 hrs/día y el incremento excede eso, marca como "sospechoso"
-  4. Muestra un **resumen de validación** en tabla: ficha, equipo, lectura anterior, nueva lectura, incremento, estado (OK / ⚠️ Sospechoso)
-  5. El usuario puede corregir valores individuales o marcar "importar de todos modos"
-  6. Al confirmar, se ejecutan todas las actualizaciones en lote usando `updateHorasActuales` existente, disparando todos los triggers normales (historial, notificaciones, etc.)
+## Solución
 
-### Implementación técnica
-- **Nueva Edge Function `voice-parse-updates`**: Recibe el texto transcrito, usa Lovable AI (Gemini) para extraer las fichas y horas de forma inteligente (maneja variaciones como "ficha alfa charlie cero tres" → "AC-003"), valida contra la DB, calcula anomalías
-- **Componente `VoiceMultiUpdate`**: UI de grabación, transcripción en vivo, tabla de validación, botones de confirmar/corregir
-- Se integra como nueva pestaña/sección en el panel flotante existente
+### 1. Nueva Edge Function: `supabase/functions/ai-core/index.ts`
 
-### Detección de anomalías
-- Se calcula: `días_transcurridos = (hoy - fecha_ultima_actualizacion)` y `max_horas_posibles = días * 9`
-- Si `incremento > max_horas_posibles * 1.2`, se marca como sospechoso con badge amarillo
-- Si `incremento < 0`, se marca como error (lectura menor a la actual)
+**Autenticación:**
+- Valida JWT del header `Authorization`
+- Verifica que el usuario tenga rol `admin` via `has_role()`
+- Rechaza con 403 si no es admin
 
----
+**Auditoría integrada — cada tool de escritura:**
+- Inserta en `historial_eventos` antes o después de la operación
+- Registra: `usuario_responsable` = email del admin, `tipo_evento` = acción, `datos_antes`/`datos_despues`
+- Esto dispara los triggers existentes (notificaciones, inventario post-mantenimiento)
 
-## 2. Filtros en Sección de Reportes
+**Tools completos (~35 herramientas):**
 
-### Cambios
-- Agregar barra de búsqueda y filtros encima de las tablas de "Equipos con lectura registrada" y "Equipos pendientes" en el panel flotante
-- Filtros: búsqueda por texto (ficha/nombre), filtro por categoría (dropdown), ordenamiento (por ficha, por nombre, por fecha)
-- Aplicar los mismos filtros a ambas tablas simultáneamente
+| Módulo | Read | Create | Update | Delete |
+|--------|------|--------|--------|--------|
+| Equipos | list, get, search | create | update, cambiar_ficha | deactivate |
+| Mantenimientos | list, get | create | update_horas, registrar_mant | deactivate |
+| Inventario | list, get, stock_bajo | create | update, mover_stock | deactivate |
+| Tickets | list, get | create | update_status, assign | close |
+| Notificaciones | list, pendientes | create | mark_read, mark_all_read | delete |
+| Historial | list, search | — | — | — |
+| Kits | list, get | create | update | deactivate |
+| Planes | list, get | create | update | deactivate |
+| Submissions | list, get | — | approve, reject | — |
+| Config | get | — | update | — |
+| Dashboard | summary, kpis | — | — | — |
+| Users | list | — | update_role | — |
+| Docs | get_api_docs | — | — | — |
 
-### Implementación
-- Estados de filtro locales en `ControlMantenimientoProfesional.tsx`
-- `useMemo` para filtrar `resumenActualizaciones.actualizados` y `resumenActualizaciones.pendientes`
-- Componentes `Input` + `Select` compactos sobre las tablas
+**Ejemplo de tool con auditoría:**
+```
+create_equipo → INSERT equipo → INSERT historial_eventos (tipo='equipo_creado')
+update_horas → UPDATE mantenimiento → INSERT historial_eventos (tipo='lectura_actualizada')
+registrar_mantenimiento → UPDATE mantenimiento + INSERT historial (tipo='mantenimiento_realizado')
+```
 
----
+### 2. Migración SQL: Tabla `ai_audit_log`
 
-## 3. Cambio de Ficha con Preservación de Historial
+Nueva tabla dedicada para auditoría de acciones de IA:
 
-### Cómo funciona
-- Nuevo botón "Cambiar Ficha" en el diálogo de edición de equipo (`EquipoDialog`)
-- Al cambiar la ficha:
-  1. Se registra en `historial_eventos` el cambio (ficha anterior → ficha nueva)
-  2. Se actualiza la ficha en **todas las tablas referenciadas**:
-     - `equipos.ficha`
-     - `mantenimientos_programados.ficha`
-     - `historial_eventos.ficha_equipo`
-     - `equipment_tickets.ficha`
-     - `notificaciones.ficha_equipo`
-     - `overrides_planes.ficha_equipo`
-  3. Todo ocurre en una sola migración SQL con una función `cambiar_ficha_equipo(old_ficha, new_ficha)`
+```
+ai_audit_log:
+  id, created_at, user_id, user_email, tool_name, 
+  tool_args (jsonb), result_summary (text), 
+  affected_table, affected_id, success (boolean)
+```
 
-### Implementación
-- **Migración SQL**: Crear función `cambiar_ficha_equipo(p_old_ficha text, p_new_ficha text)` que actualiza todas las tablas en una transacción
-- **UI**: Campo especial en `EquipoDialog` que muestra la ficha actual y permite cambiarla, con confirmación
-- **Hook**: Nuevo método `cambiarFichaEquipo` en `useSupabaseData` que llama al RPC
+Esto complementa `historial_eventos` (que es la auditoría de negocio) con una auditoría técnica de cada llamada de tool.
 
----
+### 3. Actualizar `ai-agent` para usar AI Core tools
 
-## 4. Ocultar Equipos Inactivos
+- Ampliar la lista de `tools` en el ai-agent para incluir las nuevas operaciones de creación
+- Las operaciones de escritura usarán la misma lógica de auditoría
+- El agente podrá: crear equipos, registrar mantenimientos, gestionar tickets completos, mover inventario
 
-### Cambios
-- Revisar todos los comboboxes/selectores de equipos y filtrar solo `activo = true`:
-  - `EquipoSelectorDialog` (ya usa `activeEquipos` en algunos lugares)
-  - Panel flotante: la búsqueda rápida por ficha debe ignorar inactivos
-  - Selectores en formularios de mantenimiento
-  - Selectores en tickets
-- En `ControlMantenimientoProfesional`, el `useEffect` que busca por `fichaRapida` ya filtra por `data.mantenimientosProgramados` pero necesita verificar `activo`
-- Asegurar consistencia en toda la app
+### 4. Tool de documentación
 
-### Archivos afectados
-- `src/pages/ControlMantenimientoProfesional.tsx` (búsqueda rápida)
-- `src/components/EquipoSelectorDialog.tsx`
-- `src/pages/Mantenimiento.tsx` (formularios)
-- `src/pages/GestorTickets.tsx` (selector de equipos)
+Un tool `get_api_docs` que retorna la documentación completa de todas las herramientas disponibles, sus parámetros y ejemplos de uso. Esto permite que cualquier cliente MCP externo (n8n, WhatsApp bot, etc.) sepa qué puede hacer.
 
----
+### 5. Config en `supabase/config.toml`
 
-## Orden de implementación
+```toml
+[functions.ai-core]
+verify_jwt = false  # validación in-code
+```
 
-1. Ocultar equipos inactivos (más simple, impacto inmediato)
-2. Filtros en reportes del panel flotante
-3. Cambio de ficha con historial (migración SQL + UI)
-4. Actualización por voz multi-ficha (más complejo, Edge Function + STT + UI)
-
-## Archivos principales a crear/modificar
+## Archivos a crear/modificar
 
 | Archivo | Acción |
 |---------|--------|
-| `supabase/functions/voice-parse-updates/index.ts` | Crear - parseo de voz con AI |
-| `src/components/VoiceMultiUpdate.tsx` | Crear - UI de grabación y validación |
-| `src/pages/ControlMantenimientoProfesional.tsx` | Modificar - integrar voz + filtros |
-| `src/components/equipos/EquipoDialog.tsx` | Modificar - cambio de ficha |
-| `src/hooks/useSupabaseData.ts` | Modificar - método cambiarFicha |
-| Migración SQL | Crear - función `cambiar_ficha_equipo` |
-| Varios selectores | Modificar - filtrar inactivos |
+| `supabase/functions/ai-core/index.ts` | Crear — MCP server completo con auditoría |
+| `supabase/functions/ai-core/deno.json` | Crear — imports mcp-lite + hono |
+| `supabase/functions/ai-agent/index.ts` | Modificar — ampliar tools con CRUD completo + auditoría |
+| `supabase/config.toml` | Modificar — agregar `[functions.ai-core]` |
+| Migración SQL | Crear — tabla `ai_audit_log` con RLS |
+
+## Orden de implementación
+
+1. Migración SQL: crear `ai_audit_log`
+2. Edge Function `ai-core`: MCP autenticado con 35+ tools
+3. Actualizar `ai-agent`: expandir tools con auditoría
+4. Documentación integrada como tool
 
