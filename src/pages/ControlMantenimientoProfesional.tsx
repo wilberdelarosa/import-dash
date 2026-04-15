@@ -35,7 +35,9 @@ import {
   GraduationCap,
   ClipboardList,
   Bell,
+  Check,
 } from 'lucide-react';
+import { ScrollArea } from '@/components/ui/scroll-area';
 import { Checkbox } from '@/components/ui/checkbox';
 import { EquipoSelectorDialog } from '@/components/EquipoSelectorDialog';
 import { useCaterpillarData } from '@/hooks/useCaterpillarData';
