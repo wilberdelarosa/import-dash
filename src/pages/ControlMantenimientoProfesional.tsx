@@ -35,7 +35,9 @@ import {
   GraduationCap,
   ClipboardList,
   Bell,
+  Check,
 } from 'lucide-react';
+import { ScrollArea } from '@/components/ui/scroll-area';
 import { Checkbox } from '@/components/ui/checkbox';
 import { EquipoSelectorDialog } from '@/components/EquipoSelectorDialog';
 import { useCaterpillarData } from '@/hooks/useCaterpillarData';
@@ -198,9 +200,11 @@ export default function ControlMantenimientoProfesional() {
   const [notasRapida, setNotasRapida] = useState('');
   const [updatingRapido, setUpdatingRapido] = useState(false);
 
-  // Filtros para reportes
-  const [reporteSearch, setReporteSearch] = useState('');
-  const [reporteCategoriaFilter, setReporteCategoriaFilter] = useState('all');
+  // Filtros independientes para cada listado de reporte
+  const [actualizadosSearch, setActualizadosSearch] = useState('');
+  const [actualizadosCatFilter, setActualizadosCatFilter] = useState('all');
+  const [pendientesSearch, setPendientesSearch] = useState('');
+  const [pendientesCatFilter, setPendientesCatFilter] = useState('all');
 
   // Alertas de actualización
   const [alertasActualizacion, setAlertasActualizacion] = useState<Array<{
@@ -843,30 +847,34 @@ export default function ControlMantenimientoProfesional() {
     }
   };
 
-  // Filtered report data
+  // Filtered report data - independent filters per list
   const filteredActualizados = useMemo(() => {
     if (!resumenActualizaciones) return [];
-    return resumenActualizaciones.actualizados.filter(({ mantenimiento }) => {
-      const equipo = activeEquipos.find(e => e.ficha === mantenimiento.ficha);
-      const matchSearch = !reporteSearch || 
-        mantenimiento.ficha.toLowerCase().includes(reporteSearch.toLowerCase()) ||
-        mantenimiento.nombreEquipo.toLowerCase().includes(reporteSearch.toLowerCase());
-      const matchCat = reporteCategoriaFilter === 'all' || equipo?.categoria === reporteCategoriaFilter;
-      return matchSearch && matchCat;
-    });
-  }, [resumenActualizaciones, reporteSearch, reporteCategoriaFilter, activeEquipos]);
+    return resumenActualizaciones.actualizados
+      .filter(({ mantenimiento }) => {
+        const equipo = activeEquipos.find(e => e.ficha === mantenimiento.ficha);
+        const matchSearch = !actualizadosSearch || 
+          mantenimiento.ficha.toLowerCase().includes(actualizadosSearch.toLowerCase()) ||
+          mantenimiento.nombreEquipo.toLowerCase().includes(actualizadosSearch.toLowerCase());
+        const matchCat = actualizadosCatFilter === 'all' || equipo?.categoria === actualizadosCatFilter;
+        return matchSearch && matchCat;
+      })
+      .sort((a, b) => a.mantenimiento.ficha.localeCompare(b.mantenimiento.ficha, undefined, { numeric: true }));
+  }, [resumenActualizaciones, actualizadosSearch, actualizadosCatFilter, activeEquipos]);
 
   const filteredPendientes = useMemo(() => {
     if (!resumenActualizaciones) return [];
-    return resumenActualizaciones.pendientes.filter((mantenimiento) => {
-      const equipo = activeEquipos.find(e => e.ficha === mantenimiento.ficha);
-      const matchSearch = !reporteSearch ||
-        mantenimiento.ficha.toLowerCase().includes(reporteSearch.toLowerCase()) ||
-        mantenimiento.nombreEquipo.toLowerCase().includes(reporteSearch.toLowerCase());
-      const matchCat = reporteCategoriaFilter === 'all' || equipo?.categoria === reporteCategoriaFilter;
-      return matchSearch && matchCat;
-    });
-  }, [resumenActualizaciones, reporteSearch, reporteCategoriaFilter, activeEquipos]);
+    return resumenActualizaciones.pendientes
+      .filter((mantenimiento) => {
+        const equipo = activeEquipos.find(e => e.ficha === mantenimiento.ficha);
+        const matchSearch = !pendientesSearch ||
+          mantenimiento.ficha.toLowerCase().includes(pendientesSearch.toLowerCase()) ||
+          mantenimiento.nombreEquipo.toLowerCase().includes(pendientesSearch.toLowerCase());
+        const matchCat = pendientesCatFilter === 'all' || equipo?.categoria === pendientesCatFilter;
+        return matchSearch && matchCat;
+      })
+      .sort((a, b) => a.ficha.localeCompare(b.ficha, undefined, { numeric: true }));
+  }, [resumenActualizaciones, pendientesSearch, pendientesCatFilter, activeEquipos]);
 
   // ============================================
   // RETURNS CONDICIONALES DESPUÉS DE TODOS LOS HOOKS
@@ -1717,91 +1725,131 @@ export default function ControlMantenimientoProfesional() {
                             </Badge>
                           </div>
 
-                          {/* Filtros de reporte */}
-                          <div className="flex gap-2">
-                            <div className="flex-1">
-                              <Input
-                                placeholder="Buscar ficha o nombre..."
-                                value={reporteSearch}
-                                onChange={(e) => setReporteSearch(e.target.value)}
-                                className="h-8 text-xs"
-                              />
-                            </div>
-                            <Select value={reporteCategoriaFilter} onValueChange={setReporteCategoriaFilter}>
-                              <SelectTrigger className="w-[140px] h-8 text-xs">
-                                <SelectValue placeholder="Categoría" />
-                              </SelectTrigger>
-                              <SelectContent>
-                                <SelectItem value="all">Todas</SelectItem>
-                                {categorias.map((cat) => (
-                                  <SelectItem key={cat} value={cat}>{cat}</SelectItem>
-                                ))}
-                              </SelectContent>
-                            </Select>
-                          </div>
-
                           <div className="grid gap-6 lg:grid-cols-2">
+                            {/* Equipos con lectura registrada */}
                             <div className="space-y-3">
-                              <h4 className="text-sm font-semibold">Equipos con lectura registrada</h4>
-                              {filteredActualizados.length === 0 ? (
-                                <p className="text-sm text-muted-foreground">No hay registros en el rango seleccionado.</p>
-                              ) : (
-                                <div className="rounded-md border overflow-auto max-h-64">
-                                  <Table className="text-sm">
-                                    <TableHeader className="sticky top-0 bg-muted/80">
-                                      <TableRow>
-                                        <TableHead className="text-xs h-8">Equipo</TableHead>
-                                        <TableHead className="text-xs h-8">Ficha</TableHead>
-                                        <TableHead className="text-xs h-8">Última lectura</TableHead>
-                                        <TableHead className="text-xs h-8">Responsable</TableHead>
-                                      </TableRow>
-                                    </TableHeader>
-                                    <TableBody>
-                                      {filteredActualizados.map(({ mantenimiento, evento }) => (
-                                        <TableRow key={mantenimiento.id} className="h-10">
-                                          <TableCell className="font-medium">{mantenimiento.nombreEquipo}</TableCell>
-                                          <TableCell className="font-mono text-xs">{mantenimiento.ficha}</TableCell>
-                                          <TableCell className="text-xs">
-                                            {evento
-                                              ? `${evento.horasKm} h/km • ${new Date(evento.fecha).toLocaleDateString()}`
-                                              : 'Sin detalle'}
-                                          </TableCell>
-                                          <TableCell className="text-xs">{evento?.usuarioResponsable ?? 'No registrado'}</TableCell>
-                                        </TableRow>
-                                      ))}
-                                    </TableBody>
-                                  </Table>
+                              <div className="flex items-center justify-between">
+                                <h4 className="text-sm font-semibold flex items-center gap-2">
+                                  <Check className="h-4 w-4 text-green-600" />
+                                  Actualizados
+                                  <Badge variant="secondary" className="text-[10px]">{filteredActualizados.length}</Badge>
+                                </h4>
+                              </div>
+                              <div className="flex gap-1.5">
+                                <div className="relative flex-1">
+                                  <Search className="absolute left-2 top-2 h-3.5 w-3.5 text-muted-foreground" />
+                                  <Input
+                                    placeholder="Buscar ficha o nombre..."
+                                    value={actualizadosSearch}
+                                    onChange={(e) => setActualizadosSearch(e.target.value)}
+                                    className="h-7 pl-7 text-xs"
+                                  />
                                 </div>
+                                <Select value={actualizadosCatFilter} onValueChange={setActualizadosCatFilter}>
+                                  <SelectTrigger className="w-[110px] h-7 text-[10px]">
+                                    <SelectValue placeholder="Categoría" />
+                                  </SelectTrigger>
+                                  <SelectContent>
+                                    <SelectItem value="all">Todas</SelectItem>
+                                    {categorias.map((cat) => (
+                                      <SelectItem key={cat} value={cat}>{cat}</SelectItem>
+                                    ))}
+                                  </SelectContent>
+                                </Select>
+                              </div>
+                              {filteredActualizados.length === 0 ? (
+                                <p className="text-xs text-muted-foreground py-4 text-center">Sin registros.</p>
+                              ) : (
+                                <ScrollArea className="max-h-[350px]">
+                                  <div className="space-y-1.5 pr-2">
+                                    {filteredActualizados.map(({ mantenimiento, evento }) => (
+                                      <div key={mantenimiento.id} className="flex items-center gap-3 p-2.5 rounded-lg border bg-card hover:bg-accent/30 transition-colors">
+                                        <div className="h-8 w-8 rounded-full bg-green-100 dark:bg-green-900/30 flex items-center justify-center shrink-0">
+                                          <Check className="h-4 w-4 text-green-600" />
+                                        </div>
+                                        <div className="flex-1 min-w-0">
+                                          <div className="flex items-center gap-2">
+                                            <span className="font-mono text-xs font-bold text-primary">{mantenimiento.ficha}</span>
+                                            <span className="text-xs text-muted-foreground truncate">{mantenimiento.nombreEquipo}</span>
+                                          </div>
+                                          <div className="flex items-center gap-3 mt-0.5 text-[10px] text-muted-foreground">
+                                            <span className="font-medium text-foreground">
+                                              {evento ? `${Number(evento.horasKm).toLocaleString()} h/km` : '-'}
+                                            </span>
+                                            <span>
+                                              {evento ? new Date(evento.fecha).toLocaleDateString() : '-'}
+                                            </span>
+                                            <span className="truncate">
+                                              {evento?.usuarioResponsable ?? '-'}
+                                            </span>
+                                          </div>
+                                        </div>
+                                      </div>
+                                    ))}
+                                  </div>
+                                </ScrollArea>
                               )}
                             </div>
 
+                            {/* Equipos pendientes */}
                             <div className="space-y-3">
-                              <h4 className="text-sm font-semibold">Equipos pendientes</h4>
-                              {filteredPendientes.length === 0 ? (
-                                <p className="text-sm text-muted-foreground">Todos los equipos tienen lectura en el rango.</p>
-                              ) : (
-                                <div className="rounded-md border overflow-auto max-h-64">
-                                  <Table className="text-sm">
-                                    <TableHeader className="sticky top-0 bg-muted/80">
-                                      <TableRow>
-                                        <TableHead className="text-xs h-8">Equipo</TableHead>
-                                        <TableHead className="text-xs h-8">Ficha</TableHead>
-                                        <TableHead className="text-xs h-8">Última act.</TableHead>
-                                        <TableHead className="text-xs h-8">Horas/km</TableHead>
-                                      </TableRow>
-                                    </TableHeader>
-                                    <TableBody>
-                                      {filteredPendientes.map((mantenimiento) => (
-                                        <TableRow key={mantenimiento.id} className="h-10">
-                                          <TableCell className="font-medium">{mantenimiento.nombreEquipo}</TableCell>
-                                          <TableCell className="font-mono text-xs">{mantenimiento.ficha}</TableCell>
-                                          <TableCell className="text-xs">{formatDate(mantenimiento.fechaUltimaActualizacion)}</TableCell>
-                                          <TableCell className="text-xs">{mantenimiento.horasKmActuales}</TableCell>
-                                        </TableRow>
-                                      ))}
-                                    </TableBody>
-                                  </Table>
+                              <div className="flex items-center justify-between">
+                                <h4 className="text-sm font-semibold flex items-center gap-2">
+                                  <AlertTriangle className="h-4 w-4 text-destructive" />
+                                  Pendientes
+                                  <Badge variant={filteredPendientes.length > 0 ? 'destructive' : 'secondary'} className="text-[10px]">
+                                    {filteredPendientes.length}
+                                  </Badge>
+                                </h4>
+                              </div>
+                              <div className="flex gap-1.5">
+                                <div className="relative flex-1">
+                                  <Search className="absolute left-2 top-2 h-3.5 w-3.5 text-muted-foreground" />
+                                  <Input
+                                    placeholder="Buscar ficha o nombre..."
+                                    value={pendientesSearch}
+                                    onChange={(e) => setPendientesSearch(e.target.value)}
+                                    className="h-7 pl-7 text-xs"
+                                  />
                                 </div>
+                                <Select value={pendientesCatFilter} onValueChange={setPendientesCatFilter}>
+                                  <SelectTrigger className="w-[110px] h-7 text-[10px]">
+                                    <SelectValue placeholder="Categoría" />
+                                  </SelectTrigger>
+                                  <SelectContent>
+                                    <SelectItem value="all">Todas</SelectItem>
+                                    {categorias.map((cat) => (
+                                      <SelectItem key={cat} value={cat}>{cat}</SelectItem>
+                                    ))}
+                                  </SelectContent>
+                                </Select>
+                              </div>
+                              {filteredPendientes.length === 0 ? (
+                                <p className="text-xs text-muted-foreground py-4 text-center">Todos actualizados ✓</p>
+                              ) : (
+                                <ScrollArea className="max-h-[350px]">
+                                  <div className="space-y-1.5 pr-2">
+                                    {filteredPendientes.map((mantenimiento) => (
+                                      <div key={mantenimiento.id} className="flex items-center gap-3 p-2.5 rounded-lg border border-destructive/20 bg-card hover:bg-destructive/5 transition-colors">
+                                        <div className="h-8 w-8 rounded-full bg-red-100 dark:bg-red-900/30 flex items-center justify-center shrink-0">
+                                          <AlertTriangle className="h-4 w-4 text-destructive" />
+                                        </div>
+                                        <div className="flex-1 min-w-0">
+                                          <div className="flex items-center gap-2">
+                                            <span className="font-mono text-xs font-bold text-primary">{mantenimiento.ficha}</span>
+                                            <span className="text-xs text-muted-foreground truncate">{mantenimiento.nombreEquipo}</span>
+                                          </div>
+                                          <div className="flex items-center gap-3 mt-0.5 text-[10px] text-muted-foreground">
+                                            <span>Últ. act: {formatDate(mantenimiento.fechaUltimaActualizacion)}</span>
+                                            <span className="font-medium text-foreground">
+                                              {Number(mantenimiento.horasKmActuales).toLocaleString()} h/km
+                                            </span>
+                                          </div>
+                                        </div>
+                                      </div>
+                                    ))}
+                                  </div>
+                                </ScrollArea>
                               )}
                             </div>
                           </div>
