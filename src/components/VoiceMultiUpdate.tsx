@@ -45,13 +45,39 @@ export function VoiceMultiUpdate({ onUpdateBatch, isReadOnly }: VoiceMultiUpdate
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [step, setStep] = useState<'idle' | 'recording' | 'parsing' | 'review' | 'submitting'>('idle');
   const recognitionRef = useRef<any>(null);
+  const shouldRecordRef = useRef(false);
+  const finalTextRef = useRef('');
 
-  const startRecording = useCallback(() => {
+  const startRecording = useCallback(async () => {
     const SpeechRecognition = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
     if (!SpeechRecognition) {
       toast({
         title: 'No soportado',
-        description: 'Tu navegador no soporta reconocimiento de voz. Usa Chrome o Edge.',
+        description: 'Tu navegador no soporta reconocimiento de voz. Usa Chrome, Edge o Safari (iOS 14.5+).',
+        variant: 'destructive',
+      });
+      return;
+    }
+
+    if (!window.isSecureContext) {
+      toast({
+        title: 'Conexión no segura',
+        description: 'El reconocimiento de voz requiere HTTPS.',
+        variant: 'destructive',
+      });
+      return;
+    }
+
+    // Pedir permiso explícito del micrófono primero
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      // Liberamos el stream; SpeechRecognition usa su propio acceso
+      stream.getTracks().forEach(t => t.stop());
+    } catch (err: any) {
+      console.error('Mic permission error:', err);
+      toast({
+        title: 'Permiso de micrófono denegado',
+        description: 'Habilita el micrófono en los ajustes del navegador.',
         variant: 'destructive',
       });
       return;
@@ -63,25 +89,33 @@ export function VoiceMultiUpdate({ onUpdateBatch, isReadOnly }: VoiceMultiUpdate
     recognition.lang = 'es-ES';
     recognition.maxAlternatives = 1;
 
-    let finalText = '';
+    finalTextRef.current = '';
 
     recognition.onresult = (event: any) => {
       let interim = '';
       for (let i = event.resultIndex; i < event.results.length; i++) {
         const result = event.results[i];
         if (result.isFinal) {
-          finalText += result[0].transcript + ' ';
+          finalTextRef.current += result[0].transcript + ' ';
         } else {
           interim += result[0].transcript;
         }
       }
-      setTranscript(finalText.trim());
+      setTranscript(finalTextRef.current.trim());
       setLiveTranscript(interim);
     };
 
     recognition.onerror = (event: any) => {
       console.error('Speech recognition error:', event.error);
-      if (event.error !== 'no-speech') {
+      if (event.error === 'not-allowed' || event.error === 'service-not-allowed') {
+        shouldRecordRef.current = false;
+        setIsRecording(false);
+        toast({
+          title: 'Micrófono bloqueado',
+          description: 'Permite el acceso al micrófono e inténtalo de nuevo.',
+          variant: 'destructive',
+        });
+      } else if (event.error !== 'no-speech' && event.error !== 'aborted') {
         toast({
           title: 'Error de voz',
           description: `Error: ${event.error}`,
@@ -91,25 +125,40 @@ export function VoiceMultiUpdate({ onUpdateBatch, isReadOnly }: VoiceMultiUpdate
     };
 
     recognition.onend = () => {
-      // Auto-restart if still recording
-      if (recognitionRef.current && isRecording) {
+      // Auto-reinicio mientras el usuario no haya detenido
+      if (shouldRecordRef.current) {
         try { recognition.start(); } catch { /* ignore */ }
       }
     };
 
     recognitionRef.current = recognition;
-    recognition.start();
+    shouldRecordRef.current = true;
+    try {
+      recognition.start();
+    } catch (err) {
+      console.error('Recognition start error:', err);
+      toast({
+        title: 'Error al iniciar',
+        description: 'No se pudo iniciar la grabación. Intenta de nuevo.',
+        variant: 'destructive',
+      });
+      shouldRecordRef.current = false;
+      return;
+    }
     setIsRecording(true);
     setStep('recording');
     setTranscript('');
     setLiveTranscript('');
     setParsedReadings([]);
-  }, [toast, isRecording]);
+  }, [toast]);
 
   const stopRecording = useCallback(() => {
+    shouldRecordRef.current = false;
     if (recognitionRef.current) {
-      recognitionRef.current.onend = null;
-      recognitionRef.current.stop();
+      try {
+        recognitionRef.current.onend = null;
+        recognitionRef.current.stop();
+      } catch { /* ignore */ }
       recognitionRef.current = null;
     }
     setIsRecording(false);
