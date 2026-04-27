@@ -336,62 +336,52 @@ export function VoiceMultiUpdate({ onUpdateBatch, isReadOnly }: VoiceMultiUpdate
                 Iniciar Dictado
               </Button>
             ) : (
-              <>
-                <Button
-                  onClick={stopRecording}
-                  variant="destructive"
-                  className="gap-2 flex-1"
-                >
-                  <MicOff className="h-4 w-4" />
-                  Detener
-                </Button>
-                <Button
-                  onClick={() => { stopRecording(); parseTranscript(); }}
-                  variant="secondary"
-                  className="gap-2"
-                  disabled={!transcript.trim()}
-                >
-                  <Send className="h-4 w-4" />
-                  Procesar
-                </Button>
-              </>
+              <Button
+                onClick={stopRecording}
+                variant="destructive"
+                className="gap-2 flex-1"
+              >
+                <MicOff className="h-4 w-4" />
+                Detener y Transcribir
+              </Button>
             )}
           </div>
 
           {isRecording && (
             <div className="space-y-2">
-              <div className="flex items-center gap-2">
-                <span className="relative flex h-3 w-3">
-                  <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-red-400 opacity-75"></span>
-                  <span className="relative inline-flex rounded-full h-3 w-3 bg-red-500"></span>
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <span className="relative flex h-3 w-3">
+                    <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-red-400 opacity-75"></span>
+                    <span className="relative inline-flex rounded-full h-3 w-3 bg-red-500"></span>
+                  </span>
+                  <span className="text-xs text-red-600 font-medium">Grabando...</span>
+                </div>
+                <span className="text-xs font-mono tabular-nums text-muted-foreground">
+                  {Math.floor(recordingSeconds / 60).toString().padStart(2, '0')}:
+                  {(recordingSeconds % 60).toString().padStart(2, '0')}
                 </span>
-                <span className="text-xs text-red-600 font-medium">Grabando...</span>
               </div>
-              {(transcript || liveTranscript) && (
-                <Card className="bg-muted/50">
-                  <CardContent className="p-3">
-                    <p className="text-xs text-foreground whitespace-pre-wrap">
-                      {transcript}
-                      {liveTranscript && (
-                        <span className="text-muted-foreground italic"> {liveTranscript}</span>
-                      )}
-                    </p>
-                  </CardContent>
-                </Card>
-              )}
+              <Card className="bg-muted/50">
+                <CardContent className="p-3">
+                  <p className="text-xs text-muted-foreground italic">
+                    Dicta las fichas y lecturas. Cuando termines, presiona "Detener y Transcribir".
+                  </p>
+                </CardContent>
+              </Card>
             </div>
           )}
 
-          {!isRecording && transcript && (
+          {!isRecording && transcript && step === 'idle' && (
             <div className="space-y-2">
               <Card className="bg-muted/50">
                 <CardContent className="p-3">
-                  <p className="text-xs font-medium mb-1">Texto capturado:</p>
+                  <p className="text-xs font-medium mb-1">Texto transcrito:</p>
                   <p className="text-xs text-foreground">{transcript}</p>
                 </CardContent>
               </Card>
               <Button
-                onClick={parseTranscript}
+                onClick={() => parseTranscript()}
                 className="w-full gap-2"
                 size="sm"
               >
@@ -403,11 +393,20 @@ export function VoiceMultiUpdate({ onUpdateBatch, isReadOnly }: VoiceMultiUpdate
         </div>
       )}
 
+      {/* Transcribing */}
+      {step === 'transcribing' && (
+        <div className="flex items-center gap-2 py-4 justify-center">
+          <Loader2 className="h-5 w-5 animate-spin text-primary" />
+          <span className="text-sm text-muted-foreground">Transcribiendo audio con IA...</span>
+        </div>
+      )}
+
       {/* Parsing */}
       {step === 'parsing' && (
         <div className="flex items-center gap-2 py-4 justify-center">
           <Loader2 className="h-5 w-5 animate-spin text-primary" />
           <span className="text-sm text-muted-foreground">Analizando dictado con IA...</span>
+
         </div>
       )}
 
