@@ -15,6 +15,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Separator } from '@/components/ui/separator';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import Draggable from 'react-draggable';
 import {
   Loader2,
@@ -43,7 +44,7 @@ import { EquipoSelectorDialog } from '@/components/EquipoSelectorDialog';
 import { useCaterpillarData } from '@/hooks/useCaterpillarData';
 import { getStaticCaterpillarData } from '@/data/caterpillarMaintenance';
 import { formatRemainingLabel, getRemainingVariant } from '@/lib/maintenanceUtils';
-import type { ActualizacionHorasKm, MantenimientoProgramado, MantenimientoRealizado } from '@/types/equipment';
+import { isEquipoDisponible, type ActualizacionHorasKm, type MantenimientoProgramado, type MantenimientoRealizado } from '@/types/equipment';
 import { useToast } from '@/hooks/use-toast';
 import { cn } from '@/lib/utils';
 import { useDeviceDetection } from '@/hooks/useDeviceDetection';
@@ -145,8 +146,8 @@ export default function ControlMantenimientoProfesional() {
   // TODOS LOS HOOKS DEBEN IR ANTES DE CUALQUIER RETURN CONDICIONAL
   // ============================================
 
-  // Lista derivada: solo equipos activos (no deben mostrarse inactivos en la UI)
-  const activeEquipos = useMemo(() => data.equipos.filter((e) => e.activo), [data.equipos]);
+  // Lista derivada: solo equipos disponibles (excluye inactivos y VENDIDOS)
+  const activeEquipos = useMemo(() => data.equipos.filter(isEquipoDisponible), [data.equipos]);
 
   const [selectedFicha, setSelectedFicha] = useState<string | null>(null);
   const [busqueda, setBusqueda] = useState('');
@@ -205,6 +206,26 @@ export default function ControlMantenimientoProfesional() {
   const [actualizadosCatFilter, setActualizadosCatFilter] = useState('all');
   const [pendientesSearch, setPendientesSearch] = useState('');
   const [pendientesCatFilter, setPendientesCatFilter] = useState('all');
+
+  // Pendientes descartados manualmente (no accesibles por horómetro, etc.)
+  // Clave: `${ficha}::${reporteRango.desde}::${reporteRango.hasta}` -> { motivo, ts }
+  const [pendientesDescartados, setPendientesDescartados] = useState<Record<string, { motivo: string; ts: number }>>(() => {
+    try {
+      const raw = localStorage.getItem('pendientesDescartados');
+      return raw ? JSON.parse(raw) : {};
+    } catch { return {}; }
+  });
+  useEffect(() => {
+    try { localStorage.setItem('pendientesDescartados', JSON.stringify(pendientesDescartados)); } catch { /* noop */ }
+  }, [pendientesDescartados]);
+  const [mostrarDescartados, setMostrarDescartados] = useState(false);
+  const [descartarDialog, setDescartarDialog] = useState<{ ficha: string; nombre: string } | null>(null);
+  const [descartarMotivo, setDescartarMotivo] = useState('');
+
+  const descartarKey = (ficha: string) => {
+    if (!reporteRango) return ficha;
+    return `${ficha}::${reporteRango.desde}::${reporteRango.hasta}`;
+  };
 
   // Alertas de actualización
   const [alertasActualizacion, setAlertasActualizacion] = useState<Array<{
@@ -575,7 +596,8 @@ export default function ControlMantenimientoProfesional() {
     const actualizados: ResumenActualizaciones['actualizados'] = [];
     const pendientes: ResumenActualizaciones['pendientes'] = [];
 
-    data.mantenimientosProgramados.forEach((mantenimiento) => {
+    const fichasDisponibles = new Set(activeEquipos.map((e) => e.ficha));
+    data.mantenimientosProgramados.filter((m) => fichasDisponibles.has(m.ficha)).forEach((mantenimiento) => {
       const fechaUltima = new Date(mantenimiento.fechaUltimaActualizacion);
       if (Number.isNaN(fechaUltima.getTime())) {
         pendientes.push(mantenimiento);
@@ -610,7 +632,7 @@ export default function ControlMantenimientoProfesional() {
       actualizados,
       pendientes,
     } satisfies ResumenActualizaciones;
-  }, [data.actualizacionesHorasKm, data.mantenimientosProgramados, reporteRango]);
+  }, [data.actualizacionesHorasKm, data.mantenimientosProgramados, reporteRango, activeEquipos]);
 
   // Contar solo mantenimientos que correspondan a equipos activos
   const totalEquiposPlanificados = data.mantenimientosProgramados.filter((m) => activeEquipos.some((e) => e.ficha === m.ficha)).length;
@@ -866,6 +888,7 @@ export default function ControlMantenimientoProfesional() {
     if (!resumenActualizaciones) return [];
     return resumenActualizaciones.pendientes
       .filter((mantenimiento) => {
+        if (pendientesDescartados[descartarKey(mantenimiento.ficha)]) return false;
         const equipo = activeEquipos.find(e => e.ficha === mantenimiento.ficha);
         const matchSearch = !pendientesSearch ||
           mantenimiento.ficha.toLowerCase().includes(pendientesSearch.toLowerCase()) ||
@@ -874,7 +897,14 @@ export default function ControlMantenimientoProfesional() {
         return matchSearch && matchCat;
       })
       .sort((a, b) => a.ficha.localeCompare(b.ficha, undefined, { numeric: true }));
-  }, [resumenActualizaciones, pendientesSearch, pendientesCatFilter, activeEquipos]);
+  }, [resumenActualizaciones, pendientesSearch, pendientesCatFilter, activeEquipos, pendientesDescartados, reporteRango]);
+
+  const descartadosLista = useMemo(() => {
+    if (!resumenActualizaciones) return [];
+    return resumenActualizaciones.pendientes
+      .filter((m) => pendientesDescartados[descartarKey(m.ficha)])
+      .sort((a, b) => a.ficha.localeCompare(b.ficha, undefined, { numeric: true }));
+  }, [resumenActualizaciones, pendientesDescartados, reporteRango]);
 
   // ============================================
   // RETURNS CONDICIONALES DESPUÉS DE TODOS LOS HOOKS
@@ -1847,10 +1877,66 @@ export default function ControlMantenimientoProfesional() {
                                             </span>
                                           </div>
                                         </div>
+                                        <Button
+                                          variant="ghost"
+                                          size="icon"
+                                          className="h-7 w-7 shrink-0 text-muted-foreground hover:text-destructive"
+                                          title="Descartar este pendiente (no accesible, fuera de servicio, etc.)"
+                                          onClick={() => {
+                                            setDescartarMotivo('');
+                                            setDescartarDialog({ ficha: mantenimiento.ficha, nombre: mantenimiento.nombreEquipo });
+                                          }}
+                                        >
+                                          <X className="h-3.5 w-3.5" />
+                                        </Button>
                                       </div>
                                     ))}
                                   </div>
                                 </ScrollArea>
+                              )}
+                              {descartadosLista.length > 0 && (
+                                <div className="mt-2 border-t pt-2">
+                                  <button
+                                    type="button"
+                                    onClick={() => setMostrarDescartados((v) => !v)}
+                                    className="text-[11px] text-muted-foreground hover:text-foreground flex items-center gap-1"
+                                  >
+                                    {mostrarDescartados ? <ChevronDown className="h-3 w-3" /> : <ChevronRight className="h-3 w-3" />}
+                                    Descartados ({descartadosLista.length})
+                                  </button>
+                                  {mostrarDescartados && (
+                                    <div className="mt-1.5 space-y-1">
+                                      {descartadosLista.map((m) => {
+                                        const info = pendientesDescartados[descartarKey(m.ficha)];
+                                        return (
+                                          <div key={m.id} className="flex items-center gap-2 p-1.5 rounded-md bg-muted/40 text-[10px]">
+                                            <span className="font-mono font-bold text-primary">{m.ficha}</span>
+                                            <span className="truncate flex-1">{m.nombreEquipo}</span>
+                                            {info?.motivo && (
+                                              <span className="text-muted-foreground italic truncate max-w-[120px]" title={info.motivo}>
+                                                {info.motivo}
+                                              </span>
+                                            )}
+                                            <Button
+                                              variant="ghost"
+                                              size="sm"
+                                              className="h-6 px-2 text-[10px]"
+                                              onClick={() => {
+                                                setPendientesDescartados((prev) => {
+                                                  const copy = { ...prev };
+                                                  delete copy[descartarKey(m.ficha)];
+                                                  return copy;
+                                                });
+                                              }}
+                                            >
+                                              Restaurar
+                                            </Button>
+                                          </div>
+                                        );
+                                      })}
+                                    </div>
+                                  )}
+                                </div>
                               )}
                             </div>
                           </div>
@@ -2146,6 +2232,47 @@ export default function ControlMantenimientoProfesional() {
           </Card>
         </TabsContent>
       </Tabs>
+
+      <Dialog open={!!descartarDialog} onOpenChange={(o) => { if (!o) setDescartarDialog(null); }}>
+        <DialogContent className="sm:max-w-[440px]">
+          <DialogHeader>
+            <DialogTitle>Descartar pendiente</DialogTitle>
+            <DialogDescription>
+              {descartarDialog && (
+                <>Vas a descartar <span className="font-mono font-bold">{descartarDialog.ficha}</span> — {descartarDialog.nombre} del listado de pendientes para este rango. Podrás restaurarlo después.</>
+              )}
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-2">
+            <Label htmlFor="motivo-descarte">Motivo (opcional)</Label>
+            <Textarea
+              id="motivo-descarte"
+              placeholder="Ej: No se pudo acceder al horómetro, equipo en taller, fuera de obra..."
+              value={descartarMotivo}
+              onChange={(e) => setDescartarMotivo(e.target.value)}
+              rows={3}
+            />
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setDescartarDialog(null)}>Cancelar</Button>
+            <Button
+              variant="destructive"
+              onClick={() => {
+                if (!descartarDialog) return;
+                setPendientesDescartados((prev) => ({
+                  ...prev,
+                  [descartarKey(descartarDialog.ficha)]: { motivo: descartarMotivo.trim(), ts: Date.now() },
+                }));
+                setDescartarDialog(null);
+                setDescartarMotivo('');
+                toast({ title: 'Pendiente descartado', description: `${descartarDialog.ficha} ya no aparecerá en pendientes.` });
+              }}
+            >
+              Descartar
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </Layout>
   );
 }
