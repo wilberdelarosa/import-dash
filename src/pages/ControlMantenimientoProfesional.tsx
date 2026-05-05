@@ -43,7 +43,7 @@ import { EquipoSelectorDialog } from '@/components/EquipoSelectorDialog';
 import { useCaterpillarData } from '@/hooks/useCaterpillarData';
 import { getStaticCaterpillarData } from '@/data/caterpillarMaintenance';
 import { formatRemainingLabel, getRemainingVariant } from '@/lib/maintenanceUtils';
-import type { ActualizacionHorasKm, MantenimientoProgramado, MantenimientoRealizado } from '@/types/equipment';
+import { isEquipoDisponible, type ActualizacionHorasKm, type MantenimientoProgramado, type MantenimientoRealizado } from '@/types/equipment';
 import { useToast } from '@/hooks/use-toast';
 import { cn } from '@/lib/utils';
 import { useDeviceDetection } from '@/hooks/useDeviceDetection';
@@ -145,8 +145,8 @@ export default function ControlMantenimientoProfesional() {
   // TODOS LOS HOOKS DEBEN IR ANTES DE CUALQUIER RETURN CONDICIONAL
   // ============================================
 
-  // Lista derivada: solo equipos activos (no deben mostrarse inactivos en la UI)
-  const activeEquipos = useMemo(() => data.equipos.filter((e) => e.activo), [data.equipos]);
+  // Lista derivada: solo equipos disponibles (excluye inactivos y VENDIDOS)
+  const activeEquipos = useMemo(() => data.equipos.filter(isEquipoDisponible), [data.equipos]);
 
   const [selectedFicha, setSelectedFicha] = useState<string | null>(null);
   const [busqueda, setBusqueda] = useState('');
