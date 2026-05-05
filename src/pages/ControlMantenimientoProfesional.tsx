@@ -575,7 +575,8 @@ export default function ControlMantenimientoProfesional() {
     const actualizados: ResumenActualizaciones['actualizados'] = [];
     const pendientes: ResumenActualizaciones['pendientes'] = [];
 
-    data.mantenimientosProgramados.forEach((mantenimiento) => {
+    const fichasDisponibles = new Set(activeEquipos.map((e) => e.ficha));
+    data.mantenimientosProgramados.filter((m) => fichasDisponibles.has(m.ficha)).forEach((mantenimiento) => {
       const fechaUltima = new Date(mantenimiento.fechaUltimaActualizacion);
       if (Number.isNaN(fechaUltima.getTime())) {
         pendientes.push(mantenimiento);
@@ -610,7 +611,7 @@ export default function ControlMantenimientoProfesional() {
       actualizados,
       pendientes,
     } satisfies ResumenActualizaciones;
-  }, [data.actualizacionesHorasKm, data.mantenimientosProgramados, reporteRango]);
+  }, [data.actualizacionesHorasKm, data.mantenimientosProgramados, reporteRango, activeEquipos]);
 
   // Contar solo mantenimientos que correspondan a equipos activos
   const totalEquiposPlanificados = data.mantenimientosProgramados.filter((m) => activeEquipos.some((e) => e.ficha === m.ficha)).length;
