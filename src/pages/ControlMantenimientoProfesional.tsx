@@ -887,6 +887,7 @@ export default function ControlMantenimientoProfesional() {
     if (!resumenActualizaciones) return [];
     return resumenActualizaciones.pendientes
       .filter((mantenimiento) => {
+        if (pendientesDescartados[descartarKey(mantenimiento.ficha)]) return false;
         const equipo = activeEquipos.find(e => e.ficha === mantenimiento.ficha);
         const matchSearch = !pendientesSearch ||
           mantenimiento.ficha.toLowerCase().includes(pendientesSearch.toLowerCase()) ||
@@ -895,7 +896,14 @@ export default function ControlMantenimientoProfesional() {
         return matchSearch && matchCat;
       })
       .sort((a, b) => a.ficha.localeCompare(b.ficha, undefined, { numeric: true }));
-  }, [resumenActualizaciones, pendientesSearch, pendientesCatFilter, activeEquipos]);
+  }, [resumenActualizaciones, pendientesSearch, pendientesCatFilter, activeEquipos, pendientesDescartados, reporteRango]);
+
+  const descartadosLista = useMemo(() => {
+    if (!resumenActualizaciones) return [];
+    return resumenActualizaciones.pendientes
+      .filter((m) => pendientesDescartados[descartarKey(m.ficha)])
+      .sort((a, b) => a.ficha.localeCompare(b.ficha, undefined, { numeric: true }));
+  }, [resumenActualizaciones, pendientesDescartados, reporteRango]);
 
   // ============================================
   // RETURNS CONDICIONALES DESPUÉS DE TODOS LOS HOOKS
