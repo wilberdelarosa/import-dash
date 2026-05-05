@@ -206,6 +206,26 @@ export default function ControlMantenimientoProfesional() {
   const [pendientesSearch, setPendientesSearch] = useState('');
   const [pendientesCatFilter, setPendientesCatFilter] = useState('all');
 
+  // Pendientes descartados manualmente (no accesibles por horómetro, etc.)
+  // Clave: `${ficha}::${reporteRango.desde}::${reporteRango.hasta}` -> { motivo, ts }
+  const [pendientesDescartados, setPendientesDescartados] = useState<Record<string, { motivo: string; ts: number }>>(() => {
+    try {
+      const raw = localStorage.getItem('pendientesDescartados');
+      return raw ? JSON.parse(raw) : {};
+    } catch { return {}; }
+  });
+  useEffect(() => {
+    try { localStorage.setItem('pendientesDescartados', JSON.stringify(pendientesDescartados)); } catch { /* noop */ }
+  }, [pendientesDescartados]);
+  const [mostrarDescartados, setMostrarDescartados] = useState(false);
+  const [descartarDialog, setDescartarDialog] = useState<{ ficha: string; nombre: string } | null>(null);
+  const [descartarMotivo, setDescartarMotivo] = useState('');
+
+  const descartarKey = (ficha: string) => {
+    if (!reporteRango) return ficha;
+    return `${ficha}::${reporteRango.desde}::${reporteRango.hasta}`;
+  };
+
   // Alertas de actualización
   const [alertasActualizacion, setAlertasActualizacion] = useState<Array<{
     id: string;
