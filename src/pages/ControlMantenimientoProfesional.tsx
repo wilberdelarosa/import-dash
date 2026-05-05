@@ -1876,10 +1876,66 @@ export default function ControlMantenimientoProfesional() {
                                             </span>
                                           </div>
                                         </div>
+                                        <Button
+                                          variant="ghost"
+                                          size="icon"
+                                          className="h-7 w-7 shrink-0 text-muted-foreground hover:text-destructive"
+                                          title="Descartar este pendiente (no accesible, fuera de servicio, etc.)"
+                                          onClick={() => {
+                                            setDescartarMotivo('');
+                                            setDescartarDialog({ ficha: mantenimiento.ficha, nombre: mantenimiento.nombreEquipo });
+                                          }}
+                                        >
+                                          <X className="h-3.5 w-3.5" />
+                                        </Button>
                                       </div>
                                     ))}
                                   </div>
                                 </ScrollArea>
+                              )}
+                              {descartadosLista.length > 0 && (
+                                <div className="mt-2 border-t pt-2">
+                                  <button
+                                    type="button"
+                                    onClick={() => setMostrarDescartados((v) => !v)}
+                                    className="text-[11px] text-muted-foreground hover:text-foreground flex items-center gap-1"
+                                  >
+                                    {mostrarDescartados ? <ChevronDown className="h-3 w-3" /> : <ChevronRight className="h-3 w-3" />}
+                                    Descartados ({descartadosLista.length})
+                                  </button>
+                                  {mostrarDescartados && (
+                                    <div className="mt-1.5 space-y-1">
+                                      {descartadosLista.map((m) => {
+                                        const info = pendientesDescartados[descartarKey(m.ficha)];
+                                        return (
+                                          <div key={m.id} className="flex items-center gap-2 p-1.5 rounded-md bg-muted/40 text-[10px]">
+                                            <span className="font-mono font-bold text-primary">{m.ficha}</span>
+                                            <span className="truncate flex-1">{m.nombreEquipo}</span>
+                                            {info?.motivo && (
+                                              <span className="text-muted-foreground italic truncate max-w-[120px]" title={info.motivo}>
+                                                {info.motivo}
+                                              </span>
+                                            )}
+                                            <Button
+                                              variant="ghost"
+                                              size="sm"
+                                              className="h-6 px-2 text-[10px]"
+                                              onClick={() => {
+                                                setPendientesDescartados((prev) => {
+                                                  const copy = { ...prev };
+                                                  delete copy[descartarKey(m.ficha)];
+                                                  return copy;
+                                                });
+                                              }}
+                                            >
+                                              Restaurar
+                                            </Button>
+                                          </div>
+                                        );
+                                      })}
+                                    </div>
+                                  )}
+                                </div>
                               )}
                             </div>
                           </div>
