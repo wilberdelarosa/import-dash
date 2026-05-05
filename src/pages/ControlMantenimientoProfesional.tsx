@@ -15,6 +15,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Separator } from '@/components/ui/separator';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import Draggable from 'react-draggable';
 import {
   Loader2,
@@ -2231,6 +2232,47 @@ export default function ControlMantenimientoProfesional() {
           </Card>
         </TabsContent>
       </Tabs>
+
+      <Dialog open={!!descartarDialog} onOpenChange={(o) => { if (!o) setDescartarDialog(null); }}>
+        <DialogContent className="sm:max-w-[440px]">
+          <DialogHeader>
+            <DialogTitle>Descartar pendiente</DialogTitle>
+            <DialogDescription>
+              {descartarDialog && (
+                <>Vas a descartar <span className="font-mono font-bold">{descartarDialog.ficha}</span> — {descartarDialog.nombre} del listado de pendientes para este rango. Podrás restaurarlo después.</>
+              )}
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-2">
+            <Label htmlFor="motivo-descarte">Motivo (opcional)</Label>
+            <Textarea
+              id="motivo-descarte"
+              placeholder="Ej: No se pudo acceder al horómetro, equipo en taller, fuera de obra..."
+              value={descartarMotivo}
+              onChange={(e) => setDescartarMotivo(e.target.value)}
+              rows={3}
+            />
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setDescartarDialog(null)}>Cancelar</Button>
+            <Button
+              variant="destructive"
+              onClick={() => {
+                if (!descartarDialog) return;
+                setPendientesDescartados((prev) => ({
+                  ...prev,
+                  [descartarKey(descartarDialog.ficha)]: { motivo: descartarMotivo.trim(), ts: Date.now() },
+                }));
+                setDescartarDialog(null);
+                setDescartarMotivo('');
+                toast({ title: 'Pendiente descartado', description: `${descartarDialog.ficha} ya no aparecerá en pendientes.` });
+              }}
+            >
+              Descartar
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </Layout>
   );
 }
