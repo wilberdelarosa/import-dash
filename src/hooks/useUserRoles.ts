@@ -115,58 +115,10 @@ export function useUserRoles(): UseUserRolesReturn {
           return;
         }
 
-        // 2. FALLBACK: Si no hay rol en BD, usar simulación para emails de prueba
-        // Esto permite testing sin necesidad de asignar roles manualmente
-        console.log('[useUserRoles] No hay rol en BD, verificando fallback de testing...');
-
-        // Verificar localStorage o query params para simulación manual
-        let simulateMechanic = false;
-        let simulateSupervisor = false;
-
-        if (typeof window !== 'undefined') {
-          try {
-            const ls = window.localStorage;
-            simulateMechanic = ls?.getItem('simulateRoleMechanic') === '1';
-            simulateSupervisor = ls?.getItem('simulateRoleSupervisor') === '1';
-          } catch {
-            // ignore localStorage read errors
-          }
-
-          try {
-            const params = new URLSearchParams(window.location.search);
-            simulateMechanic = simulateMechanic || params.get('simulateMechanic') === '1';
-            simulateSupervisor = simulateSupervisor || params.get('simulateSupervisor') === '1';
-          } catch {
-            // ignore
-          }
-        }
-
-        // Auto-assign roles para emails de testing (solo si no hay rol en BD)
-        if (user.email === mechanicEmail) {
-          simulateMechanic = true;
-        }
-        if (user.email === supervisorEmail) {
-          simulateSupervisor = true;
-        }
-
-        if (simulateSupervisor && user.email === supervisorEmail) {
-          console.log('[useUserRoles] Usando rol SIMULADO: supervisor');
-          setCurrentUserRole('supervisor');
-          setCachedRole(user.id, 'supervisor');
-          setLoading(false);
-          return;
-        }
-
-        if (simulateMechanic && user.email === mechanicEmail) {
-          console.log('[useUserRoles] Usando rol SIMULADO: mechanic');
-          setCurrentUserRole('mechanic');
-          setCachedRole(user.id, 'mechanic');
-          setLoading(false);
-          return;
-        }
-
-        // 3. Si no hay rol en BD ni es email de testing, asignar 'user' por defecto
-        console.log('[useUserRoles] Sin rol asignado, usando: user');
+        // No DB role found - default to 'user'. Roles must be managed in the
+        // database via the admin panel. Client-side role simulation has been
+        // removed for security (localStorage / URL params can be tampered with).
+        console.log('[useUserRoles] Sin rol en BD, usando: user');
         setCurrentUserRole('user');
         setCachedRole(user.id, 'user');
       } catch (err) {
