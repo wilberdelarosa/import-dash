@@ -914,8 +914,9 @@ export default function ControlMantenimientoProfesional() {
   if (isMobile) {
     return (
       <ControlMantenimientoMobile
-        equipos={data.mantenimientosProgramados}
-        catalogoEquipos={data.equipos}
+        equipos={data.mantenimientosProgramados.filter(m => activeEquipos.some(e => e.ficha === m.ficha))}
+        catalogoEquipos={activeEquipos}
+
         onUpdateLectura={async (id, lectura, fecha, notas) => {
           await updateHorasActuales({
             mantenimientoId: id,
