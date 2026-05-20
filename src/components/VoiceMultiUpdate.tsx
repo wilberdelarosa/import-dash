@@ -4,7 +4,6 @@ import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
 import { Card, CardContent } from '@/components/ui/card';
 import { Checkbox } from '@/components/ui/checkbox';
-import { ScrollArea } from '@/components/ui/scroll-area';
 import {
   Mic, MicOff, Loader2, AlertTriangle, Check, X, Send, Volume2
 } from 'lucide-react';
@@ -424,7 +423,12 @@ export function VoiceMultiUpdate({ onUpdateBatch, isReadOnly }: VoiceMultiUpdate
             <Badge variant="outline">{selectedCount} seleccionados</Badge>
           </div>
 
-          <ScrollArea className="h-[min(60vh,400px)] w-full pr-3">
+          <div
+            className="h-[clamp(220px,42dvh,430px)] w-full overflow-y-auto overscroll-contain pr-3 touch-pan-y"
+            onPointerDown={(e) => e.stopPropagation()}
+            onTouchStart={(e) => e.stopPropagation()}
+            onWheel={(e) => e.stopPropagation()}
+          >
             <div className="space-y-2">
               {parsedReadings.map((r, i) => (
                 <Card
@@ -505,7 +509,7 @@ export function VoiceMultiUpdate({ onUpdateBatch, isReadOnly }: VoiceMultiUpdate
                 </Card>
               ))}
             </div>
-          </ScrollArea>
+          </div>
 
           <div className="flex gap-2">
             <Button
