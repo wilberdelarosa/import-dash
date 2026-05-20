@@ -424,7 +424,7 @@ export function VoiceMultiUpdate({ onUpdateBatch, isReadOnly }: VoiceMultiUpdate
             <Badge variant="outline">{selectedCount} seleccionados</Badge>
           </div>
 
-          <ScrollArea className="max-h-[400px]">
+          <ScrollArea className="h-[min(60vh,400px)] w-full pr-3">
             <div className="space-y-2">
               {parsedReadings.map((r, i) => (
                 <Card
