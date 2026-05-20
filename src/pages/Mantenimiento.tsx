@@ -285,19 +285,27 @@ export default function Mantenimiento() {
 
   const categorias = [...new Set(data.equipos.map(e => e.categoria).filter(c => c && c.toString().trim() !== ''))];
 
-  // Recalcular próximo y restante según nueva lógica
-  const mantenimientosConCalculos = data.mantenimientosProgramados.map(mant => {
-    // Próximo = frecuencia + hr/km último mantenimiento
-    const proximoCalculado = mant.horasKmUltimoMantenimiento + mant.frecuencia;
-    // Restante = próximo - actual
-    const restanteCalculado = proximoCalculado - mant.horasKmActuales;
+  // Set de fichas de equipos activos (no vendidos ni inactivos)
+  const fichasActivas = new Set(
+    data.equipos.filter(isEquipoDisponible).map(e => e.ficha)
+  );
 
-    return {
-      ...mant,
-      proximoMantenimiento: proximoCalculado,
-      horasKmRestante: restanteCalculado
-    };
-  });
+  // Recalcular próximo y restante según nueva lógica, filtrando equipos inactivos/vendidos
+  const mantenimientosConCalculos = data.mantenimientosProgramados
+    .filter(mant => fichasActivas.has(mant.ficha))
+    .map(mant => {
+      // Próximo = frecuencia + hr/km último mantenimiento
+      const proximoCalculado = mant.horasKmUltimoMantenimiento + mant.frecuencia;
+      // Restante = próximo - actual
+      const restanteCalculado = proximoCalculado - mant.horasKmActuales;
+
+      return {
+        ...mant,
+        proximoMantenimiento: proximoCalculado,
+        horasKmRestante: restanteCalculado
+      };
+    });
+
 
   if (isMobile) {
     return (
