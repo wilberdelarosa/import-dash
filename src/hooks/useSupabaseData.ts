@@ -1290,8 +1290,10 @@ export function useSupabaseData() {
       });
 
       toast({
-        title: "✅ Horas actualizadas",
-        description: `Se registró la nueva lectura para ${mantenimiento.nombreEquipo}`,
+        title: esRetroactiva ? "📝 Lectura retroactiva guardada" : "✅ Horas actualizadas",
+        description: esRetroactiva
+          ? `Se registró en historial ${horasIngresadas} ${unidadLectura}. El horómetro actual (${horasPrevias}) se mantiene.`
+          : `Se registró la nueva lectura para ${mantenimiento.nombreEquipo}`,
       });
 
       await loadData(true);
