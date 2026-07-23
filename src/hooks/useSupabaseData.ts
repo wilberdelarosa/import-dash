@@ -1219,23 +1219,30 @@ export function useSupabaseData() {
     }
 
     const horasPrevias = Number(mantenimiento.horasKmActuales ?? 0);
-    const horasActuales = Number(horasKm);
+    const horasIngresadas = Number(horasKm);
     const unidadLectura = unidad ?? (mantenimiento.tipoMantenimiento.toLowerCase().includes('km') ? 'km' : 'horas');
-    const incremento = horasActuales - horasPrevias;
     const fechaIso = normalizeDateInputToIso(fecha);
+
+    // Lectura retroactiva/intermedia: si la nueva lectura es menor a la actual,
+    // sólo se registra en historial. NO se baja el horómetro del equipo.
+    const esRetroactiva = horasIngresadas < horasPrevias;
+    const horasActuales = esRetroactiva ? horasPrevias : horasIngresadas;
+    const incremento = horasActuales - horasPrevias;
     const restanteCalculado = mantenimiento.proximoMantenimiento - horasActuales;
 
     try {
-      const { error: updateError } = await supabase
-        .from('mantenimientos_programados')
-        .update({
-          horas_km_actuales: horasActuales,
-          fecha_ultima_actualizacion: fechaIso,
-          horas_km_restante: restanteCalculado,
-        })
-        .eq('id', mantenimientoId);
+      if (!esRetroactiva) {
+        const { error: updateError } = await supabase
+          .from('mantenimientos_programados')
+          .update({
+            horas_km_actuales: horasActuales,
+            fecha_ultima_actualizacion: fechaIso,
+            horas_km_restante: restanteCalculado,
+          })
+          .eq('id', mantenimientoId);
 
-      if (updateError) throw updateError;
+        if (updateError) throw updateError;
+      }
 
       const descripcion = observaciones
         ? observaciones
