@@ -1244,17 +1244,21 @@ export function useSupabaseData() {
         if (updateError) throw updateError;
       }
 
-      const descripcion = observaciones
+      const descripcionBase = observaciones
         ? observaciones
-        : `Lectura actualizada a ${horasActuales} ${unidadLectura}`;
+        : `Lectura registrada: ${horasIngresadas} ${unidadLectura}`;
+      const descripcion = esRetroactiva
+        ? `${descripcionBase} (lectura retroactiva/intermedia — no baja el horómetro actual de ${horasPrevias})`
+        : descripcionBase;
 
       const metadata = {
         id: mantenimientoId,
         ficha: mantenimiento.ficha,
         nombreEquipo: mantenimiento.nombreEquipo,
-        horasKm: horasActuales,
+        horasKm: horasIngresadas,
         horasPrevias,
         incremento,
+        esRetroactiva,
         fecha: fechaIso,
         usuarioResponsable,
         observaciones,
