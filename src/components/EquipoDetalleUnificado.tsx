@@ -108,8 +108,12 @@ export function EquipoDetalleUnificado({ ficha, open, onOpenChange }: Props) {
     return actualizacionesHorasKmData[0]; // Ya está ordenado de más reciente a más antiguo
   }, [actualizacionesHorasKmData]);
 
-  // Calcular horas actuales y horas del último mantenimiento
-  const horasActuales = ultimaLectura?.horasKm || proximoMantenimiento?.horasKmActuales || 0;
+  // Calcular horas actuales: siempre el máximo entre las fuentes disponibles
+  // (evita que una lectura vieja o retroactiva "pise" el valor real del horómetro).
+  const horasActuales = Math.max(
+    Number(ultimaLectura?.horasKm ?? 0),
+    Number(proximoMantenimiento?.horasKmActuales ?? 0),
+  );
   const horasUltimoMantenimiento = ultimoMantenimientoRealizado?.horasKmAlMomento || 0;
 
   // Usar hook extendido de sugerencia con información del ciclo
