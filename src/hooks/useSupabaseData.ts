@@ -1336,10 +1336,20 @@ export function useSupabaseData() {
     const fechaIso = normalizeDateInputToIso(fecha);
     const lectura = Number(horasKm);
     const unidadMantenimiento = unidad ?? (mantenimiento.tipoMantenimiento.toLowerCase().includes('km') ? 'km' : 'horas');
+    const horasActualesEquipo = Number(mantenimiento.horasKmActuales ?? 0);
     const horasPrevias = Number(mantenimiento.horasKmUltimoMantenimiento ?? 0);
     const incremento = lectura - horasPrevias;
-    const proximo = lectura + Number(mantenimiento.frecuencia ?? 0);
-    const restante = proximo - lectura;
+    const frecuencia = Number(mantenimiento.frecuencia ?? 0);
+
+    // Si la lectura del mantenimiento es menor a las horas actuales del equipo,
+    // es un mantenimiento retroactivo: se registra pero NO se baja el horómetro
+    // y el próximo se recalcula a partir del horómetro actual.
+    const esRetroactivo = lectura < horasActualesEquipo;
+    const nuevasHorasActuales = esRetroactivo ? horasActualesEquipo : lectura;
+    const proximo = esRetroactivo
+      ? Math.ceil(horasActualesEquipo / (frecuencia || 1)) * (frecuencia || 1) + (frecuencia || 0)
+      : lectura + frecuencia;
+    const restante = proximo - nuevasHorasActuales;
 
     try {
       const { error: updateError } = await supabase
@@ -1349,7 +1359,7 @@ export function useSupabaseData() {
           horas_km_ultimo_mantenimiento: lectura,
           proximo_mantenimiento: proximo,
           horas_km_restante: restante,
-          horas_km_actuales: lectura,
+          horas_km_actuales: nuevasHorasActuales,
           fecha_ultima_actualizacion: fechaIso,
         })
         .eq('id', mantenimientoId);
