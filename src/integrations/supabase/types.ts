@@ -1332,6 +1332,7 @@ export type Database = {
         Args: { p_new_ficha: string; p_old_ficha: string }
         Returns: Json
       }
+      current_user_email: { Args: never; Returns: string }
       delete_email: {
         Args: { message_id: number; queue_name: string }
         Returns: boolean
