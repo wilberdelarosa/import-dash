@@ -396,13 +396,24 @@ export function useSupabaseData() {
 
       if (mantenimientosError) throw mantenimientosError;
 
-      const { data: historialData, error: historialError } = await supabase
-        .from('historial_eventos')
-        .select('*')
-        .in('tipo_evento', ['mantenimiento_realizado', 'lectura_actualizada'])
-        .order('created_at', { ascending: true });
+      // IMPORTANTE: PostgREST limita a 1000 filas por petición.
+      // Paginamos para traer TODO el historial (si no, se cargaban solo los eventos más antiguos).
+      const historialData: any[] = [];
+      const PAGE_SIZE = 1000;
+      for (let offset = 0; ; offset += PAGE_SIZE) {
+        const { data: pageData, error: historialError } = await supabase
+          .from('historial_eventos')
+          .select('*')
+          .in('tipo_evento', ['mantenimiento_realizado', 'lectura_actualizada'])
+          .order('created_at', { ascending: true })
+          .range(offset, offset + PAGE_SIZE - 1);
 
-      if (historialError) throw historialError;
+        if (historialError) throw historialError;
+        if (!pageData || pageData.length === 0) break;
+        historialData.push(...pageData);
+        if (pageData.length < PAGE_SIZE) break;
+      }
+
 
       const actualizacionesHorasKm = (historialData || [])
         .filter(evento => evento.tipo_evento === 'lectura_actualizada')
