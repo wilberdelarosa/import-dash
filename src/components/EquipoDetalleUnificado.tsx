@@ -49,6 +49,8 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { isEquipoVendido } from '@/types/equipment';
 import { cn } from '@/lib/utils';
 import { EquipmentTicketsList, TicketCountBadge } from '@/components/tickets';
+import { CorregirRegistroDialog, type RegistroCorregible } from '@/components/CorregirRegistroDialog';
+import { Pencil } from 'lucide-react';
 
 interface Props {
   ficha: string | null;
@@ -67,6 +69,13 @@ export function EquipoDetalleUnificado({ ficha, open, onOpenChange }: Props) {
   const [mantenimientosRealizadosData, setMantenimientosRealizadosData] = useState<any[]>([]);
   const [actualizacionesHorasKmData, setActualizacionesHorasKmData] = useState<any[]>([]);
   const [intervaloSeleccionado, setIntervaloSeleccionado] = useState<string | null>(null);
+  const [registroCorregir, setRegistroCorregir] = useState<RegistroCorregible | null>(null);
+  const [corregirOpen, setCorregirOpen] = useState(false);
+
+  const abrirCorreccion = (registro: RegistroCorregible) => {
+    setRegistroCorregir(registro);
+    setCorregirOpen(true);
+  };
 
   const esCaterpillar = useMemo(
     () => equipo?.marca?.toLowerCase().includes('caterpillar') || equipo?.marca?.toLowerCase().includes('cat'),
@@ -331,6 +340,7 @@ export function EquipoDetalleUnificado({ ficha, open, onOpenChange }: Props) {
   const esVendido = isEquipoVendido(equipo.empresa);
 
   return (
+    <>
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-4xl w-[calc(100%-1rem)] sm:w-[95vw] md:w-full max-h-[95svh] sm:max-h-[90svh] overflow-y-auto p-0 bg-background mx-2 sm:mx-auto">
         {/* Hero Section - Información crítica siempre visible */}
@@ -955,16 +965,37 @@ export function EquipoDetalleUnificado({ ficha, open, onOpenChange }: Props) {
                   </CardHeader>
                   <CardContent className="space-y-4">
                     {mantenimientosRealizadosData.map((realizado) => (
-                      <div
-                        key={realizado.id}
-                        className="rounded-xl border border-amber-200/60 bg-white/70 dark:border-amber-800/40 dark:bg-slate-800/70 p-4 transition-all duration-300 hover:-translate-y-0.5 hover:shadow-md"
-                      >
-                        <div className="flex flex-wrap items-center justify-between gap-3">
-                          <span className="text-sm font-semibold text-amber-800 dark:text-amber-400">
-                            {format(new Date(realizado.fechaMantenimiento), 'dd MMM yyyy', { locale: es })}
-                          </span>
-                          <Badge variant="outline">Lectura: {realizado.horasKmAlMomento}</Badge>
-                        </div>
+                       <div
+                         key={realizado.eventoId ?? realizado.id}
+                         className="rounded-xl border border-amber-200/60 bg-white/70 dark:border-amber-800/40 dark:bg-slate-800/70 p-4 transition-all duration-300 hover:-translate-y-0.5 hover:shadow-md"
+                       >
+                         <div className="flex flex-wrap items-center justify-between gap-3">
+                           <span className="text-sm font-semibold text-amber-800 dark:text-amber-400">
+                             {format(new Date(realizado.fechaMantenimiento), 'dd MMM yyyy', { locale: es })}
+                           </span>
+                           <div className="flex items-center gap-2">
+                             <Badge variant="outline">Lectura: {realizado.horasKmAlMomento}</Badge>
+                             {realizado.eventoId && (
+                               <Button
+                                 size="sm"
+                                 variant="ghost"
+                                 className="h-11 w-11 p-0"
+                                 aria-label="Corregir mantenimiento"
+                                 onClick={() =>
+                                   abrirCorreccion({
+                                     eventoId: realizado.eventoId,
+                                     tipo: 'mantenimiento',
+                                     fecha: realizado.fechaMantenimiento,
+                                     horasKm: realizado.horasKmAlMomento,
+                                     observaciones: realizado.observaciones,
+                                   })
+                                 }
+                               >
+                                 <Pencil className="h-4 w-4" />
+                               </Button>
+                             )}
+                           </div>
+                         </div>
                         <p className="mt-2 text-sm text-muted-foreground">
                           {realizado.observaciones || 'Sin observaciones registradas.'}
                         </p>
@@ -1013,8 +1044,29 @@ export function EquipoDetalleUnificado({ ficha, open, onOpenChange }: Props) {
                           <span className="text-sm font-semibold text-sky-800 dark:text-sky-400">
                             {format(new Date(lectura.fecha), 'dd MMM yyyy', { locale: es })}
                           </span>
-                          <Badge variant="outline">{lectura.horasKm} horas/km</Badge>
-                        </div>
+                           <div className="flex items-center gap-2">
+                             <Badge variant="outline">{lectura.horasKm} horas/km</Badge>
+                             {lectura.eventoId && (
+                               <Button
+                                 size="sm"
+                                 variant="ghost"
+                                 className="h-11 w-11 p-0"
+                                 aria-label="Corregir lectura"
+                                 onClick={() =>
+                                   abrirCorreccion({
+                                     eventoId: lectura.eventoId,
+                                     tipo: 'lectura',
+                                     fecha: lectura.fecha,
+                                     horasKm: lectura.horasKm,
+                                     observaciones: lectura.observaciones,
+                                   })
+                                 }
+                               >
+                                 <Pencil className="h-4 w-4" />
+                               </Button>
+                             )}
+                           </div>
+                         </div>
                         <div className="mt-2 flex flex-wrap items-center gap-3 text-xs text-muted-foreground">
                           <span className="flex items-center gap-1">
                             <TrendingUp className="h-3 w-3 text-sky-500 dark:text-sky-400" />
@@ -1223,5 +1275,12 @@ export function EquipoDetalleUnificado({ ficha, open, onOpenChange }: Props) {
         </div>
       </DialogContent>
     </Dialog>
+
+    <CorregirRegistroDialog
+      registro={registroCorregir}
+      open={corregirOpen}
+      onOpenChange={setCorregirOpen}
+    />
+    </>
   );
 }

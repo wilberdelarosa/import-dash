@@ -453,6 +453,7 @@ export function useSupabaseData() {
 
           return {
             id: Number(evento.id),
+            eventoId: Number(evento.id),
             ficha: evento.ficha_equipo ?? metadata.ficha ?? '',
             nombreEquipo: evento.nombre_equipo ?? metadata.nombreEquipo ?? null,
             fecha: metadata.fecha ?? metadata.fechaMantenimiento ?? evento.created_at,
@@ -478,6 +479,8 @@ export function useSupabaseData() {
 
           return {
             id: Number(metadata.id ?? evento.id),
+            eventoId: Number(evento.id),
+            mantenimientoId: metadata.id != null ? Number(metadata.id) : null,
             ficha: evento.ficha_equipo ?? metadata.ficha ?? '',
             nombreEquipo: evento.nombre_equipo ?? metadata.nombreEquipo ?? null,
             fechaMantenimiento: metadata.fechaMantenimiento ?? metadata.fecha ?? evento.created_at,
@@ -1914,6 +1917,214 @@ export function useSupabaseData() {
     }
   };
 
+  // ==========================================================
+  // CORRECCIÓN DE REGISTROS (mantenimientos y lecturas)
+  // ==========================================================
+
+  const fetchEventosDeFicha = async (ficha: string) => {
+    const eventos: any[] = [];
+    const PAGE = 1000;
+    for (let offset = 0; ; offset += PAGE) {
+      const { data: page, error } = await supabase
+        .from('historial_eventos')
+        .select('*')
+        .eq('ficha_equipo', ficha)
+        .in('tipo_evento', ['mantenimiento_realizado', 'lectura_actualizada'])
+        .order('created_at', { ascending: true })
+        .range(offset, offset + PAGE - 1);
+      if (error) throw error;
+      if (!page || page.length === 0) break;
+      eventos.push(...page);
+      if (page.length < PAGE) break;
+    }
+    return eventos;
+  };
+
+  const lecturaDeEvento = (evento: any) => {
+    const md = (evento.metadata as any) ?? {};
+    const dd = (evento.datos_despues as any) ?? {};
+    return Number(md.horasKmAlMomento ?? md.horasKm ?? dd.horasKmAlMomento ?? dd.horasKm ?? 0);
+  };
+
+  /**
+   * Recalcula toda la secuencia de mantenimientos de un equipo a partir
+   * del historial completo (fuente de verdad). Se usa después de corregir
+   * o eliminar un registro.
+   */
+  const recalcularSecuenciaEquipo = async (ficha: string) => {
+    const eventos = await fetchEventosDeFicha(ficha);
+
+    const { data: rows, error: rowsError } = await supabase
+      .from('mantenimientos_programados')
+      .select('*')
+      .eq('ficha', ficha);
+    if (rowsError) throw rowsError;
+
+    const maxLecturaGlobal = eventos.reduce((max, e) => Math.max(max, lecturaDeEvento(e)), 0);
+
+    for (const row of rows ?? []) {
+      const propios = eventos.filter((e) => Number((e.metadata as any)?.id ?? 0) === Number(row.id));
+      const base = propios.length > 0 ? propios : eventos;
+
+      const mantenimientos = base
+        .filter((e) => e.tipo_evento === 'mantenimiento_realizado')
+        .sort((a, b) => new Date(a.created_at).getTime() - new Date(b.created_at).getTime());
+
+      const ultimoMant = mantenimientos[mantenimientos.length - 1] ?? null;
+      const frecuencia = Number(row.frecuencia ?? 0);
+      const horasUltimo = ultimoMant ? lecturaDeEvento(ultimoMant) : 0;
+      const maxLectura = Math.max(
+        maxLecturaGlobal,
+        base.reduce((max, e) => Math.max(max, lecturaDeEvento(e)), 0),
+        horasUltimo,
+      );
+      const proximo = horasUltimo + frecuencia;
+
+      const { error: updError } = await supabase
+        .from('mantenimientos_programados')
+        .update({
+          horas_km_ultimo_mantenimiento: horasUltimo,
+          fecha_ultimo_mantenimiento: ultimoMant ? ultimoMant.created_at : null,
+          horas_km_actuales: maxLectura,
+          proximo_mantenimiento: proximo,
+          horas_km_restante: proximo - maxLectura,
+          fecha_ultima_actualizacion: new Date().toISOString(),
+        })
+        .eq('id', row.id);
+      if (updError) throw updError;
+    }
+  };
+
+  /** Corrige un registro ya guardado (mantenimiento realizado o lectura). */
+  const corregirRegistroHistorial = async ({
+    eventoId,
+    horasKm,
+    fecha,
+    observaciones,
+    usuarioResponsable = 'Interfaz',
+  }: {
+    eventoId: number;
+    horasKm?: number;
+    fecha?: string;
+    observaciones?: string;
+    usuarioResponsable?: string;
+  }) => {
+    if (usingDemoData) {
+      showDemoWriteNotice();
+      return;
+    }
+
+    try {
+      const { data: evento, error } = await supabase
+        .from('historial_eventos')
+        .select('*')
+        .eq('id', eventoId)
+        .single();
+      if (error) throw error;
+      if (!evento) throw new Error('Registro no encontrado');
+
+      const esMantenimiento = evento.tipo_evento === 'mantenimiento_realizado';
+      const metadata = { ...(((evento.metadata as any) ?? {}) as any) };
+      const datosDespues = { ...(((evento.datos_despues as any) ?? {}) as any) };
+      const fechaIso = fecha ? normalizeDateInputToIso(fecha) : evento.created_at;
+
+      if (horasKm !== undefined && !Number.isNaN(Number(horasKm))) {
+        const lectura = Number(horasKm);
+        if (esMantenimiento) {
+          metadata.horasKmAlMomento = lectura;
+          datosDespues.horasKmAlMomento = lectura;
+        } else {
+          metadata.horasKm = lectura;
+          datosDespues.horasKm = lectura;
+        }
+      }
+
+      metadata.fecha = fechaIso;
+      if (esMantenimiento) metadata.fechaMantenimiento = fechaIso;
+      if (observaciones !== undefined) {
+        metadata.observaciones = observaciones;
+        datosDespues.observaciones = observaciones;
+      }
+      metadata.corregido = true;
+      metadata.corregidoEn = new Date().toISOString();
+      metadata.corregidoPor = usuarioResponsable;
+
+      const { error: updError } = await supabase
+        .from('historial_eventos')
+        .update({
+          created_at: fechaIso,
+          metadata,
+          datos_despues: datosDespues,
+          descripcion: observaciones && observaciones.trim().length > 0
+            ? observaciones
+            : evento.descripcion,
+        })
+        .eq('id', eventoId);
+      if (updError) throw updError;
+
+      if (evento.ficha_equipo) {
+        await recalcularSecuenciaEquipo(evento.ficha_equipo);
+      }
+
+      toast({
+        title: '✅ Registro corregido',
+        description: 'Se actualizó el registro y se recalculó la secuencia de mantenimiento.',
+      });
+
+      await loadData(true);
+    } catch (err) {
+      console.error('Error corrigiendo registro:', err);
+      toast({
+        title: '❌ Error',
+        description: 'No se pudo corregir el registro',
+        variant: 'destructive',
+      });
+      throw err;
+    }
+  };
+
+  /** Elimina un registro mal ingresado y recalcula la secuencia. */
+  const eliminarRegistroHistorial = async (eventoId: number) => {
+    if (usingDemoData) {
+      showDemoWriteNotice();
+      return;
+    }
+
+    try {
+      const { data: evento, error } = await supabase
+        .from('historial_eventos')
+        .select('*')
+        .eq('id', eventoId)
+        .single();
+      if (error) throw error;
+
+      const { error: delError } = await supabase
+        .from('historial_eventos')
+        .delete()
+        .eq('id', eventoId);
+      if (delError) throw delError;
+
+      if (evento?.ficha_equipo) {
+        await recalcularSecuenciaEquipo(evento.ficha_equipo);
+      }
+
+      toast({
+        title: '🗑️ Registro eliminado',
+        description: 'Se eliminó el registro y se recalculó la secuencia.',
+      });
+
+      await loadData(true);
+    } catch (err) {
+      console.error('Error eliminando registro:', err);
+      toast({
+        title: '❌ Error',
+        description: 'No se pudo eliminar el registro',
+        variant: 'destructive',
+      });
+      throw err;
+    }
+  };
+
   return {
     data,
     loading,
@@ -1935,5 +2146,8 @@ export function useSupabaseData() {
     deleteMantenimiento,
     updateHorasActuales,
     registrarMantenimientoRealizado,
+    corregirRegistroHistorial,
+    eliminarRegistroHistorial,
+    recalcularSecuenciaEquipo,
   };
 }
