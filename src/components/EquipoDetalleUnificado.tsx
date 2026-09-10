@@ -340,6 +340,7 @@ export function EquipoDetalleUnificado({ ficha, open, onOpenChange }: Props) {
   const esVendido = isEquipoVendido(equipo.empresa);
 
   return (
+    <>
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-4xl w-[calc(100%-1rem)] sm:w-[95vw] md:w-full max-h-[95svh] sm:max-h-[90svh] overflow-y-auto p-0 bg-background mx-2 sm:mx-auto">
         {/* Hero Section - Información crítica siempre visible */}
