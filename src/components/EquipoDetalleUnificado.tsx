@@ -964,16 +964,37 @@ export function EquipoDetalleUnificado({ ficha, open, onOpenChange }: Props) {
                   </CardHeader>
                   <CardContent className="space-y-4">
                     {mantenimientosRealizadosData.map((realizado) => (
-                      <div
-                        key={realizado.id}
-                        className="rounded-xl border border-amber-200/60 bg-white/70 dark:border-amber-800/40 dark:bg-slate-800/70 p-4 transition-all duration-300 hover:-translate-y-0.5 hover:shadow-md"
-                      >
-                        <div className="flex flex-wrap items-center justify-between gap-3">
-                          <span className="text-sm font-semibold text-amber-800 dark:text-amber-400">
-                            {format(new Date(realizado.fechaMantenimiento), 'dd MMM yyyy', { locale: es })}
-                          </span>
-                          <Badge variant="outline">Lectura: {realizado.horasKmAlMomento}</Badge>
-                        </div>
+                       <div
+                         key={realizado.eventoId ?? realizado.id}
+                         className="rounded-xl border border-amber-200/60 bg-white/70 dark:border-amber-800/40 dark:bg-slate-800/70 p-4 transition-all duration-300 hover:-translate-y-0.5 hover:shadow-md"
+                       >
+                         <div className="flex flex-wrap items-center justify-between gap-3">
+                           <span className="text-sm font-semibold text-amber-800 dark:text-amber-400">
+                             {format(new Date(realizado.fechaMantenimiento), 'dd MMM yyyy', { locale: es })}
+                           </span>
+                           <div className="flex items-center gap-2">
+                             <Badge variant="outline">Lectura: {realizado.horasKmAlMomento}</Badge>
+                             {realizado.eventoId && (
+                               <Button
+                                 size="sm"
+                                 variant="ghost"
+                                 className="h-11 w-11 p-0"
+                                 aria-label="Corregir mantenimiento"
+                                 onClick={() =>
+                                   abrirCorreccion({
+                                     eventoId: realizado.eventoId,
+                                     tipo: 'mantenimiento',
+                                     fecha: realizado.fechaMantenimiento,
+                                     horasKm: realizado.horasKmAlMomento,
+                                     observaciones: realizado.observaciones,
+                                   })
+                                 }
+                               >
+                                 <Pencil className="h-4 w-4" />
+                               </Button>
+                             )}
+                           </div>
+                         </div>
                         <p className="mt-2 text-sm text-muted-foreground">
                           {realizado.observaciones || 'Sin observaciones registradas.'}
                         </p>
