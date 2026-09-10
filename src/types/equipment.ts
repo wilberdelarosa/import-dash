@@ -59,6 +59,8 @@ export interface Movimiento {
 
 export interface ActualizacionHorasKm {
   id: number;
+  /** ID del evento en historial_eventos (para corregir/eliminar el registro) */
+  eventoId?: number;
   ficha: string;
   nombreEquipo: string | null;
   fecha: string;
