@@ -80,6 +80,10 @@ export interface FiltroUtilizado {
 
 export interface MantenimientoRealizado {
   id: number;
+  /** ID del evento en historial_eventos (para corregir/eliminar el registro) */
+  eventoId?: number;
+  /** ID del mantenimiento programado asociado */
+  mantenimientoId?: number | null;
   ficha: string;
   nombreEquipo: string | null;
   fechaMantenimiento: string;
