@@ -2146,5 +2146,8 @@ export function useSupabaseData() {
     deleteMantenimiento,
     updateHorasActuales,
     registrarMantenimientoRealizado,
+    corregirRegistroHistorial,
+    eliminarRegistroHistorial,
+    recalcularSecuenciaEquipo,
   };
 }
