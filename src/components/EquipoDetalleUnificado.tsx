@@ -1043,8 +1043,29 @@ export function EquipoDetalleUnificado({ ficha, open, onOpenChange }: Props) {
                           <span className="text-sm font-semibold text-sky-800 dark:text-sky-400">
                             {format(new Date(lectura.fecha), 'dd MMM yyyy', { locale: es })}
                           </span>
-                          <Badge variant="outline">{lectura.horasKm} horas/km</Badge>
-                        </div>
+                           <div className="flex items-center gap-2">
+                             <Badge variant="outline">{lectura.horasKm} horas/km</Badge>
+                             {lectura.eventoId && (
+                               <Button
+                                 size="sm"
+                                 variant="ghost"
+                                 className="h-11 w-11 p-0"
+                                 aria-label="Corregir lectura"
+                                 onClick={() =>
+                                   abrirCorreccion({
+                                     eventoId: lectura.eventoId,
+                                     tipo: 'lectura',
+                                     fecha: lectura.fecha,
+                                     horasKm: lectura.horasKm,
+                                     observaciones: lectura.observaciones,
+                                   })
+                                 }
+                               >
+                                 <Pencil className="h-4 w-4" />
+                               </Button>
+                             )}
+                           </div>
+                         </div>
                         <div className="mt-2 flex flex-wrap items-center gap-3 text-xs text-muted-foreground">
                           <span className="flex items-center gap-1">
                             <TrendingUp className="h-3 w-3 text-sky-500 dark:text-sky-400" />
