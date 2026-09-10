@@ -1275,5 +1275,12 @@ export function EquipoDetalleUnificado({ ficha, open, onOpenChange }: Props) {
         </div>
       </DialogContent>
     </Dialog>
+
+    <CorregirRegistroDialog
+      registro={registroCorregir}
+      open={corregirOpen}
+      onOpenChange={setCorregirOpen}
+    />
+    </>
   );
 }
