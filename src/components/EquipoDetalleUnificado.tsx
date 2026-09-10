@@ -49,6 +49,8 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { isEquipoVendido } from '@/types/equipment';
 import { cn } from '@/lib/utils';
 import { EquipmentTicketsList, TicketCountBadge } from '@/components/tickets';
+import { CorregirRegistroDialog, type RegistroCorregible } from '@/components/CorregirRegistroDialog';
+import { Pencil } from 'lucide-react';
 
 interface Props {
   ficha: string | null;
