@@ -69,6 +69,13 @@ export function EquipoDetalleUnificado({ ficha, open, onOpenChange }: Props) {
   const [mantenimientosRealizadosData, setMantenimientosRealizadosData] = useState<any[]>([]);
   const [actualizacionesHorasKmData, setActualizacionesHorasKmData] = useState<any[]>([]);
   const [intervaloSeleccionado, setIntervaloSeleccionado] = useState<string | null>(null);
+  const [registroCorregir, setRegistroCorregir] = useState<RegistroCorregible | null>(null);
+  const [corregirOpen, setCorregirOpen] = useState(false);
+
+  const abrirCorreccion = (registro: RegistroCorregible) => {
+    setRegistroCorregir(registro);
+    setCorregirOpen(true);
+  };
 
   const esCaterpillar = useMemo(
     () => equipo?.marca?.toLowerCase().includes('caterpillar') || equipo?.marca?.toLowerCase().includes('cat'),
