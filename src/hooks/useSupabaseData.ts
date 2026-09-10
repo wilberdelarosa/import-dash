@@ -479,6 +479,8 @@ export function useSupabaseData() {
 
           return {
             id: Number(metadata.id ?? evento.id),
+            eventoId: Number(evento.id),
+            mantenimientoId: metadata.id != null ? Number(metadata.id) : null,
             ficha: evento.ficha_equipo ?? metadata.ficha ?? '',
             nombreEquipo: evento.nombre_equipo ?? metadata.nombreEquipo ?? null,
             fechaMantenimiento: metadata.fechaMantenimiento ?? metadata.fecha ?? evento.created_at,
