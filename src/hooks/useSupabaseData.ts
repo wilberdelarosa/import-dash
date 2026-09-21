@@ -334,12 +334,11 @@ export function useSupabaseData() {
     usuario?: string;
     createdAt?: string;
   }) => {
-    try {
-      if (usingDemoData) {
-        return;
-      }
+    if (usingDemoData) {
+      return;
+    }
 
-      const payload = {
+    const payload = {
         tipo_evento: tipo,
         modulo,
         descripcion,
@@ -352,13 +351,13 @@ export function useSupabaseData() {
         metadata: metadata ?? null,
       } as const;
 
-      if (createdAt) {
-        await supabase.from('historial_eventos').insert({ ...payload, created_at: createdAt });
-      } else {
-        await supabase.from('historial_eventos').insert(payload);
-      }
-    } catch (error) {
+    const { error } = createdAt
+      ? await supabase.from('historial_eventos').insert({ ...payload, created_at: createdAt })
+      : await supabase.from('historial_eventos').insert(payload);
+
+    if (error) {
       console.error('Error guardando evento en historial:', error);
+      throw error;
     }
   };
 
@@ -406,6 +405,7 @@ export function useSupabaseData() {
           .select('*')
           .in('tipo_evento', ['mantenimiento_realizado', 'lectura_actualizada'])
           .order('created_at', { ascending: true })
+          .order('id', { ascending: true })
           .range(offset, offset + PAGE_SIZE - 1);
 
         if (historialError) throw historialError;
@@ -483,9 +483,10 @@ export function useSupabaseData() {
             mantenimientoId: metadata.id != null ? Number(metadata.id) : null,
             ficha: evento.ficha_equipo ?? metadata.ficha ?? '',
             nombreEquipo: evento.nombre_equipo ?? metadata.nombreEquipo ?? null,
-            fechaMantenimiento: metadata.fechaMantenimiento ?? metadata.fecha ?? evento.created_at,
+            fechaMantenimiento: metadata.fechaMantenimiento ?? metadata.fecha_mantenimiento ?? metadata.fecha ?? evento.created_at,
             horasKmAlMomento: Number(
               metadata.horasKmAlMomento ??
+              metadata.horas_km_actuales ??
               metadata.horasKm ??
               datosDespues.horasKmAlMomento ??
               datosDespues.horasKm ??
@@ -1374,7 +1375,10 @@ export function useSupabaseData() {
           proximo_mantenimiento: proximo,
           horas_km_restante: restante,
           horas_km_actuales: nuevasHorasActuales,
-          fecha_ultima_actualizacion: fechaIso,
+          fecha_ultima_actualizacion:
+            new Date(fechaIso).getTime() >= new Date(mantenimiento.fechaUltimaActualizacion).getTime()
+              ? fechaIso
+              : mantenimiento.fechaUltimaActualizacion,
         })
         .eq('id', mantenimientoId);
 
@@ -1931,6 +1935,7 @@ export function useSupabaseData() {
         .eq('ficha_equipo', ficha)
         .in('tipo_evento', ['mantenimiento_realizado', 'lectura_actualizada'])
         .order('created_at', { ascending: true })
+        .order('id', { ascending: true })
         .range(offset, offset + PAGE - 1);
       if (error) throw error;
       if (!page || page.length === 0) break;
@@ -1943,7 +1948,60 @@ export function useSupabaseData() {
   const lecturaDeEvento = (evento: any) => {
     const md = (evento.metadata as any) ?? {};
     const dd = (evento.datos_despues as any) ?? {};
-    return Number(md.horasKmAlMomento ?? md.horasKm ?? dd.horasKmAlMomento ?? dd.horasKm ?? 0);
+    return Number(
+      md.horasKmAlMomento ?? md.horas_km_actuales ?? md.horasKm ?? md.horas_km ??
+      dd.horasKmAlMomento ?? dd.horas_km_actuales ?? dd.horasKm ?? dd.horas_km ?? 0
+    );
+  };
+
+  const getHistorialDetalleEquipo = async (ficha: string) => {
+    const eventos = await fetchEventosDeFicha(ficha);
+    const ordered = (tipo: string) => eventos
+      .filter((evento) => evento.tipo_evento === tipo)
+      .sort((a, b) => new Date(a.created_at).getTime() - new Date(b.created_at).getTime() || Number(a.id) - Number(b.id));
+
+    let lecturaAnterior = 0;
+    const actualizaciones = ordered('lectura_actualizada').map((evento) => {
+      const metadata = (evento.metadata as any) ?? {};
+      const datosDespues = (evento.datos_despues as any) ?? {};
+      const horasKm = lecturaDeEvento(evento);
+      const item: ActualizacionHorasKm = {
+        id: Number(evento.id), eventoId: Number(evento.id), ficha: evento.ficha_equipo ?? ficha,
+        nombreEquipo: evento.nombre_equipo ?? metadata.nombreEquipo ?? null,
+        fecha: metadata.fecha ?? evento.created_at, horasKm,
+        incremento: Math.max(0, horasKm - lecturaAnterior),
+        usuarioResponsable: evento.usuario_responsable ?? metadata.usuarioResponsable ?? 'Sistema',
+        horasPrevias: lecturaAnterior, restante: Number(metadata.restante ?? datosDespues.restante ?? 0),
+        observaciones: metadata.observaciones ?? datosDespues.observaciones ?? null,
+      };
+      lecturaAnterior = Math.max(lecturaAnterior, horasKm);
+      return item;
+    });
+
+    let mantenimientoAnterior = 0;
+    const realizados = ordered('mantenimiento_realizado').map((evento) => {
+      const metadata = (evento.metadata as any) ?? {};
+      const datosDespues = (evento.datos_despues as any) ?? {};
+      const horasKmAlMomento = lecturaDeEvento(evento);
+      const filtros = Array.isArray(metadata.filtrosUtilizados) ? metadata.filtrosUtilizados
+        : Array.isArray(metadata.partes_usadas) ? metadata.partes_usadas
+        : Array.isArray(datosDespues.filtrosUtilizados) ? datosDespues.filtrosUtilizados : [];
+      const item: MantenimientoRealizado = {
+        id: Number(metadata.id ?? evento.id), eventoId: Number(evento.id),
+        mantenimientoId: metadata.id != null ? Number(metadata.id) : null, ficha: evento.ficha_equipo ?? ficha,
+        nombreEquipo: evento.nombre_equipo ?? metadata.nombreEquipo ?? null,
+        fechaMantenimiento: metadata.fechaMantenimiento ?? metadata.fecha_mantenimiento ?? metadata.fecha ?? evento.created_at,
+        horasKmAlMomento, idEmpleado: metadata.idEmpleado ?? metadata.empleadoId ?? null,
+        observaciones: metadata.observaciones ?? datosDespues.observaciones ?? evento.descripcion ?? '',
+        incrementoDesdeUltimo: Math.max(0, horasKmAlMomento - mantenimientoAnterior), filtrosUtilizados: filtros,
+        usuarioResponsable: evento.usuario_responsable ?? metadata.usuarioResponsable ?? 'Sistema',
+        horasPrevias: mantenimientoAnterior,
+      };
+      mantenimientoAnterior = Math.max(mantenimientoAnterior, horasKmAlMomento);
+      return item;
+    });
+
+    return { eventos, actualizacionesHorasKm: actualizaciones.reverse(), mantenimientosRealizados: realizados.reverse() };
   };
 
   /**
@@ -1964,7 +2022,13 @@ export function useSupabaseData() {
 
     for (const row of rows ?? []) {
       const propios = eventos.filter((e) => Number((e.metadata as any)?.id ?? 0) === Number(row.id));
-      const base = propios.length > 0 ? propios : eventos;
+      const tipoRow = String(row.tipo_mantenimiento ?? '').trim().toLowerCase();
+      const compatibles = eventos.filter((e) => {
+        const md = (e.metadata as any) ?? {};
+        const tipoEvento = String(md.tipoMantenimiento ?? md.tipo_mantenimiento ?? '').trim().toLowerCase();
+        return tipoEvento.length > 0 && tipoEvento === tipoRow;
+      });
+      const base = propios.length > 0 ? propios : compatibles;
 
       const mantenimientos = base
         .filter((e) => e.tipo_evento === 'mantenimiento_realizado')
@@ -1978,7 +2042,9 @@ export function useSupabaseData() {
         base.reduce((max, e) => Math.max(max, lecturaDeEvento(e)), 0),
         horasUltimo,
       );
-      const proximo = horasUltimo + frecuencia;
+      const proximo = horasUltimo > 0 ? horasUltimo + frecuencia : Number(row.proximo_mantenimiento ?? frecuencia);
+      const fechas = eventos.map((e) => new Date(e.created_at).getTime()).filter(Number.isFinite);
+      const ultimaFecha = fechas.length > 0 ? new Date(Math.max(...fechas)).toISOString() : row.fecha_ultima_actualizacion;
 
       const { error: updError } = await supabase
         .from('mantenimientos_programados')
@@ -1988,7 +2054,7 @@ export function useSupabaseData() {
           horas_km_actuales: maxLectura,
           proximo_mantenimiento: proximo,
           horas_km_restante: proximo - maxLectura,
-          fecha_ultima_actualizacion: new Date().toISOString(),
+          fecha_ultima_actualizacion: ultimaFecha,
         })
         .eq('id', row.id);
       if (updError) throw updError;
@@ -2149,5 +2215,6 @@ export function useSupabaseData() {
     corregirRegistroHistorial,
     eliminarRegistroHistorial,
     recalcularSecuenciaEquipo,
+    getHistorialDetalleEquipo,
   };
 }

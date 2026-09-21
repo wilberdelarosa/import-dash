@@ -923,7 +923,9 @@ export default function ControlMantenimientoProfesional() {
             horasKm: lectura,
             fecha,
             observaciones: notas,
-            unidad: 'horas' // Esto debería inferirse del equipo, pero por simplificación inicial
+            unidad: data.mantenimientosProgramados
+              .find((mantenimiento) => mantenimiento.id === id)
+              ?.tipoMantenimiento.toLowerCase().includes('km') ? 'km' : 'horas'
           });
         }}
         onRegistrarMantenimiento={async (id, datos) => {
