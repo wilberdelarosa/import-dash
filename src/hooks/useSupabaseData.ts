@@ -1928,7 +1928,7 @@ export function useSupabaseData() {
   // CORRECCIÓN DE REGISTROS (mantenimientos y lecturas)
   // ==========================================================
 
-  const fetchEventosDeFicha = async (ficha: string) => {
+  const fetchEventosDeFicha = useCallback(async (ficha: string) => {
     const eventos: any[] = [];
     const PAGE = 1000;
     for (let offset = 0; ; offset += PAGE) {
@@ -1946,18 +1946,18 @@ export function useSupabaseData() {
       if (page.length < PAGE) break;
     }
     return eventos;
-  };
+  }, []);
 
-  const lecturaDeEvento = (evento: any) => {
+  const lecturaDeEvento = useCallback((evento: any) => {
     const md = (evento.metadata as any) ?? {};
     const dd = (evento.datos_despues as any) ?? {};
     return Number(
       md.horasKmAlMomento ?? md.horas_km_actuales ?? md.horasKm ?? md.horas_km ??
       dd.horasKmAlMomento ?? dd.horas_km_actuales ?? dd.horasKm ?? dd.horas_km ?? 0
     );
-  };
+  }, []);
 
-  const getHistorialDetalleEquipo = async (ficha: string) => {
+  const getHistorialDetalleEquipo = useCallback(async (ficha: string) => {
     const eventos = await fetchEventosDeFicha(ficha);
     const ordered = (tipo: string) => eventos
       .filter((evento) => evento.tipo_evento === tipo)
@@ -2005,7 +2005,7 @@ export function useSupabaseData() {
     });
 
     return { eventos, actualizacionesHorasKm: actualizaciones.reverse(), mantenimientosRealizados: realizados.reverse() };
-  };
+  }, [fetchEventosDeFicha, lecturaDeEvento]);
 
   /**
    * Recalcula toda la secuencia de mantenimientos de un equipo a partir
