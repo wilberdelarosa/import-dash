@@ -1251,7 +1251,10 @@ export function useSupabaseData() {
           .from('mantenimientos_programados')
           .update({
             horas_km_actuales: horasActuales,
-            fecha_ultima_actualizacion: fechaIso,
+            fecha_ultima_actualizacion:
+              new Date(fechaIso).getTime() >= new Date(mantenimiento.fechaUltimaActualizacion).getTime()
+                ? fechaIso
+                : mantenimiento.fechaUltimaActualizacion,
             horas_km_restante: restanteCalculado,
           })
           .eq('id', mantenimientoId);

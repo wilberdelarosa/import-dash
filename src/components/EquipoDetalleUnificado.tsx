@@ -60,7 +60,7 @@ interface Props {
 
 export function EquipoDetalleUnificado({ ficha, open, onOpenChange }: Props) {
   const navigate = useNavigate();
-  const { data } = useSupabaseDataContext();
+  const { data, getHistorialDetalleEquipo } = useSupabaseDataContext();
   const { eventos } = useHistorial();
   const [equipo, setEquipo] = useState<any>(null);
   const [mantenimientos, setMantenimientos] = useState<any[]>([]);
@@ -224,6 +224,8 @@ export function EquipoDetalleUnificado({ ficha, open, onOpenChange }: Props) {
   }, [proximoMantenimiento]);
 
   useEffect(() => {
+    let cancelled = false;
+
     if (ficha && open) {
       // Buscar equipo
       const equipoEncontrado = data.equipos.find(e => e.ficha === ficha);
@@ -241,25 +243,36 @@ export function EquipoDetalleUnificado({ ficha, open, onOpenChange }: Props) {
         setInventariosRelacionados(inventarios);
       }
 
-      // Filtrar historial del equipo - ORDENAR DE MÁS RECIENTE A MÁS ANTIGUO
+      // Los eventos generales vienen del historial compartido. Las lecturas y
+      // mantenimientos se consultan directamente por ficha para no depender
+      // del límite global ni duplicarlos en la línea de tiempo.
       const historial = eventos
-        .filter(e => e.fichaEquipo === ficha)
+        .filter(e =>
+          e.fichaEquipo === ficha &&
+          e.tipoEvento !== 'mantenimiento_realizado' &&
+          e.tipoEvento !== 'lectura_actualizada'
+        )
         .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
       setHistorialEquipo(historial);
 
-      // Mantenimientos realizados - ORDENAR DE MÁS RECIENTE A MÁS ANTIGUO
-      const realizados = data.mantenimientosRealizados
-        .filter(m => m.ficha === ficha)
-        .sort((a, b) => new Date(b.fechaMantenimiento).getTime() - new Date(a.fechaMantenimiento).getTime());
-      setMantenimientosRealizadosData(realizados);
-
-      // Actualizaciones de horas/km - ORDENAR DE MÁS RECIENTE A MÁS ANTIGUO
-      const lecturas = data.actualizacionesHorasKm
-        .filter(a => a.ficha === ficha)
-        .sort((a, b) => new Date(b.fecha).getTime() - new Date(a.fecha).getTime());
-      setActualizacionesHorasKmData(lecturas);
+      void getHistorialDetalleEquipo(ficha)
+        .then((detalle) => {
+          if (cancelled) return;
+          setMantenimientosRealizadosData(detalle.mantenimientosRealizados);
+          setActualizacionesHorasKmData(detalle.actualizacionesHorasKm);
+        })
+        .catch((error) => {
+          console.error('Error cargando el historial completo del equipo:', error);
+          if (cancelled) return;
+          setMantenimientosRealizadosData([]);
+          setActualizacionesHorasKmData([]);
+        });
     }
-  }, [ficha, open, data, eventos]);
+
+    return () => {
+      cancelled = true;
+    };
+  }, [ficha, open, data, eventos, getHistorialDetalleEquipo]);
 
   // Timeline unificado: combina todos los eventos en una sola línea de tiempo
   const timelineUnificado = useMemo(() => {
