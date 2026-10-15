@@ -1,4 +1,4 @@
-import { useState, useMemo, useEffect } from 'react';
+import { useState, useMemo, useEffect, Fragment } from 'react';
 import { Layout } from '@/components/Layout';
 import { Navigation } from '@/components/Navigation';
 import { useSupabaseDataContext } from '@/context/SupabaseDataContext';
@@ -16,7 +16,7 @@ import { Badge } from '@/components/ui/badge';
 import { Separator } from '@/components/ui/separator';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { Button } from '@/components/ui/button';
-import { Activity, AlertTriangle, CalendarClock, Clock, Users, ExternalLink, Sparkles, ListChecks, ChevronDown, ChevronUp } from 'lucide-react';
+import { Activity, AlertTriangle, CalendarClock, Clock, Users, ExternalLink, Sparkles, ListChecks, ChevronDown, ChevronUp, ArrowUp, ArrowDown, ArrowUpDown } from 'lucide-react';
 import { Skeleton } from '@/components/ui/skeleton';
 import { EquipoDetalleUnificado } from '@/components/EquipoDetalleUnificado';
 import { EquipoLink } from '@/components/EquipoLink';
@@ -29,6 +29,9 @@ import {
   LIMITE_MANTENIMIENTOS_RECIENTES,
   LIMITE_MANTENIMIENTOS_DASHBOARD
 } from '@/lib/constants';
+import { FieldFilterControls } from '@/components/shared/FieldFilterControls';
+import { compareByField, matchesFieldSearch, type FieldConfig } from '@/lib/list-fields';
+import type { MantenimientoProgramado } from '@/types/equipment';
 
 const formatDate = (value: string | null | undefined) => {
   if (!value) return 'Sin registro';
@@ -54,7 +57,43 @@ export default function Dashboard() {
   const [dialogOpen, setDialogOpen] = useState(false);
   const [novedadesExpanded, setNovedadesExpanded] = useState(false);
 
+  type DashboardMantSortField = 'ficha' | 'nombreEquipo' | 'horasKmUltimoMantenimiento' | 'horasKmRestante' | 'fechaUltimaActualizacion';
+  const [vencidosSearchTerm, setVencidosSearchTerm] = useState('');
+  const [vencidosSearchField, setVencidosSearchField] = useState<'all' | DashboardMantSortField>('all');
+  const [vencidosSortField, setVencidosSortField] = useState<DashboardMantSortField>('ficha');
+  const [vencidosSortDirection, setVencidosSortDirection] = useState<'asc' | 'desc'>('asc');
+  const selectVencidosSortField = (field: DashboardMantSortField) => { setVencidosSortField(field); setVencidosSortDirection('asc'); };
+  const toggleVencidosColumn = (field: DashboardMantSortField) => {
+    setVencidosSortDirection(vencidosSortField === field && vencidosSortDirection === 'asc' ? 'desc' : 'asc');
+    setVencidosSortField(field);
+  };
+
+  const [proximosSearchTerm, setProximosSearchTerm] = useState('');
+  const [proximosSearchField, setProximosSearchField] = useState<'all' | DashboardMantSortField>('all');
+  const [proximosSortField, setProximosSortField] = useState<DashboardMantSortField>('ficha');
+  const [proximosSortDirection, setProximosSortDirection] = useState<'asc' | 'desc'>('asc');
+  const selectProximosSortField = (field: DashboardMantSortField) => { setProximosSortField(field); setProximosSortDirection('asc'); };
+  const toggleProximosColumn = (field: DashboardMantSortField) => {
+    setProximosSortDirection(proximosSortField === field && proximosSortDirection === 'asc' ? 'desc' : 'asc');
+    setProximosSortField(field);
+  };
+
   // NOTA: Los returns condicionales están DESPUÉS de todos los hooks (línea ~130)
+
+  const equiposPorFicha = useMemo(() => {
+    return data.equipos.reduce((acc, equipo) => {
+      acc[equipo.ficha] = equipo;
+      return acc;
+    }, {} as Record<string, typeof data.equipos[number]>);
+  }, [data.equipos]);
+
+  const dashboardMantFields: ReadonlyArray<FieldConfig<MantenimientoProgramado, DashboardMantSortField>> = [
+    { key: 'ficha', label: 'Ficha', get: m => m.ficha },
+    { key: 'nombreEquipo', label: 'Equipo', get: m => m.nombreEquipo },
+    { key: 'horasKmUltimoMantenimiento', label: 'Último mantenimiento', get: m => m.horasKmUltimoMantenimiento },
+    { key: 'horasKmRestante', label: 'Horas/km', get: m => Math.abs(m.horasKmRestante) },
+    { key: 'fechaUltimaActualizacion', label: 'Última actualización', get: m => m.fechaUltimaActualizacion },
+  ];
 
   // Memoizar estadísticas para evitar recálculos en cada render
   const estadisticas = useMemo(() => {
@@ -110,6 +149,24 @@ export default function Dashboard() {
       .sort((a, b) => a.horasKmRestante - b.horasKmRestante)
       .slice(0, LIMITE_MANTENIMIENTOS_DASHBOARD);
   }, [data.mantenimientosProgramados, data.equipos]);
+
+  const mantenimientosVencidosDisplay = useMemo(() => {
+    return mantenimientosVencidosList
+      .filter(m => matchesFieldSearch(m, dashboardMantFields, vencidosSearchField, vencidosSearchTerm))
+      .sort((a, b) => compareByField(a, b, dashboardMantFields, vencidosSortField, vencidosSortDirection, {
+        getEmpresa: m => equiposPorFicha[m.ficha]?.empresa,
+        getFicha: m => m.ficha,
+      }));
+  }, [mantenimientosVencidosList, vencidosSearchField, vencidosSearchTerm, vencidosSortField, vencidosSortDirection, equiposPorFicha]);
+
+  const mantenimientosProximosDisplay = useMemo(() => {
+    return mantenimientosProximosList
+      .filter(m => matchesFieldSearch(m, dashboardMantFields, proximosSearchField, proximosSearchTerm))
+      .sort((a, b) => compareByField(a, b, dashboardMantFields, proximosSortField, proximosSortDirection, {
+        getEmpresa: m => equiposPorFicha[m.ficha]?.empresa,
+        getFicha: m => m.ficha,
+      }));
+  }, [mantenimientosProximosList, proximosSearchField, proximosSearchTerm, proximosSortField, proximosSortDirection, equiposPorFicha]);
 
   const ultimasActualizaciones = useMemo(() => {
     return [...data.actualizacionesHorasKm]
@@ -201,6 +258,7 @@ export default function Dashboard() {
           mantenimientosRecientes={mantenimientosRecientes}
           mantenimientosVencidosList={mantenimientosVencidosList}
           mantenimientosProximosList={mantenimientosProximosList}
+          equiposPorFicha={equiposPorFicha}
           onVerEquipo={handleVerEquipo}
           onRefresh={async () => {
             // Trigger data reload - the context will handle it
@@ -406,58 +464,98 @@ export default function Dashboard() {
               </CardTitle>
               <CardDescription>Equipos con horas/km excedidas. Haz clic para abrir la ficha y tomar acción inmediata.</CardDescription>
             </CardHeader>
-            <CardContent className="flex-1">
-              {mantenimientosVencidosList.length === 0 ? (
+            <CardContent className="flex-1 space-y-4">
+              <FieldFilterControls
+                fields={dashboardMantFields}
+                query={vencidosSearchTerm}
+                onQueryChange={setVencidosSearchTerm}
+                searchField={vencidosSearchField}
+                onSearchFieldChange={setVencidosSearchField}
+                sortField={vencidosSortField}
+                onSortFieldChange={selectVencidosSortField}
+                direction={vencidosSortDirection}
+                onDirectionChange={setVencidosSortDirection}
+                searchPlaceholder="Buscar mantenimientos vencidos..."
+                searchLabel="Buscar mantenimientos vencidos"
+              />
+              {mantenimientosVencidosDisplay.length === 0 ? (
                 <p className="text-sm text-muted-foreground">No hay mantenimientos vencidos en este momento.</p>
               ) : (
                 <Table className="w-full min-w-[720px]">
                   <TableHeader>
                     <TableRow>
-                      <TableHead>Equipo / Ficha</TableHead>
-                      <TableHead>Último mantenimiento</TableHead>
-                      <TableHead className="text-right">Horas/km vencidas</TableHead>
-                      <TableHead>Última actualización</TableHead>
+                      <TableHead aria-sort={vencidosSortField === 'ficha' || vencidosSortField === 'nombreEquipo' ? (vencidosSortDirection === 'asc' ? 'ascending' : 'descending') : 'none'}>
+                        <Button variant="ghost" className="h-8 gap-1.5 whitespace-nowrap px-2 font-semibold" onClick={() => toggleVencidosColumn('nombreEquipo')} aria-label="Ordenar por Equipo">
+                          Equipo / Ficha{vencidosSortField === 'nombreEquipo' ? (vencidosSortDirection === 'asc' ? <ArrowUp className="h-3.5 w-3.5" /> : <ArrowDown className="h-3.5 w-3.5" />) : <ArrowUpDown className="h-3.5 w-3.5 text-muted-foreground" />}
+                        </Button>
+                      </TableHead>
+                      <TableHead aria-sort={vencidosSortField === 'horasKmUltimoMantenimiento' ? (vencidosSortDirection === 'asc' ? 'ascending' : 'descending') : 'none'}>
+                        <Button variant="ghost" className="h-8 gap-1.5 whitespace-nowrap px-2 font-semibold" onClick={() => toggleVencidosColumn('horasKmUltimoMantenimiento')} aria-label="Ordenar por Último mantenimiento">
+                          Último mantenimiento{vencidosSortField === 'horasKmUltimoMantenimiento' ? (vencidosSortDirection === 'asc' ? <ArrowUp className="h-3.5 w-3.5" /> : <ArrowDown className="h-3.5 w-3.5" />) : <ArrowUpDown className="h-3.5 w-3.5 text-muted-foreground" />}
+                        </Button>
+                      </TableHead>
+                      <TableHead className="text-right" aria-sort={vencidosSortField === 'horasKmRestante' ? (vencidosSortDirection === 'asc' ? 'ascending' : 'descending') : 'none'}>
+                        <Button variant="ghost" className="h-8 gap-1.5 whitespace-nowrap px-2 font-semibold" onClick={() => toggleVencidosColumn('horasKmRestante')} aria-label="Ordenar por Horas/km vencidas">
+                          Horas/km vencidas{vencidosSortField === 'horasKmRestante' ? (vencidosSortDirection === 'asc' ? <ArrowUp className="h-3.5 w-3.5" /> : <ArrowDown className="h-3.5 w-3.5" />) : <ArrowUpDown className="h-3.5 w-3.5 text-muted-foreground" />}
+                        </Button>
+                      </TableHead>
+                      <TableHead aria-sort={vencidosSortField === 'fechaUltimaActualizacion' ? (vencidosSortDirection === 'asc' ? 'ascending' : 'descending') : 'none'}>
+                        <Button variant="ghost" className="h-8 gap-1.5 whitespace-nowrap px-2 font-semibold" onClick={() => toggleVencidosColumn('fechaUltimaActualizacion')} aria-label="Ordenar por Última actualización">
+                          Última actualización{vencidosSortField === 'fechaUltimaActualizacion' ? (vencidosSortDirection === 'asc' ? <ArrowUp className="h-3.5 w-3.5" /> : <ArrowDown className="h-3.5 w-3.5" />) : <ArrowUpDown className="h-3.5 w-3.5 text-muted-foreground" />}
+                        </Button>
+                      </TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
-                    {mantenimientosVencidosList.map((mantenimiento) => (
-                      <TableRow
-                        key={`${mantenimiento.id}-vencido`}
-                        className="cursor-pointer transition-colors hover:bg-destructive/10 group"
-                        onClick={() => handleVerEquipo(mantenimiento.ficha)}
-                      >
-                        <TableCell className="font-medium">
-                          <div className="flex flex-col">
-                            <span>{mantenimiento.nombreEquipo ?? 'Equipo sin nombre'}</span>
-                            <span className="text-xs text-muted-foreground">
-                              {mantenimiento.ficha ? `Ficha ${mantenimiento.ficha}` : 'Sin ficha registrada'}
-                            </span>
-                          </div>
-                        </TableCell>
-                        <TableCell className="whitespace-nowrap">
-                          {mantenimiento.fechaUltimoMantenimiento ? (
-                            <>
-                              {formatDate(mantenimiento.fechaUltimoMantenimiento)}{' '}
-                              <span className="text-xs text-muted-foreground">
-                                ({Number(mantenimiento.horasKmUltimoMantenimiento || 0).toLocaleString('es-ES', { maximumFractionDigits: 1 })}{' '}
-                                {mantenimiento.tipoMantenimiento === 'Kilómetros' ? 'km' : 'h'})
-                              </span>
-                            </>
-                          ) : (
-                            <span className="text-muted-foreground">Sin registro</span>
+                    {mantenimientosVencidosDisplay.map((mantenimiento, index) => {
+                      const empresaActual = equiposPorFicha[mantenimiento.ficha]?.empresa ?? 'Sin empresa';
+                      const empresaAnterior = index > 0 ? (equiposPorFicha[mantenimientosVencidosDisplay[index - 1].ficha]?.empresa ?? 'Sin empresa') : null;
+                      const showGroupDivider = vencidosSortField === 'ficha' && (index === 0 || empresaAnterior !== empresaActual);
+                      return (
+                        <Fragment key={`${mantenimiento.id}-vencido`}>
+                          {showGroupDivider && (
+                            <TableRow data-company-group={empresaActual} className="border-t-2 border-border bg-muted/50 hover:bg-muted/50">
+                              <TableCell colSpan={4} className="py-2 text-xs font-semibold text-muted-foreground">{empresaActual}</TableCell>
+                            </TableRow>
                           )}
-                        </TableCell>
-                        <TableCell className="text-right">
-                          <Badge variant="destructive">
-                            {formatRemainingLabel(
-                              mantenimiento.horasKmRestante,
-                              mantenimiento.tipoMantenimiento === 'Kilómetros' ? 'km' : 'horas'
-                            )}
-                          </Badge>
-                        </TableCell>
-                        <TableCell>{formatDate(mantenimiento.fechaUltimaActualizacion)}</TableCell>
-                      </TableRow>
-                    ))}
+                          <TableRow
+                            className="cursor-pointer transition-colors hover:bg-destructive/10 group"
+                            onClick={() => handleVerEquipo(mantenimiento.ficha)}
+                          >
+                            <TableCell className="font-medium">
+                              <div className="flex flex-col">
+                                <span>{mantenimiento.nombreEquipo ?? 'Equipo sin nombre'}</span>
+                                <span className="text-xs text-muted-foreground">
+                                  {mantenimiento.ficha ? `Ficha ${mantenimiento.ficha}` : 'Sin ficha registrada'}
+                                </span>
+                              </div>
+                            </TableCell>
+                            <TableCell className="whitespace-nowrap">
+                              {mantenimiento.fechaUltimoMantenimiento ? (
+                                <>
+                                  {formatDate(mantenimiento.fechaUltimoMantenimiento)}{' '}
+                                  <span className="text-xs text-muted-foreground">
+                                    ({Number(Math.abs(mantenimiento.horasKmUltimoMantenimiento || 0)).toLocaleString('es-ES', { maximumFractionDigits: 1 })}{' '}
+                                    {mantenimiento.tipoMantenimiento === 'Kilómetros' ? 'km' : 'h'})
+                                  </span>
+                                </>
+                              ) : (
+                                <span className="text-muted-foreground">Sin registro</span>
+                              )}
+                            </TableCell>
+                            <TableCell className="text-right">
+                              <Badge variant="destructive">
+                                {formatRemainingLabel(
+                                  mantenimiento.horasKmRestante,
+                                  mantenimiento.tipoMantenimiento === 'Kilómetros' ? 'km' : 'horas'
+                                )}
+                              </Badge>
+                            </TableCell>
+                            <TableCell>{formatDate(mantenimiento.fechaUltimaActualizacion)}</TableCell>
+                          </TableRow>
+                        </Fragment>
+                      );
+                    })}
                   </TableBody>
                 </Table>
               )}
@@ -471,58 +569,98 @@ export default function Dashboard() {
               </CardTitle>
               <CardDescription>Próximas intervenciones con la misma estructura para comparar con los vencidos.</CardDescription>
             </CardHeader>
-            <CardContent className="flex-1">
-              {mantenimientosProximosList.length === 0 ? (
+            <CardContent className="flex-1 space-y-4">
+              <FieldFilterControls
+                fields={dashboardMantFields}
+                query={proximosSearchTerm}
+                onQueryChange={setProximosSearchTerm}
+                searchField={proximosSearchField}
+                onSearchFieldChange={setProximosSearchField}
+                sortField={proximosSortField}
+                onSortFieldChange={selectProximosSortField}
+                direction={proximosSortDirection}
+                onDirectionChange={setProximosSortDirection}
+                searchPlaceholder="Buscar mantenimientos próximos..."
+                searchLabel="Buscar mantenimientos próximos"
+              />
+              {mantenimientosProximosDisplay.length === 0 ? (
                 <p className="text-sm text-muted-foreground">No hay mantenimientos próximos registrados.</p>
               ) : (
                 <Table className="w-full min-w-[720px]">
                   <TableHeader>
                     <TableRow>
-                      <TableHead>Equipo / Ficha</TableHead>
-                      <TableHead>Último mantenimiento</TableHead>
-                      <TableHead className="text-right">Horas/km restantes</TableHead>
-                      <TableHead>Última actualización</TableHead>
+                      <TableHead aria-sort={proximosSortField === 'nombreEquipo' ? (proximosSortDirection === 'asc' ? 'ascending' : 'descending') : 'none'}>
+                        <Button variant="ghost" className="h-8 gap-1.5 whitespace-nowrap px-2 font-semibold" onClick={() => toggleProximosColumn('nombreEquipo')} aria-label="Ordenar por Equipo">
+                          Equipo / Ficha{proximosSortField === 'nombreEquipo' ? (proximosSortDirection === 'asc' ? <ArrowUp className="h-3.5 w-3.5" /> : <ArrowDown className="h-3.5 w-3.5" />) : <ArrowUpDown className="h-3.5 w-3.5 text-muted-foreground" />}
+                        </Button>
+                      </TableHead>
+                      <TableHead aria-sort={proximosSortField === 'horasKmUltimoMantenimiento' ? (proximosSortDirection === 'asc' ? 'ascending' : 'descending') : 'none'}>
+                        <Button variant="ghost" className="h-8 gap-1.5 whitespace-nowrap px-2 font-semibold" onClick={() => toggleProximosColumn('horasKmUltimoMantenimiento')} aria-label="Ordenar por Último mantenimiento">
+                          Último mantenimiento{proximosSortField === 'horasKmUltimoMantenimiento' ? (proximosSortDirection === 'asc' ? <ArrowUp className="h-3.5 w-3.5" /> : <ArrowDown className="h-3.5 w-3.5" />) : <ArrowUpDown className="h-3.5 w-3.5 text-muted-foreground" />}
+                        </Button>
+                      </TableHead>
+                      <TableHead className="text-right" aria-sort={proximosSortField === 'horasKmRestante' ? (proximosSortDirection === 'asc' ? 'ascending' : 'descending') : 'none'}>
+                        <Button variant="ghost" className="h-8 gap-1.5 whitespace-nowrap px-2 font-semibold" onClick={() => toggleProximosColumn('horasKmRestante')} aria-label="Ordenar por Horas/km restantes">
+                          Horas/km restantes{proximosSortField === 'horasKmRestante' ? (proximosSortDirection === 'asc' ? <ArrowUp className="h-3.5 w-3.5" /> : <ArrowDown className="h-3.5 w-3.5" />) : <ArrowUpDown className="h-3.5 w-3.5 text-muted-foreground" />}
+                        </Button>
+                      </TableHead>
+                      <TableHead aria-sort={proximosSortField === 'fechaUltimaActualizacion' ? (proximosSortDirection === 'asc' ? 'ascending' : 'descending') : 'none'}>
+                        <Button variant="ghost" className="h-8 gap-1.5 whitespace-nowrap px-2 font-semibold" onClick={() => toggleProximosColumn('fechaUltimaActualizacion')} aria-label="Ordenar por Última actualización">
+                          Última actualización{proximosSortField === 'fechaUltimaActualizacion' ? (proximosSortDirection === 'asc' ? <ArrowUp className="h-3.5 w-3.5" /> : <ArrowDown className="h-3.5 w-3.5" />) : <ArrowUpDown className="h-3.5 w-3.5 text-muted-foreground" />}
+                        </Button>
+                      </TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
-                    {mantenimientosProximosList.map((mantenimiento) => (
-                      <TableRow
-                        key={`${mantenimiento.id}-proximo`}
-                        className="cursor-pointer transition-colors hover:bg-primary/10 group"
-                        onClick={() => handleVerEquipo(mantenimiento.ficha)}
-                      >
-                        <TableCell className="font-medium">
-                          <div className="flex flex-col">
-                            <span>{mantenimiento.nombreEquipo ?? 'Equipo sin nombre'}</span>
-                            <span className="text-xs text-muted-foreground">
-                              {mantenimiento.ficha ? `Ficha ${mantenimiento.ficha}` : 'Sin ficha registrada'}
-                            </span>
-                          </div>
-                        </TableCell>
-                        <TableCell className="whitespace-nowrap">
-                          {mantenimiento.fechaUltimoMantenimiento ? (
-                            <>
-                              {formatDate(mantenimiento.fechaUltimoMantenimiento)}{' '}
-                              <span className="text-xs text-muted-foreground">
-                                ({Number(mantenimiento.horasKmUltimoMantenimiento || 0).toLocaleString('es-ES', { maximumFractionDigits: 1 })}{' '}
-                                {mantenimiento.tipoMantenimiento === 'Kilómetros' ? 'km' : 'h'})
-                              </span>
-                            </>
-                          ) : (
-                            <span className="text-muted-foreground">Sin registro</span>
+                    {mantenimientosProximosDisplay.map((mantenimiento, index) => {
+                      const empresaActual = equiposPorFicha[mantenimiento.ficha]?.empresa ?? 'Sin empresa';
+                      const empresaAnterior = index > 0 ? (equiposPorFicha[mantenimientosProximosDisplay[index - 1].ficha]?.empresa ?? 'Sin empresa') : null;
+                      const showGroupDivider = proximosSortField === 'ficha' && (index === 0 || empresaAnterior !== empresaActual);
+                      return (
+                        <Fragment key={`${mantenimiento.id}-proximo`}>
+                          {showGroupDivider && (
+                            <TableRow data-company-group={empresaActual} className="border-t-2 border-border bg-muted/50 hover:bg-muted/50">
+                              <TableCell colSpan={4} className="py-2 text-xs font-semibold text-muted-foreground">{empresaActual}</TableCell>
+                            </TableRow>
                           )}
-                        </TableCell>
-                        <TableCell className="text-right">
-                          <Badge variant={getRemainingVariant(mantenimiento.horasKmRestante)}>
-                            {formatRemainingLabel(
-                              mantenimiento.horasKmRestante,
-                              mantenimiento.tipoMantenimiento === 'Kilómetros' ? 'km' : 'horas'
-                            )}
-                          </Badge>
-                        </TableCell>
-                        <TableCell>{formatDate(mantenimiento.fechaUltimaActualizacion)}</TableCell>
-                      </TableRow>
-                    ))}
+                          <TableRow
+                            className="cursor-pointer transition-colors hover:bg-primary/10 group"
+                            onClick={() => handleVerEquipo(mantenimiento.ficha)}
+                          >
+                            <TableCell className="font-medium">
+                              <div className="flex flex-col">
+                                <span>{mantenimiento.nombreEquipo ?? 'Equipo sin nombre'}</span>
+                                <span className="text-xs text-muted-foreground">
+                                  {mantenimiento.ficha ? `Ficha ${mantenimiento.ficha}` : 'Sin ficha registrada'}
+                                </span>
+                              </div>
+                            </TableCell>
+                            <TableCell className="whitespace-nowrap">
+                              {mantenimiento.fechaUltimoMantenimiento ? (
+                                <>
+                                  {formatDate(mantenimiento.fechaUltimoMantenimiento)}{' '}
+                                  <span className="text-xs text-muted-foreground">
+                                    ({Number(Math.abs(mantenimiento.horasKmUltimoMantenimiento || 0)).toLocaleString('es-ES', { maximumFractionDigits: 1 })}{' '}
+                                    {mantenimiento.tipoMantenimiento === 'Kilómetros' ? 'km' : 'h'})
+                                  </span>
+                                </>
+                              ) : (
+                                <span className="text-muted-foreground">Sin registro</span>
+                              )}
+                            </TableCell>
+                            <TableCell className="text-right">
+                              <Badge variant={getRemainingVariant(mantenimiento.horasKmRestante)}>
+                                {formatRemainingLabel(
+                                  mantenimiento.horasKmRestante,
+                                  mantenimiento.tipoMantenimiento === 'Kilómetros' ? 'km' : 'horas'
+                                )}
+                              </Badge>
+                            </TableCell>
+                            <TableCell>{formatDate(mantenimiento.fechaUltimaActualizacion)}</TableCell>
+                          </TableRow>
+                        </Fragment>
+                      );
+                    })}
                   </TableBody>
                 </Table>
               )}

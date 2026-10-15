@@ -43,6 +43,8 @@ import {
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useNavigate } from 'react-router-dom';
+import { FieldFilterControls } from '@/components/shared/FieldFilterControls';
+import { compareByField, matchesFieldSearch, type FieldConfig } from '@/lib/list-fields';
 
 interface ActualizacionHorasKm {
   id: number;
@@ -70,8 +72,11 @@ interface MantenimientoProgramado {
   tipoMantenimiento: string;
   horasKmRestante: number;
   horasKmActuales: number;
+  horasKmUltimoMantenimiento?: number;
   fechaUltimaActualizacion: string | null;
 }
+
+type DashboardMantSortField = 'ficha' | 'nombreEquipo' | 'horasKmUltimoMantenimiento' | 'horasKmRestante' | 'fechaUltimaActualizacion';
 
 interface DashboardMobileProps {
   equiposActivos: number;
@@ -84,6 +89,7 @@ interface DashboardMobileProps {
   mantenimientosProximosList?: MantenimientoProgramado[];
   onVerEquipo?: (ficha: string) => void;
   onRefresh?: () => Promise<void>;
+  equiposPorFicha?: Record<string, { empresa?: string | null; categoria?: string | null }>;
 }
 
 export function DashboardMobile({
@@ -97,12 +103,45 @@ export function DashboardMobile({
   mantenimientosProximosList = [],
   onVerEquipo,
   onRefresh,
+  equiposPorFicha = {},
 }: DashboardMobileProps) {
   const navigate = useNavigate();
   const [refreshing, setRefreshing] = useState(false);
   const [actividadExpanded, setActividadExpanded] = useState(false);
   const [vencidosSheetOpen, setVencidosSheetOpen] = useState(false);
   const [proximosSheetOpen, setProximosSheetOpen] = useState(false);
+
+  const mantFields: ReadonlyArray<FieldConfig<MantenimientoProgramado, DashboardMantSortField>> = [
+    { key: 'ficha', label: 'Ficha', get: m => m.ficha },
+    { key: 'nombreEquipo', label: 'Equipo', get: m => m.nombreEquipo },
+    { key: 'horasKmUltimoMantenimiento', label: 'Último mantenimiento', get: m => m.horasKmUltimoMantenimiento },
+    { key: 'horasKmRestante', label: 'Horas/km', get: m => Math.abs(m.horasKmRestante) },
+    { key: 'fechaUltimaActualizacion', label: 'Última actualización', get: m => m.fechaUltimaActualizacion },
+  ];
+
+  const [vencidosSearchTerm, setVencidosSearchTerm] = useState('');
+  const [vencidosSearchField, setVencidosSearchField] = useState<'all' | DashboardMantSortField>('all');
+  const [vencidosSortField, setVencidosSortField] = useState<DashboardMantSortField>('ficha');
+  const [vencidosSortDirection, setVencidosSortDirection] = useState<'asc' | 'desc'>('asc');
+
+  const [proximosSearchTerm, setProximosSearchTerm] = useState('');
+  const [proximosSearchField, setProximosSearchField] = useState<'all' | DashboardMantSortField>('all');
+  const [proximosSortField, setProximosSortField] = useState<DashboardMantSortField>('ficha');
+  const [proximosSortDirection, setProximosSortDirection] = useState<'asc' | 'desc'>('asc');
+
+  const mantenimientosVencidosSheetList = mantenimientosVencidosList
+    .filter(m => matchesFieldSearch(m, mantFields, vencidosSearchField, vencidosSearchTerm))
+    .sort((a, b) => compareByField(a, b, mantFields, vencidosSortField, vencidosSortDirection, {
+      getEmpresa: m => equiposPorFicha[m.ficha]?.empresa,
+      getFicha: m => m.ficha,
+    }));
+
+  const mantenimientosProximosSheetList = mantenimientosProximosList
+    .filter(m => matchesFieldSearch(m, mantFields, proximosSearchField, proximosSearchTerm))
+    .sort((a, b) => compareByField(a, b, mantFields, proximosSortField, proximosSortDirection, {
+      getEmpresa: m => equiposPorFicha[m.ficha]?.empresa,
+      getFicha: m => m.ficha,
+    }));
 
   const handleRefresh = async () => {
     setRefreshing(true);
@@ -532,39 +571,63 @@ export function DashboardMobile({
               Equipos con horas/km excedidas que requieren atención inmediata
             </SheetDescription>
           </SheetHeader>
-          <div className="mt-6 space-y-3 overflow-y-auto max-h-[calc(80vh-140px)] pb-4">
-            {mantenimientosVencidosList.length === 0 ? (
+          <div className="mt-4">
+            <FieldFilterControls
+              fields={mantFields}
+              query={vencidosSearchTerm}
+              onQueryChange={setVencidosSearchTerm}
+              searchField={vencidosSearchField}
+              onSearchFieldChange={setVencidosSearchField}
+              sortField={vencidosSortField}
+              onSortFieldChange={setVencidosSortField}
+              direction={vencidosSortDirection}
+              onDirectionChange={setVencidosSortDirection}
+              searchPlaceholder="Buscar mantenimientos vencidos..."
+              searchLabel="Buscar mantenimientos vencidos"
+            />
+          </div>
+          <div className="mt-4 space-y-3 overflow-y-auto max-h-[calc(80vh-220px)] pb-4">
+            {mantenimientosVencidosSheetList.length === 0 ? (
               <div className="text-center py-8 text-muted-foreground">
                 No hay mantenimientos vencidos
               </div>
             ) : (
-              mantenimientosVencidosList.map((mant) => (
-                <MobileCard
-                  key={mant.id}
-                  variant="compact"
-                  className="border-red-500/30 bg-red-500/5 cursor-pointer hover:bg-red-500/10 transition-colors"
-                  onClick={() => {
-                    if (onVerEquipo) {
-                      onVerEquipo(mant.ficha);
-                      setVencidosSheetOpen(false);
-                    }
-                  }}
-                >
-                  <div className="flex items-start justify-between gap-3">
-                    <div className="flex-1 min-w-0">
-                      <p className="font-semibold text-sm truncate">{mant.nombreEquipo || 'Equipo sin nombre'}</p>
-                      <p className="text-xs text-muted-foreground">Ficha {mant.ficha}</p>
-                      <p className="text-xs text-muted-foreground mt-1">{mant.tipoMantenimiento}</p>
-                    </div>
-                    <div className="flex flex-col items-end gap-1 flex-shrink-0">
-                      <Badge variant="destructive" className="text-[0.65rem] max-w-[120px] truncate">
-                        {formatRemainingLabel(mant.horasKmRestante, mant.tipoMantenimiento === 'Kilómetros' ? 'km' : 'horas')}
-                      </Badge>
-                      <ExternalLink className="h-3.5 w-3.5 text-muted-foreground" />
-                    </div>
+              mantenimientosVencidosSheetList.map((mant, index) => {
+                const empresaActual = equiposPorFicha[mant.ficha]?.empresa ?? 'Sin empresa';
+                const empresaAnterior = index > 0 ? (equiposPorFicha[mantenimientosVencidosSheetList[index - 1].ficha]?.empresa ?? 'Sin empresa') : null;
+                const showGroupDivider = vencidosSortField === 'ficha' && (index === 0 || empresaAnterior !== empresaActual);
+                return (
+                  <div key={mant.id}>
+                    {showGroupDivider && (
+                      <p className="mb-1.5 mt-2 text-xs font-semibold text-muted-foreground first:mt-0">{empresaActual}</p>
+                    )}
+                    <MobileCard
+                      variant="compact"
+                      className="border-red-500/30 bg-red-500/5 cursor-pointer hover:bg-red-500/10 transition-colors"
+                      onClick={() => {
+                        if (onVerEquipo) {
+                          onVerEquipo(mant.ficha);
+                          setVencidosSheetOpen(false);
+                        }
+                      }}
+                    >
+                      <div className="flex items-start justify-between gap-3">
+                        <div className="flex-1 min-w-0">
+                          <p className="font-semibold text-sm truncate">{mant.nombreEquipo || 'Equipo sin nombre'}</p>
+                          <p className="text-xs text-muted-foreground">Ficha {mant.ficha}</p>
+                          <p className="text-xs text-muted-foreground mt-1">{mant.tipoMantenimiento}</p>
+                        </div>
+                        <div className="flex flex-col items-end gap-1 flex-shrink-0">
+                          <Badge variant="destructive" className="text-[0.65rem] max-w-[120px] truncate">
+                            {formatRemainingLabel(mant.horasKmRestante, mant.tipoMantenimiento === 'Kilómetros' ? 'km' : 'horas')}
+                          </Badge>
+                          <ExternalLink className="h-3.5 w-3.5 text-muted-foreground" />
+                        </div>
+                      </div>
+                    </MobileCard>
                   </div>
-                </MobileCard>
-              ))
+                );
+              })
             )}
           </div>
           <div className="pt-4 border-t">
@@ -594,39 +657,63 @@ export function DashboardMobile({
               Próximas intervenciones programadas
             </SheetDescription>
           </SheetHeader>
-          <div className="mt-6 space-y-3 overflow-y-auto max-h-[calc(80vh-140px)] pb-4">
-            {mantenimientosProximosList.length === 0 ? (
+          <div className="mt-4">
+            <FieldFilterControls
+              fields={mantFields}
+              query={proximosSearchTerm}
+              onQueryChange={setProximosSearchTerm}
+              searchField={proximosSearchField}
+              onSearchFieldChange={setProximosSearchField}
+              sortField={proximosSortField}
+              onSortFieldChange={setProximosSortField}
+              direction={proximosSortDirection}
+              onDirectionChange={setProximosSortDirection}
+              searchPlaceholder="Buscar mantenimientos próximos..."
+              searchLabel="Buscar mantenimientos próximos"
+            />
+          </div>
+          <div className="mt-4 space-y-3 overflow-y-auto max-h-[calc(80vh-220px)] pb-4">
+            {mantenimientosProximosSheetList.length === 0 ? (
               <div className="text-center py-8 text-muted-foreground">
                 No hay mantenimientos próximos
               </div>
             ) : (
-              mantenimientosProximosList.map((mant) => (
-                <MobileCard
-                  key={mant.id}
-                  variant="compact"
-                  className="border-primary/30 bg-primary/5 cursor-pointer hover:bg-primary/10 transition-colors"
-                  onClick={() => {
-                    if (onVerEquipo) {
-                      onVerEquipo(mant.ficha);
-                      setProximosSheetOpen(false);
-                    }
-                  }}
-                >
-                  <div className="flex items-start justify-between gap-3">
-                    <div className="flex-1 min-w-0">
-                      <p className="font-semibold text-sm truncate">{mant.nombreEquipo || 'Equipo sin nombre'}</p>
-                      <p className="text-xs text-muted-foreground">Ficha {mant.ficha}</p>
-                      <p className="text-xs text-muted-foreground mt-1">{mant.tipoMantenimiento}</p>
-                    </div>
-                    <div className="flex flex-col items-end gap-1 flex-shrink-0">
-                      <Badge variant="outline" className="text-[0.65rem] border-primary/30 text-primary max-w-[120px] truncate">
-                        {formatRemainingLabel(mant.horasKmRestante, mant.tipoMantenimiento === 'Kilómetros' ? 'km' : 'horas')}
-                      </Badge>
-                      <ExternalLink className="h-3.5 w-3.5 text-muted-foreground" />
-                    </div>
+              mantenimientosProximosSheetList.map((mant, index) => {
+                const empresaActual = equiposPorFicha[mant.ficha]?.empresa ?? 'Sin empresa';
+                const empresaAnterior = index > 0 ? (equiposPorFicha[mantenimientosProximosSheetList[index - 1].ficha]?.empresa ?? 'Sin empresa') : null;
+                const showGroupDivider = proximosSortField === 'ficha' && (index === 0 || empresaAnterior !== empresaActual);
+                return (
+                  <div key={mant.id}>
+                    {showGroupDivider && (
+                      <p className="mb-1.5 mt-2 text-xs font-semibold text-muted-foreground first:mt-0">{empresaActual}</p>
+                    )}
+                    <MobileCard
+                      variant="compact"
+                      className="border-primary/30 bg-primary/5 cursor-pointer hover:bg-primary/10 transition-colors"
+                      onClick={() => {
+                        if (onVerEquipo) {
+                          onVerEquipo(mant.ficha);
+                          setProximosSheetOpen(false);
+                        }
+                      }}
+                    >
+                      <div className="flex items-start justify-between gap-3">
+                        <div className="flex-1 min-w-0">
+                          <p className="font-semibold text-sm truncate">{mant.nombreEquipo || 'Equipo sin nombre'}</p>
+                          <p className="text-xs text-muted-foreground">Ficha {mant.ficha}</p>
+                          <p className="text-xs text-muted-foreground mt-1">{mant.tipoMantenimiento}</p>
+                        </div>
+                        <div className="flex flex-col items-end gap-1 flex-shrink-0">
+                          <Badge variant="outline" className="text-[0.65rem] border-primary/30 text-primary max-w-[120px] truncate">
+                            {formatRemainingLabel(mant.horasKmRestante, mant.tipoMantenimiento === 'Kilómetros' ? 'km' : 'horas')}
+                          </Badge>
+                          <ExternalLink className="h-3.5 w-3.5 text-muted-foreground" />
+                        </div>
+                      </div>
+                    </MobileCard>
                   </div>
-                </MobileCard>
-              ))
+                );
+              })
             )}
           </div>
           <div className="pt-4 border-t">
