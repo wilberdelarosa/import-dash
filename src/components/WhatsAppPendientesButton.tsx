@@ -1,13 +1,15 @@
 import { useMemo, useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Copy, MessageCircle } from 'lucide-react';
+import { Copy, MessageCircle, List } from 'lucide-react';
+import { FloatingReportPanel } from '@/components/FloatingReportPanel';
 import { useToast } from '@/hooks/use-toast';
 import { isEquipoDisponible, type Equipo, type MantenimientoProgramado } from '@/types/equipment';
 
 interface Props {
   equipos: Equipo[];
   mantenimientos: MantenimientoProgramado[];
+  pendientesReporte?: MantenimientoProgramado[];
 }
 
 const GRUPOS: { titulo: string; icono: string; match: RegExp }[] = [
@@ -39,6 +41,11 @@ export function buildMensajePendientes(equipos: Equipo[], mantenimientos: Manten
     (e) => isEquipoDisponible(e) && (ultimaPorFicha.get(e.ficha) ?? 0) < limite.getTime()
   );
 
+  return buildMensajeEquipos(pendientes);
+}
+
+export function buildMensajeEquipos(pendientes: Equipo[]) {
+
   const grupos = new Map<string, Equipo[]>();
   for (const e of pendientes) {
     const texto = `${e.categoria} ${e.nombre}`;
@@ -50,8 +57,8 @@ export function buildMensajePendientes(equipos: Equipo[], mantenimientos: Manten
   const secciones = [...GRUPOS, OTROS]
     .filter((g) => grupos.get(g.titulo)?.length)
     .map((g) => {
-      const lineas = grupos
-        .get(g.titulo)!
+      const lineas = (grupos
+        .get(g.titulo) ?? [])
         .sort((a, b) => fichaSort(a.ficha, b.ficha))
         .map((e) => `\`${e.ficha}\` ${e.nombre.trim().toUpperCase()}:`);
       return `${g.icono} *${g.titulo}*\n━━━━━━━━━━━━━━━━━━━━\n${lineas.join('\n')}`;
@@ -72,12 +79,17 @@ export function buildMensajePendientes(equipos: Equipo[], mantenimientos: Manten
   return { mensaje, total: pendientes.length };
 }
 
-export function WhatsAppPendientesButton({ equipos, mantenimientos }: Props) {
+export function WhatsAppPendientesButton({ equipos, mantenimientos, pendientesReporte }: Props) {
   const { toast } = useToast();
   const [dias, setDias] = useState('1');
+  const [previewOpen, setPreviewOpen] = useState(false);
   const { mensaje, total } = useMemo(
-    () => buildMensajePendientes(equipos, mantenimientos, Number(dias)),
-    [equipos, mantenimientos, dias]
+    () => {
+      if (pendientesReporte === undefined) return buildMensajePendientes(equipos, mantenimientos, Number(dias));
+      const fichas = new Set(pendientesReporte.map(m => m.ficha));
+      return buildMensajeEquipos(equipos.filter(e => isEquipoDisponible(e) && fichas.has(e.ficha)));
+    },
+    [equipos, mantenimientos, dias, pendientesReporte]
   );
 
   const copiar = async () => {
@@ -94,8 +106,7 @@ export function WhatsAppPendientesButton({ equipos, mantenimientos }: Props) {
       <h5 className="text-xs font-semibold flex items-center gap-2">
         <MessageCircle className="h-3.5 w-3.5 text-primary" /> Pendientes para WhatsApp
       </h5>
-      <p className="text-xs text-muted-foreground">Equipos activos sin lectura registrada en el período.</p>
-      <Select value={dias} onValueChange={setDias}>
+      {pendientesReporte === undefined && <Select value={dias} onValueChange={setDias}>
         <SelectTrigger className="h-9 text-sm"><SelectValue /></SelectTrigger>
         <SelectContent>
           <SelectItem value="1">Sin lectura hoy</SelectItem>
@@ -103,17 +114,24 @@ export function WhatsAppPendientesButton({ equipos, mantenimientos }: Props) {
           <SelectItem value="7">Sin lectura en 7 días</SelectItem>
           <SelectItem value="30">Sin lectura en 30 días</SelectItem>
         </SelectContent>
-      </Select>
-      <div className="flex gap-2">
-        <Button type="button" className="flex-1 gap-2 h-10" onClick={copiar} disabled={total === 0}>
+      </Select>}
+      <div className="flex flex-wrap gap-2">
+        <Button type="button" className="flex-1 gap-2 h-11" onClick={copiar} disabled={total === 0}>
           <Copy className="h-4 w-4" /> Copiar ({total})
         </Button>
-        <Button type="button" variant="outline" className="h-10" disabled={total === 0} asChild>
+        <Button type="button" variant="outline" className="h-11" disabled={total === 0} asChild>
           <a href={`https://wa.me/?text=${encodeURIComponent(mensaje)}`} target="_blank" rel="noreferrer">
             WhatsApp
           </a>
         </Button>
+        <Button type="button" variant="outline" size="icon" className="h-11 w-11" aria-label="Ver listado de WhatsApp" title="Ver listado de WhatsApp" onClick={() => setPreviewOpen(true)}><List className="h-4 w-4" /></Button>
       </div>
+      {previewOpen && <FloatingReportPanel title={`Pendientes para WhatsApp (${total})`} onClose={() => setPreviewOpen(false)}>
+        <div className="space-y-4 p-4 pb-12">
+          <Button className="h-11 gap-2" onClick={copiar} disabled={total === 0}><Copy className="h-4 w-4" />Copiar ({total})</Button>
+          <pre className="whitespace-pre-wrap break-words font-mono text-sm">{mensaje}</pre>
+        </div>
+      </FloatingReportPanel>}
     </div>
   );
 }
