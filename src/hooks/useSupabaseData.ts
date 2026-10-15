@@ -2094,11 +2094,18 @@ export function useSupabaseData() {
       const datosDespues = { ...(((evento.datos_despues as any) ?? {}) as any) };
       const fechaIso = fecha ? normalizeDateInputToIso(fecha) : evento.created_at;
 
+      const lecturaAnterior = esMantenimiento
+        ? (metadata.horasKmAlMomento ?? metadata.horas_km_actuales ?? datosDespues.horasKmAlMomento)
+        : (metadata.horasKm ?? datosDespues.horasKm);
+      let nuevaLectura: number | undefined;
+
       if (horasKm !== undefined && !Number.isNaN(Number(horasKm))) {
         const lectura = Number(horasKm);
+        nuevaLectura = lectura;
         if (esMantenimiento) {
           metadata.horasKmAlMomento = lectura;
           datosDespues.horasKmAlMomento = lectura;
+          if ('horas_km_actuales' in metadata) metadata.horas_km_actuales = lectura;
         } else {
           metadata.horasKm = lectura;
           datosDespues.horasKm = lectura;
@@ -2106,11 +2113,34 @@ export function useSupabaseData() {
       }
 
       metadata.fecha = fechaIso;
-      if (esMantenimiento) metadata.fechaMantenimiento = fechaIso;
-      if (observaciones !== undefined) {
-        metadata.observaciones = observaciones;
-        datosDespues.observaciones = observaciones;
+      datosDespues.fecha = fechaIso;
+      if (esMantenimiento) {
+        metadata.fechaMantenimiento = fechaIso;
+        datosDespues.fechaMantenimiento = fechaIso;
+        if ('fecha_mantenimiento' in metadata) metadata.fecha_mantenimiento = fechaIso;
       }
+
+      // Si el texto automático menciona la lectura anterior ("(1492 horas)"),
+      // reemplazarla por la nueva para que no quede desactualizado.
+      const actualizarTexto = (texto: string | undefined | null) => {
+        if (!texto || nuevaLectura === undefined || lecturaAnterior === undefined || lecturaAnterior === null) {
+          return texto ?? undefined;
+        }
+        const anterior = String(lecturaAnterior).replace('.', '\\.');
+        return texto.replace(
+          new RegExp(`\\(${anterior}(\\s*(?:horas|hrs|h|km|kilómetros))\\)`, 'gi'),
+          `(${nuevaLectura}$1)`,
+        );
+      };
+
+      const observacionesFinal = actualizarTexto(observaciones ?? metadata.observaciones);
+      if (observacionesFinal !== undefined) {
+        metadata.observaciones = observacionesFinal;
+        datosDespues.observaciones = observacionesFinal;
+      }
+      const descripcionFinal = observacionesFinal && observacionesFinal.trim().length > 0
+        ? observacionesFinal
+        : actualizarTexto(evento.descripcion) ?? evento.descripcion;
       metadata.corregido = true;
       metadata.corregidoEn = new Date().toISOString();
       metadata.corregidoPor = usuarioResponsable;
