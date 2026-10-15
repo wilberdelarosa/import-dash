@@ -31,7 +31,7 @@ export function FloatingReportPanel({ title, children, onClose }: Props) {
       bounds={{ left: 0, top: 0, right: viewport.width - width, bottom: viewport.height - height }}
       onDrag={(_, data) => setPosition({ x: data.x, y: data.y })}>
       <div ref={nodeRef} role="dialog" aria-label={title} aria-modal="false"
-        className="@container fixed left-0 top-0 z-40 flex flex-col overflow-hidden rounded-lg border border-primary/20 bg-background shadow-2xl"
+        className="@container fixed left-0 top-0 z-[55] sm:z-40 flex flex-col overflow-hidden rounded-lg border border-primary/20 bg-background shadow-2xl"
         style={{ width: fullscreen ? viewport.width : width, height: fullscreen ? viewport.height : height }}>
         <div className="report-window-handle flex shrink-0 cursor-move touch-none items-center justify-between gap-2 border-b bg-muted px-3 py-2">
           <div className="flex min-w-0 items-center gap-2"><GripVertical className="h-5 w-5 shrink-0 text-muted-foreground" /><h3 className="text-sm font-semibold">{title}</h3></div>
