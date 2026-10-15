@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react';
+import { Fragment, useMemo, useState } from 'react';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -15,11 +15,13 @@ import {
 } from '@/components/ui/sheet';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { cn } from '@/lib/utils';
-import { Trash2, Edit, Search, Filter, ZoomIn, ZoomOut, Sparkles, Lock, Building2, Tag } from 'lucide-react';
+import { Trash2, Edit, Search, Filter, ZoomIn, ZoomOut, Sparkles, Lock, Building2, Tag, ArrowUp, ArrowDown, ArrowUpDown } from 'lucide-react';
 import { Equipo, EMPRESAS_DISPONIBLES, isEquipoVendido } from '@/types/equipment';
 import { EquipoDialog } from './EquipoDialog';
 import { EquipoLink } from '@/components/EquipoLink';
 import { usePermissions } from '@/hooks/usePermissions';
+import { EquipmentFieldControls } from './EquipmentFieldControls';
+import { compareEquipment, equipmentFields, equipmentCompanyLabel, matchesEquipmentSearch, type EquipmentSearchField, type EquipmentSortField, type EquipmentSortDirection } from '@/lib/equipment-list';
 
 const CATEGORY_SYNONYMS: Record<string, string[]> = {
   transporte: ['camion', 'camiones', 'volquete', 'dump truck', 'haul truck'],
@@ -57,6 +59,15 @@ interface EquiposTableProps {
 
 export function EquiposTable({ equipos, onEdit, onDelete, onVerDetalle }: EquiposTableProps) {
   const [searchTerm, setSearchTerm] = useState('');
+  const [searchField, setSearchField] = useState<EquipmentSearchField>('all');
+  const [sortField, setSortField] = useState<EquipmentSortField>('ficha');
+  const [sortDirection, setSortDirection] = useState<EquipmentSortDirection>('asc');
+  const [filterMarca, setFilterMarca] = useState('all');
+  const selectSortField = (field: EquipmentSortField) => { setSortField(field); setSortDirection('asc'); };
+  const toggleColumn = (field: EquipmentSortField) => {
+    setSortDirection(sortField === field && sortDirection === 'asc' ? 'desc' : 'asc');
+    setSortField(field);
+  };
   const [smartQuery, setSmartQuery] = useState('');
   const [filterCategoria, setFilterCategoria] = useState('all');
   const [filterEmpresa, setFilterEmpresa] = useState('all');
@@ -219,10 +230,8 @@ export function EquiposTable({ equipos, onEdit, onDelete, onVerDetalle }: Equipo
 
   const filteredEquipos = equipos
     .filter(equipo => {
-      const matchesSearch = Object.values(equipo)
-        .join(' ')
-        .toLowerCase()
-        .includes(searchTerm.toLowerCase());
+      const matchesSearch = matchesEquipmentSearch(equipo, searchField, searchTerm);
+      const matchesMarca = filterMarca === 'all' || equipo.marca === filterMarca;
 
       const matchesCategoria = filterCategoria === 'all' || equipo.categoria === filterCategoria;
       const matchesEmpresa = filterEmpresa === 'all' || equipo.empresa === filterEmpresa;
@@ -258,25 +267,14 @@ export function EquiposTable({ equipos, onEdit, onDelete, onVerDetalle }: Equipo
       
       const matchesSmart = smartFilters.predicate ? smartFilters.predicate(equipo) : true;
 
-      return matchesSearch && matchesCategoria && matchesEmpresa && matchesActivo && matchesSmart;
+      return matchesSearch && matchesMarca && matchesCategoria && matchesEmpresa && matchesActivo && matchesSmart;
     })
-    .sort((a, b) => {
-      // Ordenar por ficha de menor a mayor
-      return a.ficha.localeCompare(b.ficha, 'es', { numeric: true, sensitivity: 'base' });
-    });
+    .sort((a, b) => compareEquipment(a, b, sortField, sortDirection));
 
   const renderFilterControls = () => (
-    <div className="flex w-full flex-col gap-4 sm:flex-row sm:flex-wrap sm:items-start">
-      <div className="w-full space-y-3 sm:max-w-md">
-        <div className="relative">
-          <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-          <Input
-            placeholder="Buscar equipos..."
-            value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
-            className="pl-10"
-          />
-        </div>
+    <div className="grid w-full min-w-0 gap-4 xl:grid-cols-2">
+      <div className="min-w-0 space-y-3">
+        <EquipmentFieldControls query={searchTerm} onQueryChange={setSearchTerm} searchField={searchField} onSearchFieldChange={setSearchField} sortField={sortField} onSortFieldChange={selectSortField} direction={sortDirection} onDirectionChange={setSortDirection} />
         <div className="relative">
           <Sparkles className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-primary" />
           <Input
@@ -301,9 +299,9 @@ export function EquiposTable({ equipos, onEdit, onDelete, onVerDetalle }: Equipo
           </div>
         )}
       </div>
-      <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:flex-wrap">
+      <div className="grid min-w-0 content-start gap-3 sm:grid-cols-2">
         <Select value={filterCategoria} onValueChange={setFilterCategoria}>
-          <SelectTrigger className="w-full sm:w-[200px]">
+          <SelectTrigger aria-label="Filtrar por categoría" className="h-11 w-full min-w-0">
             <Filter className="mr-2 h-4 w-4" />
             <SelectValue placeholder="Categoría" />
           </SelectTrigger>
@@ -314,8 +312,12 @@ export function EquiposTable({ equipos, onEdit, onDelete, onVerDetalle }: Equipo
             ))}
           </SelectContent>
         </Select>
+        <Select value={filterMarca} onValueChange={setFilterMarca}>
+          <SelectTrigger aria-label="Filtrar por marca" className="h-11 w-full min-w-0"><SelectValue /></SelectTrigger>
+          <SelectContent><SelectItem value="all">Todas las marcas</SelectItem>{marcas.map(marca => <SelectItem key={marca} value={marca}>{marca}</SelectItem>)}</SelectContent>
+        </Select>
         <Select value={filterEmpresa} onValueChange={setFilterEmpresa}>
-          <SelectTrigger className="w-full sm:w-[200px]">
+          <SelectTrigger aria-label="Filtrar por empresa" className="h-11 w-full min-w-0">
             <Building2 className="mr-2 h-4 w-4" />
             <SelectValue placeholder="Empresa" />
           </SelectTrigger>
@@ -327,7 +329,7 @@ export function EquiposTable({ equipos, onEdit, onDelete, onVerDetalle }: Equipo
           </SelectContent>
         </Select>
         <Select value={filterActivo} onValueChange={setFilterActivo}>
-          <SelectTrigger className="w-full sm:w-[180px]">
+          <SelectTrigger aria-label="Filtrar por estado" className="h-11 w-full min-w-0">
             <SelectValue placeholder="Estado" />
           </SelectTrigger>
           <SelectContent>
@@ -345,7 +347,7 @@ export function EquiposTable({ equipos, onEdit, onDelete, onVerDetalle }: Equipo
   return (
     <div className="space-y-4">
       <div className="flex flex-col gap-4">
-        <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+        <div className="flex min-w-0 flex-col gap-4">
           <Sheet>
             <div className="flex items-center justify-between gap-2 sm:hidden">
               <span className="text-sm font-semibold text-primary">Filtros</span>
@@ -357,7 +359,7 @@ export function EquiposTable({ equipos, onEdit, onDelete, onVerDetalle }: Equipo
               </SheetTrigger>
             </div>
             <div className="hidden w-full sm:block">{renderFilterControls()}</div>
-            <SheetContent side="bottom" className="sm:hidden">
+            <SheetContent side="bottom" className="max-h-[85dvh] overflow-y-auto sm:hidden">
               <SheetHeader className="text-left">
                 <SheetTitle>Filtros y búsqueda</SheetTitle>
                 <SheetDescription>Refina la tabla para encontrar el equipo que necesitas.</SheetDescription>
@@ -406,12 +408,11 @@ export function EquiposTable({ equipos, onEdit, onDelete, onVerDetalle }: Equipo
         </div>
       </div>
 
-      <div className="rounded-2xl border border-border/70 bg-card/80 p-2 shadow-lg ring-1 ring-primary/5 dark:border-slate-800 dark:bg-slate-950/40 sm:p-4">
+      <div className="min-w-0 max-w-full rounded-lg border border-border bg-card p-2 sm:p-4">
         <div
-          className={cn('overflow-x-auto', tableScale > 1 ? 'pb-4' : undefined)}
-          style={{ touchAction: 'pan-y pinch-zoom' }}
+          className={cn('max-w-full overflow-x-auto overscroll-x-contain touch-auto', tableScale > 1 ? 'pb-4' : undefined)}
         >
-          <div className="rounded-xl bg-background/80 p-2 shadow-inner dark:bg-slate-900/70">
+          <div className="rounded-lg bg-background p-2">
             <div
               className="origin-top-left"
               style={{
@@ -423,22 +424,19 @@ export function EquiposTable({ equipos, onEdit, onDelete, onVerDetalle }: Equipo
               <Table className="min-w-[1200px]">
               <TableHeader>
                 <TableRow>
-                  <TableHead>Ficha</TableHead>
-                  <TableHead>Nombre</TableHead>
-                  <TableHead>Empresa</TableHead>
-                  <TableHead>Marca</TableHead>
-                  <TableHead>Modelo</TableHead>
-                  <TableHead>N° Serie</TableHead>
-                  <TableHead>Categoría</TableHead>
-                  <TableHead>Segmento</TableHead>
-                  <TableHead>Placa</TableHead>
-                  <TableHead>Estado</TableHead>
+                  {equipmentFields.map(field => <TableHead key={field.key} aria-sort={sortField === field.key ? (sortDirection === 'asc' ? 'ascending' : 'descending') : 'none'}>
+                    <Button variant="ghost" className="h-11 gap-2 whitespace-nowrap px-2" onClick={() => toggleColumn(field.key)} aria-label={`Ordenar por ${field.label}`}>
+                      {field.label}{sortField === field.key ? (sortDirection === 'asc' ? <ArrowUp className="h-4 w-4" /> : <ArrowDown className="h-4 w-4" />) : <ArrowUpDown className="h-4 w-4 text-muted-foreground" />}
+                    </Button>
+                  </TableHead>)}
                   <TableHead>Acciones</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {filteredEquipos.map((equipo) => (
-                  <TableRow key={equipo.id}>
+                {filteredEquipos.map((equipo, index) => (
+                  <Fragment key={equipo.id}>
+                  {sortField === 'ficha' && (index === 0 || filteredEquipos[index - 1]?.empresa !== equipo.empresa) && <TableRow data-company-group={equipmentCompanyLabel(equipo)} className="border-t-2 border-border bg-muted/50 hover:bg-muted/50"><TableCell colSpan={11} className="py-3 text-xs font-semibold text-muted-foreground">{equipo.empresa}</TableCell></TableRow>}
+                  <TableRow data-equipment-row={equipo.ficha}>
                     <TableCell className="font-medium">{equipo.ficha}</TableCell>
                     <TableCell>
                       <EquipoLink ficha={equipo.ficha} variant="link" className="p-0 h-auto font-normal hover:underline">
@@ -538,6 +536,7 @@ export function EquiposTable({ equipos, onEdit, onDelete, onVerDetalle }: Equipo
                       </div>
                     </TableCell>
                   </TableRow>
+                  </Fragment>
                 ))}
               </TableBody>
               </Table>
