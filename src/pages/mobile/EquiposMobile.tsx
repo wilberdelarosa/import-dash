@@ -36,6 +36,9 @@ import {
 } from 'lucide-react';
 import { useUserRoles } from '@/hooks/useUserRoles';
 import { cn } from '@/lib/utils';
+import { EquipmentFieldControls } from '@/components/equipos/EquipmentFieldControls';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { compareEquipment, equipmentCompanyLabel, matchesEquipmentSearch, type EquipmentSearchField, type EquipmentSortField, type EquipmentSortDirection } from '@/lib/equipment-list';
 import { Equipo, isEquipoDisponible, isEquipoVendido } from '@/types/equipment';
 import {
   Sheet,
@@ -61,7 +64,7 @@ interface EquiposMobileProps {
 }
 
 type FilterType = 'all' | 'active' | 'inactive' | 'vendido' | 'todo';
-type SortType = 'ficha-asc' | 'ficha-desc' | 'categoria' | 'estado';
+
 
 export function EquiposMobile({
   equipos,
@@ -72,7 +75,14 @@ export function EquiposMobile({
 }: EquiposMobileProps) {
   const [searchQuery, setSearchQuery] = useState('');
   const [filter, setFilter] = useState<FilterType>('all');
-  const [sortBy, setSortBy] = useState<SortType>('ficha-asc');
+  const [sortField, setSortField] = useState<EquipmentSortField>('ficha');
+  const [sortDirection, setSortDirection] = useState<EquipmentSortDirection>('asc');
+  const [searchField, setSearchField] = useState<EquipmentSearchField>('all');
+  const [filterEmpresa, setFilterEmpresa] = useState('all');
+  const [filterCategoria, setFilterCategoria] = useState('all');
+  const [filterMarca, setFilterMarca] = useState('all');
+  const categorias = useMemo(() => [...new Set(equipos.map(e => e.categoria))].filter(Boolean).sort(), [equipos]);
+  const marcas = useMemo(() => [...new Set(equipos.map(e => e.marca))].filter(Boolean).sort(), [equipos]);
   const [filtersOpen, setFiltersOpen] = useState(false);
   const { currentUserRole } = useUserRoles();
   const isAdmin = currentUserRole === 'admin';
@@ -111,35 +121,12 @@ export function EquiposMobile({
         break;
     }
 
-    // Búsqueda
-    if (searchQuery.trim()) {
-      const query = searchQuery.toLowerCase();
-      filtered = filtered.filter(
-        e =>
-          e.ficha?.toLowerCase().includes(query) ||
-          e.nombre?.toLowerCase().includes(query) ||
-          e.marca?.toLowerCase().includes(query) ||
-          e.modelo?.toLowerCase().includes(query) ||
-          e.placa?.toLowerCase().includes(query)
-      );
-    }
-
-    // Sort
-    return [...filtered].sort((a, b) => {
-      switch (sortBy) {
-        case 'ficha-asc':
-          return (a.ficha || '').localeCompare(b.ficha || '', 'es', { numeric: true });
-        case 'ficha-desc':
-          return (b.ficha || '').localeCompare(a.ficha || '', 'es', { numeric: true });
-        case 'categoria':
-          return (a.categoria || '').localeCompare(b.categoria || '', 'es');
-        case 'estado':
-          return (b.activo ? 1 : 0) - (a.activo ? 1 : 0);
-        default:
-          return (a.ficha || '').localeCompare(b.ficha || '', 'es', { numeric: true });
-      }
-    });
-  }, [equipos, filter, searchQuery, sortBy]);
+    filtered = filtered.filter(e => matchesEquipmentSearch(e, searchField, searchQuery)
+      && (filterEmpresa === 'all' || e.empresa === filterEmpresa)
+      && (filterCategoria === 'all' || e.categoria === filterCategoria)
+      && (filterMarca === 'all' || e.marca === filterMarca));
+    return [...filtered].sort((a, b) => compareEquipment(a, b, sortField, sortDirection));
+  }, [equipos, filter, searchQuery, searchField, sortField, sortDirection, filterEmpresa, filterCategoria, filterMarca]);
 
   const getCategoryIcon = (categoria?: string) => {
     return <Truck className="h-5 w-5" />;
@@ -151,7 +138,7 @@ export function EquiposMobile({
       headerActions={
         <Sheet open={filtersOpen} onOpenChange={setFiltersOpen}>
           <SheetTrigger asChild>
-            <Button variant="ghost" size="icon" className="h-9 w-9 rounded-full hover:bg-primary/10 active:scale-95 transition-all">
+            <Button variant="ghost" size="icon" aria-label="Filtros de equipos" className="h-11 w-11 rounded-full hover:bg-primary/10 active:scale-95 transition-all">
               <ListFilter className="h-5 w-5" />
             </Button>
           </SheetTrigger>
@@ -249,45 +236,22 @@ export function EquiposMobile({
               {/* Separador */}
               <div className="my-4 border-t border-border/50" />
 
-              {/* Opciones de ordenamiento */}
-              <p className="text-sm font-semibold text-muted-foreground mb-3 flex items-center gap-2">
-                <ArrowUpDown className="h-4 w-4" />
-                Ordenar por
-              </p>
-
-              <div className="grid grid-cols-2 gap-2">
-                <Button
-                  variant={sortBy === 'ficha-asc' ? 'default' : 'outline'}
-                  className="justify-start gap-2 h-11 rounded-xl"
-                  onClick={() => setSortBy('ficha-asc')}
-                >
-                  <ArrowUp className="h-4 w-4" />
-                  Ficha A-Z
-                </Button>
-                <Button
-                  variant={sortBy === 'ficha-desc' ? 'default' : 'outline'}
-                  className="justify-start gap-2 h-11 rounded-xl"
-                  onClick={() => setSortBy('ficha-desc')}
-                >
-                  <ArrowDown className="h-4 w-4" />
-                  Ficha Z-A
-                </Button>
-                <Button
-                  variant={sortBy === 'categoria' ? 'default' : 'outline'}
-                  className="justify-start gap-2 h-11 rounded-xl"
-                  onClick={() => setSortBy('categoria')}
-                >
-                  <Layers className="h-4 w-4" />
-                  Categoría
-                </Button>
-                <Button
-                  variant={sortBy === 'estado' ? 'default' : 'outline'}
-                  className="justify-start gap-2 h-11 rounded-xl"
-                  onClick={() => setSortBy('estado')}
-                >
-                  <Power className="h-4 w-4" />
-                  Estado
-                </Button>
+              <EquipmentFieldControls query={searchQuery} onQueryChange={setSearchQuery} searchField={searchField} onSearchFieldChange={setSearchField} sortField={sortField} onSortFieldChange={field => { setSortField(field); setSortDirection('asc'); }} direction={sortDirection} onDirectionChange={setSortDirection} />
+              <div className="grid min-w-0 gap-3">
+                <Select value={filterEmpresa} onValueChange={setFilterEmpresa}>
+                  <SelectTrigger aria-label="Filtrar por empresa" className="h-11 min-w-0"><SelectValue /></SelectTrigger>
+                  <SelectContent><SelectItem value="all">Todas las empresas</SelectItem><SelectItem value="ALITO EIRL">ALITO EIRL</SelectItem><SelectItem value="ALITO GROUP SRL">ALITO GROUP SRL</SelectItem><SelectItem value="VENDIDO">VENDIDO</SelectItem></SelectContent>
+                </Select>
+                <Select value={filterCategoria} onValueChange={setFilterCategoria}>
+                  <SelectTrigger aria-label="Filtrar por categoría" className="h-11 min-w-0"><SelectValue /></SelectTrigger>
+                  <SelectContent><SelectItem value="all">Todas las categorías</SelectItem>{categorias.map(value => <SelectItem key={value} value={value}>{value}</SelectItem>)}</SelectContent>
+                </Select>
+                <Select value={filterMarca} onValueChange={setFilterMarca}>
+                  <SelectTrigger aria-label="Filtrar por marca" className="h-11 min-w-0"><SelectValue /></SelectTrigger>
+                  <SelectContent><SelectItem value="all">Todas las marcas</SelectItem>{marcas.map(value => <SelectItem key={value} value={value}>{value}</SelectItem>)}</SelectContent>
+                </Select>
+                <Button variant="outline" className="h-11" onClick={() => { setFilter('all'); setFilterEmpresa('all'); setFilterCategoria('all'); setFilterMarca('all'); setSearchField('all'); setSearchQuery(''); }}>Limpiar filtros</Button>
+                <Button className="h-11" onClick={() => setFiltersOpen(false)}>Ver equipos</Button>
               </div>
             </div>
           </SheetContent>
@@ -319,7 +283,7 @@ export function EquiposMobile({
               placeholder="Buscar por ficha, nombre, placa..."
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              className="pl-9 bg-muted/50 border-0 focus-visible:ring-1 focus-visible:ring-primary/50 h-10 rounded-xl"
+              aria-label="Buscar equipos" className="pl-9 bg-muted/50 border-0 focus-visible:ring-1 focus-visible:ring-primary/50 h-11 rounded-lg"
             />
           </div>
 
@@ -362,8 +326,9 @@ export function EquiposMobile({
             {equiposFiltrados.map((equipo, index) => {
               const esVendido = isEquipoVendido(equipo.empresa);
               return (
+                <div key={equipo.id} data-equipment-row={equipo.ficha}>
+                  {sortField === 'ficha' && (index === 0 || equiposFiltrados[index - 1]?.empresa !== equipo.empresa) && <div data-company-group={equipmentCompanyLabel(equipo)} className="mb-3 border-t-2 border-border pt-3 text-xs font-semibold text-muted-foreground">{equipo.empresa}</div>}
                 <div
-                  key={equipo.id}
                   className="relative group animate-in slide-in-from-bottom-4 fade-in fill-mode-backwards"
                   style={{ animationDelay: `${index * 0.05}s` }}
                 >
@@ -373,7 +338,7 @@ export function EquiposMobile({
                     meta={`${equipo.marca || ''} ${equipo.modelo || ''}`.trim() || 'Sin marca/modelo'}
                     icon={getCategoryIcon(equipo.categoria)}
                     className={cn(
-                      "bg-card/50 backdrop-blur-sm border-border/50 hover:bg-accent/50 transition-all",
+                      "bg-card/50 backdrop-blur-sm border-border/50 hover:bg-accent/50 transition-all pr-14 [&_p]:whitespace-normal [&_p]:break-words [&_p]:overflow-visible",
                       esVendido && "opacity-75 border-orange-500/30"
                     )}
                     badge={
@@ -394,7 +359,7 @@ export function EquiposMobile({
                       <Button
                         variant="ghost"
                         size="icon"
-                        className="absolute right-2 top-1/2 h-8 w-8 -translate-y-1/2 opacity-0 group-hover:opacity-100 transition-opacity focus:opacity-100 active:opacity-100 data-[state=open]:opacity-100"
+                        aria-label={`Acciones ${equipo.ficha}`} className="absolute right-2 top-1/2 h-11 w-11 -translate-y-1/2"
                         onClick={(e) => e.stopPropagation()}
                       >
                         <MoreVertical className="h-4 w-4 text-muted-foreground" />
@@ -442,6 +407,7 @@ export function EquiposMobile({
                       )}
                     </DropdownMenuContent>
                   </DropdownMenu>
+                </div>
                 </div>
               );
             })}
