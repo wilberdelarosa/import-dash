@@ -1,9 +1,12 @@
+import type React from 'react';
 import { createContext, useContext, ReactNode } from 'react';
 import { useSupabaseData } from '@/hooks/useSupabaseData';
 
 type SupabaseDataValue = ReturnType<typeof useSupabaseData>;
 
-const SupabaseDataContext = createContext<SupabaseDataValue | undefined>(undefined);
+// Reuse one context instance across hot reloads so providers and consumers never diverge.
+const ctxStore = globalThis as unknown as Record<string, unknown>;
+const SupabaseDataContext = (ctxStore.__SupabaseDataContext ??= createContext<SupabaseDataValue | undefined>(undefined)) as React.Context<SupabaseDataValue | undefined>;
 
 interface SupabaseDataProviderProps {
   children: ReactNode;
