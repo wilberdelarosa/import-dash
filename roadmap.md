@@ -1,5 +1,9 @@
 # Roadmap
 
+- [ ] Mejorar filtros por campo y adaptación de la lista de equipos
+- [ ] Ordenar por columnas y separar EIRL antes de GROUP al ordenar por ficha
+- [ ] Verificar filtros y orden con datos reales en escritorio y móvil
+
 - [x] Enlazar WhatsApp con pendientes del reporte, excluyendo archivados
 - [x] Permitir mover, redimensionar y ampliar el panel de reporte
 - [x] Verificar exportación y controles de ventana con datos reales
