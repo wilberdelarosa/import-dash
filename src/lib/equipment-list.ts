@@ -1,6 +1,23 @@
 import type { Equipo } from '@/types/equipment';
+import { compareByField, matchesFieldSearch, normalizeListText, type FieldConfig } from '@/lib/list-fields';
 
-export const equipmentFields = [
+const fieldValue = (equipo: Equipo, field: EquipmentSortField) =>
+  field === 'activo' ? (equipo.empresa === 'VENDIDO' ? 'Vendido' : equipo.activo ? 'Activo' : 'Inactivo') : equipo[field];
+
+export const equipmentFields: ReadonlyArray<FieldConfig<Equipo, EquipmentSortField>> = [
+  { key: 'ficha', label: 'Ficha', get: e => fieldValue(e, 'ficha') },
+  { key: 'nombre', label: 'Nombre', get: e => fieldValue(e, 'nombre') },
+  { key: 'empresa', label: 'Empresa', get: e => fieldValue(e, 'empresa') },
+  { key: 'marca', label: 'Marca', get: e => fieldValue(e, 'marca') },
+  { key: 'modelo', label: 'Modelo', get: e => fieldValue(e, 'modelo') },
+  { key: 'numeroSerie', label: 'N° Serie', get: e => fieldValue(e, 'numeroSerie') },
+  { key: 'categoria', label: 'Categoría', get: e => fieldValue(e, 'categoria') },
+  { key: 'segmento', label: 'Segmento', get: e => fieldValue(e, 'segmento') },
+  { key: 'placa', label: 'Placa', get: e => fieldValue(e, 'placa') },
+  { key: 'activo', label: 'Estado', get: e => fieldValue(e, 'activo') },
+] as const as ReadonlyArray<FieldConfig<Equipo, EquipmentSortField>>;
+
+const rawEquipmentFields = [
   { key: 'ficha', label: 'Ficha' },
   { key: 'nombre', label: 'Nombre' },
   { key: 'empresa', label: 'Empresa' },
@@ -13,28 +30,22 @@ export const equipmentFields = [
   { key: 'activo', label: 'Estado' },
 ] as const;
 
-export type EquipmentSortField = typeof equipmentFields[number]['key'];
+export type EquipmentSortField = typeof rawEquipmentFields[number]['key'];
 export type EquipmentSearchField = 'all' | EquipmentSortField;
 export type EquipmentSortDirection = 'asc' | 'desc';
-const collator = new Intl.Collator('es', { numeric: true, sensitivity: 'base' });
-export const normalizeEquipmentText = (value: unknown) => String(value ?? '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase().trim();
-export const equipmentCompanyLabel = (equipo: Equipo) => equipo.empresa === 'ALITO GROUP SRL' ? 'GROUP' : equipo.empresa === 'VENDIDO' ? 'VENDIDO' : 'EIRL';
-const companyRank = (equipo: Equipo) => equipo.empresa === 'ALITO EIRL' ? 0 : equipo.empresa === 'ALITO GROUP SRL' ? 1 : 2;
-const fieldValue = (equipo: Equipo, field: EquipmentSortField) => field === 'activo' ? (equipo.empresa === 'VENDIDO' ? 'Vendido' : equipo.activo ? 'Activo' : 'Inactivo') : equipo[field];
+
+export const normalizeEquipmentText = normalizeListText;
+export const equipmentCompanyLabel = (equipo: Equipo) =>
+  equipo.empresa === 'ALITO GROUP SRL' ? 'GROUP' : equipo.empresa === 'VENDIDO' ? 'VENDIDO' : 'EIRL';
 
 export function matchesEquipmentSearch(equipo: Equipo, field: EquipmentSearchField, query: string) {
-  const normalized = normalizeEquipmentText(query);
-  if (!normalized) return true;
-  const values = field === 'all' ? equipmentFields.map(({ key }) => fieldValue(equipo, key)) : [fieldValue(equipo, field)];
-  return values.some(value => normalizeEquipmentText(value).includes(normalized));
+  return matchesFieldSearch(equipo, equipmentFields, field, query);
 }
 
 export function compareEquipment(a: Equipo, b: Equipo, field: EquipmentSortField, direction: EquipmentSortDirection) {
-  // Company order remains fixed even when ficha direction is reversed.
-  if (field === 'ficha') {
-    const company = companyRank(a) - companyRank(b);
-    if (company) return company;
-  }
-  const compared = collator.compare(String(fieldValue(a, field) ?? '').trim(), String(fieldValue(b, field) ?? '').trim());
-  return compared ? compared * (direction === 'asc' ? 1 : -1) : collator.compare(a.ficha.trim(), b.ficha.trim()) || a.id - b.id;
+  return compareByField(a, b, equipmentFields, field, direction, {
+    getEmpresa: e => e.empresa,
+    getFicha: e => e.ficha,
+    tieBreaker: (x, y) => x.id - y.id,
+  });
 }

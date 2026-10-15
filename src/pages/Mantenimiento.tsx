@@ -1,4 +1,5 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
+import { Fragment } from 'react';
 import { Layout } from '@/components/Layout';
 import { Navigation } from '@/components/Navigation';
 import { useSupabaseDataContext } from '@/context/SupabaseDataContext';
@@ -63,6 +64,9 @@ import {
   Loader2,
   Printer,
   CheckCircle2,
+  ArrowUp,
+  ArrowDown,
+  ArrowUpDown,
 } from 'lucide-react';
 import { useState, useEffect } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
@@ -78,6 +82,8 @@ import { formatRemainingLabel, getRemainingVariant } from '@/lib/maintenanceUtil
 import { useDeviceDetection } from '@/hooks/useDeviceDetection';
 import { MantenimientoMobile } from '@/pages/mobile/MantenimientoMobile';
 import { useSystemConfig } from '@/context/SystemConfigContext';
+import { FieldFilterControls } from '@/components/shared/FieldFilterControls';
+import { compareByField, matchesFieldSearch, type FieldConfig } from '@/lib/list-fields';
 
 const numericField = z
   .string()
@@ -136,6 +142,15 @@ export default function Mantenimiento() {
   const { config } = useSystemConfig();
   const [modoAvanzado, setModoAvanzado] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
+  type MantenimientoSortField = 'ficha' | 'nombreEquipo' | 'categoria' | 'tipoMantenimiento' | 'horasKmActuales' | 'frecuencia' | 'horasKmRestante' | 'estado';
+  const [searchField, setSearchField] = useState<'all' | MantenimientoSortField>('all');
+  const [sortField, setSortField] = useState<MantenimientoSortField>('ficha');
+  const [sortDirection, setSortDirection] = useState<'asc' | 'desc'>('asc');
+  const selectSortField = (field: MantenimientoSortField) => { setSortField(field); setSortDirection('asc'); };
+  const toggleMantColumn = (field: MantenimientoSortField) => {
+    setSortDirection(sortField === field && sortDirection === 'asc' ? 'desc' : 'asc');
+    setSortField(field);
+  };
   const [filtros, setFiltros] = useState({
     tipos: [] as string[],
     categorias: [] as string[],
@@ -305,6 +320,17 @@ export default function Mantenimiento() {
         horasKmRestante: restanteCalculado
       };
     });
+
+  const mantFields: ReadonlyArray<FieldConfig<MantenimientoProgramado, MantenimientoSortField>> = [
+    { key: 'ficha', label: 'Ficha', get: m => m.ficha },
+    { key: 'nombreEquipo', label: 'Equipo', get: m => m.nombreEquipo },
+    { key: 'categoria', label: 'Categoría', get: m => equiposPorFicha[m.ficha]?.categoria },
+    { key: 'tipoMantenimiento', label: 'Tipo', get: m => m.tipoMantenimiento },
+    { key: 'horasKmActuales', label: 'Actual', get: m => m.horasKmActuales },
+    { key: 'frecuencia', label: 'Frecuencia', get: m => m.frecuencia },
+    { key: 'horasKmRestante', label: 'Restante', get: m => m.horasKmRestante },
+    { key: 'estado', label: 'Estado', get: m => (m.horasKmRestante <= 0 ? 'Vencido' : m.horasKmRestante <= config.alertaPreventiva ? 'Próximo' : 'Normal') },
+  ];
 
 
   if (isMobile) {
@@ -486,10 +512,7 @@ export default function Mantenimiento() {
   const mantenimientosFiltrados = mantenimientosConCalculos.filter(mant => {
     const equipo = equiposPorFicha[mant.ficha];
 
-    const matchesSearch = Object.values(mant)
-      .join(' ')
-      .toLowerCase()
-      .includes(searchTerm.toLowerCase());
+    const matchesSearch = matchesFieldSearch(mant, mantFields, searchField, searchTerm);
 
     // Filtros multi-select
     const matchesTipo = filtros.tipos.length === 0 || filtros.tipos.includes(mant.tipoMantenimiento);
@@ -510,10 +533,10 @@ export default function Mantenimiento() {
 
     return matchesSearch && matchesTipo && matchesCategoria && matchesFicha && matchesEstado && matchesRestanteMin && matchesRestanteMax && mant.activo;
   })
-    .sort((a, b) => {
-      // Ordenar por ficha de menor a mayor
-      return a.ficha.localeCompare(b.ficha, 'es', { numeric: true, sensitivity: 'base' });
-    });
+    .sort((a, b) => compareByField(a, b, mantFields, sortField, sortDirection, {
+      getEmpresa: m => equiposPorFicha[m.ficha]?.empresa,
+      getFicha: m => m.ficha,
+    }));
 
   const totalMantenimientos = mantenimientosFiltrados.length;
   const vencidos = mantenimientosFiltrados.filter(m => m.horasKmRestante <= 0).length;
@@ -1166,6 +1189,8 @@ export default function Mantenimiento() {
           className="pl-10 bg-white dark:bg-slate-950 border-slate-300 dark:border-slate-700 focus:ring-primary"
         />
       </div>
+      <FieldFilterControls fields={mantFields} query={searchTerm} onQueryChange={setSearchTerm} searchField={searchField} onSearchFieldChange={setSearchField} sortField={sortField} onSortFieldChange={selectSortField} direction={sortDirection} onDirectionChange={setSortDirection} searchPlaceholder="Buscar mantenimientos..." searchLabel="Buscar mantenimientos" />
+
       <div className="grid grid-cols-1 gap-4 md:grid-cols-4">
         <div>
           <Label className="mb-2 flex items-center gap-2 text-sm font-semibold">
@@ -1298,6 +1323,8 @@ export default function Mantenimiento() {
           className="pl-10"
         />
       </div>
+      <FieldFilterControls fields={mantFields} query={searchTerm} onQueryChange={setSearchTerm} searchField={searchField} onSearchFieldChange={setSearchField} sortField={sortField} onSortFieldChange={selectSortField} direction={sortDirection} onDirectionChange={setSortDirection} searchPlaceholder="Buscar mantenimientos..." searchLabel="Buscar mantenimientos" />
+
 
       <div className="grid grid-cols-1 gap-4 md:grid-cols-4">
         <div>
@@ -2018,28 +2045,69 @@ export default function Mantenimiento() {
                     <Table className="w-full min-w-[1000px]">
                       <TableHeader>
                         <TableRow className="bg-slate-50 dark:bg-slate-900/50 border-b-2 border-slate-200 dark:border-slate-700">
-                          <TableHead className="font-semibold text-slate-900 dark:text-slate-100">Ficha</TableHead>
-                          <TableHead className="font-semibold text-slate-900 dark:text-slate-100">Equipo</TableHead>
-                          <TableHead className="font-semibold text-slate-900 dark:text-slate-100">Categoría</TableHead>
-                          <TableHead className="font-semibold text-slate-900 dark:text-slate-100">Tipo</TableHead>
-                          <TableHead className="font-semibold text-slate-900 dark:text-slate-100">Actual</TableHead>
-                          <TableHead className="font-semibold text-slate-900 dark:text-slate-100">Frecuencia</TableHead>
+<TableHead className="font-semibold text-slate-900 dark:text-slate-100" aria-sort={sortField === 'ficha' ? (sortDirection === 'asc' ? 'ascending' : 'descending') : 'none'}>
+                            <Button variant="ghost" className="h-8 gap-1.5 whitespace-nowrap px-2 font-semibold" onClick={() => toggleMantColumn('ficha')} aria-label={`Ordenar por Ficha`}>
+                              Ficha{sortField === 'ficha' ? (sortDirection === 'asc' ? <ArrowUp className="h-3.5 w-3.5" /> : <ArrowDown className="h-3.5 w-3.5" />) : <ArrowUpDown className="h-3.5 w-3.5 text-muted-foreground" />}
+                            </Button>
+                          </TableHead>
+                          <TableHead className="font-semibold text-slate-900 dark:text-slate-100" aria-sort={sortField === 'nombreEquipo' ? (sortDirection === 'asc' ? 'ascending' : 'descending') : 'none'}>
+                            <Button variant="ghost" className="h-8 gap-1.5 whitespace-nowrap px-2 font-semibold" onClick={() => toggleMantColumn('nombreEquipo')} aria-label={`Ordenar por Equipo`}>
+                              Equipo{sortField === 'nombreEquipo' ? (sortDirection === 'asc' ? <ArrowUp className="h-3.5 w-3.5" /> : <ArrowDown className="h-3.5 w-3.5" />) : <ArrowUpDown className="h-3.5 w-3.5 text-muted-foreground" />}
+                            </Button>
+                          </TableHead>
+                          <TableHead className="font-semibold text-slate-900 dark:text-slate-100" aria-sort={sortField === 'categoria' ? (sortDirection === 'asc' ? 'ascending' : 'descending') : 'none'}>
+                            <Button variant="ghost" className="h-8 gap-1.5 whitespace-nowrap px-2 font-semibold" onClick={() => toggleMantColumn('categoria')} aria-label={`Ordenar por Categoría`}>
+                              Categoría{sortField === 'categoria' ? (sortDirection === 'asc' ? <ArrowUp className="h-3.5 w-3.5" /> : <ArrowDown className="h-3.5 w-3.5" />) : <ArrowUpDown className="h-3.5 w-3.5 text-muted-foreground" />}
+                            </Button>
+                          </TableHead>
+                          <TableHead className="font-semibold text-slate-900 dark:text-slate-100" aria-sort={sortField === 'tipoMantenimiento' ? (sortDirection === 'asc' ? 'ascending' : 'descending') : 'none'}>
+                            <Button variant="ghost" className="h-8 gap-1.5 whitespace-nowrap px-2 font-semibold" onClick={() => toggleMantColumn('tipoMantenimiento')} aria-label={`Ordenar por Tipo`}>
+                              Tipo{sortField === 'tipoMantenimiento' ? (sortDirection === 'asc' ? <ArrowUp className="h-3.5 w-3.5" /> : <ArrowDown className="h-3.5 w-3.5" />) : <ArrowUpDown className="h-3.5 w-3.5 text-muted-foreground" />}
+                            </Button>
+                          </TableHead>
+                          <TableHead className="font-semibold text-slate-900 dark:text-slate-100" aria-sort={sortField === 'horasKmActuales' ? (sortDirection === 'asc' ? 'ascending' : 'descending') : 'none'}>
+                            <Button variant="ghost" className="h-8 gap-1.5 whitespace-nowrap px-2 font-semibold" onClick={() => toggleMantColumn('horasKmActuales')} aria-label={`Ordenar por Actual`}>
+                              Actual{sortField === 'horasKmActuales' ? (sortDirection === 'asc' ? <ArrowUp className="h-3.5 w-3.5" /> : <ArrowDown className="h-3.5 w-3.5" />) : <ArrowUpDown className="h-3.5 w-3.5 text-muted-foreground" />}
+                            </Button>
+                          </TableHead>
+                          <TableHead className="font-semibold text-slate-900 dark:text-slate-100" aria-sort={sortField === 'frecuencia' ? (sortDirection === 'asc' ? 'ascending' : 'descending') : 'none'}>
+                            <Button variant="ghost" className="h-8 gap-1.5 whitespace-nowrap px-2 font-semibold" onClick={() => toggleMantColumn('frecuencia')} aria-label={`Ordenar por Frecuencia`}>
+                              Frecuencia{sortField === 'frecuencia' ? (sortDirection === 'asc' ? <ArrowUp className="h-3.5 w-3.5" /> : <ArrowDown className="h-3.5 w-3.5" />) : <ArrowUpDown className="h-3.5 w-3.5 text-muted-foreground" />}
+                            </Button>
+                          </TableHead>
                           <TableHead className="font-semibold text-slate-900 dark:text-slate-100">Últ. Mant.</TableHead>
                           <TableHead className="font-semibold text-slate-900 dark:text-slate-100">Próximo</TableHead>
-                          <TableHead className="font-semibold text-slate-900 dark:text-slate-100">Restante</TableHead>
+                          <TableHead className="font-semibold text-slate-900 dark:text-slate-100" aria-sort={sortField === 'horasKmRestante' ? (sortDirection === 'asc' ? 'ascending' : 'descending') : 'none'}>
+                            <Button variant="ghost" className="h-8 gap-1.5 whitespace-nowrap px-2 font-semibold" onClick={() => toggleMantColumn('horasKmRestante')} aria-label={`Ordenar por Restante`}>
+                              Restante{sortField === 'horasKmRestante' ? (sortDirection === 'asc' ? <ArrowUp className="h-3.5 w-3.5" /> : <ArrowDown className="h-3.5 w-3.5" />) : <ArrowUpDown className="h-3.5 w-3.5 text-muted-foreground" />}
+                            </Button>
+                          </TableHead>
                           <TableHead className="font-semibold text-slate-900 dark:text-slate-100">Fecha Últ.</TableHead>
-                          <TableHead className="font-semibold text-slate-900 dark:text-slate-100">Estado</TableHead>
+                          <TableHead className="font-semibold text-slate-900 dark:text-slate-100" aria-sort={sortField === 'estado' ? (sortDirection === 'asc' ? 'ascending' : 'descending') : 'none'}>
+                            <Button variant="ghost" className="h-8 gap-1.5 whitespace-nowrap px-2 font-semibold" onClick={() => toggleMantColumn('estado')} aria-label={`Ordenar por Estado`}>
+                              Estado{sortField === 'estado' ? (sortDirection === 'asc' ? <ArrowUp className="h-3.5 w-3.5" /> : <ArrowDown className="h-3.5 w-3.5" />) : <ArrowUpDown className="h-3.5 w-3.5 text-muted-foreground" />}
+                            </Button>
+                          </TableHead>
                           <TableHead className="text-right font-semibold text-slate-900 dark:text-slate-100">Acciones</TableHead>
                         </TableRow>
                       </TableHeader>
                       <TableBody>
-                        {mantenimientosFiltrados.map((mant) => {
+                        {mantenimientosFiltrados.map((mant, index) => {
                           const estado = obtenerEstadoMantenimiento(mant.horasKmRestante);
                           const unidad = mant.tipoMantenimiento === 'Horas' ? 'hrs' : 'km';
                           const equipo = equiposPorFicha[mant.ficha];
+                          const empresaActual = equipo?.empresa ?? 'Sin empresa';
+                          const empresaAnterior = index > 0 ? (equiposPorFicha[mantenimientosFiltrados[index - 1].ficha]?.empresa ?? 'Sin empresa') : null;
+                          const showGroupDivider = sortField === 'ficha' && (index === 0 || empresaAnterior !== empresaActual);
 
                           return (
-                            <TableRow key={mant.id} className="hover:bg-slate-50 dark:hover:bg-slate-900/30 transition-colors border-b border-slate-100 dark:border-slate-800">
+                            <Fragment key={mant.id}>
+                            {showGroupDivider && (
+                              <TableRow data-company-group={empresaActual} className="border-t-2 border-border bg-muted/50 hover:bg-muted/50">
+                                <TableCell colSpan={12} className="py-2 text-xs font-semibold text-muted-foreground">{empresaActual}</TableCell>
+                              </TableRow>
+                            )}
+                            <TableRow className="hover:bg-slate-50 dark:hover:bg-slate-900/30 transition-colors border-b border-slate-100 dark:border-slate-800">
                               <TableCell className="font-mono font-medium text-slate-700 dark:text-slate-300">{mant.ficha}</TableCell>
                               <TableCell>
                                 <EquipoLink ficha={mant.ficha} variant="link" className="p-0 h-auto font-medium text-blue-600 dark:text-blue-400 hover:underline hover:text-blue-700 dark:hover:text-blue-300">
@@ -2119,6 +2187,7 @@ export default function Mantenimiento() {
                                 </div>
                               </TableCell>
                             </TableRow>
+                            </Fragment>
                           );
                         })}
                       </TableBody>
