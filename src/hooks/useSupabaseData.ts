@@ -2146,7 +2146,7 @@ export function useSupabaseData() {
       console.error('Error corrigiendo registro:', err);
       toast({
         title: '❌ Error',
-        description: 'No se pudo corregir el registro',
+        description: err instanceof Error ? err.message : 'No se pudo corregir el registro',
         variant: 'destructive',
       });
       throw err;
