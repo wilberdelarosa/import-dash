@@ -8,11 +8,11 @@ interface Props<T, K extends string> {
   fields: ReadonlyArray<FieldConfig<T, K>>;
   query: string;
   onQueryChange: (value: string) => void;
-  searchField: 'all' | K;
+  searchField: 'all' | NoInfer<K>;
   // Method syntax keeps callbacks bivariant so narrowed state setters are accepted.
-  onSearchFieldChange(value: 'all' | K): void;
-  sortField: K;
-  onSortFieldChange(value: K): void;
+  onSearchFieldChange(value: 'all' | NoInfer<K>): void;
+  sortField: NoInfer<K>;
+  onSortFieldChange(value: NoInfer<K>): void;
   direction: SortDirection;
   onDirectionChange(value: SortDirection): void;
   searchPlaceholder?: string;
