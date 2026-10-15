@@ -2115,7 +2115,7 @@ export function useSupabaseData() {
       metadata.corregidoEn = new Date().toISOString();
       metadata.corregidoPor = usuarioResponsable;
 
-      const { error: updError } = await supabase
+      const { data: updated, error: updError } = await supabase
         .from('historial_eventos')
         .update({
           created_at: fechaIso,
@@ -2125,8 +2125,12 @@ export function useSupabaseData() {
             ? observaciones
             : evento.descripcion,
         })
-        .eq('id', eventoId);
+        .eq('id', eventoId)
+        .select('id');
       if (updError) throw updError;
+      if (!updated || updated.length === 0) {
+        throw new Error('No tienes permiso para corregir este registro (solo Admin o Supervisor).');
+      }
 
       if (evento.ficha_equipo) {
         await recalcularSecuenciaEquipo(evento.ficha_equipo);
@@ -2142,7 +2146,7 @@ export function useSupabaseData() {
       console.error('Error corrigiendo registro:', err);
       toast({
         title: '❌ Error',
-        description: 'No se pudo corregir el registro',
+        description: err instanceof Error ? err.message : 'No se pudo corregir el registro',
         variant: 'destructive',
       });
       throw err;

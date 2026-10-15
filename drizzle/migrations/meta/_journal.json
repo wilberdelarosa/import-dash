@@ -15,6 +15,13 @@
       "when": 1792065553318,
       "tag": "0001_enforce_proximo_mantenimiento_calc",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1792069788045,
+      "tag": "0002_historial_update_policy",
+      "breakpoints": true
     }
   ]
 }
