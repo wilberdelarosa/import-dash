@@ -414,7 +414,7 @@ export default function Dashboard() {
                   <TableHeader>
                     <TableRow>
                       <TableHead>Equipo / Ficha</TableHead>
-                      <TableHead>Tipo</TableHead>
+                      <TableHead>Último mantenimiento</TableHead>
                       <TableHead className="text-right">Horas/km vencidas</TableHead>
                       <TableHead>Última actualización</TableHead>
                     </TableRow>
@@ -434,7 +434,19 @@ export default function Dashboard() {
                             </span>
                           </div>
                         </TableCell>
-                        <TableCell>{mantenimiento.tipoMantenimiento}</TableCell>
+                        <TableCell className="whitespace-nowrap">
+                          {mantenimiento.fechaUltimoMantenimiento ? (
+                            <>
+                              {formatDate(mantenimiento.fechaUltimoMantenimiento)}{' '}
+                              <span className="text-xs text-muted-foreground">
+                                ({Number(mantenimiento.horasKmUltimoMantenimiento || 0).toLocaleString('es-ES', { maximumFractionDigits: 1 })}{' '}
+                                {mantenimiento.tipoMantenimiento === 'Kilómetros' ? 'km' : 'h'})
+                              </span>
+                            </>
+                          ) : (
+                            <span className="text-muted-foreground">Sin registro</span>
+                          )}
+                        </TableCell>
                         <TableCell className="text-right">
                           <Badge variant="destructive">
                             {formatRemainingLabel(

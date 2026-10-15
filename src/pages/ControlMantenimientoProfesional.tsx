@@ -51,6 +51,7 @@ import { useDeviceDetection } from '@/hooks/useDeviceDetection';
 import { useNavigate } from 'react-router-dom';
 import { ControlMantenimientoMobile } from '@/pages/mobile/ControlMantenimientoMobile';
 import { VoiceMultiUpdate } from '@/components/VoiceMultiUpdate';
+import { WhatsAppPendientesButton } from '@/components/WhatsAppPendientesButton';
 
 const formatDate = (value: string | null | undefined) => {
   if (!value) return 'Sin registro';
@@ -1577,6 +1578,10 @@ export default function ControlMantenimientoProfesional() {
                           onUpdateBatch={handleVoiceBatchUpdate}
                           isReadOnly={isReadOnly}
                         />
+                      </div>
+
+                      <div className="pt-4 border-t">
+                        <WhatsAppPendientesButton equipos={data.equipos} mantenimientos={data.mantenimientosProgramados} />
                       </div>
 
                       {/* Sección de Alertas de Actualización */}
