@@ -30,6 +30,7 @@ import { formatRemainingLabel, getRemainingVariant } from '@/lib/maintenanceUtil
 import { useToast } from '@/hooks/use-toast';
 import { useCaterpillarData } from '@/hooks/useCaterpillarData';
 import { VoiceMultiUpdate } from '@/components/VoiceMultiUpdate';
+import { WhatsAppPendientesButton } from '@/components/WhatsAppPendientesButton';
 
 interface DatosMantenimiento {
     tipo?: string;
@@ -50,6 +51,7 @@ interface ControlMantenimientoMobileProps {
     onVoiceBatchUpdate?: (updates: Array<{ mantenimientoId: number; lectura: number; ficha: string }>) => Promise<void>;
     loading?: boolean;
     isReadOnly?: boolean;
+    isArchived?: (ficha: string, desde: string, hasta: string) => boolean;
 }
 
 // Helper para resolver intervalo
@@ -72,7 +74,8 @@ export function ControlMantenimientoMobile({
     onRegistrarMantenimiento,
     onVoiceBatchUpdate,
     loading,
-    isReadOnly
+    isReadOnly,
+    isArchived
 }: ControlMantenimientoMobileProps) {
     const { toast } = useToast();
     const [activeTab, setActiveTab] = useState('lecturas');
@@ -142,9 +145,9 @@ export function ControlMantenimientoMobile({
     }, [equipos, searchTerm]);
 
     const estadoActualizacion = useMemo(() => {
-        const inicio = new Date(fechaInicio);
+        const inicio = new Date(`${fechaInicio}T00:00:00`);
         inicio.setHours(0, 0, 0, 0);
-        const fin = new Date(fechaFin);
+        const fin = new Date(`${fechaFin}T00:00:00`);
         fin.setHours(23, 59, 59, 999);
 
         const actualizados: MantenimientoProgramado[] = [];
@@ -155,13 +158,13 @@ export function ControlMantenimientoMobile({
             // Ajustar zona horaria si es necesario, pero asumimos ISO string
             if (fechaUltima >= inicio && fechaUltima <= fin) {
                 actualizados.push(eq);
-            } else {
+            } else if (!isArchived?.(eq.ficha, fechaInicio, fechaFin)) {
                 pendientes.push(eq);
             }
         });
 
         return { actualizados, pendientes };
-    }, [equipos, fechaInicio, fechaFin]);
+    }, [equipos, fechaInicio, fechaFin, isArchived]);
 
     const porcentajeCumplimiento = useMemo(() => {
         const total = equipos.length;
@@ -789,6 +792,10 @@ export function ControlMantenimientoMobile({
                                     isReadOnly={isReadOnly}
                                 />
                             </MobileCard>
+                        )}
+
+                        {estadoVistaActiva === 'pendientes' && (
+                            <WhatsAppPendientesButton equipos={catalogoEquipos} mantenimientos={equipos} pendientesReporte={filteredPendientes} />
                         )}
 
                         {/* Lista de equipos */}
