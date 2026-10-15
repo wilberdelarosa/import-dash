@@ -35,6 +35,6 @@ export function compareEquipment(a: Equipo, b: Equipo, field: EquipmentSortField
     const company = companyRank(a) - companyRank(b);
     if (company) return company;
   }
-  const compared = collator.compare(String(fieldValue(a, field) ?? ''), String(fieldValue(b, field) ?? ''));
-  return compared ? compared * (direction === 'asc' ? 1 : -1) : collator.compare(a.ficha, b.ficha) || a.id - b.id;
+  const compared = collator.compare(String(fieldValue(a, field) ?? '').trim(), String(fieldValue(b, field) ?? '').trim());
+  return compared ? compared * (direction === 'asc' ? 1 : -1) : collator.compare(a.ficha.trim(), b.ficha.trim()) || a.id - b.id;
 }

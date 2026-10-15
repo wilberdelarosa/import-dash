@@ -11,6 +11,9 @@ describe('equipment field search and sorting', () => {
   it('reverses ficha within each company, not company priority', () => {
     expect([...rows].sort((a, b) => compareEquipment(a, b, 'ficha', 'desc')).map(e => e.id)).toEqual([2, 3, 1, 4]);
   });
+  it('ignores accidental spaces in stored fichas', () => {
+    expect(compareEquipment(equipo(1, ' F-AG-011', 'ALITO GROUP SRL'), equipo(2, 'F-AG-002', 'ALITO GROUP SRL'), 'ficha', 'asc')).toBeGreaterThan(0);
+  });
   it('sorts names across companies and supports descending', () => {
     const a = equipo(1, 'AC-2', 'ALITO GROUP SRL', 'Camión');
     const b = equipo(2, 'AC-1', 'ALITO EIRL', 'Rodillo');
