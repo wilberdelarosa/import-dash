@@ -16,7 +16,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Separator } from '@/components/ui/separator';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
-import Draggable from 'react-draggable';
+import { FloatingReportPanel } from '@/components/FloatingReportPanel';
 import {
   Loader2,
   Wrench,
@@ -27,8 +27,6 @@ import {
   ChevronRight,
   ChevronDown,
   X,
-  Minimize2,
-  GripVertical,
   AlertTriangle,
   CalendarRange,
   Route,
@@ -900,6 +898,8 @@ export default function ControlMantenimientoProfesional() {
       .sort((a, b) => a.ficha.localeCompare(b.ficha, undefined, { numeric: true }));
   }, [resumenActualizaciones, pendientesSearch, pendientesCatFilter, activeEquipos, pendientesDescartados, reporteRango]);
 
+  const pendientesSinArchivar = resumenActualizaciones?.pendientes.filter(m => !pendientesDescartados[descartarKey(m.ficha)]) ?? [];
+
   const descartadosLista = useMemo(() => {
     if (!resumenActualizaciones) return [];
     return resumenActualizaciones.pendientes
@@ -917,6 +917,10 @@ export default function ControlMantenimientoProfesional() {
       <ControlMantenimientoMobile
         equipos={data.mantenimientosProgramados.filter(m => activeEquipos.some(e => e.ficha === m.ficha))}
         catalogoEquipos={activeEquipos}
+        isArchived={(ficha, desde, hasta) => {
+          const rango = normalizarRangoFechas(desde, hasta);
+          return Boolean(rango && pendientesDescartados[`${ficha}::${rango.desde}::${rango.hasta}`]);
+        }}
 
         onUpdateLectura={async (id, lectura, fecha, notas) => {
           await updateHorasActuales({
@@ -1311,7 +1315,7 @@ export default function ControlMantenimientoProfesional() {
                         {resumenActualizaciones && (
                           <div className="flex items-center gap-2 text-xs">
                             <Badge variant="secondary">{resumenActualizaciones.actualizados.length} actualizados</Badge>
-                            <Badge variant="destructive">{resumenActualizaciones.pendientes.length} pendientes</Badge>
+                            <Badge variant="destructive">{pendientesSinArchivar.length} pendientes</Badge>
                           </div>
                         )}
                       </div>
@@ -1403,38 +1407,10 @@ export default function ControlMantenimientoProfesional() {
           {/* Botón Flotante y Panel Arrastrable */}
           <div className="pointer-events-none fixed bottom-6 right-6 z-40 flex flex-col items-end gap-3">
             {panelOpen && (
-              <Draggable
-                handle=".drag-handle"
-                defaultPosition={{ x: 0, y: 0 }}
-                position={undefined}
-              >
-                <div
-                  role="dialog"
-                  aria-modal="false"
-                  className="pointer-events-auto w-[95vw] max-w-[1400px] rounded-2xl border border-primary/20 bg-background/95 shadow-2xl backdrop-blur supports-[backdrop-filter]:backdrop-blur flex flex-col max-h-[90vh]"
-                  onWheel={(e) => e.stopPropagation()}
-                >
-                  <div className="drag-handle cursor-move flex items-start justify-between gap-4 border-b px-6 py-4 bg-slate-50 dark:bg-slate-900 flex-shrink-0">
-                    <div className="flex items-center gap-2">
-                      <GripVertical className="h-5 w-5 text-slate-400" />
-                      <div>
-                        <h3 className="flex items-center gap-2 text-base font-semibold">
-                          <CalendarRange className="h-5 w-5 text-primary" /> Panel Flotante de Gestión
-                        </h3>
-                        <p className="mt-1 text-sm text-muted-foreground">
-                          Arrastra para mover libremente. Actualiza lecturas y genera reportes sin salir de esta vista.
-                        </p>
-                      </div>
-                    </div>
-                    <Button variant="ghost" size="icon" onClick={() => setPanelOpen(false)}>
-                      <X className="h-4 w-4" />
-                      <span className="sr-only">Cerrar panel</span>
-                    </Button>
-                  </div>
-
-                  <div className="grid gap-0 lg:grid-cols-[380px,1fr] flex-1 min-h-0 overflow-hidden">
+              <FloatingReportPanel title="Panel Flotante de Gestión" onClose={() => setPanelOpen(false)}>
+                  <div className="grid min-h-full gap-0 @3xl:grid-cols-[320px,1fr]">
                     {/* Columna Izquierda: Actualización Rápida */}
-                    <div className="border-r overflow-y-auto overscroll-contain px-5 py-5 space-y-4 bg-slate-50/50 dark:bg-slate-900/50">
+                    <div className="min-w-0 border-b @3xl:border-b-0 @3xl:border-r px-5 py-5 space-y-4 bg-muted/30">
                       <div>
                         <h4 className="text-sm font-semibold mb-1 flex items-center gap-2">
                           <Gauge className="h-4 w-4 text-primary" />
@@ -1580,10 +1556,6 @@ export default function ControlMantenimientoProfesional() {
                         />
                       </div>
 
-                      <div className="pt-4 border-t">
-                        <WhatsAppPendientesButton equipos={data.equipos} mantenimientos={data.mantenimientosProgramados} />
-                      </div>
-
                       {/* Sección de Alertas de Actualización */}
                       {alertasActualizacion.length > 0 && (
                         <div className="pt-4 border-t space-y-3">
@@ -1646,7 +1618,7 @@ export default function ControlMantenimientoProfesional() {
                     </div>
 
                     {/* Columna Derecha: Reportes */}
-                    <div className="overflow-y-auto overscroll-contain px-5 py-5 space-y-5">
+                    <div className="min-w-0 px-5 py-5 pb-12 space-y-5">
                       <div>
                         <h4 className="text-sm font-semibold mb-1 flex items-center gap-2">
                           <CalendarRange className="h-4 w-4 text-primary" />
@@ -1757,14 +1729,14 @@ export default function ControlMantenimientoProfesional() {
                               Actualizados: {filteredActualizados.length}/{resumenActualizaciones.actualizados.length}
                             </Badge>
                             <Badge variant={filteredPendientes.length > 0 ? 'destructive' : 'outline'}>
-                              Pendientes: {filteredPendientes.length}/{resumenActualizaciones.pendientes.length}
+                              Pendientes: {filteredPendientes.length}/{pendientesSinArchivar.length}
                             </Badge>
                             <Badge variant="outline">
                               Período: {new Date(resumenActualizaciones.desde).toLocaleDateString()} - {new Date(resumenActualizaciones.hasta).toLocaleDateString()}
                             </Badge>
                           </div>
 
-                          <div className="grid gap-6 lg:grid-cols-2">
+                          <div className="grid gap-6 @5xl:grid-cols-2">
                             {/* Equipos con lectura registrada */}
                             <div className="space-y-3">
                               <div className="flex items-center justify-between">
@@ -1831,7 +1803,8 @@ export default function ControlMantenimientoProfesional() {
                             </div>
 
                             {/* Equipos pendientes */}
-                            <div className="space-y-3">
+                            <div className="min-w-0 space-y-3">
+                              <WhatsAppPendientesButton equipos={activeEquipos} mantenimientos={data.mantenimientosProgramados} pendientesReporte={filteredPendientes} />
                               <div className="flex items-center justify-between">
                                 <h4 className="text-sm font-semibold flex items-center gap-2">
                                   <AlertTriangle className="h-4 w-4 text-destructive" />
@@ -1956,8 +1929,7 @@ export default function ControlMantenimientoProfesional() {
                       )}
                     </div>
                   </div>
-                </div>
-              </Draggable>
+              </FloatingReportPanel>
             )}
 
             <Button
