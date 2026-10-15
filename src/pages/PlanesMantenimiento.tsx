@@ -497,14 +497,14 @@ export default function PlanesMantenimiento() {
 
   return (
     <Layout title="Planes de Mantenimiento">
-      <div className="container mx-auto py-8 px-4">
-        <div className="flex items-start justify-between mb-6">
+      <div className="container mx-auto py-4 px-3 sm:py-8 sm:px-4">
+        <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between mb-6">
           <div>
-            <h1 className="text-3xl font-bold flex items-center gap-2">
-              <ClipboardList className="w-8 h-8" />
+            <h1 className="text-2xl sm:text-3xl font-bold flex items-center gap-2">
+              <ClipboardList className="w-7 h-7 sm:w-8 sm:h-8" />
               Planes de Mantenimiento
             </h1>
-            <p className="text-muted-foreground mt-1">
+            <p className="text-sm text-muted-foreground mt-1">
               {view === 'index' 
                 ? 'Resumen de planes y kits organizados por marca' 
                 : selectedMarca 
@@ -512,9 +512,9 @@ export default function PlanesMantenimiento() {
                   : 'Define planes con intervalos PM para cada marca y modelo'}
             </p>
           </div>
-          <div className="flex items-center gap-2">
+          <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2 overflow-x-auto pb-1 -mx-1 px-1">
             {view === 'details' && (
-              <Button variant="outline" onClick={() => {
+              <Button variant="outline" className="w-full sm:w-auto" onClick={() => {
                 setView('index');
                 setSelectedMarca(null);
               }}>
@@ -527,7 +527,7 @@ export default function PlanesMantenimiento() {
               if (!open) resetPlanForm();
             }}>
             <DialogTrigger asChild>
-              <Button>
+              <Button className="w-full sm:w-auto">
                 <Plus className="w-4 h-4 mr-2" />
                 Nuevo Plan
               </Button>
@@ -603,7 +603,7 @@ export default function PlanesMantenimiento() {
               </DialogFooter>
             </DialogContent>
           </Dialog>
-            <Button variant="outline" className="gap-2" onClick={() => setImportDialogOpen(true)}>
+            <Button variant="outline" className="gap-2 w-full sm:w-auto" onClick={() => setImportDialogOpen(true)}>
               <Sparkles className="w-4 h-4" />
               Plantilla Caterpillar
             </Button>
@@ -880,9 +880,9 @@ export default function PlanesMantenimiento() {
               .map((plan) => (
               <Card key={plan.id}>
                 <CardHeader>
-                  <div className="flex items-start justify-between">
+                  <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
                     <div className="flex-1">
-                      <CardTitle className="flex items-center gap-2">
+                      <CardTitle className="flex items-center gap-2 flex-wrap">
                         {plan.nombre}
                         {!plan.activo && <Badge variant="secondary">Inactivo</Badge>}
                       </CardTitle>
@@ -893,7 +893,7 @@ export default function PlanesMantenimiento() {
                         <p className="text-sm text-muted-foreground mt-2">{plan.descripcion}</p>
                       )}
                     </div>
-                    <div className="flex gap-2">
+                    <div className="flex gap-2 self-end sm:self-auto">
                       <Button size="sm" variant="ghost" onClick={() => handleEditPlan(plan)}>
                         <Pencil className="w-4 h-4" />
                       </Button>
@@ -904,12 +904,12 @@ export default function PlanesMantenimiento() {
                   </div>
                 </CardHeader>
                 <CardContent>
-                  <div className="flex items-center justify-between mb-4">
+                  <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between mb-4">
                     <h3 className="font-semibold flex items-center gap-2">
                       <Clock className="w-5 h-5" />
                       Intervalos de Mantenimiento
                     </h3>
-                    <Button size="sm" onClick={() => openNewIntervaloDialog(plan.id)}>
+                    <Button size="sm" className="w-full sm:w-auto" onClick={() => openNewIntervaloDialog(plan.id)}>
                       <Plus className="w-4 h-4 mr-1" />
                       Agregar Intervalo
                     </Button>
@@ -917,7 +917,8 @@ export default function PlanesMantenimiento() {
                   {plan.intervalos.length === 0 ? (
                     <p className="text-sm text-muted-foreground">No hay intervalos definidos</p>
                   ) : (
-                    <Table>
+                    <div className="overflow-x-auto -mx-4 px-4 sm:mx-0 sm:px-0">
+                    <Table className="min-w-[640px] sm:min-w-0">
                       <TableHeader>
                         <TableRow>
                           <TableHead>Codigo</TableHead>
@@ -988,6 +989,7 @@ export default function PlanesMantenimiento() {
                         ))}
                       </TableBody>
                     </Table>
+                    </div>
                   )}
                 </CardContent>
               </Card>

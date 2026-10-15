@@ -78,10 +78,10 @@ export function MechanicDashboard() {
   const getStatusBadge = (status: string) => {
     switch (status) {
       case 'pending':
-        return <Badge className="bg-amber-500/10 text-amber-600 border-amber-500/20">Pendiente</Badge>;
+        return <Badge className="bg-warning/10 text-warning border-warning/20">Pendiente</Badge>;
       case 'approved':
       case 'integrated':
-        return <Badge className="bg-green-500/10 text-green-600 border-green-500/20">Aprobado</Badge>;
+        return <Badge className="bg-success/10 text-success border-success/20">Aprobado</Badge>;
       case 'rejected':
         return <Badge className="bg-destructive/10 text-destructive border-destructive/20">Rechazado</Badge>;
       default:
@@ -142,13 +142,13 @@ export function MechanicDashboard() {
 
         {/* Métricas personales */}
         <div className="grid grid-cols-4 gap-1.5">
-          <MobileCard className="p-2 text-center border-amber-500/20 bg-amber-500/5">
-            <Clock className="h-4 w-4 mx-auto text-amber-600 mb-1" />
+          <MobileCard className="p-2 text-center border-warning/20 bg-warning/5">
+            <Clock className="h-4 w-4 mx-auto text-warning mb-1" />
             <p className="text-lg font-bold">{stats.pending}</p>
             <p className="text-[9px] text-muted-foreground uppercase">Pendientes</p>
           </MobileCard>
-          <MobileCard className="p-2 text-center border-green-500/20 bg-green-500/5">
-            <CheckCircle className="h-4 w-4 mx-auto text-green-600 mb-1" />
+          <MobileCard className="p-2 text-center border-success/20 bg-success/5">
+            <CheckCircle className="h-4 w-4 mx-auto text-success mb-1" />
             <p className="text-lg font-bold">{stats.approved}</p>
             <p className="text-[9px] text-muted-foreground uppercase">Aprobados</p>
           </MobileCard>
@@ -185,8 +185,8 @@ export function MechanicDashboard() {
             <TabsContent value="vencidos" className="mt-0 data-[state=active]:block h-list-default overflow-hidden">
               {equiposVencidos.length === 0 ? (
                 <div className="text-center py-6 h-full flex flex-col items-center justify-center">
-                  <CheckCircle className="h-10 w-10 mx-auto text-green-500 mb-2" />
-                  <p className="text-sm font-medium text-green-600">¡Excelente!</p>
+                  <CheckCircle className="h-10 w-10 mx-auto text-success mb-2" />
+                  <p className="text-sm font-medium text-success">¡Excelente!</p>
                   <p className="text-xs text-muted-foreground">Sin mantenimientos vencidos</p>
                 </div>
               ) : (
@@ -225,8 +225,8 @@ export function MechanicDashboard() {
             <TabsContent value="proximos" className="mt-0 h-list-default overflow-hidden">
               {equiposProximos.length === 0 ? (
                 <div className="text-center py-6 h-full flex flex-col items-center justify-center">
-                  <CheckCircle className="h-10 w-10 mx-auto text-green-500 mb-2" />
-                  <p className="text-sm font-medium text-green-600">Todo en orden</p>
+                  <CheckCircle className="h-10 w-10 mx-auto text-success mb-2" />
+                  <p className="text-sm font-medium text-success">Todo en orden</p>
                   <p className="text-xs text-muted-foreground">Sin mantenimientos próximos</p>
                 </div>
               ) : (
@@ -237,13 +237,13 @@ export function MechanicDashboard() {
                       onClick={() => handleOpenDetalle(mant.ficha)}
                       className={cn(
                         "flex items-center justify-between p-2 rounded-lg border cursor-pointer transition-all h-[52px]",
-                        "border-amber-500/30 bg-amber-500/5 active:bg-amber-500/10",
+                        "border-warning/30 bg-warning/5 active:bg-warning/10",
                         "animate-in slide-in-from-left-2"
                       )}
                       style={{ animationDelay: `${index * 0.03}s` }}
                     >
                       <div className="flex items-center gap-2 min-w-0 flex-1 overflow-hidden">
-                        <Truck className="h-4 w-4 text-amber-600 shrink-0" />
+                        <Truck className="h-4 w-4 text-warning shrink-0" />
                         <div className="min-w-0 flex-1 overflow-hidden">
                           <p className="text-xs font-medium truncate">{mant.nombreEquipo}</p>
                           <p className="text-[10px] text-muted-foreground flex items-center gap-1">
@@ -253,7 +253,7 @@ export function MechanicDashboard() {
                           </p>
                         </div>
                       </div>
-                      <Badge className="h-5 px-1.5 text-[10px] leading-none font-medium shrink-0 ml-2 tabular-nums bg-amber-500/10 text-amber-600 border-amber-500/20">
+                      <Badge className="h-5 px-1.5 text-[10px] leading-none font-medium shrink-0 ml-2 tabular-nums bg-warning/10 text-warning border-warning/20">
                         {formatRemaining(mant.horasKmRestante)}
                       </Badge>
                     </div>
@@ -305,9 +305,9 @@ export function MechanicDashboard() {
                     className={cn(
                       "flex items-center justify-between p-2.5 rounded-lg border cursor-pointer transition-all",
                       sub.status === 'pending'
-                        ? "border-amber-500/30 bg-amber-500/5 active:bg-amber-500/10"
+                        ? "border-warning/30 bg-warning/5 active:bg-warning/10"
                         : sub.status === 'approved' || sub.status === 'integrated'
-                          ? "border-green-500/30 bg-green-500/5 active:bg-green-500/10"
+                          ? "border-success/30 bg-success/5 active:bg-success/10"
                           : "border-destructive/30 bg-destructive/5 active:bg-destructive/10",
                       "animate-in slide-in-from-left-2"
                     )}

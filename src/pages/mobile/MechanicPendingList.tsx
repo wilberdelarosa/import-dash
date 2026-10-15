@@ -215,14 +215,14 @@ export function MechanicPendingList() {
 
   const getStatusStyles = (horasRestantes: number) => {
     if (horasRestantes < 0) return 'border-destructive/40 bg-gradient-to-r from-destructive/10 to-destructive/5';
-    if (horasRestantes <= config.alertaPreventiva) return 'border-amber-500/40 bg-gradient-to-r from-amber-500/10 to-amber-500/5';
-    return 'border-emerald-500/40 bg-gradient-to-r from-emerald-500/10 to-emerald-500/5';
+    if (horasRestantes <= config.alertaPreventiva) return 'border-warning/40 bg-gradient-to-r from-warning/10 to-warning/5';
+    return 'border-success/40 bg-gradient-to-r from-success/10 to-success/5';
   };
 
   const getStatusIcon = (horasRestantes: number) => {
     if (horasRestantes < 0) return <AlertTriangle className="h-4 w-4 text-destructive" />;
-    if (horasRestantes <= config.alertaPreventiva) return <Clock className="h-4 w-4 text-amber-600" />;
-    return <CheckCircle className="h-4 w-4 text-emerald-600" />;
+    if (horasRestantes <= config.alertaPreventiva) return <Clock className="h-4 w-4 text-warning" />;
+    return <CheckCircle className="h-4 w-4 text-success" />;
   };
 
   const getStatusBadge = (horasRestantes: number) => {
@@ -235,13 +235,13 @@ export function MechanicPendingList() {
     }
     if (horasRestantes <= config.alertaPreventiva) {
       return (
-        <Badge className="h-6 px-2 text-[10px] leading-none font-bold shrink-0 tabular-nums bg-amber-500 text-white shadow-sm">
+        <Badge className="h-6 px-2 text-[10px] leading-none font-bold shrink-0 tabular-nums bg-warning text-white shadow-sm">
           {formatHours(horasRestantes)}h
         </Badge>
       );
     }
     return (
-      <Badge className="h-6 px-2 text-[10px] leading-none font-bold shrink-0 tabular-nums bg-emerald-500 text-white shadow-sm">
+      <Badge className="h-6 px-2 text-[10px] leading-none font-bold shrink-0 tabular-nums bg-success text-white shadow-sm">
         {formatHours(horasRestantes)}h
       </Badge>
     );
@@ -296,9 +296,9 @@ export function MechanicPendingList() {
                 <div
                   className={cn(
                     "h-full rounded-full transition-all duration-500",
-                    stats.saludFlota >= 80 ? "bg-gradient-to-r from-emerald-400 to-emerald-500" :
-                      stats.saludFlota >= 50 ? "bg-gradient-to-r from-amber-400 to-amber-500" :
-                        "bg-gradient-to-r from-red-400 to-red-500"
+                    stats.saludFlota >= 80 ? "bg-gradient-to-r from-success to-success" :
+                      stats.saludFlota >= 50 ? "bg-gradient-to-r from-warning to-warning" :
+                        "bg-gradient-to-r from-destructive to-destructive"
                   )}
                   style={{ width: `${stats.saludFlota}%` }}
                 />
@@ -308,18 +308,18 @@ export function MechanicPendingList() {
             {/* Métricas compactas */}
             <div className="grid grid-cols-4 gap-2">
               <div className="rounded-xl bg-destructive/20 p-2.5 text-center border border-destructive/30 backdrop-blur-sm">
-                <TrendingDown className="h-3.5 w-3.5 mx-auto mb-1 text-red-400" />
-                <p className="text-xl font-bold text-red-400">{vencidos.length}</p>
+                <TrendingDown className="h-3.5 w-3.5 mx-auto mb-1 text-destructive" />
+                <p className="text-xl font-bold text-destructive">{vencidos.length}</p>
                 <p className="text-[8px] text-white/60 uppercase tracking-wider">Vencidos</p>
               </div>
-              <div className="rounded-xl bg-amber-500/20 p-2.5 text-center border border-amber-500/30 backdrop-blur-sm">
-                <Clock className="h-3.5 w-3.5 mx-auto mb-1 text-amber-400" />
-                <p className="text-xl font-bold text-amber-400">{proximos.length}</p>
+              <div className="rounded-xl bg-warning/20 p-2.5 text-center border border-warning/30 backdrop-blur-sm">
+                <Clock className="h-3.5 w-3.5 mx-auto mb-1 text-warning" />
+                <p className="text-xl font-bold text-warning">{proximos.length}</p>
                 <p className="text-[8px] text-white/60 uppercase tracking-wider">Próximos</p>
               </div>
-              <div className="rounded-xl bg-emerald-500/20 p-2.5 text-center border border-emerald-500/30 backdrop-blur-sm">
-                <CheckCircle className="h-3.5 w-3.5 mx-auto mb-1 text-emerald-400" />
-                <p className="text-xl font-bold text-emerald-400">{alDia.length}</p>
+              <div className="rounded-xl bg-success/20 p-2.5 text-center border border-success/30 backdrop-blur-sm">
+                <CheckCircle className="h-3.5 w-3.5 mx-auto mb-1 text-success" />
+                <p className="text-xl font-bold text-success">{alDia.length}</p>
                 <p className="text-[8px] text-white/60 uppercase tracking-wider">Al día</p>
               </div>
               <div className="rounded-xl bg-white/10 p-2.5 text-center border border-white/20 backdrop-blur-sm">
@@ -445,7 +445,7 @@ export function MechanicPendingList() {
                             </Badge>
                           )}
                           {(catStats?.proximos || 0) > 0 && (
-                            <Badge className="h-4 px-1 text-[9px] bg-amber-500">
+                            <Badge className="h-4 px-1 text-[9px] bg-warning">
                               {catStats?.proximos}
                             </Badge>
                           )}
@@ -538,7 +538,7 @@ export function MechanicPendingList() {
             <TabsTrigger
               value="proximos"
               className={cn(
-                "text-xs gap-1 rounded-lg data-[state=active]:bg-amber-500 data-[state=active]:text-white",
+                "text-xs gap-1 rounded-lg data-[state=active]:bg-warning data-[state=active]:text-white",
                 "transition-all data-[state=active]:shadow-lg"
               )}
             >
@@ -550,7 +550,7 @@ export function MechanicPendingList() {
             <TabsTrigger
               value="aldia"
               className={cn(
-                "text-xs gap-1 rounded-lg data-[state=active]:bg-emerald-500 data-[state=active]:text-white",
+                "text-xs gap-1 rounded-lg data-[state=active]:bg-success data-[state=active]:text-white",
                 "transition-all data-[state=active]:shadow-lg"
               )}
             >
@@ -624,9 +624,9 @@ export function MechanicPendingList() {
                           <div className={cn(
                             'px-3 py-1 text-[10px] font-bold uppercase tracking-wider flex items-center gap-2',
                             mant.horasKmRestante < -100 ? 'bg-destructive text-destructive-foreground' :
-                              mant.horasKmRestante < -50 ? 'bg-red-600 text-white' :
-                                mant.horasKmRestante < 0 ? 'bg-red-500/90 text-white' :
-                                  'bg-amber-500 text-white'
+                              mant.horasKmRestante < -50 ? 'bg-destructive text-white' :
+                                mant.horasKmRestante < 0 ? 'bg-destructive/90 text-white' :
+                                  'bg-warning text-white'
                           )}>
                             <span className="h-1.5 w-1.5 rounded-full bg-current animate-pulse" />
                             {getUrgencyLevel(mant.horasKmRestante)}
@@ -639,8 +639,8 @@ export function MechanicPendingList() {
                             <div className={cn(
                               'rounded-xl p-2.5 shrink-0 border',
                               mant.horasKmRestante < 0 ? 'bg-destructive/10 border-destructive/20' :
-                                mant.horasKmRestante <= config.alertaPreventiva ? 'bg-amber-500/10 border-amber-500/20' :
-                                  'bg-emerald-500/10 border-emerald-500/20'
+                                mant.horasKmRestante <= config.alertaPreventiva ? 'bg-warning/10 border-warning/20' :
+                                  'bg-success/10 border-success/20'
                             )}>
                               {getStatusIcon(mant.horasKmRestante)}
                             </div>

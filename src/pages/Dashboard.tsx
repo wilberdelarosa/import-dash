@@ -4,6 +4,8 @@ import { Navigation } from '@/components/Navigation';
 import { useSupabaseDataContext } from '@/context/SupabaseDataContext';
 import { useDeviceDetection } from '@/hooks/useDeviceDetection';
 import { useUserRoles } from '@/hooks/useUserRoles';
+import { useSystemConfig } from '@/context/SystemConfigContext';
+import { getEstado } from '@/lib/maintenance-status';
 import { ResponsiveWrapper } from '@/components/mobile/ResponsiveWrapper';
 import { DashboardMobile } from '@/pages/mobile/DashboardMobile';
 import { MechanicDashboard } from '@/pages/mobile/MechanicDashboard';
@@ -20,12 +22,10 @@ import { Activity, AlertTriangle, CalendarClock, Clock, Users, ExternalLink, Spa
 import { Skeleton } from '@/components/ui/skeleton';
 import { EquipoDetalleUnificado } from '@/components/EquipoDetalleUnificado';
 import { EquipoLink } from '@/components/EquipoLink';
-import { AlertasProximidad } from '@/components/AlertasProximidad';
 import { useNavigate } from 'react-router-dom';
 import { formatRemainingLabel, getRemainingVariant } from '@/lib/maintenanceUtils';
 import { Link } from 'react-router-dom';
 import {
-  UMBRAL_MANTENIMIENTO_PROXIMO_HRS,
   LIMITE_MANTENIMIENTOS_RECIENTES,
   LIMITE_MANTENIMIENTOS_DASHBOARD
 } from '@/lib/constants';
@@ -53,6 +53,7 @@ export default function Dashboard() {
   const navigate = useNavigate();
   const { isMobile } = useDeviceDetection();
   const { isMechanic, isSupervisor, loading: loadingRoles } = useUserRoles();
+  const { config } = useSystemConfig();
   const [fichaSeleccionada, setFichaSeleccionada] = useState<string | null>(null);
   const [dialogOpen, setDialogOpen] = useState(false);
   const [novedadesExpanded, setNovedadesExpanded] = useState(false);
@@ -104,7 +105,7 @@ export default function Dashboard() {
     const fichasActivos = new Set(data.equipos.filter(e => e.activo).map(e => e.ficha));
 
     const mantenimientosPendientes = data.mantenimientosProgramados.filter(
-      (m) => m.horasKmRestante <= 50 && fichasActivos.has(m.ficha)
+      (m) => getEstado(m, { alertaPreventiva: config.alertaPreventiva }) !== 'ok' && fichasActivos.has(m.ficha)
     ).length;
     const mantenimientosVencidos = data.mantenimientosProgramados.filter(
       (m) => m.horasKmRestante < 0 && fichasActivos.has(m.ficha)
@@ -126,7 +127,7 @@ export default function Dashboard() {
       proximoMantenimiento,
       inventarioBajo,
     };
-  }, [data.equipos, data.mantenimientosProgramados, data.inventarios]);
+  }, [data.equipos, data.mantenimientosProgramados, data.inventarios, config.alertaPreventiva]);
 
   // Memoizar listas de mantenimientos para evitar ordenamiento repetido
   const mantenimientosVencidosList = useMemo(() => {
@@ -143,7 +144,7 @@ export default function Dashboard() {
       .filter(
         (mantenimiento) =>
           mantenimiento.horasKmRestante > 0 &&
-          mantenimiento.horasKmRestante <= UMBRAL_MANTENIMIENTO_PROXIMO_HRS &&
+          getEstado(mantenimiento, { alertaPreventiva: config.alertaPreventiva }) === 'proximo' &&
           fichasActivos.has(mantenimiento.ficha)
       )
       .sort((a, b) => a.horasKmRestante - b.horasKmRestante)
@@ -668,10 +669,8 @@ export default function Dashboard() {
           </Card>
         </section>
 
-        {/* Panel de Alertas Inteligentes */}
-        <section className="grid gap-6 xl:grid-cols-2">
-          <AlertasProximidad />
-
+        {/* Actividad reciente */}
+        <section className="grid gap-6">
           <Card className="flex flex-col">
             <CardHeader>
               <CardTitle>Actividad reciente</CardTitle>

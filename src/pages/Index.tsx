@@ -3,7 +3,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { useSupabaseDataContext } from '@/context/SupabaseDataContext';
-import { useNotificaciones } from '@/hooks/useNotificaciones';
+import { useUnifiedNotifications } from '@/hooks/useUnifiedNotifications';
 import { useHistorial } from '@/hooks/useHistorial';
 import { isEquipoDisponible } from '@/types/equipment';
 import { 
@@ -24,7 +24,7 @@ import { useMemo } from 'react';
 
 export default function Index() {
   const { data } = useSupabaseDataContext();
-  const { notificaciones } = useNotificaciones();
+  const { notifications: notificaciones } = useUnifiedNotifications();
   const { eventos } = useHistorial();
 
   // KPIs calculados dinámicamente (excluyendo equipos vendidos)

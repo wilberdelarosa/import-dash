@@ -82,6 +82,7 @@ import { formatRemainingLabel, getRemainingVariant } from '@/lib/maintenanceUtil
 import { useDeviceDetection } from '@/hooks/useDeviceDetection';
 import { MantenimientoMobile } from '@/pages/mobile/MantenimientoMobile';
 import { useSystemConfig } from '@/context/SystemConfigContext';
+import { getEstado, getProximo, getRestante } from '@/lib/maintenance-status';
 import { FieldFilterControls } from '@/components/shared/FieldFilterControls';
 import { compareByField, matchesFieldSearch, type FieldConfig } from '@/lib/list-fields';
 
@@ -308,18 +309,13 @@ export default function Mantenimiento() {
   // Recalcular próximo y restante según nueva lógica, filtrando equipos inactivos/vendidos
   const mantenimientosConCalculos = data.mantenimientosProgramados
     .filter(mant => fichasActivas.has(mant.ficha))
-    .map(mant => {
-      // Próximo = frecuencia + hr/km último mantenimiento
-      const proximoCalculado = mant.horasKmUltimoMantenimiento + mant.frecuencia;
-      // Restante = próximo - actual
-      const restanteCalculado = proximoCalculado - mant.horasKmActuales;
-
-      return {
-        ...mant,
-        proximoMantenimiento: proximoCalculado,
-        horasKmRestante: restanteCalculado
-      };
-    });
+    .map(mant => ({
+      ...mant,
+      // Misma regla que el trigger de BD (normalizar_calculo_mantenimiento):
+      // proximo = ultimo + frecuencia; restante = proximo - actuales.
+      proximoMantenimiento: getProximo(mant),
+      horasKmRestante: getRestante(mant),
+    }));
 
   const mantFields: ReadonlyArray<FieldConfig<MantenimientoProgramado, MantenimientoSortField>> = [
     { key: 'ficha', label: 'Ficha', get: m => m.ficha },
@@ -549,8 +545,9 @@ export default function Mantenimiento() {
   };
 
   const obtenerEstadoMantenimiento = (horasRestante: number) => {
-    if (horasRestante <= 0) return { label: 'Vencido', variant: 'destructive' as const };
-    if (horasRestante <= config.alertaPreventiva) return { label: 'Próximo', variant: 'secondary' as const };
+    const estado = getEstado({ horasKmRestante: horasRestante }, { alertaPreventiva: config.alertaPreventiva });
+    if (estado === 'vencido') return { label: 'Vencido', variant: 'destructive' as const };
+    if (estado === 'proximo') return { label: 'Próximo', variant: 'secondary' as const };
     return { label: 'Normal', variant: 'default' as const };
   };
 
@@ -892,8 +889,8 @@ export default function Mantenimiento() {
       // Resumen de la categoría con cajas
       const totalCat = mantenimientosCategoria.length;
       const vencCat = mantenimientosCategoria.filter(m => m.horasKmRestante <= 0).length;
-      const proxCat = mantenimientosCategoria.filter(m => m.horasKmRestante > 0 && m.horasKmRestante <= 100).length;
-      const normCat = mantenimientosCategoria.filter(m => m.horasKmRestante > 100).length;
+      const proxCat = mantenimientosCategoria.filter(m => m.horasKmRestante > 0 && m.horasKmRestante <= config.alertaPreventiva).length;
+      const normCat = mantenimientosCategoria.filter(m => m.horasKmRestante > config.alertaPreventiva).length;
 
       doc.setFontSize(14);
       doc.setTextColor(40, 40, 40);
@@ -2131,14 +2128,14 @@ export default function Mantenimiento() {
                                   {mant.horasKmRestante <= 0 && (
                                     <AlertCircle className="h-4 w-4 text-red-500 animate-pulse" />
                                   )}
-                                  {mant.horasKmRestante > 0 && mant.horasKmRestante <= 100 && (
+                                  {mant.horasKmRestante > 0 && mant.horasKmRestante <= config.alertaPreventiva && (
                                     <Clock className="h-4 w-4 text-amber-500" />
                                   )}
                                   <span
                                     className={
                                       mant.horasKmRestante <= 0
                                         ? 'font-bold text-red-600 dark:text-red-500'
-                                        : mant.horasKmRestante <= 100
+                                        : mant.horasKmRestante <= config.alertaPreventiva
                                           ? 'font-bold text-amber-600 dark:text-amber-500'
                                           : 'font-semibold text-emerald-600 dark:text-emerald-500'
                                     }

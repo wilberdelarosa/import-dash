@@ -88,45 +88,52 @@ export function EquiposMobile({
   const isAdmin = currentUserRole === 'admin';
 
   // Estadísticas (excluyendo vendidos por defecto)
+  // Aplicar búsqueda y filtros de categoría/empresa/marca primero
+  const equiposBase = useMemo(() => {
+    return equipos.filter(e => 
+      matchesEquipmentSearch(e, searchField, searchQuery) &&
+      (filterEmpresa === "all" || e.empresa === filterEmpresa) &&
+      (filterCategoria === "all" || e.categoria === filterCategoria) &&
+      (filterMarca === "all" || e.marca === filterMarca)
+    );
+  }, [equipos, searchField, searchQuery, filterEmpresa, filterCategoria, filterMarca]);
+
+  // Estadísticas basadas en los filtros de búsqueda aplicados
   const stats = useMemo(() => {
-    const disponibles = equipos.filter(isEquipoDisponible);
+    const disponibles = equiposBase.filter(isEquipoDisponible);
     return {
       total: disponibles.length,
       activos: disponibles.filter(e => e.activo).length,
       inactivos: disponibles.filter(e => !e.activo).length,
-      vendidos: equipos.filter(e => !isEquipoDisponible(e)).length,
+      vendidos: equiposBase.filter(e => !isEquipoDisponible(e)).length,
     };
-  }, [equipos]);
+  }, [equiposBase]);
 
-  // Filtrado y búsqueda
+  // Filtrado final por estado y ordenamiento
   const equiposFiltrados = useMemo(() => {
-    let filtered = equipos;
+    let filtered = equiposBase;
 
     // Filtro por estado (excluyendo vendidos por defecto)
     switch (filter) {
-      case 'all':
+      case "all":
         filtered = filtered.filter(isEquipoDisponible);
         break;
-      case 'active':
+      case "active":
         filtered = filtered.filter(e => isEquipoDisponible(e) && e.activo);
         break;
-      case 'inactive':
+      case "inactive":
         filtered = filtered.filter(e => isEquipoDisponible(e) && !e.activo);
         break;
-      case 'vendido':
+      case "vendido":
         filtered = filtered.filter(e => !isEquipoDisponible(e));
         break;
-      case 'todo':
+      case "todo":
         // Mostrar absolutamente todos
         break;
     }
 
-    filtered = filtered.filter(e => matchesEquipmentSearch(e, searchField, searchQuery)
-      && (filterEmpresa === 'all' || e.empresa === filterEmpresa)
-      && (filterCategoria === 'all' || e.categoria === filterCategoria)
-      && (filterMarca === 'all' || e.marca === filterMarca));
     return [...filtered].sort((a, b) => compareEquipment(a, b, sortField, sortDirection));
-  }, [equipos, filter, searchQuery, searchField, sortField, sortDirection, filterEmpresa, filterCategoria, filterMarca]);
+  }, [equiposBase, filter, sortField, sortDirection]);
 
   const getCategoryIcon = (categoria?: string) => {
     return <Truck className="h-5 w-5" />;
@@ -175,7 +182,7 @@ export function EquiposMobile({
                 variant={filter === 'active' ? 'default' : 'outline'}
                 className={cn(
                   "w-full justify-start gap-3 h-14 text-base rounded-xl transition-all",
-                  filter === 'active' && "bg-emerald-600 hover:bg-emerald-700 shadow-lg shadow-emerald-600/25 border-emerald-600"
+                  filter === 'active' && "bg-success hover:bg-success shadow-lg shadow-success/25 border-success"
                 )}
                 onClick={() => {
                   setFilter('active');
@@ -265,8 +272,8 @@ export function EquiposMobile({
             <p className="text-2xl font-bold text-primary">{stats.total}</p>
             <p className="text-[10px] uppercase tracking-wider text-muted-foreground font-semibold">Total</p>
           </MobileCard>
-          <MobileCard variant="glass" className="p-3 text-center bg-emerald-500/5 border-emerald-500/10">
-            <p className="text-2xl font-bold text-emerald-600 dark:text-emerald-400">{stats.activos}</p>
+          <MobileCard variant="glass" className="p-3 text-center bg-success/5 border-success/10">
+            <p className="text-2xl font-bold text-success dark:text-success">{stats.activos}</p>
             <p className="text-[10px] uppercase tracking-wider text-muted-foreground font-semibold">Activos</p>
           </MobileCard>
           <MobileCard variant="glass" className="p-3 text-center bg-slate-500/5 border-slate-500/10">
@@ -294,7 +301,7 @@ export function EquiposMobile({
               <Badge variant="secondary" className="gap-1 pl-1 pr-2 h-6">
                 <div className={cn(
                   "h-1.5 w-1.5 rounded-full",
-                  filter === 'active' ? "bg-emerald-500" :
+                  filter === 'active' ? "bg-success" :
                     filter === 'inactive' ? "bg-slate-500" :
                       filter === 'vendido' ? "bg-orange-500" : "bg-primary"
                 )} />
@@ -345,7 +352,7 @@ export function EquiposMobile({
                       esVendido ? (
                         <Badge variant="outline" className="text-[10px] h-5 border-orange-500/30 text-orange-600 bg-orange-500/5">⚠️ Vendido</Badge>
                       ) : equipo.activo ? (
-                        <Badge variant="outline" className="text-[10px] h-5 border-emerald-500/30 text-emerald-600 bg-emerald-500/5">Activo</Badge>
+                        <Badge variant="outline" className="text-[10px] h-5 border-success/30 text-success bg-success/5">Activo</Badge>
                       ) : (
                         <Badge variant="outline" className="text-[10px] h-5 border-slate-500/30 text-slate-600 bg-slate-500/5">Inactivo</Badge>
                       )

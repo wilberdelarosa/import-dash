@@ -37,16 +37,39 @@ import { TICKET_STATUS_CONFIG, TICKET_PRIORITY_CONFIG } from '@/types/tickets';
 type FilterMode = 'todos' | 'abiertos' | 'proceso' | 'cerrados' | 'criticos';
 
 export function GestorTicketsMobile() {
-    const { tickets, loading, stats, loadTickets } = useEquipmentTickets();
+    const { tickets, loading, stats: hookStats, loadTickets } = useEquipmentTickets();
 
     const [searchTerm, setSearchTerm] = useState('');
     const [filterMode, setFilterMode] = useState<FilterMode>('todos');
     const [filtersOpen, setFiltersOpen] = useState(false);
     const [showCreateModal, setShowCreateModal] = useState(false);
 
-    // Filtrar tickets
+    // Búsqueda base
+    const ticketsBase = useMemo(() => {
+        if (!searchTerm.trim()) return tickets;
+        const query = searchTerm.toLowerCase();
+        return tickets.filter(t =>
+            t.titulo.toLowerCase().includes(query) ||
+            t.descripcion.toLowerCase().includes(query) ||
+            t.ficha.toLowerCase().includes(query) ||
+            t.equipo?.nombre?.toLowerCase().includes(query)
+        );
+    }, [tickets, searchTerm]);
+
+    // Estadísticas recalculadas basadas en la búsqueda
+    const stats = useMemo(() => {
+        return {
+            total: ticketsBase.length,
+            abiertos: ticketsBase.filter(t => t.status === 'abierto').length,
+            enProceso: ticketsBase.filter(t => !['abierto', 'cerrado', 'cancelado'].includes(t.status)).length,
+            cerrados: ticketsBase.filter(t => ['cerrado', 'cancelado'].includes(t.status)).length,
+            criticos: ticketsBase.filter(t => t.prioridad === 'critica').length,
+        };
+    }, [ticketsBase]);
+
+    // Filtrar tickets final
     const filteredTickets = useMemo(() => {
-        let result = [...tickets];
+        let result = ticketsBase;
 
         // Filtro por modo
         if (filterMode === 'abiertos') {
@@ -59,22 +82,17 @@ export function GestorTicketsMobile() {
             result = result.filter(t => t.prioridad === 'critica');
         }
 
-        // Búsqueda
-        if (searchTerm.trim()) {
-            const query = searchTerm.toLowerCase();
-            result = result.filter(t =>
-                t.titulo.toLowerCase().includes(query) ||
-                t.descripcion.toLowerCase().includes(query) ||
-                t.ficha.toLowerCase().includes(query) ||
-                t.equipo?.nombre?.toLowerCase().includes(query)
-            );
-        }
-
         return result;
-    }, [tickets, filterMode, searchTerm]);
+    }, [ticketsBase, filterMode]);
 
     const formatTimeAgo = (date: string) => {
         return formatDistanceToNow(new Date(date), { addSuffix: true, locale: es });
+    };
+
+    const limpiarFiltros = () => {
+        setFilterMode('todos');
+        setSearchTerm('');
+        setFiltersOpen(false);
     };
 
     return (
@@ -92,7 +110,7 @@ export function GestorTicketsMobile() {
                     </Button>
                     <Sheet open={filtersOpen} onOpenChange={setFiltersOpen}>
                         <SheetTrigger asChild>
-                            <Button variant="ghost" size="icon" className="h-9 w-9 rounded-full hover:bg-primary/10">
+                            <Button variant="ghost" size="icon" className="h-11 w-11 rounded-full hover:bg-primary/10">
                                 <ListFilter className="h-5 w-5" />
                             </Button>
                         </SheetTrigger>
@@ -137,7 +155,7 @@ export function GestorTicketsMobile() {
                                     </Button>
                                     <Button
                                         variant={filterMode === 'proceso' ? 'default' : 'outline'}
-                                        className={cn("w-full justify-start gap-2 h-12 rounded-xl", filterMode === 'proceso' && "bg-amber-600 hover:bg-amber-700 border-amber-600")}
+                                        className={cn("w-full justify-start gap-2 h-12 rounded-xl", filterMode === 'proceso' && "bg-warning hover:bg-warning border-warning")}
                                         onClick={() => {
                                             setFilterMode('proceso');
                                             setFiltersOpen(false);
@@ -148,7 +166,7 @@ export function GestorTicketsMobile() {
                                     </Button>
                                     <Button
                                         variant={filterMode === 'cerrados' ? 'default' : 'outline'}
-                                        className={cn("w-full justify-start gap-2 h-12 rounded-xl", filterMode === 'cerrados' && "bg-green-600 hover:bg-green-700 border-green-600")}
+                                        className={cn("w-full justify-start gap-2 h-12 rounded-xl", filterMode === 'cerrados' && "bg-success hover:bg-success border-success")}
                                         onClick={() => {
                                             setFilterMode('cerrados');
                                             setFiltersOpen(false);
@@ -159,7 +177,7 @@ export function GestorTicketsMobile() {
                                     </Button>
                                     <Button
                                         variant={filterMode === 'criticos' ? 'default' : 'outline'}
-                                        className={cn("w-full justify-start gap-2 h-12 rounded-xl", filterMode === 'criticos' && "bg-red-600 hover:bg-red-700 border-red-600")}
+                                        className={cn("w-full justify-start gap-2 h-12 rounded-xl", filterMode === 'criticos' && "bg-destructive hover:bg-destructive border-destructive")}
                                         onClick={() => {
                                             setFilterMode('criticos');
                                             setFiltersOpen(false);
@@ -169,6 +187,14 @@ export function GestorTicketsMobile() {
                                         Críticos ({stats.criticos})
                                     </Button>
                                 </div>
+
+                                <Button 
+                                    variant="outline" 
+                                    className="w-full h-11 text-muted-foreground mt-4" 
+                                    onClick={limpiarFiltros}
+                                >
+                                    Limpiar filtros
+                                </Button>
                             </div>
                         </SheetContent>
                     </Sheet>
@@ -192,34 +218,34 @@ export function GestorTicketsMobile() {
                     <div
                         className={cn(
                             "flex flex-col items-center p-3 rounded-xl border transition-all cursor-pointer",
-                            filterMode === 'proceso' ? "bg-amber-500/20 border-amber-500/50" : "bg-amber-500/5 border-amber-500/20"
+                            filterMode === 'proceso' ? "bg-warning/20 border-warning/50" : "bg-warning/5 border-warning/20"
                         )}
                         onClick={() => setFilterMode(filterMode === 'proceso' ? 'todos' : 'proceso')}
                     >
-                        <Clock className="h-4 w-4 text-amber-500 mb-1" />
-                        <span className="text-lg font-bold text-amber-600">{stats.enProceso}</span>
+                        <Clock className="h-4 w-4 text-warning mb-1" />
+                        <span className="text-lg font-bold text-warning">{stats.enProceso}</span>
                         <span className="text-[9px] text-muted-foreground">Proceso</span>
                     </div>
                     <div
                         className={cn(
                             "flex flex-col items-center p-3 rounded-xl border transition-all cursor-pointer",
-                            filterMode === 'cerrados' ? "bg-green-500/20 border-green-500/50" : "bg-green-500/5 border-green-500/20"
+                            filterMode === 'cerrados' ? "bg-success/20 border-success/50" : "bg-success/5 border-success/20"
                         )}
                         onClick={() => setFilterMode(filterMode === 'cerrados' ? 'todos' : 'cerrados')}
                     >
-                        <CheckCircle className="h-4 w-4 text-green-500 mb-1" />
-                        <span className="text-lg font-bold text-green-600">{stats.cerrados}</span>
+                        <CheckCircle className="h-4 w-4 text-success mb-1" />
+                        <span className="text-lg font-bold text-success">{stats.cerrados}</span>
                         <span className="text-[9px] text-muted-foreground">Cerrados</span>
                     </div>
                     <div
                         className={cn(
                             "flex flex-col items-center p-3 rounded-xl border transition-all cursor-pointer",
-                            filterMode === 'criticos' ? "bg-red-500/20 border-red-500/50" : "bg-red-500/5 border-red-500/20"
+                            filterMode === 'criticos' ? "bg-destructive/20 border-destructive/50" : "bg-destructive/5 border-destructive/20"
                         )}
                         onClick={() => setFilterMode(filterMode === 'criticos' ? 'todos' : 'criticos')}
                     >
-                        <AlertTriangle className="h-4 w-4 text-red-500 mb-1" />
-                        <span className="text-lg font-bold text-red-600">{stats.criticos}</span>
+                        <AlertTriangle className="h-4 w-4 text-destructive mb-1" />
+                        <span className="text-lg font-bold text-destructive">{stats.criticos}</span>
                         <span className="text-[9px] text-muted-foreground">Críticos</span>
                     </div>
                 </div>
@@ -232,7 +258,7 @@ export function GestorTicketsMobile() {
                             placeholder="Buscar ticket..."
                             value={searchTerm}
                             onChange={(e) => setSearchTerm(e.target.value)}
-                            className="pl-9 bg-muted/50 border-0 focus-visible:ring-1 focus-visible:ring-primary/50 h-10 rounded-xl text-sm"
+                            className="pl-9 bg-muted/50 border-0 focus-visible:ring-1 focus-visible:ring-primary/50 h-11 rounded-xl text-sm"
                         />
                     </div>
 
@@ -266,7 +292,7 @@ export function GestorTicketsMobile() {
                                 key={ticket.id}
                                 className={cn(
                                     'animate-in slide-in-from-bottom-4 fade-in fill-mode-backwards p-3',
-                                    ticket.prioridad === 'critica' && 'border-red-500/30 bg-red-500/5'
+                                    ticket.prioridad === 'critica' && 'border-destructive/30 bg-destructive/5'
                                 )}
                                 style={{ animationDelay: `${index * 0.03}s` } as React.CSSProperties}
                             >
@@ -274,8 +300,8 @@ export function GestorTicketsMobile() {
                                     {/* Indicador de prioridad */}
                                     <div className={cn(
                                         "w-1 self-stretch rounded-full shrink-0",
-                                        ticket.prioridad === 'critica' ? 'bg-red-500' :
-                                            ticket.prioridad === 'alta' ? 'bg-amber-500' :
+                                        ticket.prioridad === 'critica' ? 'bg-destructive' :
+                                            ticket.prioridad === 'alta' ? 'bg-warning' :
                                                 ticket.prioridad === 'media' ? 'bg-blue-500' : 'bg-slate-400'
                                     )} />
 
@@ -333,8 +359,8 @@ export function GestorTicketsMobile() {
                                 ? 'Intenta con otros filtros'
                                 : 'Crea tu primer ticket'}
                         </p>
-                        {searchTerm && (
-                            <Button variant="link" size="sm" onClick={() => setSearchTerm('')} className="mt-2 text-xs">
+                        {(searchTerm || filterMode !== 'todos') && (
+                            <Button variant="link" size="sm" onClick={limpiarFiltros} className="mt-2 h-11">
                                 Limpiar búsqueda
                             </Button>
                         )}
@@ -342,23 +368,26 @@ export function GestorTicketsMobile() {
                 )}
             </div>
 
-            {/* FAB */}
-            <Button
-                size="lg"
-                className="fixed bottom-24 right-4 h-14 w-14 rounded-full shadow-lg shadow-primary/30 bg-primary hover:bg-primary/90 hover:scale-105 active:scale-95 transition-all duration-300 z-50"
-                onClick={() => setShowCreateModal(true)}
-            >
-                <Plus className="h-7 w-7 text-primary-foreground" />
-            </Button>
-
-            {/* Modal crear ticket */}
+            {/* Modal para crear ticket */}
+            {/* CreateTicketForm renders its own dialog, so it must not be nested in a Sheet */}
             <CreateTicketForm
                 open={showCreateModal}
                 onOpenChange={setShowCreateModal}
                 onSuccess={() => {
+                    setShowCreateModal(false);
                     loadTickets();
                 }}
             />
+
+
+            {/* FAB para agregar ticket */}
+            <Button
+                size="lg"
+                className="fixed bottom-24 right-4 h-14 w-14 rounded-full shadow-lg shadow-primary/30 bg-primary hover:bg-primary/90 transition-all z-50"
+                onClick={() => setShowCreateModal(true)}
+            >
+                <Plus className="h-7 w-7 text-primary-foreground" />
+            </Button>
         </MobileLayout>
     );
 }

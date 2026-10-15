@@ -186,29 +186,29 @@ export default function Equipos() {
               <p className="text-xs text-muted-foreground mt-1">Maquinaria registrada</p>
             </CardHeader>
           </Card>
-          <Card className="group relative overflow-hidden transition-all duration-300 hover:scale-105 hover:shadow-xl border-l-4 border-l-emerald-500 sm:col-span-1">
-            <div className="absolute right-0 top-0 h-full w-24 bg-emerald-500/5 transform skew-x-12 translate-x-8" />
+          <Card className="group relative overflow-hidden transition-all duration-300 hover:scale-105 hover:shadow-xl border-l-4 border-l-success sm:col-span-1">
+            <div className="absolute right-0 top-0 h-full w-24 bg-success/5 transform skew-x-12 translate-x-8" />
             <CardHeader className="relative pb-3">
               <div className="flex items-center justify-between">
                 <CardDescription className="text-sm font-medium">Equipos Activos</CardDescription>
-                <div className="rounded-full bg-emerald-500/10 p-2 transition-transform group-hover:scale-110">
-                  <TrendingUp className="h-5 w-5 text-emerald-600" />
+                <div className="rounded-full bg-success/10 p-2 transition-transform group-hover:scale-110">
+                  <TrendingUp className="h-5 w-5 text-success" />
                 </div>
               </div>
-              <CardTitle className="text-4xl font-bold tracking-tight text-emerald-600">{equiposActivos}</CardTitle>
+              <CardTitle className="text-4xl font-bold tracking-tight text-success">{equiposActivos}</CardTitle>
               <p className="text-xs text-muted-foreground mt-1">En operación</p>
             </CardHeader>
           </Card>
-          <Card className="group relative overflow-hidden transition-all duration-300 hover:scale-105 hover:shadow-xl border-l-4 border-l-amber-500 sm:col-span-1">
-            <div className="absolute right-0 top-0 h-full w-24 bg-amber-500/5 transform skew-x-12 translate-x-8" />
+          <Card className="group relative overflow-hidden transition-all duration-300 hover:scale-105 hover:shadow-xl border-l-4 border-l-warning sm:col-span-1">
+            <div className="absolute right-0 top-0 h-full w-24 bg-warning/5 transform skew-x-12 translate-x-8" />
             <CardHeader className="relative pb-3">
               <div className="flex items-center justify-between">
                 <CardDescription className="text-sm font-medium">Equipos Inactivos</CardDescription>
-                <div className="rounded-full bg-amber-500/10 p-2 transition-transform group-hover:scale-110">
-                  <AlertTriangle className="h-5 w-5 text-amber-600" />
+                <div className="rounded-full bg-warning/10 p-2 transition-transform group-hover:scale-110">
+                  <AlertTriangle className="h-5 w-5 text-warning" />
                 </div>
               </div>
-              <CardTitle className="text-4xl font-bold tracking-tight text-amber-600">{equiposInactivos}</CardTitle>
+              <CardTitle className="text-4xl font-bold tracking-tight text-warning">{equiposInactivos}</CardTitle>
               <p className="text-xs text-muted-foreground mt-1">Fuera de servicio</p>
             </CardHeader>
           </Card>

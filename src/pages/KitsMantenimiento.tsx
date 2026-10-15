@@ -1,6 +1,9 @@
 import { Layout } from '@/components/Layout';
 import { Navigation } from '@/components/Navigation';
 import { useKits } from '@/hooks/useKits';
+import { useDeviceDetection } from '@/hooks/useDeviceDetection';
+import { useUserRoles } from '@/hooks/useUserRoles';
+import { KitsMantenimientoMobile } from '@/pages/mobile/KitsMantenimientoMobile';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -34,7 +37,10 @@ import type { KitMantenimiento, KitPieza } from '@/types/maintenance-plans';
 const TIPOS_PIEZA = ['Filtro', 'Aceite', 'Lubricante', 'Repuesto', 'Consumible', 'Otro'];
 
 export default function KitsMantenimiento() {
+  const { isMobile } = useDeviceDetection();
+  const { isAdmin } = useUserRoles();
   const { kits, loading, createKit, updateKit, deleteKit, createPieza, updatePieza, deletePieza } = useKits();
+  const [viewingKit, setViewingKit] = useState<KitMantenimiento & { piezas?: KitPieza[] } | null>(null);
   const [openKitDialog, setOpenKitDialog] = useState(false);
   const [openPiezaDialog, setOpenPiezaDialog] = useState(false);
   const [editingKit, setEditingKit] = useState<KitMantenimiento | null>(null);
@@ -286,12 +292,183 @@ export default function KitsMantenimiento() {
   };
 
   if (loading) {
+    if (isMobile) {
+      return (
+        <div className="flex items-center justify-center min-h-screen bg-background">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary"></div>
+        </div>
+      );
+    }
     return (
       <Layout title="Kits de Mantenimiento">
         <div className="flex items-center justify-center min-h-screen">
           <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary"></div>
         </div>
       </Layout>
+    );
+  }
+
+  if (isMobile) {
+    const mobileKits = kitsFiltrados.map((kit) => ({
+      id: kit.id,
+      codigo: kit.codigo,
+      nombre: kit.nombre,
+      descripcion: kit.descripcion || undefined,
+      marca: kit.marca || undefined,
+      modeloAplicable: kit.modelo_aplicable || undefined,
+      categoria: kit.categoria || undefined,
+      activo: kit.activo,
+      piezasCount: kit.piezas?.length || 0,
+    }));
+
+    return (
+      <>
+        <KitsMantenimientoMobile
+          kits={mobileKits}
+          onView={(kit) => {
+            const fullKit = kits.find((k) => k.id === kit.id);
+            if (fullKit) setViewingKit(fullKit);
+          }}
+          onEdit={(kit) => {
+            if (!isAdmin) return;
+            const fullKit = kits.find((k) => k.id === kit.id);
+            if (fullKit) handleEditKit(fullKit);
+          }}
+          onDelete={(kit) => {
+            if (!isAdmin) return;
+            handleDeleteKit(kit.id);
+          }}
+          onCreate={() => {
+            if (!isAdmin) return;
+            resetKitForm();
+            setOpenKitDialog(true);
+          }}
+        />
+
+        {/* Dialog de ver detalle (solo lectura) */}
+        <Dialog open={!!viewingKit} onOpenChange={(open) => !open && setViewingKit(null)}>
+          <DialogContent className="max-w-lg max-h-[85vh] overflow-y-auto">
+            <DialogHeader>
+              <DialogTitle className="flex items-center gap-2">
+                {viewingKit?.nombre}
+                <Badge variant="secondary">{viewingKit?.codigo}</Badge>
+              </DialogTitle>
+              <DialogDescription>
+                {viewingKit?.marca}
+                {viewingKit?.modelo_aplicable && ` • ${viewingKit.modelo_aplicable}`}
+                {viewingKit?.categoria && ` • ${viewingKit.categoria}`}
+              </DialogDescription>
+            </DialogHeader>
+            {viewingKit?.descripcion && (
+              <p className="text-sm text-muted-foreground">{viewingKit.descripcion}</p>
+            )}
+            <div className="space-y-2">
+              <h4 className="text-sm font-semibold flex items-center gap-2">
+                <Wrench className="w-4 h-4" />
+                Piezas del Kit
+              </h4>
+              {!viewingKit?.piezas || viewingKit.piezas.length === 0 ? (
+                <p className="text-sm text-muted-foreground">No hay piezas en este kit</p>
+              ) : (
+                <div className="space-y-2">
+                  {viewingKit.piezas.map((pieza) => (
+                    <div key={pieza.id} className="rounded-lg border p-2 text-sm">
+                      <div className="flex items-center justify-between gap-2">
+                        <code className="text-xs bg-muted px-1 py-0.5 rounded">{pieza.numero_parte}</code>
+                        <Badge variant="outline" className="text-[10px]">{pieza.tipo}</Badge>
+                      </div>
+                      <p className="mt-1">{pieza.descripcion}</p>
+                      <p className="text-xs text-muted-foreground mt-1">{pieza.cantidad} {pieza.unidad}</p>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          </DialogContent>
+        </Dialog>
+
+        {/* Dialogos de creacion/edicion (solo admin) */}
+        <Dialog open={openKitDialog} onOpenChange={(open) => {
+          setOpenKitDialog(open);
+          if (!open) resetKitForm();
+        }}>
+          <DialogContent className="max-w-lg max-h-[85vh] overflow-y-auto">
+            <DialogHeader>
+              <DialogTitle>{editingKit ? 'Editar Kit' : 'Crear Kit de Mantenimiento'}</DialogTitle>
+              <DialogDescription>Define un kit con sus piezas y números de parte</DialogDescription>
+            </DialogHeader>
+            <div className="grid gap-4 py-4">
+              <div>
+                <Label htmlFor="m-nombre">Nombre del Kit *</Label>
+                <Input
+                  id="m-nombre"
+                  value={kitForm.nombre}
+                  onChange={(e) => setKitForm({ ...kitForm, nombre: e.target.value })}
+                  placeholder="Kit PM2 CAT 320"
+                />
+              </div>
+              <div>
+                <Label htmlFor="m-codigo">Código *</Label>
+                <Input
+                  id="m-codigo"
+                  value={kitForm.codigo}
+                  onChange={(e) => setKitForm({ ...kitForm, codigo: e.target.value })}
+                  placeholder="KIT-PM2-320"
+                />
+              </div>
+              <div>
+                <Label htmlFor="m-marca">Marca</Label>
+                <Input
+                  id="m-marca"
+                  value={kitForm.marca}
+                  onChange={(e) => setKitForm({ ...kitForm, marca: e.target.value })}
+                  placeholder="Caterpillar"
+                />
+              </div>
+              <div>
+                <Label htmlFor="m-modelo">Modelo</Label>
+                <Input
+                  id="m-modelo"
+                  value={kitForm.modelo_aplicable}
+                  onChange={(e) => setKitForm({ ...kitForm, modelo_aplicable: e.target.value })}
+                  placeholder="320 GC"
+                />
+              </div>
+              <div>
+                <Label htmlFor="m-categoria">Categoría</Label>
+                <Input
+                  id="m-categoria"
+                  value={kitForm.categoria}
+                  onChange={(e) => setKitForm({ ...kitForm, categoria: e.target.value })}
+                  placeholder="Excavadora"
+                />
+              </div>
+              <div>
+                <Label htmlFor="m-descripcion">Descripción</Label>
+                <Textarea
+                  id="m-descripcion"
+                  value={kitForm.descripcion}
+                  onChange={(e) => setKitForm({ ...kitForm, descripcion: e.target.value })}
+                  placeholder="Descripción del kit..."
+                />
+              </div>
+              <div className="flex items-center gap-2">
+                <Switch
+                  checked={kitForm.activo}
+                  onCheckedChange={(checked) => setKitForm({ ...kitForm, activo: checked })}
+                />
+                <Label>Kit activo</Label>
+              </div>
+            </div>
+            <DialogFooter>
+              <Button variant="outline" onClick={() => setOpenKitDialog(false)}>Cancelar</Button>
+              <Button onClick={handleCreateKit}>
+                {editingKit ? 'Actualizar' : 'Crear'}
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
+      </>
     );
   }
 

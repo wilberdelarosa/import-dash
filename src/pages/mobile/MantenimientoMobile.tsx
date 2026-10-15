@@ -304,20 +304,20 @@ export function MantenimientoMobile({
 
   const getStatusIcon = (restante: number) => {
     if (restante < 0) return <AlertTriangle className="h-4 w-4 text-destructive" />;
-    if (restante <= 50) return <Clock className="h-4 w-4 text-amber-500" />;
-    return <CheckCircle2 className="h-4 w-4 text-green-500" />;
+    if (restante <= 50) return <Clock className="h-4 w-4 text-warning" />;
+    return <CheckCircle2 className="h-4 w-4 text-success" />;
   };
 
   const getStatusColor = (restante: number) => {
     if (restante < 0) return "text-destructive";
-    if (restante <= 50) return "text-amber-500";
-    return "text-green-500";
+    if (restante <= 50) return "text-warning";
+    return "text-success";
   };
 
   const getStatusBg = (restante: number) => {
     if (restante < 0) return "bg-destructive/10 border-destructive/20";
-    if (restante <= 50) return "bg-amber-500/10 border-amber-500/20";
-    return "bg-green-500/10 border-green-500/20";
+    if (restante <= 50) return "bg-warning/10 border-warning/20";
+    return "bg-success/10 border-success/20";
   };
 
   // Exportación PDF completa
@@ -397,8 +397,8 @@ export function MantenimientoMobile({
 
       const totalMant = dataToExport.length;
       const venc = dataToExport.filter(m => m.horasKmRestante <= 0).length;
-      const prox = dataToExport.filter(m => m.horasKmRestante > 0 && m.horasKmRestante <= 100).length;
-      const norm = dataToExport.filter(m => m.horasKmRestante > 100).length;
+      const prox = dataToExport.filter(m => m.horasKmRestante > 0 && m.horasKmRestante <= config.alertaPreventiva).length;
+      const norm = dataToExport.filter(m => m.horasKmRestante > config.alertaPreventiva).length;
 
       // Caja Total
       doc.setFillColor(59, 130, 246);
@@ -445,7 +445,7 @@ export function MantenimientoMobile({
         const unidad = mant.tipoMantenimiento === 'Horas' ? 'hrs' : 'km';
         const equipo = equiposPorFicha[mant.ficha];
         const estado = mant.horasKmRestante <= 0 ? 'Vencido'
-          : mant.horasKmRestante <= 100 ? 'Próximo' : 'Normal';
+          : mant.horasKmRestante <= config.alertaPreventiva ? 'Próximo' : 'Normal';
 
         return [
           mant.ficha,
@@ -634,8 +634,8 @@ export function MantenimientoMobile({
                     <div className="grid grid-cols-1 gap-2">
                       {[
                         { id: 'vencido', label: 'Vencidos', icon: AlertTriangle, color: 'text-destructive' },
-                        { id: 'proximo', label: `Próximos (≤${config.alertaPreventiva})`, icon: Clock, color: 'text-amber-500' },
-                        { id: 'normal', label: 'Normales', icon: CheckCircle2, color: 'text-green-500' },
+                        { id: 'proximo', label: `Próximos (≤${config.alertaPreventiva})`, icon: Clock, color: 'text-warning' },
+                        { id: 'normal', label: 'Normales', icon: CheckCircle2, color: 'text-success' },
                       ].map(estado => (
                         <label
                           key={estado.id}
@@ -825,10 +825,10 @@ export function MantenimientoMobile({
                 </div>
                 <p className="text-xs uppercase tracking-wider text-muted-foreground font-semibold">Total Programados</p>
               </MobileCard>
-              <MobileCard variant="glass" className="p-4 text-center bg-green-500/5 border-green-500/20">
+              <MobileCard variant="glass" className="p-4 text-center bg-success/5 border-success/20">
                 <div className="flex items-center justify-center gap-2 mb-2">
-                  <TrendingUp className="h-5 w-5 text-green-500" />
-                  <p className="text-2xl font-bold text-green-600 dark:text-green-400">{stats.porcentajeOk}%</p>
+                  <TrendingUp className="h-5 w-5 text-success" />
+                  <p className="text-2xl font-bold text-success dark:text-success">{stats.porcentajeOk}%</p>
                 </div>
                 <p className="text-xs uppercase tracking-wider text-muted-foreground font-semibold">Al Día</p>
               </MobileCard>
@@ -859,34 +859,34 @@ export function MantenimientoMobile({
                   </div>
                 </div>
                 <div className="flex items-center gap-3">
-                  <div className="w-10 h-10 rounded-full bg-amber-500/10 flex items-center justify-center">
-                    <Clock className="h-5 w-5 text-amber-500" />
+                  <div className="w-10 h-10 rounded-full bg-warning/10 flex items-center justify-center">
+                    <Clock className="h-5 w-5 text-warning" />
                   </div>
                   <div className="flex-1">
                     <div className="flex justify-between items-center">
                       <span className="text-sm font-medium">Próximos (≤{config.alertaPreventiva})</span>
-                      <span className="text-lg font-bold text-amber-500">{stats.proximos}</span>
+                      <span className="text-lg font-bold text-warning">{stats.proximos}</span>
                     </div>
                     <div className="h-1.5 bg-muted rounded-full overflow-hidden mt-1">
                       <div
-                        className="h-full bg-amber-500 rounded-full transition-all"
+                        className="h-full bg-warning rounded-full transition-all"
                         style={{ width: `${stats.total > 0 ? (stats.proximos / stats.total) * 100 : 0}%` }}
                       />
                     </div>
                   </div>
                 </div>
                 <div className="flex items-center gap-3">
-                  <div className="w-10 h-10 rounded-full bg-green-500/10 flex items-center justify-center">
-                    <CheckCircle2 className="h-5 w-5 text-green-500" />
+                  <div className="w-10 h-10 rounded-full bg-success/10 flex items-center justify-center">
+                    <CheckCircle2 className="h-5 w-5 text-success" />
                   </div>
                   <div className="flex-1">
                     <div className="flex justify-between items-center">
                       <span className="text-sm font-medium">Normales</span>
-                      <span className="text-lg font-bold text-green-500">{stats.ok}</span>
+                      <span className="text-lg font-bold text-success">{stats.ok}</span>
                     </div>
                     <div className="h-1.5 bg-muted rounded-full overflow-hidden mt-1">
                       <div
-                        className="h-full bg-green-500 rounded-full transition-all"
+                        className="h-full bg-success rounded-full transition-all"
                         style={{ width: `${stats.total > 0 ? (stats.ok / stats.total) * 100 : 0}%` }}
                       />
                     </div>
@@ -916,12 +916,12 @@ export function MantenimientoMobile({
                           </span>
                         )}
                         {cat.proximos > 0 && (
-                          <span className="px-2 py-0.5 bg-amber-500/10 text-amber-600 dark:text-amber-400 rounded-full">
+                          <span className="px-2 py-0.5 bg-warning/10 text-warning dark:text-warning rounded-full">
                             {cat.proximos} próximos
                           </span>
                         )}
                         {cat.ok > 0 && (
-                          <span className="px-2 py-0.5 bg-green-500/10 text-green-600 dark:text-green-400 rounded-full">
+                          <span className="px-2 py-0.5 bg-success/10 text-success dark:text-success rounded-full">
                             {cat.ok} ok
                           </span>
                         )}
@@ -987,12 +987,12 @@ export function MantenimientoMobile({
                 <p className="text-lg font-bold text-destructive">{stats.vencidos}</p>
                 <p className="text-[0.6rem] uppercase tracking-wider text-muted-foreground font-semibold">Vencidos</p>
               </MobileCard>
-              <MobileCard variant="glass" className="p-2 text-center bg-amber-500/5 border-amber-500/10">
-                <p className="text-lg font-bold text-amber-600 dark:text-amber-400">{stats.proximos}</p>
+              <MobileCard variant="glass" className="p-2 text-center bg-warning/5 border-warning/10">
+                <p className="text-lg font-bold text-warning dark:text-warning">{stats.proximos}</p>
                 <p className="text-[0.6rem] uppercase tracking-wider text-muted-foreground font-semibold">Próx.</p>
               </MobileCard>
-              <MobileCard variant="glass" className="p-2 text-center bg-green-500/5 border-green-500/10">
-                <p className="text-lg font-bold text-green-600 dark:text-green-400">{stats.ok}</p>
+              <MobileCard variant="glass" className="p-2 text-center bg-success/5 border-success/10">
+                <p className="text-lg font-bold text-success dark:text-success">{stats.ok}</p>
                 <p className="text-[0.6rem] uppercase tracking-wider text-muted-foreground font-semibold">OK</p>
               </MobileCard>
             </div>
@@ -1067,8 +1067,8 @@ export function MantenimientoMobile({
                           <div className={cn(
                             "flex-shrink-0 h-10 w-10 rounded-full flex items-center justify-center shadow-sm",
                             item.horasKmRestante < 0 ? "bg-destructive/20 text-destructive" :
-                              item.horasKmRestante <= 50 ? "bg-amber-500/20 text-amber-600 dark:text-amber-400" :
-                                "bg-green-500/20 text-green-600 dark:text-green-400"
+                              item.horasKmRestante <= 50 ? "bg-warning/20 text-warning dark:text-warning" :
+                                "bg-success/20 text-success dark:text-success"
                           )}>
                             {getStatusIcon(item.horasKmRestante)}
                           </div>

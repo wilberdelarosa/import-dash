@@ -83,8 +83,8 @@ const COLUMN_OPTIONS = [
 ];
 
 const COLOR_THEMES = {
-    emerald: { name: 'Esmeralda', class: 'bg-emerald-50 dark:bg-emerald-950/20' },
-    amber: { name: 'Ámbar', class: 'bg-amber-50 dark:bg-amber-950/20' },
+    emerald: { name: 'Esmeralda', class: 'bg-success dark:bg-success/20' },
+    amber: { name: 'Ámbar', class: 'bg-warning dark:bg-warning/20' },
     sky: { name: 'Cielo', class: 'bg-sky-50 dark:bg-sky-950/20' },
     slate: { name: 'Grafito', class: ' bg-slate-100 dark:bg-slate-900/20' },
 };
@@ -379,8 +379,8 @@ export function ListasPersonalizadasMobile() {
                         <p className="text-xl font-bold text-primary">{selectedFichas.length}</p>
                         <p className="text-[0.65rem] text-muted-foreground">Selec.</p>
                     </MobileCard>
-                    <MobileCard variant="compact" className="text-center border-emerald-500/30">
-                        <p className="text-xl font-bold text-emerald-600">{selectedColumns.length}</p>
+                    <MobileCard variant="compact" className="text-center border-success/30">
+                        <p className="text-xl font-bold text-success">{selectedColumns.length}</p>
                         <p className="text-[0.65rem] text-muted-foreground">Columnas</p>
                     </MobileCard>
                 </div>

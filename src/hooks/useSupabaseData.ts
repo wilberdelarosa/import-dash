@@ -56,6 +56,7 @@ import {
   Empleado,
 } from '@/types/equipment';
 import { DEMO_DATABASE_DATA } from '@/data/demoDatabase';
+import { fetchAll } from '@/lib/fetch-all';
 
 type MantenimientoPayload = {
   ficha: string;
@@ -1926,22 +1927,16 @@ export function useSupabaseData() {
   // ==========================================================
 
   const fetchEventosDeFicha = useCallback(async (ficha: string) => {
-    const eventos: any[] = [];
-    const PAGE = 1000;
-    for (let offset = 0; ; offset += PAGE) {
-      const { data: page, error } = await supabase
+    const eventos = await fetchAll<any>((offset, limit) =>
+      supabase
         .from('historial_eventos')
         .select('*')
         .eq('ficha_equipo', ficha)
         .in('tipo_evento', ['mantenimiento_realizado', 'lectura_actualizada'])
         .order('created_at', { ascending: true })
         .order('id', { ascending: true })
-        .range(offset, offset + PAGE - 1);
-      if (error) throw error;
-      if (!page || page.length === 0) break;
-      eventos.push(...page);
-      if (page.length < PAGE) break;
-    }
+        .range(offset, offset + limit - 1)
+    );
     return eventos;
   }, []);
 

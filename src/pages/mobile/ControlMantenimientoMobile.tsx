@@ -7,6 +7,16 @@ import { Badge } from '@/components/ui/badge';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import {
+    Dialog,
+    DialogContent,
+    DialogDescription,
+    DialogFooter,
+    DialogHeader,
+    DialogTitle,
+} from '@/components/ui/dialog';
+import { Textarea } from '@/components/ui/textarea';
+import { Label } from '@/components/ui/label';
+import {
     Search,
     Gauge,
     ClipboardList,
@@ -22,7 +32,8 @@ import {
     Wrench,
     AlertTriangle,
     Mic,
-    Filter
+    Filter,
+    X
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { MantenimientoProgramado, MantenimientoRealizado, Equipo, isEquipoDisponible } from '@/types/equipment';
@@ -54,6 +65,7 @@ interface ControlMantenimientoMobileProps {
     loading?: boolean;
     isReadOnly?: boolean;
     isArchived?: (ficha: string, desde: string, hasta: string) => boolean;
+    onDescartarPendiente?: (ficha: string, nombre: string, motivo: string) => void;
 }
 
 // Helper para resolver intervalo
@@ -77,12 +89,15 @@ export function ControlMantenimientoMobile({
     onVoiceBatchUpdate,
     loading,
     isReadOnly,
-    isArchived
+    isArchived,
+    onDescartarPendiente
 }: ControlMantenimientoMobileProps) {
     const { toast } = useToast();
     const [activeTab, setActiveTab] = useState('lecturas');
     const [searchTerm, setSearchTerm] = useState('');
     const [selectedEquipo, setSelectedEquipo] = useState<MantenimientoProgramado | null>(null);
+    const [descartarTarget, setDescartarTarget] = useState<{ ficha: string; nombre: string } | null>(null);
+    const [descartarMotivo, setDescartarMotivo] = useState('');
 
     // Estados para lectura
     const [lecturaActual, setLecturaActual] = useState('');
@@ -637,7 +652,7 @@ export function ControlMantenimientoMobile({
                                             <p className="text-xl font-bold">{selectedEquipo.proximoMantenimiento}</p>
                                         </div>
                                         <div className={cn("text-center p-2 rounded-lg",
-                                            selectedEquipo.horasKmRestante < 0 ? "bg-red-100 text-red-700" : "bg-green-100 text-green-700"
+                                            selectedEquipo.horasKmRestante < 0 ? "bg-destructive text-destructive" : "bg-success text-success"
                                         )}>
                                             <p className="text-xs uppercase opacity-80">Restante</p>
                                             <p className="text-xl font-bold">{formatRemainingLabel(selectedEquipo.horasKmRestante)}</p>
@@ -740,13 +755,13 @@ export function ControlMantenimientoMobile({
                                 className={cn(
                                     "p-4 flex flex-col items-center justify-center cursor-pointer transition-all",
                                     estadoVistaActiva === 'actualizados'
-                                        ? "bg-emerald-500/15 border-emerald-500/40 ring-2 ring-emerald-500/30"
-                                        : "bg-emerald-500/5 border-emerald-500/20"
+                                        ? "bg-success/15 border-success/40 ring-2 ring-success/30"
+                                        : "bg-success/5 border-success/20"
                                 )}
                                 onClick={() => setEstadoVistaActiva('actualizados')}
                             >
-                                <span className="text-3xl font-bold text-emerald-600">{estadoActualizacion.actualizados.length}</span>
-                                <span className="text-xs font-medium text-emerald-700 uppercase tracking-wider mt-1">Actualizados</span>
+                                <span className="text-3xl font-bold text-success">{estadoActualizacion.actualizados.length}</span>
+                                <span className="text-xs font-medium text-success uppercase tracking-wider mt-1">Actualizados</span>
                             </MobileCard>
                             <MobileCard
                                 className={cn(
@@ -847,12 +862,28 @@ export function ControlMantenimientoMobile({
                                                                 <p className="text-xs text-muted-foreground truncate">{eq.nombreEquipo}</p>
                                                                 <p className="text-[10px] text-muted-foreground">Última act: {new Date(eq.fechaUltimaActualizacion).toLocaleDateString()}</p>
                                                             </div>
-                                                            <Button size="sm" variant="outline" className="h-8 ml-2 shrink-0" onClick={() => {
-                                                                setSelectedEquipo(eq);
-                                                                setActiveTab('lecturas');
-                                                            }}>
-                                                                Actualizar
-                                                            </Button>
+                                                            <div className="flex items-center gap-1 ml-2 shrink-0">
+                                                                <Button size="sm" variant="outline" className="h-8" onClick={() => {
+                                                                    setSelectedEquipo(eq);
+                                                                    setActiveTab('lecturas');
+                                                                }}>
+                                                                    Actualizar
+                                                                </Button>
+                                                                {onDescartarPendiente && (
+                                                                    <Button
+                                                                        size="icon"
+                                                                        variant="ghost"
+                                                                        className="h-8 w-8 text-muted-foreground hover:text-destructive"
+                                                                        title="Descartar este pendiente"
+                                                                        onClick={() => {
+                                                                            setDescartarMotivo('');
+                                                                            setDescartarTarget({ ficha: eq.ficha, nombre: eq.nombreEquipo });
+                                                                        }}
+                                                                    >
+                                                                        <X className="h-4 w-4" />
+                                                                    </Button>
+                                                                )}
+                                                            </div>
                                                         </div>
                                                     </MobileCard>
                                                 </Fragment>
@@ -876,14 +907,14 @@ export function ControlMantenimientoMobile({
                                                     {showGroupDivider && (
                                                         <div className="px-1 pt-2 text-xs font-semibold text-muted-foreground">{empresaActual}</div>
                                                     )}
-                                                    <MobileCard className="border-l-4 border-l-emerald-500">
+                                                    <MobileCard className="border-l-4 border-l-success">
                                                         <div className="flex justify-between items-center">
                                                             <div className="min-w-0 flex-1">
                                                                 <h4 className="font-bold text-sm">{eq.ficha}</h4>
                                                                 <p className="text-xs text-muted-foreground truncate">{eq.nombreEquipo}</p>
                                                                 <p className="text-[10px] text-muted-foreground">Actualizado: {new Date(eq.fechaUltimaActualizacion).toLocaleDateString()}</p>
                                                             </div>
-                                                            <CheckCircle2 className="h-5 w-5 text-emerald-500 shrink-0" />
+                                                            <CheckCircle2 className="h-5 w-5 text-success shrink-0" />
                                                         </div>
                                                     </MobileCard>
                                                 </Fragment>
@@ -900,6 +931,43 @@ export function ControlMantenimientoMobile({
                     </TabsContent>
                 </div>
             </Tabs>
+
+            <Dialog open={!!descartarTarget} onOpenChange={(o) => { if (!o) setDescartarTarget(null); }}>
+                <DialogContent className="sm:max-w-[440px]">
+                    <DialogHeader>
+                        <DialogTitle>Descartar pendiente</DialogTitle>
+                        <DialogDescription>
+                            {descartarTarget && (
+                                <>Vas a descartar <span className="font-mono font-bold">{descartarTarget.ficha}</span> — {descartarTarget.nombre} del listado de pendientes para este rango. Podrás restaurarlo después.</>
+                            )}
+                        </DialogDescription>
+                    </DialogHeader>
+                    <div className="space-y-2">
+                        <Label htmlFor="motivo-descarte-mobile">Motivo (opcional)</Label>
+                        <Textarea
+                            id="motivo-descarte-mobile"
+                            placeholder="Ej: No se pudo acceder al horómetro, equipo en taller, fuera de obra..."
+                            value={descartarMotivo}
+                            onChange={(e) => setDescartarMotivo(e.target.value)}
+                            rows={3}
+                        />
+                    </div>
+                    <DialogFooter>
+                        <Button variant="outline" onClick={() => setDescartarTarget(null)}>Cancelar</Button>
+                        <Button
+                            variant="destructive"
+                            onClick={() => {
+                                if (!descartarTarget) return;
+                                onDescartarPendiente?.(descartarTarget.ficha, descartarTarget.nombre, descartarMotivo.trim());
+                                setDescartarTarget(null);
+                                setDescartarMotivo('');
+                            }}
+                        >
+                            Descartar
+                        </Button>
+                    </DialogFooter>
+                </DialogContent>
+            </Dialog>
         </MobileLayout>
     );
 }
