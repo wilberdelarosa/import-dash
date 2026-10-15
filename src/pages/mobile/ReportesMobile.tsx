@@ -25,6 +25,9 @@ import {
     SheetTrigger,
 } from '@/components/ui/sheet';
 import { MantenimientoProgramado } from '@/types/equipment';
+import { FieldFilterControls } from '@/components/shared/FieldFilterControls';
+import { compareByField, matchesFieldSearch, type FieldConfig } from '@/lib/list-fields';
+import { Fragment } from 'react';
 
 interface ResumenCategoria {
     categoria: string;
@@ -54,6 +57,18 @@ export function ReportesMobile({
 }: ReportesMobileProps) {
     const [filtersOpen, setFiltersOpen] = useState(false);
     const [selectedCategory, setSelectedCategory] = useState<FilterType>('all');
+    type MantSortField = 'ficha' | 'nombre' | 'restante';
+    const [searchTerm, setSearchTerm] = useState('');
+    const [searchField, setSearchField] = useState<'all' | MantSortField>('all');
+    const [sortField, setSortField] = useState<MantSortField>('ficha');
+    const [sortDirection, setSortDirection] = useState<'asc' | 'desc'>('asc');
+    const selectSortField = (field: MantSortField) => { setSortField(field); setSortDirection('asc'); };
+
+    const mantFields: ReadonlyArray<FieldConfig<MantenimientoProgramado, MantSortField>> = [
+        { key: 'ficha', label: 'Ficha', get: m => m.ficha },
+        { key: 'nombre', label: 'Equipo', get: m => m.nombreEquipo },
+        { key: 'restante', label: 'Restante', get: m => m.horasKmRestante },
+    ];
 
     // Filtrar mantenimientos por categoría
     const mantenimientosFiltrados = useMemo(() => {
@@ -72,6 +87,16 @@ export function ReportesMobile({
         // I will assume the passed objects have it (maybe joined in the backend).
         return mantenimientosVencidos.filter((m) => (m as MantenimientoProgramado & { categoria?: string }).categoria === selectedCategory);
     }, [mantenimientosVencidos, selectedCategory]);
+
+    const mantenimientosBuscados = useMemo(
+        () => mantenimientosFiltrados.filter(m => matchesFieldSearch(m, mantFields, searchField, searchTerm)),
+        [mantenimientosFiltrados, searchField, searchTerm]
+    );
+
+    const mantenimientosOrdenados = useMemo(
+        () => [...mantenimientosBuscados].sort((a, b) => compareByField(a, b, mantFields, sortField, sortDirection)),
+        [mantenimientosBuscados, sortField, sortDirection]
+    );
 
     return (
         <MobileLayout
@@ -200,7 +225,7 @@ export function ReportesMobile({
                 </div>
 
                 {/* Alertas Críticas Premium */}
-                {mantenimientosFiltrados.length > 0 && (
+                {mantenimientosOrdenados.length > 0 && (
                     <div className="space-y-3">
                         <div className="flex items-center justify-between">
                             <h3 className="text-sm font-semibold text-red-600 px-1 uppercase tracking-wider flex items-center gap-2">
@@ -217,8 +242,21 @@ export function ReportesMobile({
                                 </Badge>
                             )}
                         </div>
+                        <FieldFilterControls
+                            fields={mantFields}
+                            query={searchTerm}
+                            onQueryChange={setSearchTerm}
+                            searchField={searchField}
+                            onSearchFieldChange={setSearchField}
+                            sortField={sortField}
+                            onSortFieldChange={selectSortField}
+                            direction={sortDirection}
+                            onDirectionChange={setSortDirection}
+                            searchPlaceholder="Buscar en ficha, equipo..."
+                            searchLabel="Buscar mantenimientos"
+                        />
                         <div className="space-y-2">
-                            {mantenimientosFiltrados.slice(0, 10).map((mant, index) => (
+                            {mantenimientosOrdenados.slice(0, 10).map((mant, index) => (
                                 <MobileCard
                                     key={mant.id}
                                     variant="glass"
@@ -237,16 +275,16 @@ export function ReportesMobile({
                                 </MobileCard>
                             ))}
                         </div>
-                        {mantenimientosFiltrados.length > 10 && (
+                        {mantenimientosOrdenados.length > 10 && (
                             <p className="text-center text-xs text-muted-foreground">
-                                +{mantenimientosFiltrados.length - 10} mantenimientos más
+                                +{mantenimientosOrdenados.length - 10} mantenimientos más
                             </p>
                         )}
                     </div>
                 )}
 
                 {/* Empty state cuando no hay vencidos */}
-                {mantenimientosFiltrados.length === 0 && (
+                {mantenimientosOrdenados.length === 0 && (
                     <div className="flex flex-col items-center justify-center py-8 text-center animate-fade-in">
                         <div className="h-20 w-20 rounded-full bg-green-500/10 flex items-center justify-center mb-4">
                             <CheckCircle2 className="h-10 w-10 text-green-500" />

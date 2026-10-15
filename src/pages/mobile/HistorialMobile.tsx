@@ -1,10 +1,13 @@
-import { useState, useMemo } from 'react';
+import { useState, useMemo, Fragment } from 'react';
 import { MobileLayout } from '@/components/mobile/MobileLayout';
 import { MobileCard } from '@/components/mobile/MobileCard';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
 import { useHistorial } from '@/hooks/useHistorial';
+import { useSupabaseDataContext } from '@/context/SupabaseDataContext';
+import { FieldFilterControls } from '@/components/shared/FieldFilterControls';
+import { compareByField, matchesFieldSearch, type FieldConfig } from '@/lib/list-fields';
 import {
     Search,
     Filter,
@@ -62,6 +65,8 @@ interface HistorialMobileProps {
     loading?: boolean;
 }
 
+type HistorialSortField = 'fecha' | 'tipo' | 'modulo' | 'descripcion' | 'ficha' | 'equipo' | 'usuario' | 'nivel';
+
 export function HistorialMobile({ loading: externalLoading }: HistorialMobileProps) {
     const {
         eventos,
@@ -70,11 +75,33 @@ export function HistorialMobile({ loading: externalLoading }: HistorialMobilePro
         setFiltros,
         limpiarHistorial,
     } = useHistorial();
+    const { data } = useSupabaseDataContext();
 
     const [expandedEventId, setExpandedEventId] = useState<number | null>(null);
     const [activeTab, setActiveTab] = useState<'timeline' | 'stats'>('timeline');
     const [filterSheetOpen, setFilterSheetOpen] = useState(false);
     const [refreshing, setRefreshing] = useState(false);
+    const [searchTerm, setSearchTerm] = useState('');
+    const [searchField, setSearchField] = useState<'all' | HistorialSortField>('all');
+    const [sortField, setSortField] = useState<HistorialSortField>('fecha');
+    const [sortDirection, setSortDirection] = useState<'asc' | 'desc'>('desc');
+    const selectSortField = (field: HistorialSortField) => { setSortField(field); setSortDirection(field === 'fecha' ? 'desc' : 'asc'); };
+
+    const equiposPorFicha = data.equipos.reduce((acc, equipo) => {
+        acc[equipo.ficha] = equipo;
+        return acc;
+    }, {} as Record<string, any>);
+
+    const historialFields: ReadonlyArray<FieldConfig<HistorialEvento, HistorialSortField>> = [
+        { key: 'fecha', label: 'Fecha', get: e => e.createdAt },
+        { key: 'tipo', label: 'Tipo', get: e => e.etiquetaSubtipo ?? e.etiquetaCategoria },
+        { key: 'modulo', label: 'Módulo', get: e => e.modulo },
+        { key: 'descripcion', label: 'Descripción', get: e => e.descripcion },
+        { key: 'ficha', label: 'Ficha', get: e => e.fichaEquipo },
+        { key: 'equipo', label: 'Equipo', get: e => e.nombreEquipo },
+        { key: 'usuario', label: 'Usuario', get: e => e.usuarioResponsable },
+        { key: 'nivel', label: 'Nivel', get: e => e.nivelImportancia },
+    ];
 
     const getIconoNivel = (nivel: string) => {
         switch (nivel) {
@@ -141,9 +168,22 @@ export function HistorialMobile({ loading: externalLoading }: HistorialMobilePro
         }
     };
 
+    const eventosBuscados = useMemo(
+        () => eventos.filter(e => matchesFieldSearch(e, historialFields, searchField, searchTerm)),
+        [eventos, searchField, searchTerm]
+    );
+
+    const eventosOrdenados = useMemo(
+        () => [...eventosBuscados].sort((a, b) => compareByField(a, b, historialFields, sortField, sortDirection, {
+            getEmpresa: e => (e.fichaEquipo ? equiposPorFicha[e.fichaEquipo]?.empresa : null),
+            getFicha: e => e.fichaEquipo ?? '',
+        })),
+        [eventosBuscados, sortField, sortDirection, equiposPorFicha]
+    );
+
     const eventosAgrupados = useMemo(() => {
         const grupos = new Map<string, typeof eventos>();
-        eventos.forEach(evento => {
+        eventosBuscados.forEach(evento => {
             const fecha = format(new Date(evento.createdAt), "EEEE d 'de' MMMM yyyy", { locale: es });
             if (!grupos.has(fecha)) {
                 grupos.set(fecha, []);
@@ -151,7 +191,7 @@ export function HistorialMobile({ loading: externalLoading }: HistorialMobilePro
             grupos.get(fecha)?.push(evento);
         });
         return Array.from(grupos.entries());
-    }, [eventos]);
+    }, [eventosBuscados]);
 
     const estadisticas = useMemo(() => {
         const criticos = eventos.filter(e => e.nivelImportancia === 'critical').length;
@@ -200,6 +240,99 @@ export function HistorialMobile({ loading: externalLoading }: HistorialMobilePro
         return format(new Date(dateString), 'HH:mm', { locale: es });
     };
 
+    const renderEventoCard = (evento: HistorialEvento) => {
+        const visual = getEventoVisual(evento.categoriaEvento);
+        const isExpanded = expandedEventId === evento.id;
+
+        return (
+            <MobileCard
+                key={evento.id}
+                className={cn(
+                    "p-0 overflow-hidden border-l-4 transition-all",
+                    visual.borderClass
+                )}
+            >
+                <button
+                    onClick={() => setExpandedEventId(isExpanded ? null : evento.id)}
+                    className="w-full p-3 text-left"
+                >
+                    <div className="flex items-start justify-between gap-2">
+                        <div className="flex-1 min-w-0 space-y-2">
+                            {/* Header del evento */}
+                            <div className="flex items-center gap-2 flex-wrap">
+                                {getIconoNivel(evento.nivelImportancia)}
+                                <Badge
+                                    variant="outline"
+                                    className={cn("text-xs", visual.textClass)}
+                                >
+                                    {visual.label}
+                                </Badge>
+                                <span className="text-[0.65rem] text-muted-foreground">
+                                    {formatTime(evento.createdAt)}
+                                </span>
+                            </div>
+
+                            {/* Descripción */}
+                            <p className="text-sm font-medium line-clamp-2">
+                                {evento.descripcion}
+                            </p>
+
+                            {/* Metadata compacta */}
+                            {(evento.fichaEquipo || evento.nombreEquipo) && (
+                                <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                                    {evento.fichaEquipo && (
+                                        <span className="font-medium">
+                                            {evento.fichaEquipo}
+                                        </span>
+                                    )}
+                                    {evento.nombreEquipo && (
+                                        <span className="truncate">
+                                            {evento.nombreEquipo}
+                                        </span>
+                                    )}
+                                </div>
+                            )}
+                        </div>
+
+                        {/* Indicador de expandir */}
+                        {isExpanded ? (
+                            <ChevronUp className="h-4 w-4 text-muted-foreground flex-shrink-0" />
+                        ) : (
+                            <ChevronDown className="h-4 w-4 text-muted-foreground flex-shrink-0" />
+                        )}
+                    </div>
+                </button>
+
+                {/* Detalles expandidos */}
+                {isExpanded && (
+                    <div className={cn(
+                        "border-t border-border/50 p-3 space-y-2 text-xs animate-in slide-in-from-top-2",
+                        visual.bgClass
+                    )}>
+                        <div className="grid gap-2">
+                            <div className="flex justify-between">
+                                <span className="text-muted-foreground">Módulo:</span>
+                                <span className="font-medium capitalize">{evento.modulo}</span>
+                            </div>
+                            {evento.usuarioResponsable && (
+                                <div className="flex justify-between">
+                                    <span className="text-muted-foreground">Usuario:</span>
+                                    <span className="font-medium">{evento.usuarioResponsable}</span>
+                                </div>
+                            )}
+                            <div className="flex justify-between">
+                                <span className="text-muted-foreground">Hora exacta:</span>
+                                <span className="font-medium">
+                                    {format(new Date(evento.createdAt), 'HH:mm:ss', { locale: es })}
+                                </span>
+                            </div>
+                        </div>
+                    </div>
+                )}
+            </MobileCard>
+        );
+    };
+
     return (
         <MobileLayout
             title="Historial"
@@ -234,27 +367,31 @@ export function HistorialMobile({ loading: externalLoading }: HistorialMobilePro
             }
         >
             <div className="space-y-4 pb-20">
-                {/* Búsqueda rápida */}
-                <div className="relative">
-                    <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                    <Input
-                        placeholder="Buscar eventos..."
-                        value={filtros.busqueda}
-                        onChange={(e) => setFiltros({ ...filtros, busqueda: e.target.value })}
-                        className="pl-10 h-11"
-                    />
-                    {filtrosActivos > 0 && (
-                        <Button
-                            variant="ghost"
-                            size="sm"
-                            className="absolute right-1 top-1/2 -translate-y-1/2 h-8"
-                            onClick={limpiarFiltros}
-                        >
-                            <X className="h-4 w-4 mr-1" />
-                            Limpiar
-                        </Button>
-                    )}
-                </div>
+                {/* Búsqueda y orden */}
+                <FieldFilterControls
+                    fields={historialFields}
+                    query={searchTerm}
+                    onQueryChange={setSearchTerm}
+                    searchField={searchField}
+                    onSearchFieldChange={setSearchField}
+                    sortField={sortField}
+                    onSortFieldChange={selectSortField}
+                    direction={sortDirection}
+                    onDirectionChange={setSortDirection}
+                    searchPlaceholder="Buscar en descripción, ficha, equipo, usuario..."
+                    searchLabel="Buscar eventos"
+                />
+                {filtrosActivos > 0 && (
+                    <Button
+                        variant="ghost"
+                        size="sm"
+                        className="w-full"
+                        onClick={limpiarFiltros}
+                    >
+                        <X className="h-4 w-4 mr-1" />
+                        Limpiar filtros avanzados
+                    </Button>
+                )}
 
                 {/* Tabs */}
                 <Tabs value={activeTab} onValueChange={(v) => setActiveTab(v as 'timeline' | 'stats')}>
@@ -311,7 +448,7 @@ export function HistorialMobile({ loading: externalLoading }: HistorialMobilePro
                                     </Button>
                                 )}
                             </div>
-                        ) : (
+                        ) : sortField === 'fecha' ? (
                             <div className="space-y-6">
                                 {eventosAgrupados.map(([fecha, eventosDia]) => (
                                     <div key={fecha} className="space-y-3">
@@ -328,101 +465,33 @@ export function HistorialMobile({ loading: externalLoading }: HistorialMobilePro
 
                                         {/* Eventos del día */}
                                         <div className="space-y-2">
-                                            {eventosDia.map((evento) => {
-                                                const visual = getEventoVisual(evento.categoriaEvento);
-                                                const isExpanded = expandedEventId === evento.id;
-
-                                                return (
-                                                    <MobileCard
-                                                        key={evento.id}
-                                                        className={cn(
-                                                            "p-0 overflow-hidden border-l-4 transition-all",
-                                                            visual.borderClass
-                                                        )}
-                                                    >
-                                                        <button
-                                                            onClick={() => setExpandedEventId(isExpanded ? null : evento.id)}
-                                                            className="w-full p-3 text-left"
-                                                        >
-                                                            <div className="flex items-start justify-between gap-2">
-                                                                <div className="flex-1 min-w-0 space-y-2">
-                                                                    {/* Header del evento */}
-                                                                    <div className="flex items-center gap-2 flex-wrap">
-                                                                        {getIconoNivel(evento.nivelImportancia)}
-                                                                        <Badge
-                                                                            variant="outline"
-                                                                            className={cn("text-xs", visual.textClass)}
-                                                                        >
-                                                                            {visual.label}
-                                                                        </Badge>
-                                                                        <span className="text-[0.65rem] text-muted-foreground">
-                                                                            {formatTime(evento.createdAt)}
-                                                                        </span>
-                                                                    </div>
-
-                                                                    {/* Descripción */}
-                                                                    <p className="text-sm font-medium line-clamp-2">
-                                                                        {evento.descripcion}
-                                                                    </p>
-
-                                                                    {/* Metadata compacta */}
-                                                                    {(evento.fichaEquipo || evento.nombreEquipo) && (
-                                                                        <div className="flex items-center gap-2 text-xs text-muted-foreground">
-                                                                            {evento.fichaEquipo && (
-                                                                                <span className="font-medium">
-                                                                                    {evento.fichaEquipo}
-                                                                                </span>
-                                                                            )}
-                                                                            {evento.nombreEquipo && (
-                                                                                <span className="truncate">
-                                                                                    {evento.nombreEquipo}
-                                                                                </span>
-                                                                            )}
-                                                                        </div>
-                                                                    )}
-                                                                </div>
-
-                                                                {/* Indicador de expandir */}
-                                                                {isExpanded ? (
-                                                                    <ChevronUp className="h-4 w-4 text-muted-foreground flex-shrink-0" />
-                                                                ) : (
-                                                                    <ChevronDown className="h-4 w-4 text-muted-foreground flex-shrink-0" />
-                                                                )}
-                                                            </div>
-                                                        </button>
-
-                                                        {/* Detalles expandidos */}
-                                                        {isExpanded && (
-                                                            <div className={cn(
-                                                                "border-t border-border/50 p-3 space-y-2 text-xs animate-in slide-in-from-top-2",
-                                                                visual.bgClass
-                                                            )}>
-                                                                <div className="grid gap-2">
-                                                                    <div className="flex justify-between">
-                                                                        <span className="text-muted-foreground">Módulo:</span>
-                                                                        <span className="font-medium capitalize">{evento.modulo}</span>
-                                                                    </div>
-                                                                    {evento.usuarioResponsable && (
-                                                                        <div className="flex justify-between">
-                                                                            <span className="text-muted-foreground">Usuario:</span>
-                                                                            <span className="font-medium">{evento.usuarioResponsable}</span>
-                                                                        </div>
-                                                                    )}
-                                                                    <div className="flex justify-between">
-                                                                        <span className="text-muted-foreground">Hora exacta:</span>
-                                                                        <span className="font-medium">
-                                                                            {format(new Date(evento.createdAt), 'HH:mm:ss', { locale: es })}
-                                                                        </span>
-                                                                    </div>
-                                                                </div>
-                                                            </div>
-                                                        )}
-                                                    </MobileCard>
-                                                );
-                                            })}
+                                            {eventosDia.map((evento) => renderEventoCard(evento))}
                                         </div>
                                     </div>
                                 ))}
+                            </div>
+                        ) : (
+                            <div className="space-y-2">
+                                {eventosOrdenados.map((evento, idx) => {
+                                    const empresaActual = evento.fichaEquipo ? (equiposPorFicha[evento.fichaEquipo]?.empresa ?? 'Sin empresa') : 'Sin empresa';
+                                    const anterior = eventosOrdenados[idx - 1];
+                                    const empresaAnterior = anterior ? (anterior.fichaEquipo ? (equiposPorFicha[anterior.fichaEquipo]?.empresa ?? 'Sin empresa') : 'Sin empresa') : null;
+                                    const showGroupDivider = sortField === 'ficha' && (idx === 0 || empresaAnterior !== empresaActual);
+
+                                    return (
+                                        <Fragment key={evento.id}>
+                                            {showGroupDivider && (
+                                                <div className="flex items-center gap-2 pt-2">
+                                                    <h3 className="text-xs font-semibold uppercase text-muted-foreground tracking-wider">
+                                                        {empresaActual}
+                                                    </h3>
+                                                    <div className="h-px flex-1 bg-border" />
+                                                </div>
+                                            )}
+                                            {renderEventoCard(evento)}
+                                        </Fragment>
+                                    );
+                                })}
                             </div>
                         )}
                     </TabsContent>

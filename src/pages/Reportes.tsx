@@ -15,6 +15,9 @@ import { Label } from '@/components/ui/label';
 import jsPDF from 'jspdf';
 import 'jspdf-autotable';
 import { useDeviceDetection } from '@/hooks/useDeviceDetection';
+import { FieldFilterControls } from '@/components/shared/FieldFilterControls';
+import { compareByField, matchesFieldSearch, type FieldConfig } from '@/lib/list-fields';
+import { Fragment } from 'react';
 import { ReportesMobile } from '@/pages/mobile/ReportesMobile';
 import { isEquipoDisponible } from '@/types/equipment';
 
@@ -32,6 +35,13 @@ export default function Reportes() {
     horasHasta: ''
   });
   const [estadoMantenimiento, setEstadoMantenimiento] = useState<'todos' | 'normal' | 'proximo' | 'vencido'>('todos');
+
+  type ReporteEquipoSortField = 'ficha' | 'nombre' | 'categoria' | 'marca' | 'estado';
+  const [searchTerm, setSearchTerm] = useState('');
+  const [searchField, setSearchField] = useState<'all' | ReporteEquipoSortField>('all');
+  const [sortField, setSortField] = useState<ReporteEquipoSortField>('ficha');
+  const [sortDirection, setSortDirection] = useState<'asc' | 'desc'>('asc');
+  const selectSortField = (field: ReporteEquipoSortField) => { setSortField(field); setSortDirection('asc'); };
 
   // Equipos disponibles (no vendidos) y activos
   const equiposActivos = data.equipos.filter(e => isEquipoDisponible(e) && e.activo);
@@ -93,6 +103,28 @@ export default function Reportes() {
       estadoMantenimiento === 'todos' || equipo.estadoMantenimiento === estadoMantenimiento
     ))
   ), [equiposConEstado, estadoMantenimiento]);
+
+  type ReporteEquipoRow = typeof equiposConEstado[number];
+  const reporteEquipoFields: ReadonlyArray<FieldConfig<ReporteEquipoRow, ReporteEquipoSortField>> = [
+    { key: 'ficha', label: 'Ficha', get: e => e.ficha },
+    { key: 'nombre', label: 'Nombre', get: e => e.nombre },
+    { key: 'categoria', label: 'Categoría', get: e => e.categoria },
+    { key: 'marca', label: 'Marca', get: e => e.marca },
+    { key: 'estado', label: 'Estado', get: e => e.estadoMantenimiento },
+  ];
+
+  const equiposPorEstadoBuscados = useMemo(
+    () => equiposPorEstado.filter(e => matchesFieldSearch(e, reporteEquipoFields, searchField, searchTerm)),
+    [equiposPorEstado, searchField, searchTerm]
+  );
+
+  const equiposPorEstadoOrdenados = useMemo(
+    () => [...equiposPorEstadoBuscados].sort((a, b) => compareByField(a, b, reporteEquipoFields, sortField, sortDirection, {
+      getEmpresa: e => e.empresa,
+      getFicha: e => e.ficha,
+    })),
+    [equiposPorEstadoBuscados, sortField, sortDirection]
+  );
 
   const resumenPorCategoria = categorias.map(categoria => {
     const equiposCategoria = equiposFiltrados.filter(e => e.categoria === categoria);
@@ -704,25 +736,50 @@ export default function Reportes() {
             </SelectContent>
           </Select>
         </CardHeader>
-        <CardContent>
-          {equiposPorEstado.length > 0 ? (
+        <CardContent className="space-y-4">
+          <FieldFilterControls
+            fields={reporteEquipoFields}
+            query={searchTerm}
+            onQueryChange={setSearchTerm}
+            searchField={searchField}
+            onSearchFieldChange={setSearchField}
+            sortField={sortField}
+            onSortFieldChange={selectSortField}
+            direction={sortDirection}
+            onDirectionChange={setSortDirection}
+            searchPlaceholder="Buscar en ficha, nombre, categoría, marca..."
+            searchLabel="Buscar equipos"
+          />
+          {equiposPorEstadoOrdenados.length > 0 ? (
             <div className="space-y-3">
-              {equiposPorEstado.map((equipo) => (
-                <div
-                  key={equipo.id}
-                  className="flex flex-col gap-1 rounded-lg border p-3 transition hover:bg-muted/50"
-                >
-                  <div className="flex items-center gap-2">
-                    <span className="font-medium">{equipo.nombre}</span>
-                    {equipo.estadoMantenimiento !== 'sin-programar' && (
-                      <Badge className={`${estadoLabels[equipo.estadoMantenimiento].badgeClass} border-0`}>
-                        {estadoLabels[equipo.estadoMantenimiento].label}
-                      </Badge>
+              {equiposPorEstadoOrdenados.map((equipo, idx) => {
+                const empresaActual = equipo.empresa ?? 'Sin empresa';
+                const anterior = equiposPorEstadoOrdenados[idx - 1];
+                const empresaAnterior = anterior ? (anterior.empresa ?? 'Sin empresa') : null;
+                const showGroupDivider = sortField === 'ficha' && (idx === 0 || empresaAnterior !== empresaActual);
+
+                return (
+                  <Fragment key={equipo.id}>
+                    {showGroupDivider && (
+                      <div className="flex items-center gap-2 pt-2">
+                        <h4 className="text-xs font-semibold uppercase text-muted-foreground tracking-wider">{empresaActual}</h4>
+                        <div className="h-px flex-1 bg-border" />
+                      </div>
                     )}
-                  </div>
-                  <span className="text-sm font-mono text-muted-foreground">{equipo.ficha}</span>
-                </div>
-              ))}
+                    <div className="flex flex-col gap-1 rounded-lg border p-3 transition hover:bg-muted/50">
+                      <div className="flex items-center gap-2">
+                        <span className="font-medium">{equipo.nombre}</span>
+                        {equipo.estadoMantenimiento !== 'sin-programar' && (
+                          <Badge className={`${estadoLabels[equipo.estadoMantenimiento].badgeClass} border-0`}>
+                            {estadoLabels[equipo.estadoMantenimiento].label}
+                          </Badge>
+                        )}
+                      </div>
+                      <span className="text-sm font-mono text-muted-foreground">{equipo.ficha}</span>
+                    </div>
+                  </Fragment>
+                );
+              })}
             </div>
           ) : (
             <p className="text-sm text-muted-foreground">
