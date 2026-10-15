@@ -1,4 +1,4 @@
-import { useState, useMemo } from 'react';
+import { Fragment, useState, useMemo } from 'react';
 import { MobileLayout } from '@/components/mobile/MobileLayout';
 import { MobileCard } from '@/components/mobile/MobileCard';
 import { Button } from '@/components/ui/button';
@@ -31,6 +31,8 @@ import { useToast } from '@/hooks/use-toast';
 import { useCaterpillarData } from '@/hooks/useCaterpillarData';
 import { VoiceMultiUpdate } from '@/components/VoiceMultiUpdate';
 import { WhatsAppPendientesButton } from '@/components/WhatsAppPendientesButton';
+import { FieldFilterControls } from '@/components/shared/FieldFilterControls';
+import { compareByField, matchesFieldSearch, type FieldConfig } from '@/lib/list-fields';
 
 interface DatosMantenimiento {
     tipo?: string;
@@ -96,6 +98,10 @@ export function ControlMantenimientoMobile({
     // Estados para filtros en Estado
     const [estadoSearch, setEstadoSearch] = useState('');
     const [estadoCategoriaFilter, setEstadoCategoriaFilter] = useState('all');
+    type EstadoSortField = 'ficha' | 'nombreEquipo' | 'categoria';
+    const [estadoSearchField, setEstadoSearchField] = useState<'all' | EstadoSortField>('all');
+    const [estadoSortField, setEstadoSortField] = useState<EstadoSortField>('ficha');
+    const [estadoSortDirection, setEstadoSortDirection] = useState<'asc' | 'desc'>('asc');
     const [estadoVistaActiva, setEstadoVistaActiva] = useState<'pendientes' | 'actualizados'>('pendientes');
 
     // Estados para pestaña Estado
@@ -181,36 +187,47 @@ export function ControlMantenimientoMobile({
         return Array.from(cats).sort();
     }, [equipos, catalogoEquipos]);
 
-    // Filtrar y ordenar por ficha ascendente
+    const equiposPorFichaEstado = useMemo(() => {
+        return catalogoEquipos.reduce((acc, equipo) => {
+            acc[equipo.ficha] = equipo;
+            return acc;
+        }, {} as Record<string, Equipo>);
+    }, [catalogoEquipos]);
+
+    const estadoFields: ReadonlyArray<FieldConfig<MantenimientoProgramado, EstadoSortField>> = [
+        { key: 'ficha', label: 'Ficha', get: m => m.ficha },
+        { key: 'nombreEquipo', label: 'Equipo', get: m => m.nombreEquipo },
+        { key: 'categoria', label: 'Categoría', get: m => equiposPorFichaEstado[m.ficha]?.categoria },
+    ];
+
+    // Filtrar y ordenar
     const filteredPendientes = useMemo(() => {
-        let list = [...estadoActualizacion.pendientes];
-        if (estadoSearch) {
-            const term = estadoSearch.toLowerCase();
-            list = list.filter(e => e.ficha.toLowerCase().includes(term) || e.nombreEquipo.toLowerCase().includes(term));
-        }
+        let list = estadoActualizacion.pendientes.filter(e => matchesFieldSearch(e, estadoFields, estadoSearchField, estadoSearch));
         if (estadoCategoriaFilter !== 'all') {
             list = list.filter(e => {
                 const equipo = catalogoEquipos.find(ce => ce.ficha === e.ficha);
                 return equipo?.categoria === estadoCategoriaFilter;
             });
         }
-        return list.sort((a, b) => a.ficha.localeCompare(b.ficha, undefined, { numeric: true }));
-    }, [estadoActualizacion.pendientes, estadoSearch, estadoCategoriaFilter, catalogoEquipos]);
+        return [...list].sort((a, b) => compareByField(a, b, estadoFields, estadoSortField, estadoSortDirection, {
+            getEmpresa: m => equiposPorFichaEstado[m.ficha]?.empresa,
+            getFicha: m => m.ficha,
+        }));
+    }, [estadoActualizacion.pendientes, estadoSearch, estadoSearchField, estadoCategoriaFilter, catalogoEquipos, estadoFields, estadoSortField, estadoSortDirection, equiposPorFichaEstado]);
 
     const filteredActualizados = useMemo(() => {
-        let list = [...estadoActualizacion.actualizados];
-        if (estadoSearch) {
-            const term = estadoSearch.toLowerCase();
-            list = list.filter(e => e.ficha.toLowerCase().includes(term) || e.nombreEquipo.toLowerCase().includes(term));
-        }
+        let list = estadoActualizacion.actualizados.filter(e => matchesFieldSearch(e, estadoFields, estadoSearchField, estadoSearch));
         if (estadoCategoriaFilter !== 'all') {
             list = list.filter(e => {
                 const equipo = catalogoEquipos.find(ce => ce.ficha === e.ficha);
                 return equipo?.categoria === estadoCategoriaFilter;
             });
         }
-        return list.sort((a, b) => a.ficha.localeCompare(b.ficha, undefined, { numeric: true }));
-    }, [estadoActualizacion.actualizados, estadoSearch, estadoCategoriaFilter, catalogoEquipos]);
+        return [...list].sort((a, b) => compareByField(a, b, estadoFields, estadoSortField, estadoSortDirection, {
+            getEmpresa: m => equiposPorFichaEstado[m.ficha]?.empresa,
+            getFicha: m => m.ficha,
+        }));
+    }, [estadoActualizacion.actualizados, estadoSearch, estadoSearchField, estadoCategoriaFilter, catalogoEquipos, estadoFields, estadoSortField, estadoSortDirection, equiposPorFichaEstado]);
 
     const handleSelectEquipo = (equipo: MantenimientoProgramado) => {
         setSelectedEquipo(equipo);
@@ -760,29 +777,31 @@ export function ControlMantenimientoMobile({
                         </div>
 
                         {/* Filtros de búsqueda */}
-                        <div className="flex gap-2">
-                            <div className="flex-1 relative">
-                                <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                                <Input
-                                    placeholder="Buscar ficha o nombre..."
-                                    value={estadoSearch}
-                                    onChange={(e) => setEstadoSearch(e.target.value)}
-                                    className="pl-9 h-10"
-                                />
-                            </div>
-                            <Select value={estadoCategoriaFilter} onValueChange={setEstadoCategoriaFilter}>
-                                <SelectTrigger className="w-[120px] h-10">
-                                    <Filter className="h-3.5 w-3.5 mr-1" />
-                                    <SelectValue placeholder="Categoría" />
-                                </SelectTrigger>
-                                <SelectContent>
-                                    <SelectItem value="all">Todas</SelectItem>
-                                    {categoriasDisponibles.map(cat => (
-                                        <SelectItem key={cat} value={cat}>{cat}</SelectItem>
-                                    ))}
-                                </SelectContent>
-                            </Select>
-                        </div>
+                        <FieldFilterControls
+                            fields={estadoFields}
+                            query={estadoSearch}
+                            onQueryChange={setEstadoSearch}
+                            searchField={estadoSearchField}
+                            onSearchFieldChange={setEstadoSearchField}
+                            sortField={estadoSortField}
+                            onSortFieldChange={setEstadoSortField}
+                            direction={estadoSortDirection}
+                            onDirectionChange={setEstadoSortDirection}
+                            searchPlaceholder="Buscar ficha o nombre..."
+                            searchLabel="Buscar equipos"
+                        />
+                        <Select value={estadoCategoriaFilter} onValueChange={setEstadoCategoriaFilter}>
+                            <SelectTrigger className="w-full h-10">
+                                <Filter className="h-3.5 w-3.5 mr-1" />
+                                <SelectValue placeholder="Categoría" />
+                            </SelectTrigger>
+                            <SelectContent>
+                                <SelectItem value="all">Todas</SelectItem>
+                                {categoriasDisponibles.map(cat => (
+                                    <SelectItem key={cat} value={cat}>{cat}</SelectItem>
+                                ))}
+                            </SelectContent>
+                        </Select>
 
                         {/* Voz Multi-Ficha Mobile */}
                         {onVoiceBatchUpdate && (
@@ -812,23 +831,33 @@ export function ControlMantenimientoMobile({
                             {estadoVistaActiva === 'pendientes' ? (
                                 filteredPendientes.length > 0 ? (
                                     <div className="space-y-2">
-                                        {filteredPendientes.map(eq => (
-                                            <MobileCard key={eq.id} className="border-l-4 border-l-destructive">
-                                                <div className="flex justify-between items-center">
-                                                    <div className="min-w-0 flex-1">
-                                                        <h4 className="font-bold text-sm">{eq.ficha}</h4>
-                                                        <p className="text-xs text-muted-foreground truncate">{eq.nombreEquipo}</p>
-                                                        <p className="text-[10px] text-muted-foreground">Última act: {new Date(eq.fechaUltimaActualizacion).toLocaleDateString()}</p>
-                                                    </div>
-                                                    <Button size="sm" variant="outline" className="h-8 ml-2 shrink-0" onClick={() => {
-                                                        setSelectedEquipo(eq);
-                                                        setActiveTab('lecturas');
-                                                    }}>
-                                                        Actualizar
-                                                    </Button>
-                                                </div>
-                                            </MobileCard>
-                                        ))}
+                                        {filteredPendientes.map((eq, index) => {
+                                            const empresaActual = equiposPorFichaEstado[eq.ficha]?.empresa ?? 'Sin empresa';
+                                            const empresaAnterior = index > 0 ? (equiposPorFichaEstado[filteredPendientes[index - 1].ficha]?.empresa ?? 'Sin empresa') : null;
+                                            const showGroupDivider = estadoSortField === 'ficha' && (index === 0 || empresaAnterior !== empresaActual);
+                                            return (
+                                                <Fragment key={eq.id}>
+                                                    {showGroupDivider && (
+                                                        <div className="px-1 pt-2 text-xs font-semibold text-muted-foreground">{empresaActual}</div>
+                                                    )}
+                                                    <MobileCard className="border-l-4 border-l-destructive">
+                                                        <div className="flex justify-between items-center">
+                                                            <div className="min-w-0 flex-1">
+                                                                <h4 className="font-bold text-sm">{eq.ficha}</h4>
+                                                                <p className="text-xs text-muted-foreground truncate">{eq.nombreEquipo}</p>
+                                                                <p className="text-[10px] text-muted-foreground">Última act: {new Date(eq.fechaUltimaActualizacion).toLocaleDateString()}</p>
+                                                            </div>
+                                                            <Button size="sm" variant="outline" className="h-8 ml-2 shrink-0" onClick={() => {
+                                                                setSelectedEquipo(eq);
+                                                                setActiveTab('lecturas');
+                                                            }}>
+                                                                Actualizar
+                                                            </Button>
+                                                        </div>
+                                                    </MobileCard>
+                                                </Fragment>
+                                            );
+                                        })}
                                     </div>
                                 ) : (
                                     <div className="text-center py-8 text-muted-foreground text-sm">
@@ -838,18 +867,28 @@ export function ControlMantenimientoMobile({
                             ) : (
                                 filteredActualizados.length > 0 ? (
                                     <div className="space-y-2">
-                                        {filteredActualizados.map(eq => (
-                                            <MobileCard key={eq.id} className="border-l-4 border-l-emerald-500">
-                                                <div className="flex justify-between items-center">
-                                                    <div className="min-w-0 flex-1">
-                                                        <h4 className="font-bold text-sm">{eq.ficha}</h4>
-                                                        <p className="text-xs text-muted-foreground truncate">{eq.nombreEquipo}</p>
-                                                        <p className="text-[10px] text-muted-foreground">Actualizado: {new Date(eq.fechaUltimaActualizacion).toLocaleDateString()}</p>
-                                                    </div>
-                                                    <CheckCircle2 className="h-5 w-5 text-emerald-500 shrink-0" />
-                                                </div>
-                                            </MobileCard>
-                                        ))}
+                                        {filteredActualizados.map((eq, index) => {
+                                            const empresaActual = equiposPorFichaEstado[eq.ficha]?.empresa ?? 'Sin empresa';
+                                            const empresaAnterior = index > 0 ? (equiposPorFichaEstado[filteredActualizados[index - 1].ficha]?.empresa ?? 'Sin empresa') : null;
+                                            const showGroupDivider = estadoSortField === 'ficha' && (index === 0 || empresaAnterior !== empresaActual);
+                                            return (
+                                                <Fragment key={eq.id}>
+                                                    {showGroupDivider && (
+                                                        <div className="px-1 pt-2 text-xs font-semibold text-muted-foreground">{empresaActual}</div>
+                                                    )}
+                                                    <MobileCard className="border-l-4 border-l-emerald-500">
+                                                        <div className="flex justify-between items-center">
+                                                            <div className="min-w-0 flex-1">
+                                                                <h4 className="font-bold text-sm">{eq.ficha}</h4>
+                                                                <p className="text-xs text-muted-foreground truncate">{eq.nombreEquipo}</p>
+                                                                <p className="text-[10px] text-muted-foreground">Actualizado: {new Date(eq.fechaUltimaActualizacion).toLocaleDateString()}</p>
+                                                            </div>
+                                                            <CheckCircle2 className="h-5 w-5 text-emerald-500 shrink-0" />
+                                                        </div>
+                                                    </MobileCard>
+                                                </Fragment>
+                                            );
+                                        })}
                                     </div>
                                 ) : (
                                     <div className="text-center py-8 text-muted-foreground text-sm">

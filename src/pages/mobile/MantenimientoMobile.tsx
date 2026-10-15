@@ -11,7 +11,7 @@
  * - Búsqueda en tiempo real
  */
 
-import { useState, useMemo } from 'react';
+import { Fragment, useState, useMemo } from 'react';
 import { MobileLayout } from '@/components/mobile/MobileLayout';
 import { MobileCard } from '@/components/mobile/MobileCard';
 import { Badge } from '@/components/ui/badge';
@@ -77,6 +77,8 @@ import { formatRemainingLabel, getRemainingVariant } from '@/lib/maintenanceUtil
 import { useUserRoles } from '@/hooks/useUserRoles';
 import { useToast } from '@/hooks/use-toast';
 import { useSystemConfig } from '@/context/SystemConfigContext';
+import { FieldFilterControls } from '@/components/shared/FieldFilterControls';
+import { compareByField, matchesFieldSearch, type FieldConfig } from '@/lib/list-fields';
 
 interface MantenimientoMobileProps {
   mantenimientos: MantenimientoProgramado[];
@@ -88,7 +90,7 @@ interface MantenimientoMobileProps {
   onRefresh?: () => Promise<void>;
   categorias?: string[];
   tipos?: string[];
-  equiposPorFicha?: Record<string, { categoria: string; marca?: string; modelo?: string }>;
+  equiposPorFicha?: Record<string, { categoria: string; marca?: string; modelo?: string; empresa?: string }>;
 }
 
 type ViewMode = 'list' | 'overview';
@@ -109,6 +111,10 @@ export function MantenimientoMobile({
   const [exportOpen, setExportOpen] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
   const [refreshing, setRefreshing] = useState(false);
+  type MantSortField = 'ficha' | 'nombreEquipo' | 'categoria' | 'tipoMantenimiento' | 'horasKmActuales' | 'frecuencia' | 'horasKmRestante' | 'estado';
+  const [searchField, setSearchField] = useState<'all' | MantSortField>('all');
+  const [sortField, setSortField] = useState<MantSortField>('ficha');
+  const [sortDirection, setSortDirection] = useState<'asc' | 'desc'>('asc');
   const [viewMode, setViewMode] = useState<ViewMode>('list');
   const [expandedCard, setExpandedCard] = useState<string | null>(null);
   const { currentUserRole } = useUserRoles();
@@ -149,14 +155,22 @@ export function MantenimientoMobile({
     );
   }, [mantenimientos]);
 
+  const mantFields: ReadonlyArray<FieldConfig<MantenimientoProgramado, MantSortField>> = useMemo(() => [
+    { key: 'ficha', label: 'Ficha', get: m => m.ficha },
+    { key: 'nombreEquipo', label: 'Equipo', get: m => m.nombreEquipo },
+    { key: 'categoria', label: 'Categoría', get: m => equiposPorFicha[m.ficha]?.categoria },
+    { key: 'tipoMantenimiento', label: 'Tipo', get: m => m.tipoMantenimiento },
+    { key: 'horasKmActuales', label: 'Actual', get: m => m.horasKmActuales },
+    { key: 'frecuencia', label: 'Frecuencia', get: m => m.frecuencia },
+    { key: 'horasKmRestante', label: 'Restante', get: m => m.horasKmRestante },
+    { key: 'estado', label: 'Estado', get: m => (m.horasKmRestante <= 0 ? 'Vencido' : m.horasKmRestante <= config.alertaPreventiva ? 'Próximo' : 'Normal') },
+  ], [equiposPorFicha, config.alertaPreventiva]);
+
   // Filtrado avanzado
   const mantenimientosFiltrados = useMemo(() => {
     return mantenimientos.filter(m => {
       // Búsqueda de texto
-      const searchMatch =
-        m.ficha.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        m.nombreEquipo.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        m.tipoMantenimiento.toLowerCase().includes(searchTerm.toLowerCase());
+      const searchMatch = matchesFieldSearch(m, mantFields, searchField, searchTerm);
 
       if (!searchMatch) return false;
 
@@ -199,12 +213,15 @@ export function MantenimientoMobile({
 
       return m.activo;
     });
-  }, [mantenimientos, searchTerm, filtros, equiposPorFicha]);
+  }, [mantenimientos, searchTerm, searchField, mantFields, filtros, equiposPorFicha]);
 
-  // Ordenar por urgencia (vencidos primero)
+  // Ordenar según campo y dirección seleccionados
   const mantenimientosOrdenados = useMemo(() => {
-    return [...mantenimientosFiltrados].sort((a, b) => a.horasKmRestante - b.horasKmRestante);
-  }, [mantenimientosFiltrados]);
+    return [...mantenimientosFiltrados].sort((a, b) => compareByField(a, b, mantFields, sortField, sortDirection, {
+      getEmpresa: m => equiposPorFicha[m.ficha]?.empresa,
+      getFicha: m => m.ficha,
+    }));
+  }, [mantenimientosFiltrados, mantFields, sortField, sortDirection, equiposPorFicha]);
 
   // Estadísticas detalladas
   const stats = useMemo(() => {
@@ -769,26 +786,31 @@ export function MantenimientoMobile({
     >
       <div className="space-y-4 pb-20">
         {/* Buscador */}
-        <div className="sticky top-0 z-30 bg-background/80 backdrop-blur-xl py-2">
-          <div className="relative">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-            <Input
-              placeholder="Buscar por ficha, equipo, tipo..."
-              className="pl-9 h-11 rounded-xl bg-muted/50 border-transparent focus:bg-background focus:border-primary/50"
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-            />
-            {(searchTerm || filtrosActivos > 0) && (
-              <Button
-                variant="ghost"
-                size="icon"
-                className="absolute right-1 top-1/2 -translate-y-1/2 h-8 w-8"
-                onClick={limpiarFiltros}
-              >
-                <X className="h-4 w-4" />
-              </Button>
-            )}
-          </div>
+        <div className="sticky top-0 z-30 bg-background/80 backdrop-blur-xl py-2 space-y-2">
+          <FieldFilterControls
+            fields={mantFields}
+            query={searchTerm}
+            onQueryChange={setSearchTerm}
+            searchField={searchField}
+            onSearchFieldChange={setSearchField}
+            sortField={sortField}
+            onSortFieldChange={setSortField}
+            direction={sortDirection}
+            onDirectionChange={setSortDirection}
+            searchPlaceholder="Buscar por ficha, equipo, tipo..."
+            searchLabel="Buscar mantenimientos"
+          />
+          {(searchTerm || filtrosActivos > 0) && (
+            <Button
+              variant="ghost"
+              size="sm"
+              className="h-8 gap-1.5"
+              onClick={limpiarFiltros}
+            >
+              <X className="h-3.5 w-3.5" />
+              Limpiar búsqueda y filtros
+            </Button>
+          )}
         </div>
 
         {/* Vista de Resumen Gerencial */}
@@ -982,10 +1004,16 @@ export function MantenimientoMobile({
                   const equipo = equiposPorFicha[item.ficha];
                   const isExpanded = expandedCard === `${item.ficha}-${item.id}`;
                   const unidad = item.tipoMantenimiento === 'Horas' ? 'hrs' : 'km';
+                  const empresaActual = equipo?.empresa ?? 'Sin empresa';
+                  const empresaAnterior = index > 0 ? (equiposPorFicha[mantenimientosOrdenados[index - 1].ficha]?.empresa ?? 'Sin empresa') : null;
+                  const showGroupDivider = sortField === 'ficha' && (index === 0 || empresaAnterior !== empresaActual);
 
                   return (
+                    <Fragment key={`${item.ficha}-${item.id}`}>
+                    {showGroupDivider && (
+                      <div className="px-1 pt-2 text-xs font-semibold text-muted-foreground">{empresaActual}</div>
+                    )}
                     <MobileCard
-                      key={`${item.ficha}-${item.id}`}
                       variant="compact"
                       className={cn(
                         'relative animate-in slide-in-from-bottom-4 fade-in fill-mode-backwards group overflow-visible',
@@ -1126,6 +1154,7 @@ export function MantenimientoMobile({
                         </div>
                       </div>
                     </MobileCard>
+                    </Fragment>
                   );
                 })}
               </div>

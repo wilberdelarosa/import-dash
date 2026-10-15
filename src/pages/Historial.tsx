@@ -60,6 +60,9 @@ import {
   EyeOff,
   ChevronDown,
   Archive,
+  ArrowUp,
+  ArrowDown,
+  ArrowUpDown,
 } from 'lucide-react';
 import { format } from 'date-fns';
 import { es } from 'date-fns/locale';
@@ -67,9 +70,16 @@ import { cn } from '@/lib/utils';
 import { HistorialEvento, TipoEventoBase } from '@/types/historial';
 import { useDeviceDetection } from '@/hooks/useDeviceDetection';
 import { HistorialMobile } from '@/pages/mobile/HistorialMobile';
+import { useSupabaseDataContext } from '@/context/SupabaseDataContext';
+import { FieldFilterControls } from '@/components/shared/FieldFilterControls';
+import { compareByField, matchesFieldSearch, type FieldConfig } from '@/lib/list-fields';
+import { Fragment } from 'react';
+
+type HistorialSortField = 'fecha' | 'tipo' | 'modulo' | 'descripcion' | 'ficha' | 'equipo' | 'usuario' | 'nivel';
 
 export default function Historial() {
   const { isMobile } = useDeviceDetection();
+  const { data } = useSupabaseDataContext();
   const {
     eventos,
     loading,
@@ -78,15 +88,54 @@ export default function Historial() {
     limpiarHistorial,
   } = useHistorial();
 
+  const [searchTerm, setSearchTerm] = useState('');
+  const [searchField, setSearchField] = useState<'all' | HistorialSortField>('all');
+  const [sortField, setSortField] = useState<HistorialSortField>('fecha');
+  const [sortDirection, setSortDirection] = useState<'asc' | 'desc'>('desc');
+  const selectSortField = (field: HistorialSortField) => { setSortField(field); setSortDirection(field === 'fecha' ? 'desc' : 'asc'); };
+  const toggleHistorialColumn = (field: HistorialSortField) => {
+    setSortDirection(sortField === field && sortDirection === 'asc' ? 'desc' : 'asc');
+    setSortField(field);
+  };
+
+  const equiposPorFicha = data.equipos.reduce((acc, equipo) => {
+    acc[equipo.ficha] = equipo;
+    return acc;
+  }, {} as Record<string, any>);
+
+  const historialFields: ReadonlyArray<FieldConfig<HistorialEvento, HistorialSortField>> = [
+    { key: 'fecha', label: 'Fecha', get: e => e.createdAt },
+    { key: 'tipo', label: 'Tipo', get: e => e.etiquetaSubtipo ?? e.etiquetaCategoria },
+    { key: 'modulo', label: 'Módulo', get: e => e.modulo },
+    { key: 'descripcion', label: 'Descripción', get: e => e.descripcion },
+    { key: 'ficha', label: 'Ficha', get: e => e.fichaEquipo },
+    { key: 'equipo', label: 'Equipo', get: e => e.nombreEquipo },
+    { key: 'usuario', label: 'Usuario', get: e => e.usuarioResponsable },
+    { key: 'nivel', label: 'Nivel', get: e => e.nivelImportancia },
+  ];
+
   const [mostrarFiltros, setMostrarFiltros] = useState(false);
   const [vistaActiva, setVistaActiva] = useState<'timeline' | 'tabla' | 'estadisticas'>('timeline');
   const [mostrarDetallesTecnicos, setMostrarDetallesTecnicos] = useState(false);
 
   // Mover los useMemo aquí antes del early return para cumplir con las reglas de hooks
+  const eventosBuscados = useMemo(
+    () => eventos.filter(e => matchesFieldSearch(e, historialFields, searchField, searchTerm)),
+    [eventos, searchField, searchTerm]
+  );
+
+  const eventosTabla = useMemo(
+    () => [...eventosBuscados].sort((a, b) => compareByField(a, b, historialFields, sortField, sortDirection, {
+      getEmpresa: e => (e.fichaEquipo ? equiposPorFicha[e.fichaEquipo]?.empresa : null),
+      getFicha: e => e.fichaEquipo ?? '',
+    })),
+    [eventosBuscados, sortField, sortDirection, equiposPorFicha]
+  );
+
   const eventosAgrupados = useMemo(() => {
     const grupos = new Map<string, typeof eventos>();
 
-    eventos.forEach(evento => {
+    eventosBuscados.forEach(evento => {
       const fecha = format(new Date(evento.createdAt), "EEEE d 'de' MMMM yyyy", { locale: es });
       if (!grupos.has(fecha)) {
         grupos.set(fecha, []);
@@ -95,10 +144,11 @@ export default function Historial() {
     });
 
     return Array.from(grupos.entries());
-  }, [eventos]);
+  }, [eventosBuscados]);
 
   // Estadísticas avanzadas
   const estadisticasAvanzadas = useMemo(() => {
+    const eventos = eventosBuscados;
     const porModulo = eventos.reduce((acc, evento) => {
       acc[evento.modulo] = (acc[evento.modulo] || 0) + 1;
       return acc;
@@ -140,7 +190,7 @@ export default function Historial() {
       ultimosSieteDias,
       promedioEventosPorDia: eventos.length > 0 ? (eventos.length / 30).toFixed(1) : '0'
     };
-  }, [eventos]);
+  }, [eventosBuscados]);
 
   // Si es móvil, renderizar versión mobile (después de todos los hooks)
   if (isMobile) {
@@ -557,16 +607,8 @@ export default function Historial() {
         <Card>
           <CardContent className="pt-6">
             <div className="flex flex-col gap-4">
+              <FieldFilterControls fields={historialFields} query={searchTerm} onQueryChange={setSearchTerm} searchField={searchField} onSearchFieldChange={setSearchField} sortField={sortField} onSortFieldChange={selectSortField} direction={sortDirection} onDirectionChange={setSortDirection} searchPlaceholder="Buscar en descripción, ficha, equipo, usuario..." searchLabel="Buscar eventos" />
               <div className="flex gap-2">
-                <div className="relative flex-1">
-                  <Search className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
-                  <Input
-                    placeholder="Buscar en descripción, ficha, equipo, usuario..."
-                    value={filtros.busqueda}
-                    onChange={(e) => setFiltros({ ...filtros, busqueda: e.target.value })}
-                    className="pl-9"
-                  />
-                </div>
                 <Button
                   variant={mostrarFiltros || filtrosActivos ? "default" : "outline"}
                   onClick={() => setMostrarFiltros(!mostrarFiltros)}
@@ -713,8 +755,8 @@ export default function Historial() {
                 Línea de Tiempo
               </CardTitle>
               <CardDescription>
-                {eventos.length > 0
-                  ? `Mostrando ${eventos.length} evento(s) ordenados cronológicamente`
+                {eventosBuscados.length > 0
+                  ? `Mostrando ${eventosBuscados.length} evento(s) ordenados cronológicamente`
                   : 'No hay eventos registrados'
                 }
               </CardDescription>
@@ -893,21 +935,32 @@ export default function Historial() {
                   <table className="w-full">
                     <thead className="bg-muted/50">
                       <tr className="border-b">
-                        <th className="px-4 py-3 text-left text-xs font-medium">Fecha/Hora</th>
-                        <th className="px-4 py-3 text-left text-xs font-medium">Tipo</th>
-                        <th className="px-4 py-3 text-left text-xs font-medium">Módulo</th>
-                        <th className="px-4 py-3 text-left text-xs font-medium">Descripción</th>
-                        <th className="px-4 py-3 text-left text-xs font-medium">Equipo</th>
-                        <th className="px-4 py-3 text-left text-xs font-medium">Usuario</th>
-                        <th className="px-4 py-3 text-left text-xs font-medium">Nivel</th>
+                        <th className="px-2 py-3 text-left text-xs font-medium"><Button variant="ghost" className="h-8 gap-1.5 whitespace-nowrap px-2 font-semibold" onClick={() => toggleHistorialColumn('fecha')} aria-label="Ordenar por Fecha/Hora">Fecha/Hora{sortField === 'fecha' ? (sortDirection === 'asc' ? <ArrowUp className="h-3.5 w-3.5" /> : <ArrowDown className="h-3.5 w-3.5" />) : <ArrowUpDown className="h-3.5 w-3.5 text-muted-foreground" />}</Button></th>
+                        <th className="px-2 py-3 text-left text-xs font-medium"><Button variant="ghost" className="h-8 gap-1.5 whitespace-nowrap px-2 font-semibold" onClick={() => toggleHistorialColumn('tipo')} aria-label="Ordenar por Tipo">Tipo{sortField === 'tipo' ? (sortDirection === 'asc' ? <ArrowUp className="h-3.5 w-3.5" /> : <ArrowDown className="h-3.5 w-3.5" />) : <ArrowUpDown className="h-3.5 w-3.5 text-muted-foreground" />}</Button></th>
+                        <th className="px-2 py-3 text-left text-xs font-medium"><Button variant="ghost" className="h-8 gap-1.5 whitespace-nowrap px-2 font-semibold" onClick={() => toggleHistorialColumn('modulo')} aria-label="Ordenar por Módulo">Módulo{sortField === 'modulo' ? (sortDirection === 'asc' ? <ArrowUp className="h-3.5 w-3.5" /> : <ArrowDown className="h-3.5 w-3.5" />) : <ArrowUpDown className="h-3.5 w-3.5 text-muted-foreground" />}</Button></th>
+                        <th className="px-2 py-3 text-left text-xs font-medium"><Button variant="ghost" className="h-8 gap-1.5 whitespace-nowrap px-2 font-semibold" onClick={() => toggleHistorialColumn('descripcion')} aria-label="Ordenar por Descripción">Descripción{sortField === 'descripcion' ? (sortDirection === 'asc' ? <ArrowUp className="h-3.5 w-3.5" /> : <ArrowDown className="h-3.5 w-3.5" />) : <ArrowUpDown className="h-3.5 w-3.5 text-muted-foreground" />}</Button></th>
+                        <th className="px-2 py-3 text-left text-xs font-medium"><Button variant="ghost" className="h-8 gap-1.5 whitespace-nowrap px-2 font-semibold" onClick={() => toggleHistorialColumn('ficha')} aria-label="Ordenar por Ficha">Ficha{sortField === 'ficha' ? (sortDirection === 'asc' ? <ArrowUp className="h-3.5 w-3.5" /> : <ArrowDown className="h-3.5 w-3.5" />) : <ArrowUpDown className="h-3.5 w-3.5 text-muted-foreground" />}</Button></th>
+                        <th className="px-2 py-3 text-left text-xs font-medium"><Button variant="ghost" className="h-8 gap-1.5 whitespace-nowrap px-2 font-semibold" onClick={() => toggleHistorialColumn('equipo')} aria-label="Ordenar por Equipo">Equipo{sortField === 'equipo' ? (sortDirection === 'asc' ? <ArrowUp className="h-3.5 w-3.5" /> : <ArrowDown className="h-3.5 w-3.5" />) : <ArrowUpDown className="h-3.5 w-3.5 text-muted-foreground" />}</Button></th>
+                        <th className="px-2 py-3 text-left text-xs font-medium"><Button variant="ghost" className="h-8 gap-1.5 whitespace-nowrap px-2 font-semibold" onClick={() => toggleHistorialColumn('usuario')} aria-label="Ordenar por Usuario">Usuario{sortField === 'usuario' ? (sortDirection === 'asc' ? <ArrowUp className="h-3.5 w-3.5" /> : <ArrowDown className="h-3.5 w-3.5" />) : <ArrowUpDown className="h-3.5 w-3.5 text-muted-foreground" />}</Button></th>
+                        <th className="px-2 py-3 text-left text-xs font-medium"><Button variant="ghost" className="h-8 gap-1.5 whitespace-nowrap px-2 font-semibold" onClick={() => toggleHistorialColumn('nivel')} aria-label="Ordenar por Nivel">Nivel{sortField === 'nivel' ? (sortDirection === 'asc' ? <ArrowUp className="h-3.5 w-3.5" /> : <ArrowDown className="h-3.5 w-3.5" />) : <ArrowUpDown className="h-3.5 w-3.5 text-muted-foreground" />}</Button></th>
                       </tr>
                     </thead>
                     <tbody>
-                      {eventos.map((evento, idx) => {
+                      {eventosTabla.map((evento, idx) => {
                         const visual = getEventoVisual(evento.categoriaEvento);
+                        const empresaActual = evento.fichaEquipo ? (equiposPorFicha[evento.fichaEquipo]?.empresa ?? 'Sin empresa') : 'Sin empresa';
+                        const anterior = eventosTabla[idx - 1];
+                        const empresaAnterior = anterior ? (anterior.fichaEquipo ? (equiposPorFicha[anterior.fichaEquipo]?.empresa ?? 'Sin empresa') : 'Sin empresa') : null;
+                        const showGroupDivider = sortField === 'ficha' && (idx === 0 || empresaAnterior !== empresaActual);
 
                         return (
-                          <tr key={evento.id} className={cn(
+                          <Fragment key={evento.id}>
+                          {showGroupDivider && (
+                            <tr data-company-group={empresaActual} className="border-t-2 border-border bg-muted/50">
+                              <td colSpan={7} className="px-4 py-2 text-xs font-semibold text-muted-foreground">{empresaActual}</td>
+                            </tr>
+                          )}
+                          <tr className={cn(
                             "border-b transition-colors hover:bg-muted/50",
                             idx % 2 === 0 ? 'bg-background' : 'bg-muted/20'
                           )}>
@@ -954,6 +1007,7 @@ export default function Historial() {
                               </div>
                             </td>
                           </tr>
+                          </Fragment>
                         );
                       })}
                     </tbody>

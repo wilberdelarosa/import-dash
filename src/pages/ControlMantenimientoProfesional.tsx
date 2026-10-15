@@ -1,4 +1,4 @@
-import { FormEvent, useEffect, useMemo, useState, useRef } from 'react';
+import { Fragment, FormEvent, useEffect, useMemo, useState, useRef } from 'react';
 import { Layout } from '@/components/Layout';
 import { useSupabaseDataContext } from '@/context/SupabaseDataContext';
 import { useUserRoles } from '@/hooks/useUserRoles';
@@ -50,6 +50,8 @@ import { useNavigate } from 'react-router-dom';
 import { ControlMantenimientoMobile } from '@/pages/mobile/ControlMantenimientoMobile';
 import { VoiceMultiUpdate } from '@/components/VoiceMultiUpdate';
 import { WhatsAppPendientesButton } from '@/components/WhatsAppPendientesButton';
+import { FieldFilterControls } from '@/components/shared/FieldFilterControls';
+import { compareByField, matchesFieldSearch, type FieldConfig } from '@/lib/list-fields';
 
 const formatDate = (value: string | null | undefined) => {
   if (!value) return 'Sin registro';
@@ -205,6 +207,13 @@ export default function ControlMantenimientoProfesional() {
   const [actualizadosCatFilter, setActualizadosCatFilter] = useState('all');
   const [pendientesSearch, setPendientesSearch] = useState('');
   const [pendientesCatFilter, setPendientesCatFilter] = useState('all');
+  type ReporteSortField = 'ficha' | 'nombreEquipo' | 'categoria';
+  const [actualizadosSearchField, setActualizadosSearchField] = useState<'all' | ReporteSortField>('all');
+  const [actualizadosSortField, setActualizadosSortField] = useState<ReporteSortField>('ficha');
+  const [actualizadosSortDirection, setActualizadosSortDirection] = useState<'asc' | 'desc'>('asc');
+  const [pendientesSearchField, setPendientesSearchField] = useState<'all' | ReporteSortField>('all');
+  const [pendientesSortField, setPendientesSortField] = useState<ReporteSortField>('ficha');
+  const [pendientesSortDirection, setPendientesSortDirection] = useState<'asc' | 'desc'>('asc');
 
   // Pendientes descartados manualmente (no accesibles por horómetro, etc.)
   // Clave: `${ficha}::${reporteRango.desde}::${reporteRango.hasta}` -> { motivo, ts }
@@ -868,20 +877,34 @@ export default function ControlMantenimientoProfesional() {
     }
   };
 
+  const equiposPorFichaReporte = useMemo(() => {
+    return activeEquipos.reduce((acc, equipo) => {
+      acc[equipo.ficha] = equipo;
+      return acc;
+    }, {} as Record<string, typeof activeEquipos[number]>);
+  }, [activeEquipos]);
+
+  const actualizadosFields: ReadonlyArray<FieldConfig<MantenimientoProgramado, ReporteSortField>> = [
+    { key: 'ficha', label: 'Ficha', get: m => m.ficha },
+    { key: 'nombreEquipo', label: 'Equipo', get: m => m.nombreEquipo },
+    { key: 'categoria', label: 'Categoría', get: m => equiposPorFichaReporte[m.ficha]?.categoria },
+  ];
+
   // Filtered report data - independent filters per list
   const filteredActualizados = useMemo(() => {
     if (!resumenActualizaciones) return [];
     return resumenActualizaciones.actualizados
       .filter(({ mantenimiento }) => {
         const equipo = activeEquipos.find(e => e.ficha === mantenimiento.ficha);
-        const matchSearch = !actualizadosSearch || 
-          mantenimiento.ficha.toLowerCase().includes(actualizadosSearch.toLowerCase()) ||
-          mantenimiento.nombreEquipo.toLowerCase().includes(actualizadosSearch.toLowerCase());
+        const matchSearch = matchesFieldSearch(mantenimiento, actualizadosFields, actualizadosSearchField, actualizadosSearch);
         const matchCat = actualizadosCatFilter === 'all' || equipo?.categoria === actualizadosCatFilter;
         return matchSearch && matchCat;
       })
-      .sort((a, b) => a.mantenimiento.ficha.localeCompare(b.mantenimiento.ficha, undefined, { numeric: true }));
-  }, [resumenActualizaciones, actualizadosSearch, actualizadosCatFilter, activeEquipos]);
+      .sort((a, b) => compareByField(a.mantenimiento, b.mantenimiento, actualizadosFields, actualizadosSortField, actualizadosSortDirection, {
+        getEmpresa: m => equiposPorFichaReporte[m.ficha]?.empresa,
+        getFicha: m => m.ficha,
+      }));
+  }, [resumenActualizaciones, actualizadosSearch, actualizadosSearchField, actualizadosCatFilter, activeEquipos, actualizadosFields, actualizadosSortField, actualizadosSortDirection, equiposPorFichaReporte]);
 
   const filteredPendientes = useMemo(() => {
     if (!resumenActualizaciones) return [];
@@ -889,14 +912,15 @@ export default function ControlMantenimientoProfesional() {
       .filter((mantenimiento) => {
         if (pendientesDescartados[descartarKey(mantenimiento.ficha)]) return false;
         const equipo = activeEquipos.find(e => e.ficha === mantenimiento.ficha);
-        const matchSearch = !pendientesSearch ||
-          mantenimiento.ficha.toLowerCase().includes(pendientesSearch.toLowerCase()) ||
-          mantenimiento.nombreEquipo.toLowerCase().includes(pendientesSearch.toLowerCase());
+        const matchSearch = matchesFieldSearch(mantenimiento, actualizadosFields, pendientesSearchField, pendientesSearch);
         const matchCat = pendientesCatFilter === 'all' || equipo?.categoria === pendientesCatFilter;
         return matchSearch && matchCat;
       })
-      .sort((a, b) => a.ficha.localeCompare(b.ficha, undefined, { numeric: true }));
-  }, [resumenActualizaciones, pendientesSearch, pendientesCatFilter, activeEquipos, pendientesDescartados, reporteRango]);
+      .sort((a, b) => compareByField(a, b, actualizadosFields, pendientesSortField, pendientesSortDirection, {
+        getEmpresa: m => equiposPorFichaReporte[m.ficha]?.empresa,
+        getFicha: m => m.ficha,
+      }));
+  }, [resumenActualizaciones, pendientesSearch, pendientesSearchField, pendientesCatFilter, activeEquipos, pendientesDescartados, reporteRango, actualizadosFields, pendientesSortField, pendientesSortDirection, equiposPorFichaReporte]);
 
   const pendientesSinArchivar = resumenActualizaciones?.pendientes.filter(m => !pendientesDescartados[descartarKey(m.ficha)]) ?? [];
 
@@ -1746,57 +1770,69 @@ export default function ControlMantenimientoProfesional() {
                                   <Badge variant="secondary" className="text-[10px]">{filteredActualizados.length}</Badge>
                                 </h4>
                               </div>
-                              <div className="flex gap-1.5">
-                                <div className="relative flex-1">
-                                  <Search className="absolute left-2 top-2 h-3.5 w-3.5 text-muted-foreground" />
-                                  <Input
-                                    placeholder="Buscar ficha o nombre..."
-                                    value={actualizadosSearch}
-                                    onChange={(e) => setActualizadosSearch(e.target.value)}
-                                    className="h-7 pl-7 text-xs"
-                                  />
-                                </div>
-                                <Select value={actualizadosCatFilter} onValueChange={setActualizadosCatFilter}>
-                                  <SelectTrigger className="w-[110px] h-7 text-[10px]">
-                                    <SelectValue placeholder="Categoría" />
-                                  </SelectTrigger>
-                                  <SelectContent>
-                                    <SelectItem value="all">Todas</SelectItem>
-                                    {categorias.map((cat) => (
-                                      <SelectItem key={cat} value={cat}>{cat}</SelectItem>
-                                    ))}
-                                  </SelectContent>
-                                </Select>
-                              </div>
+                              <FieldFilterControls
+                                fields={actualizadosFields}
+                                query={actualizadosSearch}
+                                onQueryChange={setActualizadosSearch}
+                                searchField={actualizadosSearchField}
+                                onSearchFieldChange={setActualizadosSearchField}
+                                sortField={actualizadosSortField}
+                                onSortFieldChange={setActualizadosSortField}
+                                direction={actualizadosSortDirection}
+                                onDirectionChange={setActualizadosSortDirection}
+                                searchPlaceholder="Buscar ficha o nombre..."
+                                searchLabel="Buscar actualizados"
+                              />
+                              <Select value={actualizadosCatFilter} onValueChange={setActualizadosCatFilter}>
+                                <SelectTrigger className="w-full h-7 text-[10px]">
+                                  <SelectValue placeholder="Categoría" />
+                                </SelectTrigger>
+                                <SelectContent>
+                                  <SelectItem value="all">Todas</SelectItem>
+                                  {categorias.map((cat) => (
+                                    <SelectItem key={cat} value={cat}>{cat}</SelectItem>
+                                  ))}
+                                </SelectContent>
+                              </Select>
                               {filteredActualizados.length === 0 ? (
                                 <p className="text-xs text-muted-foreground py-4 text-center">Sin registros.</p>
                               ) : (
                                 <ScrollArea className="h-[350px]">
                                   <div className="space-y-1.5 pr-2">
-                                    {filteredActualizados.map(({ mantenimiento, evento }) => (
-                                      <div key={mantenimiento.id} className="flex items-center gap-3 p-2.5 rounded-lg border bg-card hover:bg-accent/30 transition-colors">
-                                        <div className="h-8 w-8 rounded-full bg-green-100 dark:bg-green-900/30 flex items-center justify-center shrink-0">
-                                          <Check className="h-4 w-4 text-green-600" />
-                                        </div>
-                                        <div className="flex-1 min-w-0">
-                                          <div className="flex items-center gap-2">
-                                            <span className="font-mono text-xs font-bold text-primary">{mantenimiento.ficha}</span>
-                                            <span className="text-xs text-muted-foreground truncate">{mantenimiento.nombreEquipo}</span>
+                                    {filteredActualizados.map(({ mantenimiento, evento }, index) => {
+                                      const empresaActual = equiposPorFichaReporte[mantenimiento.ficha]?.empresa ?? 'Sin empresa';
+                                      const empresaAnterior = index > 0 ? (equiposPorFichaReporte[filteredActualizados[index - 1].mantenimiento.ficha]?.empresa ?? 'Sin empresa') : null;
+                                      const showGroupDivider = actualizadosSortField === 'ficha' && (index === 0 || empresaAnterior !== empresaActual);
+                                      return (
+                                        <Fragment key={mantenimiento.id}>
+                                          {showGroupDivider && (
+                                            <div className="px-1 pt-1 text-[10px] font-semibold text-muted-foreground">{empresaActual}</div>
+                                          )}
+                                          <div className="flex items-center gap-3 p-2.5 rounded-lg border bg-card hover:bg-accent/30 transition-colors">
+                                            <div className="h-8 w-8 rounded-full bg-green-100 dark:bg-green-900/30 flex items-center justify-center shrink-0">
+                                              <Check className="h-4 w-4 text-green-600" />
+                                            </div>
+                                            <div className="flex-1 min-w-0">
+                                              <div className="flex items-center gap-2">
+                                                <span className="font-mono text-xs font-bold text-primary">{mantenimiento.ficha}</span>
+                                                <span className="text-xs text-muted-foreground truncate">{mantenimiento.nombreEquipo}</span>
+                                              </div>
+                                              <div className="flex items-center gap-3 mt-0.5 text-[10px] text-muted-foreground">
+                                                <span className="font-medium text-foreground">
+                                                  {evento ? `${Number(evento.horasKm).toLocaleString()} h/km` : '-'}
+                                                </span>
+                                                <span>
+                                                  {evento ? new Date(evento.fecha).toLocaleDateString() : '-'}
+                                                </span>
+                                                <span className="truncate">
+                                                  {evento?.usuarioResponsable ?? '-'}
+                                                </span>
+                                              </div>
+                                            </div>
                                           </div>
-                                          <div className="flex items-center gap-3 mt-0.5 text-[10px] text-muted-foreground">
-                                            <span className="font-medium text-foreground">
-                                              {evento ? `${Number(evento.horasKm).toLocaleString()} h/km` : '-'}
-                                            </span>
-                                            <span>
-                                              {evento ? new Date(evento.fecha).toLocaleDateString() : '-'}
-                                            </span>
-                                            <span className="truncate">
-                                              {evento?.usuarioResponsable ?? '-'}
-                                            </span>
-                                          </div>
-                                        </div>
-                                      </div>
-                                    ))}
+                                        </Fragment>
+                                      );
+                                    })}
                                   </div>
                                 </ScrollArea>
                               )}
@@ -1814,64 +1850,76 @@ export default function ControlMantenimientoProfesional() {
                                   </Badge>
                                 </h4>
                               </div>
-                              <div className="flex gap-1.5">
-                                <div className="relative flex-1">
-                                  <Search className="absolute left-2 top-2 h-3.5 w-3.5 text-muted-foreground" />
-                                  <Input
-                                    placeholder="Buscar ficha o nombre..."
-                                    value={pendientesSearch}
-                                    onChange={(e) => setPendientesSearch(e.target.value)}
-                                    className="h-7 pl-7 text-xs"
-                                  />
-                                </div>
-                                <Select value={pendientesCatFilter} onValueChange={setPendientesCatFilter}>
-                                  <SelectTrigger className="w-[110px] h-7 text-[10px]">
-                                    <SelectValue placeholder="Categoría" />
-                                  </SelectTrigger>
-                                  <SelectContent>
-                                    <SelectItem value="all">Todas</SelectItem>
-                                    {categorias.map((cat) => (
-                                      <SelectItem key={cat} value={cat}>{cat}</SelectItem>
-                                    ))}
-                                  </SelectContent>
-                                </Select>
-                              </div>
+                              <FieldFilterControls
+                                fields={actualizadosFields}
+                                query={pendientesSearch}
+                                onQueryChange={setPendientesSearch}
+                                searchField={pendientesSearchField}
+                                onSearchFieldChange={setPendientesSearchField}
+                                sortField={pendientesSortField}
+                                onSortFieldChange={setPendientesSortField}
+                                direction={pendientesSortDirection}
+                                onDirectionChange={setPendientesSortDirection}
+                                searchPlaceholder="Buscar ficha o nombre..."
+                                searchLabel="Buscar pendientes"
+                              />
+                              <Select value={pendientesCatFilter} onValueChange={setPendientesCatFilter}>
+                                <SelectTrigger className="w-full h-7 text-[10px]">
+                                  <SelectValue placeholder="Categoría" />
+                                </SelectTrigger>
+                                <SelectContent>
+                                  <SelectItem value="all">Todas</SelectItem>
+                                  {categorias.map((cat) => (
+                                    <SelectItem key={cat} value={cat}>{cat}</SelectItem>
+                                  ))}
+                                </SelectContent>
+                              </Select>
                               {filteredPendientes.length === 0 ? (
                                 <p className="text-xs text-muted-foreground py-4 text-center">Todos actualizados ✓</p>
                               ) : (
                                 <ScrollArea className="h-[350px]">
                                   <div className="space-y-1.5 pr-2">
-                                    {filteredPendientes.map((mantenimiento) => (
-                                      <div key={mantenimiento.id} className="flex items-center gap-3 p-2.5 rounded-lg border border-destructive/20 bg-card hover:bg-destructive/5 transition-colors">
-                                        <div className="h-8 w-8 rounded-full bg-red-100 dark:bg-red-900/30 flex items-center justify-center shrink-0">
-                                          <AlertTriangle className="h-4 w-4 text-destructive" />
-                                        </div>
-                                        <div className="flex-1 min-w-0">
-                                          <div className="flex items-center gap-2">
-                                            <span className="font-mono text-xs font-bold text-primary">{mantenimiento.ficha}</span>
-                                            <span className="text-xs text-muted-foreground truncate">{mantenimiento.nombreEquipo}</span>
+                                    {filteredPendientes.map((mantenimiento, index) => {
+                                      const empresaActual = equiposPorFichaReporte[mantenimiento.ficha]?.empresa ?? 'Sin empresa';
+                                      const empresaAnterior = index > 0 ? (equiposPorFichaReporte[filteredPendientes[index - 1].ficha]?.empresa ?? 'Sin empresa') : null;
+                                      const showGroupDivider = pendientesSortField === 'ficha' && (index === 0 || empresaAnterior !== empresaActual);
+                                      return (
+                                        <Fragment key={mantenimiento.id}>
+                                          {showGroupDivider && (
+                                            <div className="px-1 pt-1 text-[10px] font-semibold text-muted-foreground">{empresaActual}</div>
+                                          )}
+                                          <div className="flex items-center gap-3 p-2.5 rounded-lg border border-destructive/20 bg-card hover:bg-destructive/5 transition-colors">
+                                            <div className="h-8 w-8 rounded-full bg-red-100 dark:bg-red-900/30 flex items-center justify-center shrink-0">
+                                              <AlertTriangle className="h-4 w-4 text-destructive" />
+                                            </div>
+                                            <div className="flex-1 min-w-0">
+                                              <div className="flex items-center gap-2">
+                                                <span className="font-mono text-xs font-bold text-primary">{mantenimiento.ficha}</span>
+                                                <span className="text-xs text-muted-foreground truncate">{mantenimiento.nombreEquipo}</span>
+                                              </div>
+                                              <div className="flex items-center gap-3 mt-0.5 text-[10px] text-muted-foreground">
+                                                <span>Últ. act: {formatDate(mantenimiento.fechaUltimaActualizacion)}</span>
+                                                <span className="font-medium text-foreground">
+                                                  {Number(mantenimiento.horasKmActuales).toLocaleString()} h/km
+                                                </span>
+                                              </div>
+                                            </div>
+                                            <Button
+                                              variant="ghost"
+                                              size="icon"
+                                              className="h-7 w-7 shrink-0 text-muted-foreground hover:text-destructive"
+                                              title="Descartar este pendiente (no accesible, fuera de servicio, etc.)"
+                                              onClick={() => {
+                                                setDescartarMotivo('');
+                                                setDescartarDialog({ ficha: mantenimiento.ficha, nombre: mantenimiento.nombreEquipo });
+                                              }}
+                                            >
+                                              <X className="h-3.5 w-3.5" />
+                                            </Button>
                                           </div>
-                                          <div className="flex items-center gap-3 mt-0.5 text-[10px] text-muted-foreground">
-                                            <span>Últ. act: {formatDate(mantenimiento.fechaUltimaActualizacion)}</span>
-                                            <span className="font-medium text-foreground">
-                                              {Number(mantenimiento.horasKmActuales).toLocaleString()} h/km
-                                            </span>
-                                          </div>
-                                        </div>
-                                        <Button
-                                          variant="ghost"
-                                          size="icon"
-                                          className="h-7 w-7 shrink-0 text-muted-foreground hover:text-destructive"
-                                          title="Descartar este pendiente (no accesible, fuera de servicio, etc.)"
-                                          onClick={() => {
-                                            setDescartarMotivo('');
-                                            setDescartarDialog({ ficha: mantenimiento.ficha, nombre: mantenimiento.nombreEquipo });
-                                          }}
-                                        >
-                                          <X className="h-3.5 w-3.5" />
-                                        </Button>
-                                      </div>
-                                    ))}
+                                        </Fragment>
+                                      );
+                                    })}
                                   </div>
                                 </ScrollArea>
                               )}
