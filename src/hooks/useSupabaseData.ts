@@ -1359,14 +1359,11 @@ export function useSupabaseData() {
     const incremento = lectura - horasPrevias;
     const frecuencia = Number(mantenimiento.frecuencia ?? 0);
 
-    // Si la lectura del mantenimiento es menor a las horas actuales del equipo,
-    // es un mantenimiento retroactivo: se registra pero NO se baja el horómetro
-    // y el próximo se recalcula a partir del horómetro actual.
+    // Mantenimiento retroactivo: NO se baja el horómetro, pero el próximo
+    // servicio siempre se calcula desde la lectura en que se hizo el mantenimiento.
     const esRetroactivo = lectura < horasActualesEquipo;
     const nuevasHorasActuales = esRetroactivo ? horasActualesEquipo : lectura;
-    const proximo = esRetroactivo
-      ? Math.ceil(horasActualesEquipo / (frecuencia || 1)) * (frecuencia || 1) + (frecuencia || 0)
-      : lectura + frecuencia;
+    const proximo = lectura + frecuencia;
     const restante = proximo - nuevasHorasActuales;
 
     try {
