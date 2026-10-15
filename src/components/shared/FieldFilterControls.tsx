@@ -9,11 +9,12 @@ interface Props<T, K extends string> {
   query: string;
   onQueryChange: (value: string) => void;
   searchField: 'all' | K;
-  onSearchFieldChange: (value: 'all' | K) => void;
+  // Method syntax keeps callbacks bivariant so narrowed state setters are accepted.
+  onSearchFieldChange(value: 'all' | K): void;
   sortField: K;
-  onSortFieldChange: (value: K) => void;
+  onSortFieldChange(value: K): void;
   direction: SortDirection;
-  onDirectionChange: (value: SortDirection) => void;
+  onDirectionChange(value: SortDirection): void;
   searchPlaceholder?: string;
   searchLabel?: string;
 }
