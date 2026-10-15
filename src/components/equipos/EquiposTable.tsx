@@ -428,7 +428,7 @@ export function EquiposTable({ equipos, onEdit, onDelete, onVerDetalle }: Equipo
                     <Button variant="ghost" className="h-11 gap-2 whitespace-nowrap px-2" onClick={() => toggleColumn(field.key)} aria-label={`Ordenar por ${field.label}`}>
                       {field.label}{sortField === field.key ? (sortDirection === 'asc' ? <ArrowUp className="h-4 w-4" /> : <ArrowDown className="h-4 w-4" />) : <ArrowUpDown className="h-4 w-4 text-muted-foreground" />}
                     </Button>
-                  </TableHead>
+                  </TableHead>)}
                   <TableHead>Acciones</TableHead>
                 </TableRow>
               </TableHeader>
