@@ -108,7 +108,7 @@ export function HistorialMobile({ loading: externalLoading }: HistorialMobilePro
             case 'critical':
                 return <AlertCircle className="h-4 w-4 text-destructive" />;
             case 'warning':
-                return <AlertTriangle className="h-4 w-4 text-amber-500" />;
+                return <AlertTriangle className="h-4 w-4 text-warning" />;
             default:
                 return <Info className="h-4 w-4 text-blue-500" />;
         }
@@ -119,9 +119,9 @@ export function HistorialMobile({ loading: externalLoading }: HistorialMobilePro
             case 'crear':
                 return {
                     label: 'Creación',
-                    bgClass: 'bg-emerald-50 dark:bg-emerald-950/20',
-                    borderClass: 'border-l-emerald-500',
-                    textClass: 'text-emerald-700 dark:text-emerald-400',
+                    bgClass: 'bg-success dark:bg-success/20',
+                    borderClass: 'border-l-success',
+                    textClass: 'text-success dark:text-success',
                 };
             case 'actualizar':
                 return {
@@ -133,16 +133,16 @@ export function HistorialMobile({ loading: externalLoading }: HistorialMobilePro
             case 'eliminar':
                 return {
                     label: 'Eliminación',
-                    bgClass: 'bg-rose-50 dark:bg-rose-950/20',
-                    borderClass: 'border-l-rose-500',
-                    textClass: 'text-rose-700 dark:text-rose-400',
+                    bgClass: 'bg-destructive dark:bg-destructive/20',
+                    borderClass: 'border-l-destructive',
+                    textClass: 'text-destructive dark:text-destructive',
                 };
             case 'mantenimiento_realizado':
                 return {
                     label: 'Mantenimiento',
-                    bgClass: 'bg-amber-50 dark:bg-amber-950/20',
-                    borderClass: 'border-l-amber-500',
-                    textClass: 'text-amber-700 dark:text-amber-400',
+                    bgClass: 'bg-warning dark:bg-warning/20',
+                    borderClass: 'border-l-warning',
+                    textClass: 'text-warning dark:text-warning',
                 };
             case 'lectura_actualizada':
                 return {
@@ -194,11 +194,11 @@ export function HistorialMobile({ loading: externalLoading }: HistorialMobilePro
     }, [eventosBuscados]);
 
     const estadisticas = useMemo(() => {
-        const criticos = eventos.filter(e => e.nivelImportancia === 'critical').length;
-        const advertencias = eventos.filter(e => e.nivelImportancia === 'warning').length;
-        const info = eventos.filter(e => e.nivelImportancia === 'info').length;
+        const criticos = eventosBuscados.filter(e => e.nivelImportancia === "critical").length;
+        const advertencias = eventosBuscados.filter(e => e.nivelImportancia === "warning").length;
+        const info = eventosBuscados.filter(e => e.nivelImportancia === "info").length;
 
-        const ultimos7Dias = eventos.filter(e => {
+        const ultimos7Dias = eventosBuscados.filter(e => {
             const fecha = new Date(e.createdAt);
             const haceUnaSemana = new Date();
             haceUnaSemana.setDate(haceUnaSemana.getDate() - 7);
@@ -206,7 +206,7 @@ export function HistorialMobile({ loading: externalLoading }: HistorialMobilePro
         }).length;
 
         return { criticos, advertencias, info, ultimos7Dias };
-    }, [eventos]);
+    }, [eventosBuscados]);
 
     const filtrosActivos = [
         filtros.tipoEvento.length > 0,
@@ -385,7 +385,7 @@ export function HistorialMobile({ loading: externalLoading }: HistorialMobilePro
                     <Button
                         variant="ghost"
                         size="sm"
-                        className="w-full"
+                        className="w-full h-11"
                         onClick={limpiarFiltros}
                     >
                         <X className="h-4 w-4 mr-1" />
@@ -413,12 +413,12 @@ export function HistorialMobile({ loading: externalLoading }: HistorialMobilePro
                                 <p className="text-2xl font-bold">{eventos.length}</p>
                                 <p className="text-[0.65rem] text-muted-foreground">Total</p>
                             </MobileCard>
-                            <MobileCard variant="compact" className="text-center border-red-500/30 bg-red-500/5">
+                            <MobileCard variant="compact" className="text-center border-destructive/30 bg-destructive/5">
                                 <p className="text-2xl font-bold text-destructive">{estadisticas.criticos}</p>
                                 <p className="text-[0.65rem] text-muted-foreground">Críticos</p>
                             </MobileCard>
-                            <MobileCard variant="compact" className="text-center border-amber-500/30 bg-amber-500/5">
-                                <p className="text-2xl font-bold text-amber-600">{estadisticas.advertencias}</p>
+                            <MobileCard variant="compact" className="text-center border-warning/30 bg-warning/5">
+                                <p className="text-2xl font-bold text-warning">{estadisticas.advertencias}</p>
                                 <p className="text-[0.65rem] text-muted-foreground">Alertas</p>
                             </MobileCard>
                             <MobileCard variant="compact" className="text-center border-blue-500/30 bg-blue-500/5">
@@ -441,7 +441,7 @@ export function HistorialMobile({ loading: externalLoading }: HistorialMobilePro
                                     <Button
                                         variant="outline"
                                         size="sm"
-                                        className="mt-4"
+                                        className="mt-4 h-11"
                                         onClick={limpiarFiltros}
                                     >
                                         Limpiar filtros
@@ -529,11 +529,11 @@ export function HistorialMobile({ loading: externalLoading }: HistorialMobilePro
                                 <div className="space-y-2">
                                     <div className="flex justify-between text-sm">
                                         <span className="text-muted-foreground">Advertencias</span>
-                                        <span className="font-bold text-amber-600">{estadisticas.advertencias}</span>
+                                        <span className="font-bold text-warning">{estadisticas.advertencias}</span>
                                     </div>
                                     <div className="h-2 bg-muted rounded-full overflow-hidden">
                                         <div
-                                            className="h-full bg-amber-500"
+                                            className="h-full bg-warning"
                                             style={{ width: `${(estadisticas.advertencias / (eventos.length || 1)) * 100}%` }}
                                         />
                                     </div>

@@ -179,10 +179,10 @@ export function DashboardMobile({
       label: 'Equipos activos',
       value: equiposActivos,
       icon: Truck,
-      color: 'text-emerald-600 dark:text-emerald-400',
-      bgColor: 'bg-emerald-500/10',
-      borderColor: 'border-emerald-500/20',
-      gradient: 'from-emerald-500/5 to-emerald-500/10',
+      color: 'text-success dark:text-success',
+      bgColor: 'bg-success/10',
+      borderColor: 'border-success/20',
+      gradient: 'from-success/5 to-success/10',
       trend: '+5%',
       trendUp: true,
       path: '/equipos'
@@ -191,10 +191,10 @@ export function DashboardMobile({
       label: 'Mant. vencidos',
       value: mantenimientosVencidos,
       icon: AlertTriangle,
-      color: 'text-red-600 dark:text-red-400',
-      bgColor: 'bg-red-500/10',
-      borderColor: 'border-red-500/20',
-      gradient: 'from-red-500/5 to-red-500/10',
+      color: 'text-destructive dark:text-destructive',
+      bgColor: 'bg-destructive/10',
+      borderColor: 'border-destructive/20',
+      gradient: 'from-destructive/5 to-destructive/10',
       urgent: mantenimientosVencidos > 0,
       onClick: () => setVencidosSheetOpen(true),
     },
@@ -212,10 +212,10 @@ export function DashboardMobile({
       label: 'Stock bajo',
       value: inventarioBajo,
       icon: Package,
-      color: 'text-amber-600 dark:text-amber-400',
-      bgColor: 'bg-amber-500/10',
-      borderColor: 'border-amber-500/20',
-      gradient: 'from-amber-500/5 to-amber-500/10',
+      color: 'text-warning dark:text-warning',
+      bgColor: 'bg-warning/10',
+      borderColor: 'border-warning/20',
+      gradient: 'from-warning/5 to-warning/10',
       path: '/inventario'
     },
   ];
@@ -257,22 +257,22 @@ export function DashboardMobile({
           {/* Alert si hay mantenimientos vencidos - Compact */}
           {mantenimientosVencidos > 0 && (
             <div className="animate-in fade-in slide-in-from-top-4 duration-500">
-              <div className="relative overflow-hidden rounded-lg border border-red-200 bg-red-50/80 p-2.5 shadow-sm backdrop-blur-sm dark:border-red-900/30 dark:bg-red-900/10">
+              <div className="relative overflow-hidden rounded-lg border border-destructive bg-destructive/80 p-2.5 shadow-sm backdrop-blur-sm dark:border-destructive/30 dark:bg-destructive/10">
                 <div className="flex items-start gap-2">
-                  <div className="rounded-full bg-red-100 p-1.5 dark:bg-red-900/30 flex-shrink-0">
-                    <AlertTriangle className="h-4 w-4 text-red-600 dark:text-red-400" />
+                  <div className="rounded-full bg-destructive p-1.5 dark:bg-destructive/30 flex-shrink-0">
+                    <AlertTriangle className="h-4 w-4 text-destructive dark:text-destructive" />
                   </div>
                   <div className="flex-1 min-w-0">
-                    <h3 className="font-semibold text-sm text-red-900 dark:text-red-200">
+                    <h3 className="font-semibold text-sm text-destructive dark:text-destructive">
                       Atención Requerida
                     </h3>
-                    <p className="text-xs text-red-700 dark:text-red-300 mt-0.5">
+                    <p className="text-xs text-destructive dark:text-destructive mt-0.5">
                       Tienes <span className="font-bold">{mantenimientosVencidos}</span> mantenimientos vencidos que necesitan revisión inmediata.
                     </p>
                     <Button
                       size="sm"
                       variant="ghost"
-                      className="mt-1.5 h-7 px-0 text-xs text-red-700 hover:text-red-800 hover:bg-transparent dark:text-red-300 dark:hover:text-red-200 font-medium"
+                      className="mt-1.5 h-7 px-0 text-xs text-destructive hover:text-destructive hover:bg-transparent dark:text-destructive dark:hover:text-destructive font-medium"
                       onClick={() => navigate('/control-mantenimiento')}
                     >
                       Ver detalles →
@@ -294,7 +294,7 @@ export function DashboardMobile({
                   "bg-gradient-to-br backdrop-blur-sm",
                   metric.gradient,
                   metric.borderColor,
-                  metric.urgent && "ring-1 ring-red-500/20 border-red-500/30"
+                  metric.urgent && "ring-1 ring-destructive/20 border-destructive/30"
                 )}
               >
                 <div className="flex items-start justify-between mb-2">
@@ -307,7 +307,7 @@ export function DashboardMobile({
                   {metric.trend && (
                     <div className={cn(
                       "flex items-center gap-0.5 text-[9px] font-bold px-1.5 py-0.5 rounded-full",
-                      metric.trendUp ? "bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400" : "bg-red-100 text-red-700"
+                      metric.trendUp ? "bg-success text-success dark:bg-success/30 dark:text-success" : "bg-destructive text-destructive"
                     )}>
                       {metric.trendUp ? <TrendingUp className="h-2.5 w-2.5" /> : <TrendingDown className="h-2.5 w-2.5" />}
                       {metric.trend}
@@ -421,16 +421,16 @@ export function DashboardMobile({
 
           {/* Mantenimientos Vencidos */}
           {mantenimientosVencidosList.length > 0 && (
-            <MobileCard variant="glass" className="p-0 overflow-hidden border-red-500/30">
-              <div className="p-2.5 border-b border-border/50 bg-gradient-to-r from-red-500/5 to-transparent">
+            <MobileCard variant="glass" className="p-0 overflow-hidden border-destructive/30">
+              <div className="p-2.5 border-b border-border/50 bg-gradient-to-r from-destructive/5 to-transparent">
                 <div className="flex items-center justify-between gap-2">
                   <div className="flex items-center gap-2">
-                    <div className="rounded-full bg-red-500/10 p-1.5">
-                      <AlertTriangle className="h-3.5 w-3.5 text-red-600 dark:text-red-400" />
+                    <div className="rounded-full bg-destructive/10 p-1.5">
+                      <AlertTriangle className="h-3.5 w-3.5 text-destructive dark:text-destructive" />
                     </div>
                     <div className="min-w-0 flex-1">
-                      <span className="font-semibold text-xs text-red-900 dark:text-red-200 block truncate">Mantenimientos Vencidos</span>
-                      <p className="text-[0.6rem] text-red-700 dark:text-red-300">Requieren atención inmediata</p>
+                      <span className="font-semibold text-xs text-destructive dark:text-destructive block truncate">Mantenimientos Vencidos</span>
+                      <p className="text-[0.6rem] text-destructive dark:text-destructive">Requieren atención inmediata</p>
                     </div>
                   </div>
                   <Badge variant="destructive" className="text-[0.65rem] h-5 tabular-nums">{mantenimientosVencidosList.length}</Badge>
@@ -441,7 +441,7 @@ export function DashboardMobile({
                   <button
                     key={mant.id}
                     onClick={() => onVerEquipo && onVerEquipo(mant.ficha)}
-                    className="w-full rounded-lg border border-red-500/20 bg-red-500/5 p-2 hover:bg-red-500/10 transition-all active:scale-98 text-left"
+                    className="w-full rounded-lg border border-destructive/20 bg-destructive/5 p-2 hover:bg-destructive/10 transition-all active:scale-98 text-left"
                   >
                     <div className="flex items-center justify-between gap-2">
                       <div className="flex-1 min-w-0">
@@ -460,7 +460,7 @@ export function DashboardMobile({
                   <Button
                     variant="outline"
                     size="sm"
-                    className="w-full gap-2 h-8 text-xs border-red-500/30 text-red-700 dark:text-red-300 hover:bg-red-500/10"
+                    className="w-full gap-2 h-8 text-xs border-destructive/30 text-destructive dark:text-destructive hover:bg-destructive/10"
                     onClick={() => setVencidosSheetOpen(true)}
                   >
                     Ver todos ({mantenimientosVencidosList.length})
@@ -543,14 +543,14 @@ export function DashboardMobile({
                 onClick={() => navigate('/reportes')}
                 className="flex flex-col items-center justify-center gap-1 py-3 hover:bg-muted/50 transition-colors active:bg-muted"
               >
-                <Zap className="h-4 w-4 text-amber-500" />
+                <Zap className="h-4 w-4 text-warning" />
                 <span className="text-[0.6rem] font-medium">Reportes</span>
               </button>
               <button
                 onClick={() => navigate('/listas-personalizadas')}
                 className="flex flex-col items-center justify-center gap-1 py-3 hover:bg-muted/50 transition-colors active:bg-muted"
               >
-                <CheckCircle2 className="h-4 w-4 text-green-500" />
+                <CheckCircle2 className="h-4 w-4 text-success" />
                 <span className="text-[0.6rem] font-medium">Listas</span>
               </button>
             </div>
@@ -603,7 +603,7 @@ export function DashboardMobile({
                     )}
                     <MobileCard
                       variant="compact"
-                      className="border-red-500/30 bg-red-500/5 cursor-pointer hover:bg-red-500/10 transition-colors"
+                      className="border-destructive/30 bg-destructive/5 cursor-pointer hover:bg-destructive/10 transition-colors"
                       onClick={() => {
                         if (onVerEquipo) {
                           onVerEquipo(mant.ficha);

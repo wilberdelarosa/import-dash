@@ -969,6 +969,13 @@ export default function ControlMantenimientoProfesional() {
         onVoiceBatchUpdate={handleVoiceBatchUpdate}
         loading={loading}
         isReadOnly={isReadOnly}
+        onDescartarPendiente={(ficha, nombre, motivo) => {
+          setPendientesDescartados((prev) => ({
+            ...prev,
+            [descartarKey(ficha)]: { motivo, ts: Date.now() },
+          }));
+          toast({ title: 'Pendiente descartado', description: `${ficha} ya no aparecerá en pendientes.` });
+        }}
       />
     );
   }

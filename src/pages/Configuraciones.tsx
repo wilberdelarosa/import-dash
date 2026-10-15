@@ -16,7 +16,7 @@ import { AdminSection } from '@/components/admin/AdminSection';
 import { useUserRoles } from '@/hooks/useUserRoles';
 import { useSystemConfig } from '@/context/SystemConfigContext';
 import { DEFAULT_SYSTEM_CONFIG } from '@/types/config';
-import { useNotifications } from '@/hooks/useNotifications';
+import { useUnifiedNotifications } from '@/hooks/useUnifiedNotifications';
 import { useToast } from '@/hooks/use-toast';
 import { useDeviceDetection } from '@/hooks/useDeviceDetection';
 import { ConfiguracionesMobile } from '@/pages/mobile/ConfiguracionesMobile';
@@ -28,7 +28,8 @@ export default function Configuraciones() {
   const [draft, setDraft] = useState(config);
   const draftRef = useRef(draft);
   const timeoutRef = useRef<number>();
-  const { permission, supported, requestPermission } = useNotifications();
+  const { pushPermission: permission, requestPushPermission: requestPermission } = useUnifiedNotifications();
+  const supported = typeof window !== 'undefined' && 'Notification' in window;
   const { toast } = useToast();
   const { isMobile } = useDeviceDetection();
   const { data: contextData } = useSupabaseDataContext();

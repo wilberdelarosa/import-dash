@@ -211,9 +211,9 @@ function SubmissionDetail({ submission, onBack }: { submission: Submission; onBa
   const getStatusBadge = (status: string) => {
     switch (status) {
       case 'pending':
-        return <Badge className="bg-amber-500 text-white">Pendiente</Badge>;
+        return <Badge className="bg-warning text-white">Pendiente</Badge>;
       case 'approved':
-        return <Badge className="bg-green-500 text-white">Aprobado</Badge>;
+        return <Badge className="bg-success text-white">Aprobado</Badge>;
       case 'integrated':
         return <Badge className="bg-blue-500 text-white">Integrado</Badge>;
       case 'rejected':
@@ -431,10 +431,10 @@ export function MechanicHistory() {
   const getStatusIcon = (status: string) => {
     switch (status) {
       case 'pending':
-        return <Clock className="h-4 w-4 text-amber-500" />;
+        return <Clock className="h-4 w-4 text-warning" />;
       case 'approved':
       case 'integrated':
-        return <CheckCircle className="h-4 w-4 text-green-500" />;
+        return <CheckCircle className="h-4 w-4 text-success" />;
       case 'rejected':
         return <XCircle className="h-4 w-4 text-destructive" />;
       default:
@@ -445,9 +445,9 @@ export function MechanicHistory() {
   const getStatusBadge = (status: string) => {
     switch (status) {
       case 'pending':
-        return <Badge className="bg-amber-500/10 text-amber-600 border-amber-500/20 text-[10px]">Pendiente</Badge>;
+        return <Badge className="bg-warning/10 text-warning border-warning/20 text-[10px]">Pendiente</Badge>;
       case 'approved':
-        return <Badge className="bg-green-500/10 text-green-600 border-green-500/20 text-[10px]">Aprobado</Badge>;
+        return <Badge className="bg-success/10 text-success border-success/20 text-[10px]">Aprobado</Badge>;
       case 'integrated':
         return <Badge className="bg-blue-500/10 text-blue-600 border-blue-500/20 text-[10px]">Integrado</Badge>;
       case 'rejected':
@@ -542,8 +542,8 @@ export function MechanicHistory() {
                 <div className="flex items-start gap-3">
                   <div className={cn(
                     "h-9 w-9 rounded-full flex items-center justify-center flex-shrink-0",
-                    sub.status === 'pending' && "bg-amber-500/10",
-                    (sub.status === 'approved' || sub.status === 'integrated') && "bg-green-500/10",
+                    sub.status === 'pending' && "bg-warning/10",
+                    (sub.status === 'approved' || sub.status === 'integrated') && "bg-success/10",
                     sub.status === 'rejected' && "bg-destructive/10"
                   )}>
                     {getStatusIcon(sub.status)}

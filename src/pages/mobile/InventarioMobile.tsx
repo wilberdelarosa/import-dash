@@ -20,7 +20,6 @@ import {
 } from '@/components/ui/dropdown-menu';
 import {
   Search,
-  Filter,
   Plus,
   MoreVertical,
   Pencil,
@@ -54,25 +53,37 @@ export function InventarioMobile({
   const { currentUserRole } = useUserRoles();
   const isAdmin = currentUserRole === 'admin';
 
-  // Estadísticas rápidas
+  // Búsqueda base
+  const inventariosBase = useMemo(() => {
+    if (!searchTerm.trim()) return inventarios;
+    const search = searchTerm.toLowerCase();
+    return inventarios.filter(
+      (i) =>
+        i.nombre?.toLowerCase().includes(search) ||
+        i.numeroParte?.toLowerCase().includes(search) ||
+        i.codigoIdentificacion?.toLowerCase().includes(search)
+    );
+  }, [inventarios, searchTerm]);
+
+  // Estadísticas rápidas basadas en la búsqueda
   const stats = useMemo(() => {
-    const total = inventarios.length;
-    const filtros = inventarios.filter((i) => i.tipo === 'Filtro').length;
-    const aceites = inventarios.filter((i) => i.tipo === 'Aceite').length;
-    const repuestos = inventarios.filter((i) => i.tipo === 'Repuesto').length;
-    const herramientas = inventarios.filter(
+    const total = inventariosBase.length;
+    const filtros = inventariosBase.filter((i) => i.tipo === 'Filtro').length;
+    const aceites = inventariosBase.filter((i) => i.tipo === 'Aceite').length;
+    const repuestos = inventariosBase.filter((i) => i.tipo === 'Repuesto').length;
+    const herramientas = inventariosBase.filter(
       (i) => i.tipo === 'Herramienta'
     ).length;
-    const lowStock = inventarios.filter(
+    const lowStock = inventariosBase.filter(
       (i) => i.cantidad < i.stockMinimo
     ).length;
 
     return { total, filtros, aceites, repuestos, herramientas, lowStock };
-  }, [inventarios]);
+  }, [inventariosBase]);
 
-  // Filtrado y búsqueda
+  // Filtrado final
   const inventariosFiltrados = useMemo(() => {
-    let resultado = inventarios;
+    let resultado = inventariosBase;
 
     // Filtro por tipo o stock bajo
     if (filter === 'low-stock') {
@@ -81,21 +92,16 @@ export function InventarioMobile({
       resultado = resultado.filter((i) => i.tipo === filter);
     }
 
-    // Búsqueda
-    if (searchTerm.trim()) {
-      const search = searchTerm.toLowerCase();
-      resultado = resultado.filter(
-        (i) =>
-          i.nombre?.toLowerCase().includes(search) ||
-          i.numeroParte?.toLowerCase().includes(search) ||
-          i.codigoIdentificacion?.toLowerCase().includes(search)
-      );
-    }
-
     return resultado;
-  }, [inventarios, filter, searchTerm]);
+  }, [inventariosBase, filter]);
 
   const isLowStock = (item: InventarioItem) => item.cantidad < item.stockMinimo;
+
+  const limpiarFiltros = () => {
+    setFilter('all');
+    setSearchTerm('');
+    setFiltersOpen(false);
+  };
 
   return (
     <MobileLayout
@@ -103,7 +109,7 @@ export function InventarioMobile({
       headerActions={
         <Sheet open={filtersOpen} onOpenChange={setFiltersOpen}>
           <SheetTrigger asChild>
-            <Button variant="ghost" size="icon" className="h-9 w-9 rounded-full hover:bg-primary/10 active:scale-95 transition-all">
+            <Button variant="ghost" size="icon" className="h-11 w-11 rounded-full hover:bg-primary/10 active:scale-95 transition-all">
               <ListFilter className="h-5 w-5" />
             </Button>
           </SheetTrigger>
@@ -148,7 +154,7 @@ export function InventarioMobile({
                 </Button>
                 <Button
                   variant={filter === 'Aceite' ? 'default' : 'outline'}
-                  className={cn("w-full justify-start gap-2 h-12 rounded-xl", filter === 'Aceite' && "bg-amber-600 hover:bg-amber-700 border-amber-600")}
+                  className={cn("w-full justify-start gap-2 h-12 rounded-xl", filter === 'Aceite' && "bg-warning hover:bg-warning border-warning")}
                   onClick={() => {
                     setFilter('Aceite');
                     setFiltersOpen(false);
@@ -184,21 +190,29 @@ export function InventarioMobile({
               <Button
                 variant={filter === 'low-stock' ? 'destructive' : 'outline'}
                 className={cn(
-                  "w-full justify-start gap-3 h-14 mt-2 rounded-xl border-red-200 dark:border-red-900",
-                  filter === 'low-stock' && "shadow-lg shadow-red-900/20"
+                  "w-full justify-start gap-3 h-14 mt-2 rounded-xl border-destructive dark:border-destructive",
+                  filter === 'low-stock' && "shadow-lg shadow-destructive/20"
                 )}
                 onClick={() => {
                   setFilter('low-stock');
                   setFiltersOpen(false);
                 }}
               >
-                <div className="flex h-8 w-8 items-center justify-center rounded-full bg-red-100 dark:bg-red-900/30 text-red-600 dark:text-red-400">
+                <div className="flex h-8 w-8 items-center justify-center rounded-full bg-destructive dark:bg-destructive/30 text-destructive dark:text-destructive">
                   <AlertTriangle className="h-4 w-4" />
                 </div>
                 <div className="flex flex-1 items-center justify-between">
-                  <span className={cn(filter !== 'low-stock' && "text-red-600 dark:text-red-400")}>Stock Bajo</span>
+                  <span className={cn(filter !== 'low-stock' && "text-destructive dark:text-destructive")}>Stock Bajo</span>
                   <Badge variant={filter === 'low-stock' ? 'secondary' : 'destructive'} className={cn(filter === 'low-stock' && "bg-background/20 text-foreground")}>{stats.lowStock}</Badge>
                 </div>
+              </Button>
+
+              <Button 
+                variant="outline" 
+                className="w-full h-11 text-muted-foreground mt-4" 
+                onClick={limpiarFiltros}
+              >
+                Limpiar filtros
               </Button>
             </div>
           </SheetContent>
@@ -209,20 +223,20 @@ export function InventarioMobile({
         {/* Alertas de stock bajo Premium */}
         {stats.lowStock > 0 && filter !== 'low-stock' && (
           <div
-            className="group relative flex items-center gap-3 rounded-2xl border border-red-500/20 bg-red-500/5 p-4 cursor-pointer overflow-hidden transition-all hover:bg-red-500/10 active:scale-[0.98]"
+            className="group relative flex items-center gap-3 rounded-2xl border border-destructive/20 bg-destructive/5 p-4 cursor-pointer overflow-hidden transition-all hover:bg-destructive/10 active:scale-[0.98]"
             onClick={() => setFilter('low-stock')}
           >
-            <div className="absolute left-0 top-0 bottom-0 w-1.5 bg-red-500" />
-            <div className="relative flex h-12 w-12 items-center justify-center rounded-full bg-red-100 text-red-600 dark:bg-red-900/30 dark:text-red-400 shadow-sm">
+            <div className="absolute left-0 top-0 bottom-0 w-1.5 bg-destructive" />
+            <div className="relative flex h-12 w-12 items-center justify-center rounded-full bg-destructive text-destructive dark:bg-destructive/30 dark:text-destructive shadow-sm">
               <AlertTriangle className="h-6 w-6 animate-pulse-soft" />
             </div>
             <div className="flex-1 min-w-0">
-              <p className="text-sm font-bold text-red-600 dark:text-red-400">Atención Requerida</p>
+              <p className="text-sm font-bold text-destructive dark:text-destructive">Atención Requerida</p>
               <p className="text-xs text-muted-foreground truncate mt-0.5">
                 {stats.lowStock} {stats.lowStock === 1 ? 'item tiene' : 'items tienen'} stock crítico
               </p>
             </div>
-            <div className="flex items-center justify-center h-8 w-8 rounded-full bg-red-500 text-white font-bold text-xs shadow-md animate-pulse">
+            <div className="flex items-center justify-center h-8 w-8 rounded-full bg-destructive text-white font-bold text-xs shadow-md animate-pulse">
               {stats.lowStock}
             </div>
           </div>
@@ -236,7 +250,7 @@ export function InventarioMobile({
               placeholder="Buscar item..."
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
-              className="pl-9 bg-muted/50 border-0 focus-visible:ring-1 focus-visible:ring-primary/50 h-10 rounded-xl"
+              className="pl-9 bg-muted/50 border-0 focus-visible:ring-1 focus-visible:ring-primary/50 h-11 rounded-xl"
             />
           </div>
 
@@ -266,7 +280,7 @@ export function InventarioMobile({
               variant={filter === 'Aceite' ? 'default' : 'outline'}
               className={cn(
                 "cursor-pointer px-4 py-1.5 rounded-full transition-all duration-300 whitespace-nowrap",
-                filter === 'Aceite' ? "bg-amber-600 border-0 shadow-lg shadow-amber-900/20" : "hover:bg-accent"
+                filter === 'Aceite' ? "bg-warning border-0 shadow-lg shadow-warning/20" : "hover:bg-accent"
               )}
               onClick={() => setFilter('Aceite')}
             >
@@ -294,7 +308,7 @@ export function InventarioMobile({
                 variant="compact"
                 className={cn(
                   'relative animate-in slide-in-from-bottom-4 fade-in fill-mode-backwards group overflow-visible',
-                  isLowStock(item) ? 'border-red-500/30 bg-red-500/5' : 'bg-card/50 backdrop-blur-sm border-border/50'
+                  isLowStock(item) ? 'border-destructive/30 bg-destructive/5' : 'bg-card/50 backdrop-blur-sm border-border/50'
                 )}
                 style={{ animationDelay: `${index * 0.05}s` } as React.CSSProperties}
               >
@@ -304,7 +318,7 @@ export function InventarioMobile({
                     <Button
                       variant="ghost"
                       size="icon"
-                      className="absolute top-1 right-1 h-7 w-7 opacity-0 group-hover:opacity-100 transition-opacity focus:opacity-100 data-[state=open]:opacity-100"
+                      className="absolute top-1 right-1 h-11 w-11 opacity-0 group-hover:opacity-100 transition-opacity focus:opacity-100 data-[state=open]:opacity-100"
                     >
                       <MoreVertical className="h-4 w-4" />
                     </Button>
@@ -358,7 +372,7 @@ export function InventarioMobile({
                       <span
                         className={cn(
                           'text-sm font-bold',
-                          isLowStock(item) ? 'text-red-600' : 'text-foreground'
+                          isLowStock(item) ? 'text-destructive' : 'text-foreground'
                         )}
                       >
                         {item.cantidad}
@@ -366,14 +380,14 @@ export function InventarioMobile({
                     </div>
                     <div className="w-full bg-secondary h-1 rounded-full overflow-hidden">
                       <div
-                        className={cn("h-full rounded-full transition-all duration-500", isLowStock(item) ? "bg-red-500" : "bg-primary")}
+                        className={cn("h-full rounded-full transition-all duration-500", isLowStock(item) ? "bg-destructive" : "bg-primary")}
                         style={{ width: `${Math.min((item.cantidad / (item.stockMinimo * 2)) * 100, 100)}%` }}
                       />
                     </div>
                   </div>
 
                   {isLowStock(item) && (
-                    <div className="flex items-center gap-1 text-red-600 animate-pulse">
+                    <div className="flex items-center gap-1 text-destructive animate-pulse">
                       <AlertTriangle className="h-3 w-3" />
                       <span className="text-[0.65rem] font-bold">Stock Crítico</span>
                     </div>
@@ -396,7 +410,7 @@ export function InventarioMobile({
                 : 'Agrega tu primer item al inventario'}
             </p>
             {searchTerm && (
-              <Button variant="link" onClick={() => setSearchTerm('')} className="mt-2">
+              <Button variant="link" onClick={() => setSearchTerm('')} className="mt-2 h-11">
                 Limpiar búsqueda
               </Button>
             )}

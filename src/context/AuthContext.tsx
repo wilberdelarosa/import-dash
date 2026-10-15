@@ -1,3 +1,4 @@
+import type React from 'react';
 import { createContext, useContext, useEffect, useState, ReactNode } from 'react';
 import { User, Session } from '@supabase/supabase-js';
 import { supabase } from '@/integrations/supabase/client';
@@ -10,7 +11,9 @@ interface AuthContextType {
   switchAccount: (email: string, password: string) => Promise<boolean>;
 }
 
-const AuthContext = createContext<AuthContextType | undefined>(undefined);
+// Reuse one context instance across hot reloads so providers and consumers never diverge.
+const ctxStore = globalThis as unknown as Record<string, unknown>;
+const AuthContext = (ctxStore.__AuthContext ??= createContext<AuthContextType | undefined>(undefined)) as React.Context<AuthContextType | undefined>;
 
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<User | null>(null);

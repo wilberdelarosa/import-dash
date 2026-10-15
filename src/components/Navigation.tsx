@@ -24,7 +24,7 @@ import {
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Popover, PopoverTrigger, PopoverContent } from '@/components/ui/popover';
-import { NotificacionesCentro } from '@/components/NotificacionesCentro';
+import { NotificationButton } from '@/components/NotificationButton';
 import { LogoutButton } from '@/components/LogoutButton';
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetDescription, SheetTrigger, SheetClose } from '@/components/ui/sheet';
 import { BrandLogo } from '@/components/BrandLogo';
@@ -106,7 +106,7 @@ export function Navigation({ hideBrand = false }: NavigationProps) {
           <div className="flex items-center justify-between sm:hidden">
             <BrandLogo compact showTagline={false} />
             <div className="flex gap-2">
-              <NotificacionesCentro />
+              {!hideBrand && <NotificationButton />}
               <SheetTrigger asChild>
                 <Button variant="outline" size="sm" className="gap-2">
                   <Menu className="h-4 w-4" />
@@ -181,13 +181,13 @@ export function Navigation({ hideBrand = false }: NavigationProps) {
               </div>
               <div className="hidden shrink-0 items-center gap-3 lg:flex">
                 <UserBadge />
-                <NotificacionesCentro />
+                {!hideBrand && <NotificationButton />}
                 <LogoutButton />
               </div>
             </div>
             <div className="flex w-full items-center justify-between gap-2 lg:hidden">
               <div className="flex items-center gap-2">
-                <NotificacionesCentro />
+                {!hideBrand && <NotificationButton />}
                 <LogoutButton />
               </div>
             </div>
@@ -262,7 +262,7 @@ export function Navigation({ hideBrand = false }: NavigationProps) {
             {/* Usuario y Cuenta */}
             <div className="pt-4 border-t border-border space-y-3">
               <UserBadge className="w-full" />
-              <NotificacionesCentro />
+              {!hideBrand && <NotificationButton />}
               <LogoutButton className="w-full" />
             </div>
           </div>

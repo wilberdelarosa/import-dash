@@ -160,25 +160,25 @@ export function ReportesMobile({
                             <p className="fluid-text-sm uppercase tracking-wider text-muted-foreground font-medium">Total</p>
                         </div>
                     </MobileCard>
-                    <MobileCard variant="glass" className="p-3 border-green-500/20 shadow-premium relative overflow-hidden group animate-slide-in-up" style={{ animationDelay: '0.1s' } as React.CSSProperties}>
-                        <div className="absolute inset-0 bg-green-500/5 group-hover:bg-green-500/10 transition-colors" />
+                    <MobileCard variant="glass" className="p-3 border-success/20 shadow-premium relative overflow-hidden group animate-slide-in-up" style={{ animationDelay: '0.1s' } as React.CSSProperties}>
+                        <div className="absolute inset-0 bg-success/5 group-hover:bg-success/10 transition-colors" />
                         <div className="text-center relative z-10">
-                            <p className="fluid-kpi font-bold text-green-600 mb-0.5 tabular-nums">{stats.activos}</p>
-                            <p className="fluid-text-sm uppercase tracking-wider text-green-600/80 font-medium">Activos</p>
+                            <p className="fluid-kpi font-bold text-success mb-0.5 tabular-nums">{stats.activos}</p>
+                            <p className="fluid-text-sm uppercase tracking-wider text-success/80 font-medium">Activos</p>
                         </div>
                     </MobileCard>
-                    <MobileCard variant="glass" className="p-3 border-red-500/20 shadow-premium relative overflow-hidden group animate-slide-in-up" style={{ animationDelay: '0.2s' } as React.CSSProperties}>
-                        <div className="absolute inset-0 bg-red-500/5 group-hover:bg-red-500/10 transition-colors" />
+                    <MobileCard variant="glass" className="p-3 border-destructive/20 shadow-premium relative overflow-hidden group animate-slide-in-up" style={{ animationDelay: '0.2s' } as React.CSSProperties}>
+                        <div className="absolute inset-0 bg-destructive/5 group-hover:bg-destructive/10 transition-colors" />
                         <div className="text-center relative z-10">
-                            <p className="fluid-kpi font-bold text-red-600 mb-0.5 tabular-nums">{stats.vencidos}</p>
-                            <p className="fluid-text-sm uppercase tracking-wider text-red-600/80 font-medium">Vencidos</p>
+                            <p className="fluid-kpi font-bold text-destructive mb-0.5 tabular-nums">{stats.vencidos}</p>
+                            <p className="fluid-text-sm uppercase tracking-wider text-destructive/80 font-medium">Vencidos</p>
                         </div>
                     </MobileCard>
-                    <MobileCard variant="glass" className="p-3 border-amber-500/20 shadow-premium relative overflow-hidden group animate-slide-in-up" style={{ animationDelay: '0.3s' } as React.CSSProperties}>
-                        <div className="absolute inset-0 bg-amber-500/5 group-hover:bg-amber-500/10 transition-colors" />
+                    <MobileCard variant="glass" className="p-3 border-warning/20 shadow-premium relative overflow-hidden group animate-slide-in-up" style={{ animationDelay: '0.3s' } as React.CSSProperties}>
+                        <div className="absolute inset-0 bg-warning/5 group-hover:bg-warning/10 transition-colors" />
                         <div className="text-center relative z-10">
-                            <p className="fluid-kpi font-bold text-amber-600 mb-0.5 tabular-nums">{stats.porVencer}</p>
-                            <p className="fluid-text-sm uppercase tracking-wider text-amber-600/80 font-medium">Por Vencer</p>
+                            <p className="fluid-kpi font-bold text-warning mb-0.5 tabular-nums">{stats.porVencer}</p>
+                            <p className="fluid-text-sm uppercase tracking-wider text-warning/80 font-medium">Por Vencer</p>
                         </div>
                     </MobileCard>
                 </div>
@@ -213,7 +213,7 @@ export function ReportesMobile({
                                         <Badge variant="secondary" className="text-xs glass-panel">{cat.total}</Badge>
                                         <Badge
                                             variant="outline"
-                                            className="text-xs text-green-600 border-green-200 bg-green-50 dark:bg-green-900/20 dark:border-green-800"
+                                            className="text-xs text-success border-success bg-success dark:bg-success/20 dark:border-success"
                                         >
                                             {cat.activos} activos
                                         </Badge>
@@ -228,7 +228,7 @@ export function ReportesMobile({
                 {mantenimientosOrdenados.length > 0 && (
                     <div className="space-y-3">
                         <div className="flex items-center justify-between">
-                            <h3 className="text-sm font-semibold text-red-600 px-1 uppercase tracking-wider flex items-center gap-2">
+                            <h3 className="text-sm font-semibold text-destructive px-1 uppercase tracking-wider flex items-center gap-2">
                                 <AlertTriangle className="h-4 w-4 animate-pulse" />
                                 Atención Requerida
                             </h3>
@@ -260,7 +260,7 @@ export function ReportesMobile({
                                 <MobileCard
                                     key={mant.id}
                                     variant="glass"
-                                    className="p-3 border-l-4 border-l-red-500 bg-red-500/5 animate-slide-in-up fill-mode-backwards"
+                                    className="p-3 border-l-4 border-l-destructive bg-destructive/5 animate-slide-in-up fill-mode-backwards"
                                     style={{ animationDelay: `${index * 0.05}s` } as React.CSSProperties}
                                 >
                                     <div className="flex justify-between items-start">
@@ -286,8 +286,8 @@ export function ReportesMobile({
                 {/* Empty state cuando no hay vencidos */}
                 {mantenimientosOrdenados.length === 0 && (
                     <div className="flex flex-col items-center justify-center py-8 text-center animate-fade-in">
-                        <div className="h-20 w-20 rounded-full bg-green-500/10 flex items-center justify-center mb-4">
-                            <CheckCircle2 className="h-10 w-10 text-green-500" />
+                        <div className="h-20 w-20 rounded-full bg-success/10 flex items-center justify-center mb-4">
+                            <CheckCircle2 className="h-10 w-10 text-success" />
                         </div>
                         <p className="text-base font-semibold text-foreground/80">¡Todo al día!</p>
                         <p className="mt-2 text-sm text-muted-foreground max-w-[250px]">

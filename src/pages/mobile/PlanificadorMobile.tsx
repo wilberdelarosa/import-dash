@@ -109,14 +109,14 @@ export function PlanificadorMobile({
                             variant="glass"
                             className={cn(
                                 "p-4 border-l-4 shadow-premium",
-                                mpSugerido.esManual ? "border-l-amber-500 bg-amber-500/5" : "border-l-green-500 bg-green-500/5"
+                                mpSugerido.esManual ? "border-l-warning bg-warning/5" : "border-l-success bg-success/5"
                             )}
                         >
                             <div className="flex items-center justify-between mb-4">
                                 <div className="flex items-center gap-3">
                                     <div className={cn(
                                         "p-3 rounded-xl shadow-lg",
-                                        mpSugerido.esManual ? "bg-amber-100 dark:bg-amber-900/30 text-amber-600 dark:text-amber-400" : "bg-green-100 dark:bg-green-900/30 text-green-600 dark:text-green-400"
+                                        mpSugerido.esManual ? "bg-warning dark:bg-warning/30 text-warning dark:text-warning" : "bg-success dark:bg-success/30 text-success dark:text-success"
                                     )}>
                                         <Wrench className="h-6 w-6" />
                                     </div>
@@ -230,15 +230,15 @@ export function PlanificadorMobile({
                         <p className="text-2xl font-bold text-primary relative z-10">{stats.total}</p>
                         <p className="text-[0.65rem] uppercase tracking-wider text-muted-foreground font-medium relative z-10">Total</p>
                     </MobileCard>
-                    <MobileCard variant="glass" className="p-3 text-center shadow-premium relative overflow-hidden group border-green-500/20">
-                        <div className="absolute inset-0 bg-green-500/5 group-hover:bg-green-500/10 transition-colors" />
-                        <p className="text-2xl font-bold text-green-600 relative z-10">{stats.conPlan}</p>
-                        <p className="text-[0.65rem] uppercase tracking-wider text-green-600/80 font-medium relative z-10">Con Plan</p>
+                    <MobileCard variant="glass" className="p-3 text-center shadow-premium relative overflow-hidden group border-success/20">
+                        <div className="absolute inset-0 bg-success/5 group-hover:bg-success/10 transition-colors" />
+                        <p className="text-2xl font-bold text-success relative z-10">{stats.conPlan}</p>
+                        <p className="text-[0.65rem] uppercase tracking-wider text-success/80 font-medium relative z-10">Con Plan</p>
                     </MobileCard>
-                    <MobileCard variant="glass" className="p-3 text-center shadow-premium relative overflow-hidden group border-amber-500/20">
-                        <div className="absolute inset-0 bg-amber-500/5 group-hover:bg-amber-500/10 transition-colors" />
-                        <p className="text-2xl font-bold text-amber-600 relative z-10">{stats.sinPlan}</p>
-                        <p className="text-[0.65rem] uppercase tracking-wider text-amber-600/80 font-medium relative z-10">Sin Plan</p>
+                    <MobileCard variant="glass" className="p-3 text-center shadow-premium relative overflow-hidden group border-warning/20">
+                        <div className="absolute inset-0 bg-warning/5 group-hover:bg-warning/10 transition-colors" />
+                        <p className="text-2xl font-bold text-warning relative z-10">{stats.sinPlan}</p>
+                        <p className="text-[0.65rem] uppercase tracking-wider text-warning/80 font-medium relative z-10">Sin Plan</p>
                     </MobileCard>
                 </div>
 
@@ -289,7 +289,7 @@ export function PlanificadorMobile({
                                             {equipo.categoria}
                                         </Badge>
                                         {planManualOverride[equipo.ficha] && (
-                                            <CheckCircle2 className="h-4 w-4 text-green-500 flex-shrink-0" />
+                                            <CheckCircle2 className="h-4 w-4 text-success flex-shrink-0" />
                                         )}
                                     </div>
                                 </div>

@@ -124,7 +124,7 @@ export function NotificacionesMobile() {
       case 'critical':
         return <AlertCircle className="h-4 w-4 text-destructive" />;
       case 'warning':
-        return <AlertTriangle className="h-4 w-4 text-amber-500" />;
+        return <AlertTriangle className="h-4 w-4 text-warning" />;
       default:
         return <Info className="h-4 w-4 text-blue-500" />;
     }
@@ -136,7 +136,7 @@ export function NotificacionesMobile() {
       case 'critical':
         return "bg-destructive/5 border-l-destructive";
       case 'warning':
-        return "bg-amber-500/5 border-l-amber-500";
+        return "bg-warning/5 border-l-warning";
       default:
         return "bg-primary/5 border-l-primary";
     }
@@ -207,8 +207,8 @@ export function NotificacionesMobile() {
             <p className="text-lg font-bold text-destructive">{stats.critical}</p>
             <p className="text-[9px] text-muted-foreground uppercase">Críticas</p>
           </MobileCard>
-          <MobileCard variant="compact" className="p-2 text-center border-amber-500/30">
-            <p className="text-lg font-bold text-amber-600">{stats.warnings}</p>
+          <MobileCard variant="compact" className="p-2 text-center border-warning/30">
+            <p className="text-lg font-bold text-warning">{stats.warnings}</p>
             <p className="text-[9px] text-muted-foreground uppercase">Alertas</p>
           </MobileCard>
         </div>
@@ -278,7 +278,7 @@ export function NotificacionesMobile() {
                   <div className={cn(
                     "flex-shrink-0 h-9 w-9 rounded-full flex items-center justify-center",
                     notif.nivel === 'critical' && "bg-destructive/10",
-                    notif.nivel === 'warning' && "bg-amber-500/10",
+                    notif.nivel === 'warning' && "bg-warning/10",
                     notif.nivel === 'info' && "bg-blue-500/10",
                   )}>
                     {getNivelIcon(notif.nivel)}

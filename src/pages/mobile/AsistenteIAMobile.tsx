@@ -378,7 +378,7 @@ export function AsistenteIAMobile({
                         {context ? (
                             <>
                                 <div className="flex items-center gap-2 rounded-xl bg-muted/40 px-3.5 py-2 text-xs backdrop-blur-sm">
-                                    <div className="h-2 w-2 animate-pulse rounded-full bg-green-500" />
+                                    <div className="h-2 w-2 animate-pulse rounded-full bg-success" />
                                     <span className="text-muted-foreground">Última actualización:</span>
                                     <span className="font-semibold text-foreground">{context.lastUpdatedLabel}</span>
                                 </div>

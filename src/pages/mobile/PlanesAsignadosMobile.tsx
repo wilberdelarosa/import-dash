@@ -12,11 +12,13 @@
 
 import { useState, useMemo } from 'react';
 import { usePlanesAsignados, type PlanAsignadoDetallado } from '@/hooks/usePlanesAsignados';
+import { MobileSheet } from "@/components/mobile/MobileSheet";
 import { MobileLayout } from '@/components/mobile/MobileLayout';
 import { MobileListCard } from '@/components/mobile/MobileCard';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
+import { Textarea } from '@/components/ui/textarea';
 import {
   Sheet,
   SheetContent,
@@ -32,14 +34,6 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-} from '@/components/ui/dialog';
 import {
   Select,
   SelectContent,
@@ -72,6 +66,19 @@ export function PlanesAsignadosMobile() {
   const [filtersOpen, setFiltersOpen] = useState(false);
   const [editDialog, setEditDialog] = useState(false);
   const [planSeleccionado, setPlanSeleccionado] = useState<PlanAsignadoDetallado | null>(null);
+
+  const [guardandoEdicion, setGuardandoEdicion] = useState(false);
+  const [editForm, setEditForm] = useState<{
+    tecnico_responsable: string;
+    estado: 'pendiente' | 'en_proceso' | 'completado' | 'vencido';
+    horas_alerta: number;
+    notas: string;
+  }>({
+    tecnico_responsable: '',
+    estado: 'pendiente',
+    horas_alerta: 50,
+    notas: '',
+  });
 
   // Técnicos únicos
   const tecnicos = useMemo(() => {
@@ -137,6 +144,34 @@ export function PlanesAsignadosMobile() {
       await actualizarPlanAsignado({ id, estado: nuevoEstado });
     } catch (error) {
       console.error('Error cambiando estado:', error);
+    }
+  };
+
+  const abrirEdicion = (plan: PlanAsignadoDetallado) => {
+    setPlanSeleccionado(plan);
+    setEditForm({
+      tecnico_responsable: plan.tecnico_responsable,
+      estado: plan.estado,
+      horas_alerta: plan.horas_alerta,
+      notas: plan.notas || '',
+    });
+    setEditDialog(true);
+  };
+
+  const handleGuardarEdicion = async () => {
+    if (!planSeleccionado) return;
+    setGuardandoEdicion(true);
+    try {
+      await actualizarPlanAsignado({
+        id: planSeleccionado.id,
+        ...editForm,
+      });
+      setEditDialog(false);
+      setPlanSeleccionado(null);
+    } catch (error) {
+      console.error('Error guardando edición:', error);
+    } finally {
+      setGuardandoEdicion(false);
     }
   };
 
@@ -310,12 +345,7 @@ export function PlanesAsignadosMobile() {
                           Marcar completado
                         </DropdownMenuItem>
                         <DropdownMenuSeparator />
-                        <DropdownMenuItem
-                          onClick={() => {
-                            setPlanSeleccionado(plan);
-                            setEditDialog(true);
-                          }}
-                        >
+                        <DropdownMenuItem onClick={() => abrirEdicion(plan)}>
                           <Edit className="mr-2 h-4 w-4" />
                           Editar
                         </DropdownMenuItem>
@@ -365,25 +395,76 @@ export function PlanesAsignadosMobile() {
         )}
       </div>
 
-      {/* Diálogo de edición (placeholder) */}
-      <Dialog open={editDialog} onOpenChange={setEditDialog}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>Editar Plan</DialogTitle>
-            <DialogDescription>
-              {planSeleccionado?.equipo_ficha} - {planSeleccionado?.intervalo_codigo}
-            </DialogDescription>
-          </DialogHeader>
-          <div className="space-y-4">
-            <p className="text-sm text-muted-foreground">
-              Edición completa disponible en versión desktop
-            </p>
+      {/* Diálogo de edición */}
+      <MobileSheet
+        open={editDialog}
+        onOpenChange={setEditDialog}
+        title="Editar Plan"
+        description={`${planSeleccionado?.equipo_ficha} - ${planSeleccionado?.intervalo_codigo}`}
+        footer={
+          <div className="flex gap-2 w-full">
+            <Button variant="outline" className="flex-1" onClick={() => setEditDialog(false)} disabled={guardandoEdicion}>
+              Cancelar
+            </Button>
+            <Button className="flex-1" onClick={handleGuardarEdicion} disabled={guardandoEdicion}>
+              {guardandoEdicion ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
+              Guardar
+            </Button>
           </div>
-          <DialogFooter>
-            <Button onClick={() => setEditDialog(false)}>Cerrar</Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+        }
+      >
+        <div className="space-y-4">
+          <div className="space-y-2">
+            <label className="text-sm font-medium">Técnico responsable</label>
+            <Input
+              value={editForm.tecnico_responsable}
+              onChange={(e) => setEditForm({ ...editForm, tecnico_responsable: e.target.value })}
+              placeholder="Nombre del técnico"
+            />
+          </div>
+
+          <div className="space-y-2">
+            <label className="text-sm font-medium">Estado</label>
+            <Select
+              value={editForm.estado}
+              onValueChange={(value) =>
+                setEditForm({ ...editForm, estado: value as typeof editForm.estado })
+              }
+            >
+              <SelectTrigger>
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="pendiente">Pendiente</SelectItem>
+                <SelectItem value="en_proceso">En Proceso</SelectItem>
+                <SelectItem value="completado">Completado</SelectItem>
+                <SelectItem value="vencido">Vencido</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+
+          <div className="space-y-2">
+            <label className="text-sm font-medium">Horas de alerta</label>
+            <Input
+              type="number"
+              value={editForm.horas_alerta}
+              onChange={(e) =>
+                setEditForm({ ...editForm, horas_alerta: Number(e.target.value) || 0 })
+              }
+            />
+          </div>
+
+          <div className="space-y-2">
+            <label className="text-sm font-medium">Notas</label>
+            <Textarea
+              value={editForm.notas}
+              onChange={(e) => setEditForm({ ...editForm, notas: e.target.value })}
+              placeholder="Notas adicionales..."
+              rows={3}
+            />
+          </div>
+        </div>
+      </MobileSheet>
     </MobileLayout>
   );
 }

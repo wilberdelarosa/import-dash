@@ -92,14 +92,14 @@ export function SupervisorSubmissions() {
     switch (status) {
       case 'pending':
         return (
-          <Badge className="bg-amber-500/10 text-amber-600 border-amber-500/20 text-[10px] gap-1">
+          <Badge className="bg-warning/10 text-warning border-warning/20 text-[10px] gap-1">
             <Clock className="h-3 w-3" />
             Pendiente
           </Badge>
         );
       case 'approved':
         return (
-          <Badge className="bg-green-500/10 text-green-600 border-green-500/20 text-[10px] gap-1">
+          <Badge className="bg-success/10 text-success border-success/20 text-[10px] gap-1">
             <CheckCircle className="h-3 w-3" />
             Aprobado
           </Badge>
@@ -138,11 +138,11 @@ export function SupervisorSubmissions() {
 
         {/* Stats rápidos - Grid responsive */}
         <div className="mobile-stats-grid">
-          <MobileCard className="p-2 text-center border-amber-500/20 bg-amber-500/5">
+          <MobileCard className="p-2 text-center border-warning/20 bg-warning/5">
             <p className="fluid-kpi font-bold tabular-nums">{stats.pending}</p>
             <p className="fluid-text-sm text-muted-foreground uppercase">Pendientes</p>
           </MobileCard>
-          <MobileCard className="p-2 text-center border-green-500/20 bg-green-500/5">
+          <MobileCard className="p-2 text-center border-success/20 bg-success/5">
             <p className="fluid-kpi font-bold tabular-nums">{stats.approved}</p>
             <p className="fluid-text-sm text-muted-foreground uppercase">Aprobados</p>
           </MobileCard>
@@ -203,7 +203,7 @@ export function SupervisorSubmissions() {
                   key={sub.id}
                   className={cn(
                     "h-[88px] p-3 overflow-hidden transition-all cursor-pointer hover:bg-muted/50 animate-in slide-in-from-bottom-2",
-                    sub.status === 'pending' && "border-l-2 border-l-amber-500"
+                    sub.status === 'pending' && "border-l-2 border-l-warning"
                   )}
                   style={{ animationDelay: `${index * 0.03}s` }}
                   onClick={() => setSelectedSubmission(sub)}

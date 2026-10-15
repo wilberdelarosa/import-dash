@@ -159,9 +159,9 @@ export function SupervisorDashboard() {
             <p className="text-lg font-bold text-destructive">{mantStats.vencidos}</p>
             <p className="text-[9px] text-muted-foreground uppercase">Vencidos</p>
           </MobileCard>
-          <MobileCard className="p-2.5 text-center border-amber-500/20 bg-amber-500/5">
-            <Clock className="h-4 w-4 mx-auto text-amber-600 mb-1" />
-            <p className="text-lg font-bold text-amber-600">{mantStats.proximos}</p>
+          <MobileCard className="p-2.5 text-center border-warning/20 bg-warning/5">
+            <Clock className="h-4 w-4 mx-auto text-warning mb-1" />
+            <p className="text-lg font-bold text-warning">{mantStats.proximos}</p>
             <p className="text-[9px] text-muted-foreground uppercase">Próximos</p>
           </MobileCard>
         </div>
@@ -187,8 +187,8 @@ export function SupervisorDashboard() {
             <TabsContent value="vencidos" className="mt-0 data-[state=active]:block h-list-default overflow-hidden">
               {equiposVencidos.length === 0 ? (
                 <div className="text-center py-6 h-full flex flex-col items-center justify-center">
-                  <CheckCircle className="h-10 w-10 mx-auto text-green-500 mb-2" />
-                  <p className="text-sm font-medium text-green-600">¡Excelente!</p>
+                  <CheckCircle className="h-10 w-10 mx-auto text-success mb-2" />
+                  <p className="text-sm font-medium text-success">¡Excelente!</p>
                   <p className="text-xs text-muted-foreground">Sin mantenimientos vencidos</p>
                 </div>
               ) : (
@@ -227,8 +227,8 @@ export function SupervisorDashboard() {
             <TabsContent value="proximos" className="mt-0 h-list-default overflow-hidden">
               {equiposProximos.length === 0 ? (
                 <div className="text-center py-6 h-full flex flex-col items-center justify-center">
-                  <CheckCircle className="h-10 w-10 mx-auto text-green-500 mb-2" />
-                  <p className="text-sm font-medium text-green-600">Todo en orden</p>
+                  <CheckCircle className="h-10 w-10 mx-auto text-success mb-2" />
+                  <p className="text-sm font-medium text-success">Todo en orden</p>
                   <p className="text-xs text-muted-foreground">Sin mantenimientos próximos</p>
                 </div>
               ) : (
@@ -239,13 +239,13 @@ export function SupervisorDashboard() {
                       onClick={() => handleOpenDetalle(mant.ficha)}
                       className={cn(
                         "flex items-center justify-between p-2 rounded-lg border cursor-pointer transition-all h-[52px]",
-                        "border-amber-500/30 bg-amber-500/5 active:bg-amber-500/10",
+                        "border-warning/30 bg-warning/5 active:bg-warning/10",
                         "animate-in slide-in-from-left-2"
                       )}
                       style={{ animationDelay: `${index * 0.03}s` }}
                     >
                       <div className="flex items-center gap-2 min-w-0 flex-1 overflow-hidden">
-                        <Truck className="h-4 w-4 text-amber-600 shrink-0" />
+                        <Truck className="h-4 w-4 text-warning shrink-0" />
                         <div className="min-w-0 flex-1 overflow-hidden">
                           <p className="text-xs font-medium truncate">{mant.nombreEquipo}</p>
                           <p className="text-[10px] text-muted-foreground flex items-center gap-1">
@@ -255,7 +255,7 @@ export function SupervisorDashboard() {
                           </p>
                         </div>
                       </div>
-                      <Badge className="h-5 px-1.5 text-[10px] leading-none font-medium shrink-0 ml-2 tabular-nums bg-amber-500/10 text-amber-600 border-amber-500/20">
+                      <Badge className="h-5 px-1.5 text-[10px] leading-none font-medium shrink-0 ml-2 tabular-nums bg-warning/10 text-warning border-warning/20">
                         {formatRemaining(mant.horasKmRestante)}
                       </Badge>
                     </div>
@@ -310,7 +310,7 @@ export function SupervisorDashboard() {
               Reportes de Mecánicos
             </h3>
             {pendingSubmissions.length > 0 && (
-              <Badge className="bg-amber-500/10 text-amber-600 border-amber-500/20 text-[10px]">
+              <Badge className="bg-warning/10 text-warning border-warning/20 text-[10px]">
                 {pendingSubmissions.length} pendientes
               </Badge>
             )}
@@ -322,7 +322,7 @@ export function SupervisorDashboard() {
             </p>
           ) : pendingSubmissions.length === 0 ? (
             <div className="text-center py-4">
-              <CheckCircle className="h-8 w-8 mx-auto text-green-500 mb-2" />
+              <CheckCircle className="h-8 w-8 mx-auto text-success mb-2" />
               <p className="text-sm text-muted-foreground">
                 No hay reportes pendientes
               </p>
@@ -332,7 +332,7 @@ export function SupervisorDashboard() {
               {pendingSubmissions.map((sub, index) => (
                 <div
                   key={sub.id}
-                  className="p-2 rounded-lg border bg-amber-500/5 border-amber-500/20 animate-in slide-in-from-left-2"
+                  className="p-2 rounded-lg border bg-warning/5 border-warning/20 animate-in slide-in-from-left-2"
                   style={{ animationDelay: `${index * 0.05}s` }}
                   onClick={() => navigate('/supervisor/submissions')}
                 >
@@ -349,7 +349,7 @@ export function SupervisorDashboard() {
                       <p className="text-[10px] text-muted-foreground">
                         {format(new Date(sub.created_at), "d MMM", { locale: es })}
                       </p>
-                      <Clock className="h-3.5 w-3.5 text-amber-500" />
+                      <Clock className="h-3.5 w-3.5 text-warning" />
                     </div>
                   </div>
                 </div>
@@ -380,7 +380,7 @@ export function SupervisorDashboard() {
             </div>
             <div>
               <p className="text-muted-foreground text-xs">Disponibilidad</p>
-              <p className="font-semibold text-green-600">
+              <p className="font-semibold text-success">
                 {equiposStats.total > 0
                   ? Math.round((equiposStats.activos / equiposStats.total) * 100)
                   : 0}%
@@ -388,11 +388,11 @@ export function SupervisorDashboard() {
             </div>
             <div>
               <p className="text-muted-foreground text-xs">Al día</p>
-              <p className="font-semibold text-green-600">{mantStats.alDia}</p>
+              <p className="font-semibold text-success">{mantStats.alDia}</p>
             </div>
             <div>
               <p className="text-muted-foreground text-xs">Requieren atención</p>
-              <p className="font-semibold text-amber-600">{mantStats.vencidos + mantStats.proximos}</p>
+              <p className="font-semibold text-warning">{mantStats.vencidos + mantStats.proximos}</p>
             </div>
           </div>
         </MobileCard>

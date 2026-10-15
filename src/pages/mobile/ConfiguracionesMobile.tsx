@@ -28,7 +28,7 @@ import {
 import { cn } from '@/lib/utils';
 import { useSystemConfig } from '@/context/SystemConfigContext';
 import { DEFAULT_SYSTEM_CONFIG } from '@/types/config';
-import { useNotifications } from '@/hooks/useNotifications';
+import { useUnifiedNotifications } from '@/hooks/useUnifiedNotifications';
 import { useToast } from '@/hooks/use-toast';
 
 // Tipos de notificación disponibles
@@ -41,7 +41,8 @@ const NOTIFICATION_TYPES = [
 export function ConfiguracionesMobile() {
   const { config, loading, saving, updateConfig } = useSystemConfig();
   const [draft, setDraft] = useState(config);
-  const { permission, supported, requestPermission, addNotification } = useNotifications();
+  const { pushPermission: permission, requestPushPermission: requestPermission } = useUnifiedNotifications();
+  const supported = typeof window !== 'undefined' && 'Notification' in window;
   const { toast } = useToast();
 
   const [alertasExpanded, setAlertasExpanded] = useState(true);
@@ -108,7 +109,11 @@ export function ConfiguracionesMobile() {
     }
     setTestingPush(true);
     await new Promise(resolve => setTimeout(resolve, 500));
-    addNotification({ title: '🔔 Notificación de prueba', body: 'Las notificaciones push están funcionando.', type: 'success' });
+    try {
+      new Notification('🔔 Notificación de prueba', { body: 'Las notificaciones push están funcionando.' });
+    } catch (e) {
+      console.error('Error sending test notification', e);
+    }
     setTestingPush(false);
     toast({ title: '✅ Notificación enviada' });
   };
@@ -126,24 +131,24 @@ export function ConfiguracionesMobile() {
   const getChannelStatus = (channel: 'email' | 'whatsapp' | 'push') => {
     if (channel === 'email') {
       if (!draft.notificarEmail) return { status: 'disabled', label: 'Desactivado', color: 'text-muted-foreground' };
-      if (!draft.correoNotificaciones || !isValidEmail(draft.correoNotificaciones)) return { status: 'warning', label: 'Sin configurar', color: 'text-amber-500' };
-      return { status: 'active', label: 'Activo', color: 'text-emerald-500' };
+      if (!draft.correoNotificaciones || !isValidEmail(draft.correoNotificaciones)) return { status: 'warning', label: 'Sin configurar', color: 'text-warning' };
+      return { status: 'active', label: 'Activo', color: 'text-success' };
     }
     if (channel === 'whatsapp') {
       if (!draft.notificarWhatsapp) return { status: 'disabled', label: 'Desactivado', color: 'text-muted-foreground' };
-      if (!draft.telefonoWhatsapp || !isValidPhone(draft.telefonoWhatsapp)) return { status: 'warning', label: 'Sin configurar', color: 'text-amber-500' };
-      return { status: 'active', label: 'Activo', color: 'text-emerald-500' };
+      if (!draft.telefonoWhatsapp || !isValidPhone(draft.telefonoWhatsapp)) return { status: 'warning', label: 'Sin configurar', color: 'text-warning' };
+      return { status: 'active', label: 'Activo', color: 'text-success' };
     }
     if (!supported) return { status: 'error', label: 'No soportado', color: 'text-destructive' };
     if (permission === 'denied') return { status: 'error', label: 'Bloqueado', color: 'text-destructive' };
     if (!draft.notificarDispositivo) return { status: 'disabled', label: 'Desactivado', color: 'text-muted-foreground' };
-    if (permission !== 'granted') return { status: 'warning', label: 'Sin permiso', color: 'text-amber-500' };
-    return { status: 'active', label: 'Activo', color: 'text-emerald-500' };
+    if (permission !== 'granted') return { status: 'warning', label: 'Sin permiso', color: 'text-warning' };
+    return { status: 'active', label: 'Activo', color: 'text-success' };
   };
 
   const StatusIcon = ({ status }: { status: string }) => {
-    if (status === 'active') return <CheckCircle2 className="h-3.5 w-3.5 text-emerald-500" />;
-    if (status === 'warning') return <AlertTriangle className="h-3.5 w-3.5 text-amber-500" />;
+    if (status === 'active') return <CheckCircle2 className="h-3.5 w-3.5 text-success" />;
+    if (status === 'warning') return <AlertTriangle className="h-3.5 w-3.5 text-warning" />;
     if (status === 'error') return <XCircle className="h-3.5 w-3.5 text-destructive" />;
     return <div className="h-3.5 w-3.5 rounded-full bg-muted-foreground/30" />;
   };
@@ -204,7 +209,7 @@ export function ConfiguracionesMobile() {
                 <Label className="text-sm font-semibold mb-2 block">Alerta preventiva</Label>
                 <div className="flex items-center gap-3 mb-3">
                   <Slider className="flex-1" value={[draft.alertaPreventiva]} min={10} max={200} step={10} onValueChange={([v]) => scheduleUpdate({ alertaPreventiva: v })} />
-                  <Badge className="bg-amber-500 text-base font-bold min-w-[60px] text-center">{draft.alertaPreventiva}</Badge>
+                  <Badge className="bg-warning text-base font-bold min-w-[60px] text-center">{draft.alertaPreventiva}</Badge>
                 </div>
                 <p className="text-xs text-muted-foreground">Se marcarán en amarillo cuando resten {draft.alertaPreventiva} horas/km</p>
               </div>
@@ -243,7 +248,7 @@ export function ConfiguracionesMobile() {
               <div className="space-y-3 p-3 rounded-xl bg-accent/20 border border-border/30">
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-3">
-                    <div className="p-2 rounded-lg bg-green-500/10"><MessageSquare className="h-4 w-4 text-green-600" /></div>
+                    <div className="p-2 rounded-lg bg-success/10"><MessageSquare className="h-4 w-4 text-success" /></div>
                     <div><Label className="text-sm font-semibold block">WhatsApp</Label><div className="flex items-center gap-1"><StatusIcon status={getChannelStatus('whatsapp').status} /><span className={cn("text-xs", getChannelStatus('whatsapp').color)}>{getChannelStatus('whatsapp').label}</span></div></div>
                   </div>
                   <Switch checked={draft.notificarWhatsapp} onCheckedChange={(v) => scheduleUpdate({ notificarWhatsapp: v })} className="scale-110" />

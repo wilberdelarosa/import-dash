@@ -27,7 +27,7 @@ export default function Admin() {
     return (
       <MobileLayout title="Acceso Denegado">
         <Card className="p-8 text-center max-w-md mx-auto mt-12">
-          <AlertTriangle className="h-16 w-16 mx-auto text-amber-500 mb-4" />
+          <AlertTriangle className="h-16 w-16 mx-auto text-warning mb-4" />
           <h2 className="text-xl font-bold mb-2">Acceso Restringido</h2>
           <p className="text-muted-foreground">
             No tienes permisos para acceder al panel de administración.
