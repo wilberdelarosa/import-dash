@@ -2151,9 +2151,7 @@ export function useSupabaseData() {
           created_at: fechaIso,
           metadata,
           datos_despues: datosDespues,
-          descripcion: observaciones && observaciones.trim().length > 0
-            ? observaciones
-            : evento.descripcion,
+          descripcion: descripcionFinal,
         })
         .eq('id', eventoId)
         .select('id');
